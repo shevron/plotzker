@@ -1,4 +1,4 @@
-"""X− endstop switch mount (README §8 T3.4). Print ×1.
+"""X− endstop switch mount (STATUS.md T3.4). Print ×1.
 
 Purpose: holds the X endstop board (Creality type) upright behind the beam at the
 left end, switch facing +x, lever pointing −y. At the carriage's left end of travel

@@ -4,24 +4,40 @@ A 2D CNC pen plotter built mostly from parts salvaged from low-end 3D printers, 
 hardware (metric hex fasteners, bearings) and 3D-printed parts. It draws with ordinary
 household pens on paper, card, cardboard or thin wood.
 
-> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.4 done (CAD
-> scaffold, gantry end brackets, X carriage, X motor/idler/endstop mounts; STLs in `stl/`,
-> test prints pending). CAD migrated from OpenSCAD to PythonSCAD (T3.9, D22; identical
-> STLs). On trial: SVG 2D sketches for profiles (D23; V-slot 2020/2040). Open: Q12 (beam ends tapped?). Q10 (SVG/PDF toolchain) deferred until the
-> machine runs.
-> **Next:** T3.5 Y motor mounts, idlers, tensioners and Y endstops. Phase 2 can
-> run in parallel. See the **work plan in §8**; CAD workflow in **§10**.
+This file holds what rarely changes: goals, requirements, the high-level design and its
+rationale, the repository layout, and the coding standards and contribution guidelines for
+humans and AI agents alike.
 
-**Contents:** 1 Requirements · 2 Inventory · 3 Build phases · 4 Design · 5 Key numbers ·
-6 Decision log · 7 Open questions · 8 Work plan · 9 Repository layout ·
-10 CAD workflow
+| File | Purpose |
+|------|---------|
+| `README.md` (this file) | Overview, goals, high-level design and decisions, standards, contribution guidelines |
+| [`STATUS.md`](STATUS.md) | Ongoing work: current status, work plan, open questions, detailed decisions, inventory, key numbers, as-built design notes, ideas |
+| [`CLAUDE.md`](CLAUDE.md) | Instructions specific to AI agents; points to the two files above |
+| [`docs/`](docs) | Longer research and reference: [`controller.md`](docs/controller.md) (board, pin map, firmware plan), [`hardware.md`](docs/hardware.md) (vendor part dimensions for CAD), [`sketch-formats.md`](docs/sketch-formats.md) (2D sketch format research) |
 
-Detailed docs: [`docs/controller.md`](docs/controller.md) (board, pin map, firmware plan) ·
-[`docs/hardware.md`](docs/hardware.md) (vendor part dimensions for CAD)
+**Contents:** 1 Goals · 2 Requirements and constraints · 3 Design · 4 Design decisions ·
+5 Repository layout · 6 Development setup and workflow · 7 Contribution guidelines and
+coding standards
 
 ---
 
-## 1. Requirements and constraints
+## 1. Goals
+
+- A reliable, accurate pen plotter for **A3 (297 × 420 mm) and smaller** media up to
+  **15 mm** thick, built from parts on hand and common 3D-printer components.
+- **Modular tool head**, so the pen holder can evolve (pen-lift experiments, automatic pen
+  changing, other tools) without redesigning the machine.
+- **Parametric, reproducible CAD** in Python: every printed part regenerates from shared
+  parameters, and design rules fail the build when a requirement is broken.
+- **Easy to build, debug and service** with hand tools.
+
+Non-goals (for now): cutting, engraving, lasers, high-speed operation, enclosure.
+
+Build phases, the work plan and the current status are in [`STATUS.md`](STATUS.md).
+
+---
+
+## 2. Requirements and constraints
 
 | # | Requirement | Notes |
 |---|-------------|-------|
@@ -30,72 +46,24 @@ Detailed docs: [`docs/controller.md`](docs/controller.md) (board, pin map, firmw
 | R3 | **Work area: A3 (297 × 420 mm) and smaller** | Travel ≥ 320 × 440 mm for margins and registration |
 | R4 | Lift and lower the pen under program control | Required in v1; without it every path is connected |
 | R5 | Hold standard pens of **7–16 mm** diameter | Manual pen insertion in v1 |
-| R6 | Constant, gentle pen pressure despite small height errors | Pen head absorbs ±1.5 mm (§4.8) |
+| R6 | Constant, gentle pen pressure despite small height errors | Pen head absorbs ±1.5 mm (§3.8) |
 | R7 | Modular, easily replaceable tool head | Path to automatic pen changing, other tools later |
-| R8 | Use parts on hand wherever possible; otherwise commonly available parts | §2 |
+| R8 | Use parts on hand wherever possible; otherwise commonly available parts | Inventory: `STATUS.md` |
 | R9 | Open-source firmware and toolchain | Marlin; no custom firmware |
 
-**Project constraints (hard rules, see also `CLAUDE.md`):**
+**Project constraints (hard rules, detailed in §7.1):**
 - All measurements **metric**.
 - Hardware is off-the-shelf (metric hex fasteners etc.) or common low-end 3D-printer
   parts (steppers, belts, lead screws, bearings, extrusions), plus 3D-printed parts.
-- CAD in **PythonSCAD** (Python package `plotter_cad`), parametric (D2, D22).
+- CAD in **PythonSCAD** (Python package `plotter_cad`), parametric (D2).
 - Safety: printer heaters disabled in firmware and left unconnected; mains wiring
   enclosed and earthed.
 
-Non-goals (for now): cutting, engraving, lasers, high-speed operation, enclosure.
-
 ---
 
-## 2. Parts on hand (inventory)
+## 3. Design
 
-Working assumption: any **commonly available** 3D-printer / maker part can be obtained.
-Parts listed here are ones we specifically plan around. If something turns out to be
-hard to get, we adjust.
-
-| Part | Qty | Details | Still to confirm |
-|------|-----|---------|------------------|
-| 2020 V-slot extrusion | several | **520 mm** long | — |
-| 4020 V-slot extrusion | 2 | **520 mm** long → X beam; V-slot profile confirmed | Ends tapped M5? (Q12) |
-| Shorter 2020 / 2040 / 4040 extrusions | assorted | e.g. 340 mm 2040 → baseboard runners/feet | Lengths |
-| V-wheels | many | POM V-groove wheels on 625Z bearings (5 mm bore), Ø24 × 10 mm; eccentric spacers: 10 mm hex × 7.8, Ø7 × 2.1 boss, Ø5 bore, ~0.7 mm offset (2 needed, D21) | — |
-| Ø10 mm smooth (optical-axis) shafts | 2 | **700 mm**, hardened → Y axis | — |
-| SK10 shaft supports | 4 | End supports, shaft center **20 mm** above the mounting surface; 2 × M5 on 32 mm, 42 W × 37.5 H × 14 L ([`docs/hardware.md`](docs/hardware.md)) | — |
-| SCS10UU linear bearing blocks | 4 | 2 per shaft; 35 L × 40 W × 26.5 H mm, shaft center 13 mm above the base, 4 × M5 top holes on 28 × 21 mm, top: two 10 mm raised flats (holes in them) with a 17 mm × 1 mm recess between, 92 g ([`docs/hardware.md`](docs/hardware.md)) | — |
-| NEMA17 stepper motors | ≥ 3 (+1 for optional Z) | Standard 3D-printer type; sizes vary: typical 39.2 mm body / 22.6 mm shaft, short 33.5 / 19 | — |
-| GT2 belt, pulleys, idlers | assorted | 6 mm belt (plenty); common 3D-printer 20T pulleys and idlers | Exact pulley/idler sizes (design for common, adjust) |
-| Lead screws, linear bearings, misc. bearings | assorted | | Only needed for a stepper Z experiment |
-| Hobby servos | 2+ | Small, SG90-class assumed | Model |
-| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers ([`docs/controller.md`](docs/controller.md)) | Driver chip type; pin map (bench) |
-| Controller: Creality (newer) | 1? | Not located yet; fallback | Model |
-| BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
-| Power supply | 1 | From a printer | **Voltage (12/24 V), current** |
-| Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 mm (27 mm incl. lever), 2 holes 15 mm apart, ~12 mm thick incl. connector | Screw size (M3?), hole positions |
-| Plywood, steel sheet, magnets | to buy/cut | Baseboard, bed panel, work holding (§4.8) | — |
-
----
-
-## 3. Build phases
-
-| Phase | Name | Output | Status |
-|-------|------|--------|--------|
-| 0 | Inventory & requirements | §1, §2 | ✅ Done |
-| 1 | Architecture decisions | §4, §6 | ✅ Done |
-| 2 | **Electronics bench bring-up** | Marlin configured and flashed; pin map verified; motors, endstops and servo working on the bench | Next |
-| 3 | **Mechanical CAD (PythonSCAD)** | Parametric model: gantry, carriage, mounts, v1 pen holder, baseboard layout | 🔧 In progress |
-| 4 | Print & assemble | Baseboard, Y axis, gantry, X axis, wiring | — |
-| 5 | Integration & calibration | Homing, squaring, steps/mm, soft limits, bed leveling | — |
-| 6 | First plots & pen-lift experiments | Test patterns from hand-written/scripted G-code; pen-lift mechanism chosen (Q6) | — |
-| 7 | Software toolchain | SVG/PDF → G-code workflow (Q10) | Deferred |
-| 8 | Enhancements | Automatic pen change, other tools, TFT35 standalone use | — |
-
-Phases 2 and 3 are independent and can run in parallel.
-
----
-
-## 4. Design
-
-### 4.1 Kinematics: Cartesian, not CoreXY (D5)
+### 3.1 Kinematics: Cartesian, not CoreXY (D5)
 
 **Where CoreXY wins:** both motors are fixed to the frame, so the moving mass is only the
 carriage. That allows high acceleration and keeps motor cables static. It matters in a
@@ -119,7 +87,7 @@ calibrate, and maps directly onto the parts we have.
 Also considered: *H-bot* (racking torque on the gantry; rejected), *polargraph*
 (vertical surface, low precision; rejected), *moving bed* (needs ~2× footprint; rejected).
 
-### 4.2 Axis layout (D6, D7, D12, D13)
+### 3.2 Axis layout (D6, D7, D12, D13)
 
 ```
    SK10 ┃═══════════ Ø10 shaft (Y1), 700 mm ═══════════┃ SK10
@@ -138,22 +106,14 @@ Also considered: *H-bot* (racking torque on the gantry; rejected), *polargraph*
   to tilting and twisting.
 - **X axis:** a **520 mm 4020 V-slot beam, mounted upright** (40 mm tall), bolted to
   gantry end brackets on top of the SCS blocks. A printed carriage rides on it on POM
-  V-wheels.
+  V-wheels. The beam end sits directly over the shaft, so the gantry weight bears straight
+  down on the blocks; this sets the shaft spacing to **520 mm**.
 - **Drive:** GT2 belts on both axes. Typical setup: 20T pulley, 1.8° motor, 1/16
-  microstepping → **80 steps/mm**. Each Y side has its own belt **30 mm outboard of
-  its shaft** (motor at one end, idler at the other, ~1.4 m belt each). The top run is cut
-  and both ends clamp under the gantry end bracket; the belt line puts the Y motor shaft and
-  idler axle at **~27.8 mm** above the baseboard. The **X belt** is a vertical loop behind
-  the beam (belt center 23 mm behind the beam's center plane, ~1.2 m of belt); its top run is
-  cut and clamped under the carriage's rear block, ~3.6 mm above the beam top. X motor shaft
-  and idler axle run front-to-back at **~94.8 mm** above the baseboard.
-- **X drive (T3.4):** the **X motor** sits behind the beam at the right end
-  (`x_motor_mount.py`), the **idler + belt tensioner** at the left end (`x_idler_mount.py`:
-  the M5 axle slides in an 8 mm slot, an M3 screw pushes it outward, the axle nut locks it),
-  with the **X− endstop** on top of the idler mount (`x_endstop_mount.py`, ±4 mm slots).
-  Both mounts sit on the gantry bracket over the rear SCS block and are clamped by that
-  block's 4 M5 bolts (M5×25 there instead of M5×20), so the brackets need no extra holes. Lead screws only for an
-  optional pen-Z experiment.
+  microstepping → **80 steps/mm**. Each Y side has its own belt outboard of its shaft
+  (motor at one end, idler at the other; the top run is cut and both ends clamp under the
+  gantry end bracket). The X belt is a vertical loop behind the beam, its top run cut and
+  clamped under the carriage's rear block. The X motor sits at one beam end and the idler
+  with its belt tensioner at the other. Lead screws only for an optional pen-Z experiment.
 - **Gantry drive:** a motor on each Y side (second motor on the ZRIB's E0 driver,
   `Y_DUAL_STEPPER_DRIVERS`) and **one endstop per side** (`Y_DUAL_ENDSTOPS`), so the
   gantry is re-squared at every homing. Essential with closed linear bushings, which
@@ -180,7 +140,7 @@ at its ends. Estimated mid-span sag (span ~680 mm, gantry ~1.5 kg → ~0.7 kg pe
 | Gantry at mid-span | ~0.43 mm | ~0.11 mm |
 | **Total** | **~0.6 mm** | **~0.15 mm** |
 
-SK10 clamps sit in between: expect **0.2–0.4 mm**. The pen head absorbs it (§4.8).
+SK10 clamps sit in between: expect **0.2–0.4 mm**. The pen head absorbs it (§3.8).
 **Keep the gantry light.** If sag ever shows up, supported rails (e.g. SBR12) can
 replace the shafts on the same layout.
 
@@ -188,41 +148,29 @@ replace the shafts on the same layout.
 mount the second with slightly oversized SK10 holes; move the gantry to each end and
 tighten the supports there, so the gantry aligns the shafts itself.
 
-**Height stack-up (from the shaft mounting surface):** shaft center 20 mm → SCS10UU base
-7 mm → SCS10UU top face **33.5 mm** (26.5 mm measured block height) → gantry end brackets
-(4 × M5 into the block, 28 × 21 mm pattern) → beam. The carriage's bottom V-wheels hang
-~22 mm below the beam, so the **beam bottom sits at ~58 mm** (bed top ~15, 15 mm media,
-3 mm clearance, ~25 mm of carriage below the beam): the end brackets lift the beam
-~25 mm above the SCS top face. Computed and checked in `params.py`; details in
-[`docs/hardware.md`](docs/hardware.md).
-
-**Gantry end brackets (T3.2, `parts/gantry_end_bracket.py`, left + mirrored right):**
-a 10 mm base plate on both SCS blocks (8 × M5), a ribbed face plate the beam end bolts to
-(2 × M5 into the beam's end bores, in a 1.5 mm locating pocket), the two Y-belt clamps
-underneath (printed caps with tooth ridges, M3 into heat-set inserts), and an M3 trigger
-screw for the Y endstop that also fine-tunes each side's home position. The **beam end
-sits directly over the shaft**, so the gantry weight bears straight down on the blocks;
-this sets the shaft spacing to **520 mm**. ~70 g each (PETG).
+**Height stack-up:** measured from the shaft mounting surface: shaft center → SCS10UU
+base → SCS10UU top face → gantry end brackets → beam. The beam bottom must clear the bed,
+15 mm media, a safety gap and the carriage's bottom wheels, which hang below the beam, so
+the end brackets lift the beam well above the SCS top face. The stack-up is computed and
+checked in `params.py`; the numbers are in `STATUS.md` and `docs/hardware.md`.
 
 **Work area:** A3's short side (297 mm) runs across X, the long side (420 mm) along Y.
-- **X travel ≈ 426 mm** (520 mm beam − ~70 mm carriage − 2 × 12 mm end keep-out: in front
-  of the beam the tool head can't pass over the SCS blocks).
-- **Y travel ≈ 540 mm** (700 mm − 2 × 14 mm SK10 − ~120–135 mm gantry end). It covers
-  A3 with room to park the gantry off the sheet while loading.
-- Shaft spacing **520 mm** center to center (beam end over each shaft, T3.2).
-- Footprint of the mechanics ~600 (X) × ~800 (Y) mm; Y motors/idlers set the Y length (T3.5).
+- **X travel** is the beam length minus the carriage and an end keep-out at each side
+  (in front of the beam the tool head can't pass over the SCS blocks): about 426 mm.
+- **Y travel** is the shaft length minus the SK10 supports and the gantry end: about
+  540 mm. It covers A3 with room to park the gantry off the sheet while loading.
+- Shaft spacing 520 mm center to center. Y travel is parametric in CAD.
 
-### 4.3 Pen lift and media thickness (D14, D18)
+### 3.3 Pen lift and media thickness (D14, D18)
 
-**Approach: choose the pen-lift mechanism by experiment.** The v1 pen holder (§4.4) has a
-vertical slide whose lift actuator can be swapped. Candidates are compared on real plots
-in phase 6.
+**Approach: choose the pen-lift mechanism by experiment.** The v1 pen holder (§3.4) has a
+vertical slide whose lift actuator can be swapped. Candidates are compared on real plots.
 
 **Requirements every candidate must meet:**
 - **Constant, adjustable pen pressure**: starting point ~20–80 g at the tip (fineliners
   need less, markers more), independent of media thickness and small height errors.
 - **≥ 3 mm of float** below first contact with near-constant pressure, to absorb ±1.5 mm
-  of shaft sag, bed and media unevenness (§4.8).
+  of shaft sag, bed and media unevenness (§3.8).
 - **Lift stroke ≥ 5 mm**, so the pen clears warped media while traveling.
 - **Smooth, low-friction vertical slide** with no lateral play (e.g. 2 × LM6UU/LM8UU on
   rods, or a printed slide with PTFE/brass bushings).
@@ -237,7 +185,7 @@ in phase 6.
 | Permanent-magnet assisted | Magnets soften the landing or latch "up" | As above | Experimental |
 | Stepper Z (lead screw) | Spring in the holder; Z position sets compression | Z driver + Z− endstop | Slow lifts; fallback |
 
-### 4.4 Tool head and modularity (D8)
+### 3.4 Tool head and modularity (D8)
 
 A **custom 3D-printed X carriage** with a defined **tool-plate interface** on its front face.
 Every tool head (v1 pen holder, pen-lift experiments, future pen changer) is a separate
@@ -264,24 +212,7 @@ printed part. Start simple and evolve; the tool head is expected to be replaced.
   the beam.
 - Exact dimensions live in `params.py`.
 
-**X carriage (T3.3, `parts/x_carriage.py`):** an 8 mm front plate with 4 V-wheels
-64 mm apart: top pair on printed 8.3 mm stand-offs, bottom pair on the eccentric spacers
-(D21), all on M5×35. A bridge over the middle of the beam (between the top wheels) carries
-a rear block behind the beam that clamps both ends of the X belt (same clamp caps as Y) and
-holds the X endstop trigger (M3 screw head, pointing −X). Printed front face down, ~64 g.
-
-**v1 pen holder:** a printed body on the interface with a vertical slide carrying a V-groove
-pen clamp (centers 7–16 mm pens on one axis; thumbscrew or strap), a coarse ~20 mm height
-adjustment, and a mount for the servo (gravity + servo first).
-
-**Not for v1:** a vertical extrusion "spine" (e.g. the 340 mm 2040). The pen needs only
-a few mm of stroke; an extrusion adds mass and leverage. It could become its own tool head
-later for a heavy tool needing a long Z.
-
-**Later:** automatic pen changing (parking slots at the edge of the work area, or a
-carousel). The interface and connector leave room for it.
-
-### 4.5 Controller and firmware (D9, D19)
+### 3.5 Controller and firmware (D9, D19)
 
 **Board: Zonestar ZRIB v5.8** (ATmega2560, 6 socketed StepStick drivers, min and max
 endstops on every axis, servo header, EXP1/EXP2, microSD, buck 5 V regulator).
@@ -318,7 +249,7 @@ from its own SD/USB, so the plotter runs without a PC. Candidate port: Serial2 o
 pins 3/4, or the AUX connector if that turns out to be serial (see `docs/controller.md`).
 Not needed for v1.
 
-### 4.6 Power
+### 3.6 Power
 
 - Re-use the printer PSU; **voltage to be read from the label** (the board accepts 12–24 V).
   With no heaters, three to four steppers draw far below a printer PSU's rating.
@@ -327,16 +258,16 @@ Not needed for v1.
   (common GND).
 - Mains: enclosed terminals, earthed PSU and frame, strain relief, switched inlet.
 
-### 4.7 Homing, limits and coordinates
+### 3.7 Homing, limits and coordinates
 
 - **Origin at front-left** (X−, Y−). Homing order: Y (both sides square the gantry), then X.
 - Endstops: X−; Y− (left) and the Y+ input used as the right-side Y2 endstop. Z− only if
   a stepper Z is used.
 - Max limits by firmware soft limits (`X_MAX_POS`, `Y_MAX_POS` from the measured travel).
-- After homing, the plot origin is set relative to the registration corner (§4.8),
+- After homing, the plot origin is set relative to the registration corner (§3.8),
   e.g. with `G92` or a workspace offset.
 
-### 4.8 Frame, bed and work holding (D16, D17)
+### 3.8 Frame, bed and work holding (D16)
 
 **Principle: one flat reference.** The SK10 supports and the bed mount on the **same
 baseboard**. The bed only needs to be parallel to the plane the pen moves in, not level
@@ -357,13 +288,13 @@ with gravity.
 sheet** bonded on top. Flat magnets hold the media anywhere, and nothing at the sheet
 edges can catch on the head. The panel sits on **4 adjustment points** (M5 screws with
 nuts, or springs and thumb-nuts) above the baseboard. Alternative: 3–5 mm cast acrylic
-with clips. Glass isn't needed.
+with clips. Glass isn't needed. The final bed choice is made at build time.
 
 **Leveling (once, then occasionally):** a dial gauge, feeler gauge or sheet of paper under
 the pen holder. Jog to the four corners and the center, and adjust until the gap is
 within ±0.3 mm.
 
-**Z error budget the pen head must absorb:**
+**Z error budget the pen head must absorb (D18):**
 
 | Source | Estimate |
 |--------|----------|
@@ -371,7 +302,7 @@ within ±0.3 mm.
 | Bed flatness after adjustment | ±0.3 mm |
 | Residual board/panel bow | ~0.3 mm |
 | Media unevenness (warped card, wood) | 0.5–1.5 mm |
-| **Total** | **~±1.5 mm** → ≥ 3 mm float, ≥ 5 mm lift (§4.3) |
+| **Total** | **~±1.5 mm** → ≥ 3 mm float, ≥ 5 mm lift (§3.3) |
 
 **XY squareness and registration:**
 - Dual Y endstops square the gantry at every homing. X-to-Y squareness is set once when
@@ -380,232 +311,61 @@ within ±0.3 mm.
 - **Registration corner:** the machine draws an L-shaped reference line at the sheet
   origin. Fix printed or magnetic stops along it so sheets go in square to the machine axes.
 
-### 4.9 Software (Q10 deferred)
+### 3.9 Software
 
-**First (phases 5–6):** hand-written or small scripted G-code test patterns (squares,
-circles, grids, pen up/down tests), sent over USB (Pronterface / any Marlin host) or from
-the SD card.
+**First:** hand-written or small scripted G-code test patterns (squares, circles, grids,
+pen up/down tests), sent over USB (Pronterface / any Marlin host) or from the SD card.
 
-**Later (Q10):** an SVG/PDF → G-code workflow. Likely candidates: Inkscape or generative
+**Later:** an SVG/PDF → G-code workflow. Likely candidates: Inkscape or generative
 code → `vpype` (merge, sort, simplify paths) → G-code with pen up/down mapped to `M280`
-(or to the chosen pen-lift commands) → sender.
+(or to the chosen pen-lift commands) → sender. Deferred until the machine runs (D20).
 
 ---
 
-## 5. Key numbers (quick reference)
+## 4. Design decisions
 
-| Item | Value |
-|------|-------|
-| X travel / Y travel | ~426 mm / ~543 mm |
-| Target media | A3 and smaller, 0–15 mm thick |
-| Steps/mm (GT2, 20T, 1.8°, 1/16) | 80 |
-| Shaft center height above the mounting surface | 20 mm |
-| SCS10UU top face above the mounting surface | 33.5 mm |
-| SCS10UU top mounting holes | 4 × M5, 28 (across) × 21 (along) mm |
-| Bed top / thickest media top (above baseboard) | ~15 mm / ~30 mm (*design values*) |
-| X beam bottom / top (above baseboard) | ~58 / ~98 mm (carriage clears 15 mm media by 3 mm) |
-| Expected shaft sag | 0.2–0.4 mm |
-| Pen head | ≥ 5 mm lift, ≥ 3 mm float, ~20 mm manual height adjust, 7–16 mm pens |
-| Pen pressure (start point) | ~20–80 g |
-| Baseboard | 18 mm plywood, ~850 × 650 mm |
-| Shaft spacing | 520 mm |
-| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard |
-| X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~94.8 mm above the baseboard; ~1.2 m belt |
-| Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
-| Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 inserts 36 mm apart |
-| Mechanics footprint | ~600 × ~800 mm |
+High-level decisions that shape the project. Each has an ID that is referenced from code
+and docs. To change one, see §7.1. Lower-level and in-progress decisions (D11, D17, D20–D24
+and newer) are in the decision log in [`STATUS.md`](STATUS.md).
 
----
-
-## 6. Decision log
-
-| ID | Decision | Status | Ref |
-|----|----------|--------|-----|
-| D1 | Metric units throughout | ✅ | Project rule |
-| D2 | CAD in PythonSCAD (Python), parametric; OpenSCAD until D22 | ✅ | Project rule, D22 |
-| D3 | Off-the-shelf / 3D-printer parts + printed parts only | ✅ | Project rule |
-| D4 | Pen lift is a v1 requirement | ✅ | §4.3 |
-| D5 | Cartesian moving-gantry layout (not CoreXY) | ✅ | §4.1, Q4 |
-| D6 | Y = 2 × Ø10 × 700 mm shafts on SK10 supports, 2 SCS10UU blocks per side | ✅ | §4.2; replaces the earlier SBR12 plan (no SBR12 on hand) |
-| D7 | GT2 belt drive on X and Y; lead screws only for an optional pen-Z experiment | ✅ | §4.2 |
-| D8 | Printed X carriage with a hook + 2 × M3 tool-plate interface and a tool-head connector; tool heads are separate printed parts; no extrusion spine in v1 | ✅ | §4.4, Q8 |
-| D9 | Controller: ZRIB v5.8 with Marlin `BOARD_ZRIB_V53`; Y2 on E0; servo on SERVO0 | ✅ | §4.5, Q7; pin map verified in phase 2 |
-| D10 | Target media A3 and smaller; A3 short side across X | ✅ | Q3 |
-| D11 | Y travel ~540 mm; Y length parametric in CAD | ✅ | Q3 |
-| D12 | X beam: 520 mm 4020 V-slot mounted upright (~426 mm X travel) | ✅ | §4.2 |
-| D13 | Dual Y motors with one endstop per side (auto-squaring) | ✅ | §4.2, Q5 |
-| D14 | Pen-lift mechanism chosen by experiment; start with gravity + servo | ✅ | §4.3, Q6 |
-| D15 | Media thickness 0–15 mm | ✅ | Q3 |
-| D16 | 18 mm plywood baseboard (~850 × 650 mm) with extrusion runners underneath; shafts and bed share it as the reference | ✅ | §4.8, Q9 |
-| D17 | Bed: adjustable panel (4 points) with a bonded steel sheet and magnets; acrylic as alternative; no glass | 🟡 Proposed (final choice at build) | §4.8 |
-| D18 | Pen head absorbs ±1.5 mm Z error: ≥ 3 mm float with near-constant pressure, ≥ 5 mm lift | ✅ | §4.8 |
-| D19 | Heaters disabled in firmware (`EXTRUDERS 0`, sensors 0) and left unconnected | ✅ | §4.5 |
-| D20 | SVG/PDF toolchain deferred; prove the machine with hand-written/scripted G-code first | ✅ | §4.9, Q10 |
-| D21 | X-carriage preload: 2 eccentric spacers on the bottom wheel pair. Fallback if 2 can't be found: slotted axle holes + M3 push screw, clamped by the axle nut (`CARRIAGE.preload` in `params.py`) | ✅ | §4.4, Q11 |
-| D22 | Migrate the CAD from OpenSCAD to PythonSCAD: a `plotter_cad` Python package (`src/`), pip `pythonscad` module for STL export, PythonSCAD app for renders/preview. Ported 1:1 (all 8 STLs geometrically identical); the old `.scad` files were removed afterwards | ✅ | §10, T3.9 |
-| D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | §10 |
-| D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
+| ID | Decision | Rationale |
+|----|----------|-----------|
+| D1 | Metric units throughout | Project rule |
+| D2 | CAD in PythonSCAD (Python), parametric | Project rule; one scriptable, testable source |
+| D3 | Off-the-shelf / 3D-printer parts + printed parts only | Project rule |
+| D4 | Pen lift is a v1 requirement | §3.3 |
+| D5 | Cartesian moving-gantry layout (not CoreXY) | §3.1 |
+| D6 | Y = 2 × Ø10 × 700 mm shafts on SK10 supports, 2 SCS10UU blocks per side | §3.2; replaces an earlier SBR12 plan (none on hand) |
+| D7 | GT2 belt drive on X and Y; lead screws only for an optional pen-Z experiment | §3.2 |
+| D8 | Printed X carriage with a hook + 2 × M3 tool-plate interface and a tool-head connector; tool heads are separate printed parts; no extrusion spine in v1 | §3.4 |
+| D9 | Controller: ZRIB v5.8 with Marlin `BOARD_ZRIB_V53`; Y2 on E0; servo on SERVO0 | §3.5; pin map verified on the bench |
+| D10 | Target media A3 and smaller; A3 short side across X | R3, §3.2 |
+| D12 | X beam: 520 mm 4020 V-slot mounted upright (~426 mm X travel) | §3.2 |
+| D13 | Dual Y motors with one endstop per side (auto-squaring) | §3.2 |
+| D14 | Pen-lift mechanism chosen by experiment; start with gravity + servo | §3.3 |
+| D15 | Media thickness 0–15 mm | R2 |
+| D16 | 18 mm plywood baseboard (~850 × 650 mm) with extrusion runners underneath; shafts and bed share it as the reference | §3.8 |
+| D18 | Pen head absorbs ±1.5 mm Z error: ≥ 3 mm float with near-constant pressure, ≥ 5 mm lift | §3.8 |
+| D19 | Heaters disabled in firmware (`EXTRUDERS 0`, sensors 0) and left unconnected | §3.5 |
 
 ---
 
-## 7. Open questions
-
-| ID | Question | Status |
-|----|----------|--------|
-| Q1 | Controller boards | ✅ ZRIB v5.8; Creality board TBD (fallback); TFT35-E3 is a screen/SD sender |
-| Q2 | Parts inventory | ✅ Enough to proceed; remaining measurements listed in §8 (T2.1, T3.1) |
-| Q3 | Work area, rail length, media thickness | ✅ A3; ~540 mm Y travel; 0–15 mm media |
-| Q4 | Cartesian vs CoreXY | ✅ Cartesian |
-| Q5 | Gantry drive and squaring | ✅ Dual Y motors + dual endstops |
-| Q6 | Pen lift and thickness handling | 🔬 Approach decided; mechanism chosen by experiment (T6.2) |
-| Q7 | Firmware and board mapping | ✅ Marlin `BOARD_ZRIB_V53`; verified in T2.3 |
-| Q8 | Tool-plate interface and v1 pen holder | ✅ §4.4 |
-| Q9 | Frame, baseboard and work holding | ✅ §4.8 (bed material finalized at build) |
-| Q10 | SVG/PDF → G-code toolchain | ⏸ Deferred to phase 7 |
-| Q11 | X-carriage wheel preload | ✅ D21: 2 eccentric spacers on the bottom pair; slot + push-screw fallback |
-| Q12 | Are the 4020 beam ends tapped M5 (gantry brackets bolt into the end bores)? | ❓ User to check; else tap M5 or let an M5 screw cut its own thread |
-
----
-
-## 8. Work plan
-
-Tasks are sized for one working session each. When a task is done: tick it here, record
-any new decisions in §6, and update the status line at the top.
-
-### Phase 2 — Electronics bench bring-up (see `docs/controller.md`)
-
-- [ ] **T2.1 Read the hardware facts.** PSU label (voltage, current); chip markings on all
-  6 drivers (A4988/DRV8825/other); microstepping jumpers under each socket; servo model.
-  *Done when:* recorded in §2 and `docs/controller.md`.
-- [ ] **T2.2 Configure Marlin.** Marlin 2.1.x; store config in `firmware/` (full
-  `Configuration.h` / `Configuration_adv.h` or a diff, plus build notes). Key settings:
-  `BOARD_ZRIB_V53`, `EXTRUDERS 0`, `TEMP_SENSOR_* 0`, `Y_DUAL_STEPPER_DRIVERS`,
-  `Y_DUAL_ENDSTOPS` (+ `Y2_USE_ENDSTOP _YMAX_`), `NUM_SERVOS 1`, driver types, 80 steps/mm
-  for X/Y, travel limits (~410 × 540), `PINS_DEBUGGING` (for `M43`), SD card support.
-  *Done when:* it compiles (PlatformIO, `mega2560` env).
-- [ ] **T2.3 Flash and verify the pin map.** Flash over USB. Check every endstop with
-  `M43 W` / `M119`. Jog each driver socket with one motor attached; confirm E0 drives Y2.
-  *Done when:* the pin map in `docs/controller.md` is marked verified, or corrected.
-- [ ] **T2.4 Servo and 5 V test.** Find the servo header (likely XS2). Check `M280 P0 S<angle>`
-  sweeps, and that the board doesn't reset with the servo stalled.
-  *Done when:* header and angle range recorded; decision on a separate 5 V supply.
-- [ ] **T2.5 Driver current (Vref).** Set Vref for the motors in use; both Y drivers identical.
-- [ ] **T2.6 (Optional) TFT35-E3.** Identify the AUX connector pins; connect the TFT in touch
-  mode (Serial2 on EXP1 or AUX).
-
-### Phase 3 — Mechanical CAD (PythonSCAD; conventions in `CLAUDE.md`, workflow in §10)
-
-- [x] **T3.1 Scaffold the CAD.** `params.py` (travel, shaft spacing, clearances,
-  print tolerances, tool-plate interface dimensions), `hardware/` (models of NEMA17,
-  GT2 pulley, SK10, SCS10UU, 2020/4020, V-wheel, fasteners, from `docs/hardware.md`).
-  Measure first: SK10 hole spacing/size, NEMA17 body length, belt width, V-wheel dimensions.
-  - [x] Files written with catalog values marked `// ASSUMED`; derived stack-up, travel
-    and clearance checks (now `params.design_checks()`); `assemblies/skeleton.py` (layout check) and
-    `hardware_gallery.py`. All render without errors.
-  - [x] SK10: vendor table (values in `docs/hardware.md`): 2 × M5 on 32 mm, W 42,
-    F 37.5, L 14, base 6.
-  - [x] 4020 confirmed V-slot (user).
-  - [x] NEMA17: design for 39.2 mm body / 22.6 mm shaft; belt lines must fit the shortest
-    shaft on hand (19 mm, 33.5 mm motor); 48 mm clearance envelope.
-  - [x] 6 mm GT2 belt; common 20T pulleys and idlers; V-wheels Ø24 × 10. Design for common
-    sizes, adjust at assembly. Eccentric spacers: only a few, don't rely on them (Q11).
-  - Remaining measurements moved to the tasks that need them (T3.2, T3.3/T3.5, T3.6).
-- [x] **T3.2 Gantry end brackets (×2).** Bolt to two SCS10UU (4 × M5 each, 28 × 21 mm), hold
-  the 4020 beam square, include the Y belt clamp and the Y endstop trigger. Lift the beam
-  bottom to ~58 mm (§4.2). Bracket bears on the SCS10UU's two 10 mm top flats (measured).
-  → `parts/gantry_end_bracket.py` (left/right), `parts/y_belt_clamp.py` (×4),
-  `assemblies/gantry.py`; STLs in `stl/`. The endstop switch itself mounts in T3.5.
-  - [ ] Follow-up: answer Q12 (beam ends tapped?); test-print one bracket and check the fit
-    on the SCS blocks, the beam pocket and the belt clamp before printing the pair.
-- [x] **T3.3 X carriage.** 4 V-wheels on the 4020 (eccentric bottom pair, D21), X belt clamp,
-  X endstop trigger, tool-plate interface (hook + 2 × M3), connector mount, cable strain relief.
-  Eccentric spacers measured (10 mm hex × 7.8, Ø7 × 2.1 boss, ~0.7 mm offset): bottom wheels
-  sit 8.3 mm from the plate face; the top wheels match on printed stand-offs.
-  → `parts/x_carriage.py` (+ `Preload.SLOT` fallback),
-  `assemblies/carriage.py`; STL in `stl/`. Checked: no collision with the gantry
-  brackets at either end of travel, incl. a 50 × 60 mm tool-head envelope.
-  - [ ] Follow-up: test-print; check wheel preload range, hook-groove fit (with the T3.6 tool
-    plate) and the X belt clamp. (STL regenerated in T3.4: belt line 4 mm further back.)
-- [x] **T3.4 X motor mount and X idler** at the beam ends. → `x_motor_mount.py` (right end,
-  printed mirrored), `x_idler_mount.py` + `x_idler_spacer.py` (left end, slot tensioner),
-  `x_endstop_mount.py` (X− switch on the idler mount); assembled in
-  `assemblies/gantry.py`. The X belt line moved 4 mm back (center 23 mm behind the beam
-  center) so the motor plate fits between the bracket's rear bolt rows and 22.6 mm motor
-  shafts clear the beam; the carriage regenerates from `params.py` (new STL; trigger now
-  at z ~114.5). Checked: no collisions with the carriage at either end of travel.
-  - [ ] Follow-up: check the endstop board's hole positions and connector side against
-    `x_endstop_mount.py` (assumed: holes across the width, 4 mm from the far end; connector
-    on the switch side); test-print and check belt tension range and switch trip point.
-- [ ] **T3.5 Y motor mounts, Y idlers and belt tensioners** (on the baseboard, in line with
-  each shaft); endstop mounts for X−, Y−, Y2. Belt center 30 mm outboard of each shaft;
-  motor shaft / idler axle at `y_pulley_axis_z` (~27.8 mm, motor body ~6.7 mm above the
-  board). Y endstops are hit by the bracket's trigger screw (outboard, ~48 mm above the
-  board). Endstops: Creality-type boards (`endstop()` in `hardware/`). *Check first:*
-  screw size (M3?) and where the two holes sit (across the 20 mm width?).
-- [ ] **T3.6 v1 pen holder (tool head).** Vertical slide, V-groove clamp for 7–16 mm pens,
-  ~20 mm height adjustment, servo mount, gravity loading with room for added weight; meets
-  the §4.3 requirements. Interface: `TOOL_PLATE` in `params.py` (≤ 50 mm wide, hook lip for the
-  45° groove, 2 × M3); cable to the connector window in the carriage top tab.
-  *Check first:* servo model.
-- [ ] **T3.7 Full assembly and baseboard layout.** Assembly model for fit checks (travel,
-  clearances, 15 mm media under the head). 1:1 baseboard drilling layout: SK10 positions,
-  motor mounts, bed-panel adjustment points, runners, electronics.
-- [ ] **T3.8 Cable management.** Drag chain or cable guide from the gantry to the board.
-- [x] **T3.9 Migrate the CAD to PythonSCAD (D22).** Sanity test: PythonSCAD renders the
-  old `.scad` files to the same STLs. Port to a Python package (`src/plotter_cad/`:
-  `params.py`, `hardware/`, `parts/`, `assemblies/`, `build.py` CLI) with pytest tests
-  and ruff. Checked: all 8 STLs geometrically identical to the OpenSCAD ones (volume,
-  bounding box, cross-sections; incl. the `Preload.SLOT` fallback); assemblies match by
-  volume and bounding box; same key numbers. The old `.scad` files were removed afterwards.
-
-### Phase 4 — Build
-
-- [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.
-- [ ] **T4.2** Mount the SK10s and shafts; fit the gantry; align the shafts (§4.2 procedure).
-- [ ] **T4.3** Fit the beam, carriage, motors, belts and endstops; check that the axes move
-  freely by hand.
-- [ ] **T4.4** Mount the electronics and PSU; wire everything; safety checks on mains wiring.
-
-### Phase 5 — Integration & calibration
-
-- [ ] **T5.1** First homing (Y squaring, then X); set soft limits from the measured travel.
-- [ ] **T5.2** Steps/mm check (draw/measure a 300 mm line); squareness check (diagonals of a
-  large square); belt tension.
-- [ ] **T5.3** Bed leveling (§4.8); set the pen-down height and the float.
-
-### Phase 6 — First plots & pen-lift experiments
-
-- [ ] **T6.1** Test-pattern G-code in `software/test-patterns/` (squares, circles, grids,
-  text, pen up/down stress test); speed/acceleration tuning.
-- [ ] **T6.2** Pen-lift experiments (Q6): gravity + servo, then spring + servo and
-  solenoid/magnet options; compare pressure consistency, line quality and speed; record the
-  results in `docs/pen-lift.md` and choose a mechanism.
-- [ ] **T6.3** Registration corner (§4.8).
-
-### Phase 7 — Software toolchain (Q10)
-
-- [ ] **T7.1** Choose and document the SVG/PDF → G-code workflow.
-
-### Phase 8 — Enhancements (backlog)
-
-- Automatic pen changing; TFT35 standalone plotting; other tool heads.
-
----
-
-## 9. Repository layout
+## 5. Repository layout
 
 ```
 Plotter/
-├── README.md            ← overview, decisions, work plan (this file)
-├── CLAUDE.md            ← guidelines for Claude working on this project
-├── pyproject.toml       ← Python project: plotter_cad package, deps, pytest/ruff/uv config
-├── Makefile             ← shortcuts: make develop / check / format / lint / test / stl / render / clean
+├── README.md            ← overview, design, standards, contribution guidelines (this file)
+├── STATUS.md            ← ongoing development: work plan, decisions, open questions
+├── CLAUDE.md            ← instructions specific to AI agents
+├── pyproject.toml       ← Python project: plotter_cad package, deps, pytest/ruff/mypy/uv config
+├── Makefile             ← shortcuts: make develop / check / typecheck / format / lint / test / stl / render / clean
 ├── uv.lock              ← locked dependency versions (uv)
 ├── .python-version      ← Python version for pyenv and uv (3.14)
 ├── docs/
 │   ├── controller.md    ← ZRIB v5.8 analysis, pin map, bring-up checklist
-│   └── hardware.md      ← vendor part dimensions for CAD
-├── src/plotter_cad/     ← CAD (PythonSCAD); paths in this README are relative to it
+│   ├── hardware.md      ← vendor part dimensions for CAD
+│   └── sketch-formats.md ← research on parametric 2D sketch formats
+├── src/plotter_cad/     ← CAD (PythonSCAD); paths in the docs are relative to it
 │   ├── params.py        ← shared parameters, derived values, design checks
 │   ├── geometry.py      ← $fn settings, teardrop holes, SVG sketch loader and other helpers
 │   ├── hardware/        ← vendor-part dimensions and models (SK10, SCS10UU, NEMA17…),
@@ -613,6 +373,7 @@ Plotter/
 │   ├── parts/           ← printable parts, one module each (print orientation)
 │   ├── assemblies/      ← fit-check assemblies (gantry, carriage, skeleton, gallery)
 │   └── build.py         ← CLI: python -m plotter_cad {check,stl,render,all}
+├── stubs/pythonscad/    ← type stub for the untyped pythonscad module
 ├── tests/               ← pytest: design rules, sane printable solids, connected assemblies
 ├── stl/                 ← exported printable parts (generated by `make stl`; git-ignored)
 ├── renders/             ← PNG renders of parts and assemblies (generated by `make render`; git-ignored)
@@ -622,10 +383,10 @@ Plotter/
 
 ---
 
-## 10. CAD workflow (PythonSCAD)
+## 6. Development setup and workflow
 
 The CAD is plain Python on top of the [PythonSCAD](https://pythonscad.org) `pythonscad`
-module (OpenSCAD's geometry engine with a Python API). Conventions: `CLAUDE.md`.
+module (OpenSCAD's geometry engine with a Python API). Conventions: §7.4.
 
 **Setup (once):** Python ≥ 3.14 from [pyenv](https://github.com/pyenv/pyenv), packages
 managed with [uv](https://docs.astral.sh/uv/). `.python-version` pins 3.14 for both
@@ -636,7 +397,7 @@ pyenv interpreter instead of downloading its own. Dependencies are locked in `uv
 cd Plotter
 pyenv install --skip-existing 3.14            # any 3.14.x
 uv venv --python "$(pyenv which python)"      # creates .venv on the pyenv interpreter
-uv sync --extra dev                           # plotter_cad + pythonscad + pytest + ruff
+uv sync --extra dev                           # plotter_cad + pythonscad + pytest + ruff + mypy
 source .venv/bin/activate                     # or prefix commands with `uv run`
 ```
 
@@ -644,9 +405,11 @@ source .venv/bin/activate                     # or prefix commands with `uv run`
 (or `uv sync --extra dev`) again; it updates `uv.lock`.
 
 **Shortcuts (`Makefile`):** `make develop` (set up the environment), `make check` (mypy,
-ruff lint + format check; changes nothing), `make typecheck` (mypy only), `make format` (re-format the code), `make lint`
-(ruff lint with automatic fixes), `make test` (pytest), `make stl` (all STLs), `make render` (all PNG renders; needs the PythonSCAD app), `make clean` (delete
-`stl/`, `renders/`, caches and build output; keeps `.venv`). `make` lists them.
+ruff lint + format check; changes nothing), `make typecheck` (mypy only), `make format`
+(re-format the code), `make lint` (ruff lint with automatic fixes), `make test` (pytest),
+`make stl` (all STLs), `make render` (all PNG renders; needs the PythonSCAD app),
+`make clean` (delete `stl/`, `renders/`, caches and build output; keeps `.venv`).
+`make` lists them.
 
 For renders and interactive preview, also install the PythonSCAD app
 (pythonscad.org/downloads; on macOS it is found at `/Applications/PythonSCAD.app`).
@@ -655,16 +418,17 @@ For renders and interactive preview, also install the PythonSCAD app
 
 | Command | What it does |
 |---------|--------------|
-| `python -m plotter_cad check` | Design checks + key numbers (§5) |
+| `python -m plotter_cad check` | Design checks + key numbers |
 | `python -m plotter_cad stl [names]` | Export printable parts to `stl/` |
 | `python -m plotter_cad render [names]` | PNGs of parts and assemblies to `renders/` (needs the app; `--pythonscad PATH` or `$PYTHONSCAD`) |
 | `python -m plotter_cad all` | All of the above |
-| `python -m pytest` | Tests: design rules hold, every part is a sane printable solid, assembly parts connect (philosophy: `CLAUDE.md` § Testing) |
+| `python -m pytest` | Tests: design rules hold, every part is a sane printable solid, assembly parts connect (philosophy: §7.6) |
+| `mypy` | Type checks (§7.5) |
 | `ruff format . && ruff check .` | Formatting and lint (PEP 8) |
 
 After an intentional geometry change: review the new STLs/renders.
 
-**2D sketches (experiment, D23):** a shape that is easier to draw than to code can be an
+**2D sketches (trial, D23):** a shape that is easier to draw than to code can be an
 SVG file next to the Python module that uses it. `geometry.load_sketch(path)` imports it
 as a 2D object, which the module extrudes:
 
@@ -689,3 +453,186 @@ beam = linear_extrude(profile, height=520)
 
 **Interactive preview:** open `preview.py` (repo root) in the PythonSCAD app, set the
 part or assembly name at the top, and render (F6). It adds `src/` to the path itself.
+
+---
+
+## 7. Contribution guidelines and coding standards
+
+These apply to everyone working on the project, human or AI agent.
+
+### 7.1 Working on the project
+
+- Pick work from the task list in [`STATUS.md`](STATUS.md); do **one task at a time** and
+  check its "done when" criterion.
+- Before designing around an unknown dimension or fact, **measure or check it** (photos
+  welcome) instead of guessing. Mark any assumed value clearly as `ASSUMED` in code and as
+  *assumed* in docs.
+- Check the inventory (`STATUS.md`) and `docs/hardware.md` before designing around a part.
+- **Don't silently change a decision.** High-level decisions are in §4, detailed ones in
+  `STATUS.md`. To change one, propose it, explain the trade-off, and update the log once
+  it is agreed.
+- When comparing options, give a short table of trade-offs and a recommendation.
+- When a task is finished: tick it in `STATUS.md`, add follow-up tasks, record new or
+  changed decisions and open questions there, update its inventory, key numbers and
+  as-built notes (and `docs/`) with any new facts or measurements, and update its status
+  line.
+
+**Hard rules**
+
+1. **Metric only.** Millimeters, degrees, mm/s (or mm/min where G-code requires it, and
+   say which). No imperial units or fasteners.
+2. **Hardware is off-the-shelf or salvaged 3D-printer parts.** Metric hex fasteners
+   (M2.5/M3/M4/M5, ISO 4762 socket head preferred), heat-set inserts or captive nuts,
+   NEMA17 steppers, GT2 belts/pulleys, T8 lead screws, 608/625 bearings, LM6UU/LM8UU,
+   Ø10 mm shafts with SK10 supports and SCS10UU blocks, 2020/2040/4020/4040 V-slot extrusion.
+   Anything else must be justified and noted in this README.
+3. **CAD is PythonSCAD (Python).** The `plotter_cad` package under `src/` is the only CAD
+   source (D2). No other CAD formats as sources, with one exception on trial (D23):
+   2D sketches as SVG files next to the module that extrudes them (§6). STLs and renders
+   are generated outputs.
+4. **Safety:** printer heaters stay disabled in firmware and unconnected; mains wiring
+   enclosed and earthed.
+
+### 7.2 Design constraints
+
+- **Keep the gantry light.** The Y shafts are end-supported Ø10 mm shafts that sag
+  ~0.2–0.4 mm under the gantry (§3.2).
+- **Pen head:** ≥ 5 mm lift, ≥ 3 mm float with near-constant pressure, ~20 mm manual
+  height adjustment, 7–16 mm pens, pen close to the carriage face (§3.3, §3.4).
+- **Modularity:** tool heads attach only through the tool-plate interface (hook + 2 × M3,
+  §3.4). Don't couple tool-head geometry to the carriage beyond that interface.
+- **Clearance:** 15 mm media must pass under the head and gantry everywhere in the travel.
+- **Simplicity over performance:** prefer the easy-to-build, easy-to-debug option.
+- **Serviceability:** belts tensionable without disassembly; motors, boards and tool
+  heads replaceable with hand tools.
+
+### 7.3 Documentation
+
+- Keep this README concise; prefer tables for comparisons and decisions. It holds what
+  rarely changes; anything tied to the progress of the work goes in `STATUS.md`.
+- **US English spelling** everywhere: docs, comments, docstrings, identifiers, sketch
+  comments (center, color, modeled, leveling, aluminum, millimeter, catalog...).
+- Longer research, procedures and results go in `docs/<topic>.md` (e.g.
+  `docs/pen-lift.md`, `docs/calibration.md`), linked from this README or `STATUS.md`.
+- Don't store vendor datasheets or drawings in the repository (copyright). Record the
+  values for the specific parts we use in `docs/hardware.md` and note where they came from.
+- Electronics wiring and pin allocation live in `docs/controller.md`; keep it current
+  (mark items verified after bench tests).
+
+### 7.4 CAD conventions (PythonSCAD)
+
+The CAD is a Python package, `plotter_cad` (`src/plotter_cad/`), built on the
+[PythonSCAD](https://pythonscad.org) `pythonscad` module (OpenSCAD's geometry engine
+with a native Python API). Setup and commands are in §6.
+
+- **Environment:** Python ≥ 3.14 from pyenv (`.python-version`), virtualenv in `.venv`,
+  dependencies managed by uv (`uv sync --extra dev`, locked in `uv.lock`). Run commands
+  in the activated `.venv` or with `uv run` (e.g. `uv run python -m pytest`). Don't
+  install packages with `pip`; add them to `pyproject.toml` and re-sync.
+- **Parametric first.** Shared dimensions in `params.py` (travel, shaft spacing,
+  clearances, tolerances, tool-plate interface), grouped into frozen dataclasses with one
+  module-level instance each (`TOL`, `BEAM`, `CARRIAGE`, `TOOL_PLATE`...). Vendor-part
+  dimensions and simple models in `hardware/` (`SK10`, `SCS10UU`, `NEMA17`, `VWHEEL`,
+  fasteners...). Derived values are `@property`s, never typed-in numbers. No magic
+  numbers in part modules: add a parameter instead.
+- **2D sketches (trial, D23):** an SVG next to the module that uses it, loaded with
+  `geometry.load_sketch()`; 1 unit = 1 mm, origin at the viewBox's bottom-left, holes as
+  `evenodd` sub-paths, dimensions noted in a comment in the file (§6). So far
+  only for vendor-part profiles (`hardware/vslot_*.svg`); printed parts stay parametric
+  in Python unless a sketch is requested.
+- **Design rules** live in `params.design_checks()`; `check_design()` raises
+  `DesignError`. Add a rule whenever a new constraint appears (clearance, travel, fit).
+- One printable part per module in `parts/`, exposing a function that returns the part
+  in its **print orientation** (flat face on z = 0), plus `*_installed()` / `*_left()`
+  helpers when the part is designed in another frame. Register every printable part in
+  `parts.PRINTABLE_PARTS` (name = STL file name).
+- Assemblies in `assemblies/` return lists of colored solids (parts + hardware models)
+  for fit checks; register them in `assemblies.ASSEMBLIES`.
+- Default print tolerances (tune after a test print; keep them in `params.TOL`):
+  - Bolt clearance holes: nominal + 0.3–0.4 mm (M3 → 3.4 mm, M5 → 5.4 mm)
+  - Sliding fit +0.2 mm; press fit −0.1 to 0 mm
+  - Nut traps: across-flats + 0.3 mm
+  - Minimum wall: 1.6 mm (4 perimeters at 0.4 mm nozzle)
+- Prefer designs printable without supports (teardrop holes from `geometry.py`, 45°
+  overhangs); note any required supports in the module docstring.
+- Each part module starts with a docstring: purpose, required hardware (with
+  quantities), print settings (material, layer height, infill, orientation).
+- Facet counts: pass `fn=` explicitly; use `geometry.FN` / `geometry.FN_HOLE` (64) for
+  printed geometry, lower counts only for hardware models.
+- **Before handing over a CAD change:** `make check` and `make test` pass;
+  `python -m plotter_cad stl` regenerates `stl/`; `python -m plotter_cad render`
+  regenerates `renders/` (needs the PythonSCAD app). If geometry changed on purpose,
+  review the STLs/renders.
+
+### 7.5 Python coding standards
+
+- PEP 8, enforced by `ruff format` and `ruff check` (config in `pyproject.toml`,
+  line length 100).
+- Import PythonSCAD names explicitly (`from pythonscad import cube, cylinder`), never
+  `from pythonscad import *`.
+- Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
+  reads in the order the operations happen. Note that this is the reverse of the
+  OpenSCAD nesting order.
+- Don't give a function the same name as its module inside a package `__init__`
+  (`from .x_carriage import x_carriage` shadows the submodule); import modules there.
+- Mark assumed values with an `ASSUMED` comment, design choices with `DESIGN (Tn.m)`.
+
+#### Type annotations
+
+- All code must pass type checking with `mypy` (`make typecheck`, part of `make check`;
+  strict mode, config in `pyproject.toml`). Annotate all new functions and public
+  attributes.
+- Follow PEP 604 (`X | Y` unions) and PEP 673 (`Self`).
+- Use `collections.abc` for generic collection types over deprecated `typing` types.
+- Prefer structural typing (duck typing) such as `Protocol`s over strict inheritance,
+  unless inheritance also serves other purposes beyond type adherence (such as code reuse).
+- `pythonscad` ships no type information: the local stub `stubs/pythonscad/__init__.pyi`
+  provides it, including the `Solid` type. `Solid` exists only in the stub, so import it
+  under `if TYPE_CHECKING:` (annotations are lazy in Python 3.14). Extend the stub when
+  using a new PythonSCAD function or method.
+
+#### Comments and docblocks
+
+- Files, classes and functions have a short docblock (at least a one-liner, PEP 257 style)
+  describing the purpose of the unit: "what this is", not "how this works".
+- A Google-style docstring may describe a function in more detail, beyond what naming and
+  type annotations already say, if necessary.
+- Inline comments should be rare, and never explain what the code does or repeat what is
+  obvious from reading it.
+- A short inline comment is fine for a non-obvious block or something others may find
+  confusing or counter-intuitive, but code should be self-documenting; a comment is a
+  last resort.
+
+### 7.6 Testing
+
+Tests exist to make changes faster and safer: they should fail when the code is broken
+and stay quiet when a design value changes on purpose. A test that only makes changes
+slower has negative value; delete it.
+
+**Test:**
+- Pure functions that are reused or more than trivial (geometry helpers, the sketch
+  loader, the measuring helpers in `tests/solids.py`).
+- Solids are sane: every printable part is one piece with no enclosed voids, has a
+  plausible volume and rests on the print bed.
+- Assemblies hold together: parts touch what they mount on, nothing floats.
+- Behavior at the public interface: the design rules pass, a broken rule is reported,
+  errors for bad input, the STL export writes its files.
+
+**Don't test:**
+- Parameter or geometry values that are expected to change (key numbers, reference
+  volumes or bounding boxes). That duplicates the configuration and breaks on every
+  intended change. A real constraint belongs in `params.design_checks()` instead.
+- Trivial behavior: Python operators, one-line arithmetic, other libraries.
+- Implementation details and private (`_name`) code.
+- Anything through a mock that replaces the code under test. Overriding a parameter
+  set (e.g. `dataclasses.replace` on a params instance) is fine; faking the
+  implementation is not.
+
+Run with `make test`. Assemblies are fit-check models: when a connection test fails
+because a model is too crude (a missing nut or bushing), fix the model.
+
+### 7.7 Firmware
+
+- Marlin 2.1.x, `BOARD_ZRIB_V53`. Keep the configuration under `firmware/` (full files or
+  a diff against a stated Marlin version) with build and flash notes.
+- Never enable heaters or thermal outputs.

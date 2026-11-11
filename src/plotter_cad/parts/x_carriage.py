@@ -1,4 +1,4 @@
-"""X carriage on the upright 4020 beam (README §8 T3.3). Print ×1.
+"""X carriage on the upright 4020 beam (STATUS.md T3.3). Print ×1.
 
 Purpose: carries the tool head. Four V-wheels ride the beam's top and bottom grooves
 (bottom pair on eccentric spacers for preload, D21). A bridge over the middle of the

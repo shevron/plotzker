@@ -1,4 +1,4 @@
-"""X idler mount + belt tensioner (README §8 T3.4). Print ×1 (left gantry end).
+"""X idler mount + belt tensioner (STATUS.md T3.4). Print ×1 (left gantry end).
 
 Purpose: carries the X belt idler behind the beam at the left end of the gantry and
 tensions the belt. The idler turns on an M5 axle that slides in a slot along x; an M3

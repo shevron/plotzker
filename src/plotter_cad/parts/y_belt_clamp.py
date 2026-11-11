@@ -1,4 +1,4 @@
-"""Belt clamp cap (README §8 T3.2). Print ×4 for Y (2 per gantry bracket) + ×2 for X (carriage).
+"""Belt clamp cap (STATUS.md T3.2). Print ×4 for Y (2 per gantry bracket) + ×2 for X (carriage).
 
 Purpose: clamps one end of a belt into the channel under a gantry end bracket (or
 the carriage's rear block). The belt's back bears on the channel ceiling; the cap

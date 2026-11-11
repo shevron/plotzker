@@ -1,4 +1,4 @@
-"""Spacer between the X idler and its mount plate (README §8 T3.4). Print ×1.
+"""Spacer between the X idler and its mount plate (STATUS.md T3.4). Print ×1.
 
 Purpose: holds the X idler on the belt line. Slides on the M5 axle; bears on the
 idler's inner bearing ring. Length = ``X_DRIVE.idler_spacer_len``.

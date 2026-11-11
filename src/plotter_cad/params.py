@@ -37,7 +37,7 @@ from plotter_cad.hardware import (
 )
 
 # -----------------------------------------------------------------------------
-# Print tolerances (tune after a test print; defaults from CLAUDE.md)
+# Print tolerances (tune after a test print; defaults from README.md §7.4)
 # -----------------------------------------------------------------------------
 
 
@@ -87,21 +87,21 @@ class Tolerances:
 TOL = Tolerances()
 
 # -----------------------------------------------------------------------------
-# Requirements (README §1, §5)
+# Requirements (README §2, STATUS.md §5)
 # -----------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class Requirements:
-    """Requirements the design must meet (README §1)."""
+    """Requirements the design must meet (README §2)."""
 
     media_a3: tuple[float, float] = (297, 420)  #: A3 short side across X (D10)
     media_max_t: float = 15  #: R2, D15
-    x_travel: float = 410  #: target travel (README §4.2)
+    x_travel: float = 410  #: target travel (README §3.2)
     y_travel: float = 540  #: target travel (D11)
     #: Min gap above the thickest media for everything except the pen. DESIGN
     gantry_media_clear: float = 3
-    # Pen head (README §4.3, D14, D18)
+    # Pen head (README §3.3, D14, D18)
     pen_d_range: tuple[float, float] = (7, 16)
     pen_lift_min: float = 5
     pen_float_min: float = 3
@@ -113,7 +113,7 @@ class Requirements:
 REQ = Requirements()
 
 # -----------------------------------------------------------------------------
-# Baseboard and bed (README §4.8, D16, D17)
+# Baseboard and bed (README §3.8, D16, D17)
 # -----------------------------------------------------------------------------
 
 
@@ -197,7 +197,7 @@ class BeltClamp:
 CLAMP = BeltClamp()
 
 # -----------------------------------------------------------------------------
-# Tool-plate interface v1 (D8, README §4.4)
+# Tool-plate interface v1 (D8, README §3.4)
 # -----------------------------------------------------------------------------
 # The carriage front face carries a hook (cleat) along its top edge and two M3
 # clamp points along its bottom edge. A tool head hangs on the hook and is clamped
@@ -692,7 +692,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Bed panel collides with the SCS blocks",
     )
     yield BEAM.bottom_z >= BEAM.bottom_z_min, "Carriage would hit 15 mm media"
-    yield DRIVE.steps_per_mm == 80, "Steps/mm changed — update README §5"
+    yield DRIVE.steps_per_mm == 80, "Steps/mm changed — update STATUS.md §5"
     yield -Y_AXIS.belt_x - GT2.width / 2 >= SK10.width / 2 + 3, "Y belt too close to the SK10"
     yield -Y_AXIS.belt_x - CLAMP.w / 2 >= SCS10UU.width / 2 + 1, "Y belt clamp hits the SCS block"
     yield -Y_AXIS.belt_x + CLAMP.w / 2 <= -BRACKET.x_out, "Y belt clamp outside the bracket"

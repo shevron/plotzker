@@ -1,4 +1,4 @@
-"""X motor mount (README §8 T3.4). Print ×1 (right gantry end).
+"""X motor mount (STATUS.md T3.4). Print ×1 (right gantry end).
 
 Purpose: holds the X NEMA17 behind the beam at the right end of the gantry, shaft
 pointing forward (−y) so the 20T pulley sits on the X belt line. The foot sits on the

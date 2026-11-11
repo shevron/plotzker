@@ -70,7 +70,7 @@ repo, but note it if the project is ever published under another license.
 
 ## Open items before adopting (needs your decision; do not change D23 yet)
 
-- B vs D (code-first vs GUI-first)? This changes D23 and the “SVG sketches” rule in `CLAUDE.md`.
+- B vs D (code-first vs GUI-first)? This changes D23 and the “SVG sketches” rule in `README.md` §7.1.
 - Add `python-solvespace` to `pyproject.toml` (source build needs a C++ toolchain/CMake;
   check `uv sync` on your machine).
 - Proposed spike if B: `plotter_cad/sketch.py` (~150 lines: `Sketch`, `point/line/arc`,

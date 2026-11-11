@@ -1,4 +1,4 @@
-"""Y-gantry end bracket (README §8 T3.2). Print ×1 left + ×1 right (mirror image).
+"""Y-gantry end bracket (STATUS.md T3.2). Print ×1 left + ×1 right (mirror image).
 
 Purpose: joins the two SCS10UU blocks on one Y shaft into a rigid gantry end,
 carries the X beam (4020 upright) with its bottom 24.5 mm above the blocks, clamps

@@ -1,4 +1,4 @@
-# Common development commands. Setup details: README §10.
+# Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
 .PHONY: help develop clean check typecheck format lint test stl render

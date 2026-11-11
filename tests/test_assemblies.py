@@ -17,7 +17,9 @@ from plotter_cad.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, 
 from plotter_cad.hardware import sk10, y_shaft
 from plotter_cad.params import FRAME, Y_AXIS
 from plotter_cad.parts.gantry_end_bracket import Side
-from solids import connected_groups, flatten, volume
+from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
+from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
+from solids import connected_groups, flatten, touching, volume
 
 
 @pytest.mark.parametrize("name", ASSEMBLIES)
@@ -88,3 +90,18 @@ def test_x_endstop_plug_space_is_free():
     """A plug can be pushed onto the X endstop's connector: nothing is in the way."""
     keepout = x_endstop_keepout()
     assert all(volume(keepout & s) < 0.1 for s in flatten(gantry_end_local(Side.LEFT)))
+
+
+@pytest.mark.parametrize(
+    ("mount", "sk10_y"),
+    [
+        (y_idler_mount_installed, Y_AXIS.sk10_y[0]),
+        (y_motor_mount_installed, Y_AXIS.sk10_y[1]),
+    ],
+    ids=["idler mount, front SK10", "motor mount, rear SK10"],
+)
+def test_sk10_seats_in_the_mount_pocket(mount, sk10_y):
+    """The SK10 fits in its mount's pocket without overlap and rests against the end wall."""
+    support = sk10().translate([0, sk10_y, 0])
+    assert volume(mount() & support) < 1e-6
+    assert touching(mount(), support)

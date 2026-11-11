@@ -6,7 +6,7 @@ Source: docs/hardware.md (vendor table values and measurements). Dimensions in m
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, linear_extrude, polygon
+from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
 from plotter_cad.geometry import EPS
 
@@ -29,11 +29,14 @@ class Sk10Spec:
     shaft_h: float = 20  #: [h] shaft center above the mounting surface (confirmed)
     side: float = 21  #: [E] center to side (= width / 2)
     width: float = 42  #: [W] overall width, across the shaft
-    length: float = 14  #: [L] thickness along the shaft
+    length: float = 13.1  #: [L] thickness along the shaft (measured; the table says 14)
     height: float = 37.5  #: [F] overall height
     base_t: float = 6  #: [G] base flange thickness
     body_w: float = 18  #: [P] width of the upright body
-    hole_pitch: float = 32  #: [B] mounting-hole spacing
+    #: [B] mounting-hole spacing: from the measured 2 mm between hole edge and narrow edge
+    #: (hole Ø5.5, centered along the length); the vendor table says 32
+    hole_pitch: float = 32.5
+    base_chamfer: float = 1  #: measured roughly: both narrow edges. ASSUMED: top edges
     hole_d: float = 5.5  #: [S] mounting holes (2 × M5)
     clamp_m: float = 4  #: clamping bolt
     mount_m: float = 5  #: mounting bolts
@@ -86,9 +89,12 @@ def y_shaft(length: float = Y_SHAFT.length) -> Solid:
 def sk10() -> Solid:
     """SK10. Origin: mounting surface under the shaft axis, at mid-thickness; shaft along Y."""
     s = SK10
-    body = cube([s.width, s.length, s.base_t]).translate([-s.width / 2, -s.length / 2, 0]) | cube(
-        [s.body_w, s.length, s.height]
-    ).translate([-s.body_w / 2, -s.length / 2, 0])
+    c = s.base_chamfer
+    base = hull(
+        cube([s.width - 2 * c, s.length, s.base_t]).translate([-s.width / 2 + c, -s.length / 2, 0]),
+        cube([s.width, s.length, s.base_t - c]).translate([-s.width / 2, -s.length / 2, 0]),
+    )
+    body = base | cube([s.body_w, s.length, s.height]).translate([-s.body_w / 2, -s.length / 2, 0])
     bore = (
         cylinder(d=Y_SHAFT.d, h=s.length + 2, center=True, fn=32)
         .rotate([90, 0, 0])

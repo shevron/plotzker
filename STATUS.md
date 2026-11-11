@@ -116,15 +116,18 @@ any new decisions in §3, and update the status line at the top.
   lever hinged at the left, 1.5 mm board, connector 10 × 7.2 × 5.6 mm) and modeled in
   `hardware/endstop.py`; both endstop mounts (X and Y) follow it. The board is chiral, so
   the right-hand Y idler mount isn't a pure mirror image (the tower's height differs).
+  Both mounts also have an SK10 pocket (D26; tested: the SK10 seats without overlap).
   Each connector has a 15 mm plug keep-out behind it (tests: nothing intrudes); it pushed
   the Y idler forward (axle y 32) and moved the trigger contact 4 mm in from the lever tip.
   Checked: no collisions with the gantry, SK10s or shafts at the front, middle or back of
   Y travel (test); only the trigger pressing the endstop lever.
-  - [ ] Follow-up: test-print; check belt tension range, and the trip point (adjust with the
+  - [ ] Follow-up: test-print; check the pocket fit on an SK10 (tune `pocket_clear`) and the
+    belt tension range, and the trip point (adjust with the
     trigger screw length); measure where the switch clicks (modeled at 75 % of the lever's
     travel) and check the board's assumed body offset (2.5 mm right of center) and lever
     length (13.5 mm); check that a plug fits on the connectors; check the idler plate against
-    the wood-screw positions.
+    the wood-screw positions; measure the SK10 bore offset from the base edges (it limits
+    belt parallelism).
 - [ ] **T3.6 v1 pen holder (tool head).** Vertical slide, V-groove clamp for 7–16 mm pens,
   ~20 mm height adjustment, servo mount, gravity loading with room for added weight; meets
   the README §3.3 requirements. Interface: `TOOL_PLATE` in `params.py` (≤ 50 mm wide, hook
@@ -211,6 +214,7 @@ update the log once it is agreed (README §7.1).
 | D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | README §6 |
 | D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
 | D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with M4 wood screws (*assumed* size). Costs ~25 mm of baseboard length at the back; belt ~1.5 m per side | ✅ | T3.5, §6 |
+| D26 | The Y motor and idler mounts have a **pocket for their SK10** (cut-out in a 6 mm foot, end wall against the shaft-end face, side walls ±0.2 mm), so the belt line is referenced to the shaft instead of the baseboard layout; mounts are fitted last, around the already aligned SK10s, and screwed down through plain holes (no pre-drilled positions). Pocket clearance to be tuned after a test print; the SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
 
 ---
 
@@ -246,7 +250,7 @@ hard to get, we adjust.
 
 | Item | Value |
 |------|-------|
-| X travel / Y travel | ~426 mm / ~543 mm |
+| X travel / Y travel | ~426 mm / ~545 mm |
 | Target media | A3 and smaller, 0–15 mm thick |
 | Steps/mm (GT2, 20T, 1.8°, 1/16) | 80 |
 | Shaft center height above the mounting surface | 20 mm |
@@ -259,7 +263,7 @@ hard to get, we adjust.
 | Pen pressure (start point) | ~20–80 g |
 | Baseboard | 18 mm plywood, ~850 × 650 mm |
 | Shaft spacing | 520 mm |
-| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard; idler axle y 32, motor axis y 799 (machine frame); ~1.5 m belt per side |
+| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
 | X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~94.8 mm above the baseboard; ~1.2 m belt |
 | Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
 | Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 inserts 36 mm apart |
@@ -292,6 +296,9 @@ the screw head sits just in front of the gantry's front stop). The **Y endstop**
 board stands on a tower on the idler plate, in the plane of the bracket's trigger screw, front edge toward +y: the screw tip presses
 the lever toward the board ~2.2 mm before the end of travel (the screw length sets the trip point). All
 mounts are screwed down with M4 wood screws (assumed) through counterbored feet; the right-hand parts are mirror images, except the tower (the board is chiral).
+Each mount's foot also carries an **SK10 pocket** (`parts/sk10_pocket.py`, D26): a U-shaped cut-out the
+SK10's base sits in (end wall 4 mm against the shaft-end face, side walls ±0.2 mm clearance,
+open toward the other SK10), so the mounts are fitted last around the aligned SK10s.
 
 **X drive (T3.4):** the **X motor** sits behind the beam at the right end
 (`x_motor_mount.py`), the **idler + belt tensioner** at the left end (`x_idler_mount.py`:
@@ -319,7 +326,7 @@ this sets the shaft spacing to **520 mm**. ~70 g each (PETG).
 **Work area:**
 - **X travel ≈ 426 mm** (520 mm beam − ~70 mm carriage − 2 × 12 mm end keep-out: in front
   of the beam the tool head can't pass over the SCS blocks).
-- **Y travel ≈ 540 mm** (700 mm − 2 × 14 mm SK10 − ~120–135 mm gantry end).
+- **Y travel ≈ 545 mm** (700 mm − 2 × 13.1 mm SK10 − ~125 mm gantry end − 2 × 2 mm margin).
 - Footprint of the mechanics ~600 (X) × ~800 (Y) mm; Y motors/idlers set the Y length (T3.5).
 
 **X carriage (T3.3, `parts/x_carriage.py`):** an 8 mm front plate with 4 V-wheels

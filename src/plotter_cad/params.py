@@ -700,6 +700,10 @@ class YDrive:
 
     foot_t: float = 6  #: printed foot on the baseboard (M4 wood screws, counterbored)
     foot_screw_m: float = 4  #: ASSUMED: wood/chipboard screws into the 18 mm plywood
+    # SK10 pocket (both mounts): the SK10's base sits in a cut-out of the foot, pushed against
+    # the end wall (shaft end plane); the side walls fix x. Open toward the other SK10.
+    pocket_clear: float = 0.2  #: DESIGN (T3.5): pocket side clearance (per side); tune by print
+    pocket_wall: float = 4  #: side and end walls (the end wall also spaces the motor)
     # Idler (toothed 20T on an M5 axle, cantilevered from a plate outboard of it)
     idler_slot: float = 8  #: axle slot length along y (belt tension travel)
     idler_gap: float = 1.25  #: idler flange to plate: one M5 washer + clearance
@@ -708,7 +712,6 @@ class YDrive:
     head_gap: float = 2.5  #: tension screw head to the gantry front, beyond the head height
     idler_foot_out: float = 16  #: foot beyond the plate, outboard
     # Motor (shaft points outboard; body inboard, behind the rear SK10)
-    motor_gap: float = 3  #: rear SK10 face to the motor body
     hub_gap: float = 1  #: pulley hub to the motor plate
     motor_plate_t: float = 5
     motor_foot_out: float = 26  #: foot beyond the plate, outboard (screws under the open side)
@@ -719,6 +722,28 @@ class YDrive:
     def gantry_front_y(self) -> float:
         """Front face of the gantry bracket at its end of travel (machine y)."""
         return Y_AXIS.shaft_y0 + SK10.length + Y_AXIS.end_margin
+
+    @property
+    def motor_gap(self) -> float:
+        """Rear SK10 face to the motor body: the pocket's end wall."""
+        return self.pocket_wall
+
+    @property
+    def pocket_half(self) -> float:
+        """Half width of the pocket cut-out (across the shaft)."""
+        return SK10.width / 2 + self.pocket_clear
+
+    @property
+    def front_pocket_y(self) -> tuple[float, float]:
+        """Front pocket's frame, y extent: from the end wall's outer face to the SK10's inboard
+        face."""
+        return (Y_AXIS.shaft_y0 - self.pocket_wall, Y_AXIS.shaft_y0 + SK10.length)
+
+    @property
+    def rear_pocket_y(self) -> tuple[float, float]:
+        """Rear pocket's frame, y extent."""
+        end = Y_AXIS.shaft_y0 + Y_SHAFT.length
+        return (end - SK10.length, end + self.pocket_wall)
 
     @property
     def idler_y(self) -> float:
@@ -936,6 +961,14 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield (
         yd.motor_plate_x[1] - NEMA17.shaft_len_min <= yd.pulley_hub_x - PULLEY.hub_len,
         "Shortest motor shaft doesn't reach the Y pulley hub",
+    )
+    yield (
+        yd.foot_t <= Y_AXIS.scs_base_z - 0.5,
+        "Pocket walls would catch the SCS blocks",
+    )
+    yield (
+        yd.front_pocket_y[1] <= yd.gantry_front_y,
+        "Front pocket reaches into the gantry's travel",
     )
     yield (
         Y_AXIS.pulley_axis_z - PULLEY.flange_d / 2 >= yd.foot_t + 1,

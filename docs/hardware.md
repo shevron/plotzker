@@ -48,11 +48,11 @@ names each field descriptively and gives the vendor symbol in its comment (e.g. 
 | h | 20 ±0.02 | Shaft center height above the mounting surface (**confirmed by user**) |
 | E | 21 ±0.05 | Center to side (= W / 2) |
 | W | 42 | Overall width (across the shaft) |
-| L | 14 | Thickness along the shaft |
+| L | 13.1 | Thickness along the shaft (**measured**; the vendor table says 14) |
 | F | 37.5 | Overall height |
 | G | 6 | Base flange thickness |
 | P | 18 | Width of the upright body |
-| B | 32 | Mounting-hole spacing |
+| B | 32.5 | Mounting-hole spacing: **measured** 2 mm from hole edge to the narrow edge, centered along the length (the table says 32). The base also has a ~1 mm chamfer on both narrow edges (hard to measure; modeled on the top edges, *assumed*) |
 | S | 2 × Ø5.5 | Mounting holes, **M5** bolts |
 | — | M4 | Clamping bolt |
 | Mass | 24 g | Each |

@@ -36,6 +36,7 @@ from plotter_cad.geometry import EPS, FN_HOLE, teardrop, teardrop_x, teardrop_y
 from plotter_cad.hardware import ENDSTOP, M3_INSERT, metric
 from plotter_cad.params import TOL, Y_AXIS, Y_DRIVE, Y_ENDSTOP
 from plotter_cad.parts.gantry_end_bracket import Side
+from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -53,6 +54,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     y0, y1 = d.idler_plate_y
     plate_cx = (x0 + x1) / 2
     foot = cube([x1 - d.idler_foot_x0, y1 - y0, d.foot_t]).translate([d.idler_foot_x0, y0, 0])
+    pocket_frame, pocket_cut = sk10_pocket(PocketEnd.FRONT, x1)
     plate = cube([x1 - x0, y1 - y0, d.idler_top_z]).translate([x0, y0, 0])
     slot = hull(
         *(
@@ -99,7 +101,9 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         )
         for sz in (-1, 1)
     ]
-    return (foot | plate | tower) - slot - insert - screw - holes - pilots
+    return (
+        (foot | plate | tower | pocket_frame) - pocket_cut - slot - insert - screw - holes - pilots
+    )
 
 
 def y_idler_mount(side: Side = Side.LEFT) -> Solid:

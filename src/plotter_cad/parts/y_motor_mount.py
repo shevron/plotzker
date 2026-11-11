@@ -28,6 +28,7 @@ from plotter_cad.geometry import EPS, FN_HOLE, teardrop_x
 from plotter_cad.hardware import NEMA17, metric
 from plotter_cad.params import TOL, Y_AXIS, Y_DRIVE
 from plotter_cad.parts.gantry_end_bracket import Side
+from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -43,6 +44,7 @@ def y_motor_mount_installed() -> Solid:
     x0, x1 = d.motor_plate_x
     y0, y1 = d.motor_plate_y
     foot = cube([x1 - d.motor_foot_x0, y1 - y0, d.foot_t]).translate([d.motor_foot_x0, y0, 0])
+    pocket_frame, pocket_cut = sk10_pocket(PocketEnd.REAR, d.motor_foot_x0)
     plate = cube([x1 - x0, y1 - y0, d.motor_top_z]).translate([x0, y0, 0])
     gussets = [
         hull(
@@ -79,7 +81,7 @@ def y_motor_mount_installed() -> Solid:
                 [foot_x, y, d.foot_t - metric(SCREW_M).head_h]
             )
         )
-    return (foot | plate | gussets) - boss - screws - holes
+    return (foot | plate | gussets | pocket_frame) - pocket_cut - boss - screws - holes
 
 
 def y_motor_mount(side: Side = Side.LEFT) -> Solid:

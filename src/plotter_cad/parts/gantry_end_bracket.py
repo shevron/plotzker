@@ -22,12 +22,11 @@ Hardware per bracket:
   2 × M5×20 ISO 4762 — face plate into the beam end. The 4020's center bores (Ø4.2)
                        must be tapped M5 (or an M5 screw driven in to cut its own thread)
   4 × M3 heat-set inserts (Ø4.6 × 5.7) + 4 × M3×10 ISO 4762 — two Y belt clamps
-  2 × y_belt_clamp (printed)
+  2 × belt_clamp (printed)
   1 × M3×16 ISO 4762 + 2 × M3 nuts — Y endstop trigger (adjust, then lock)
 
 Print: PETG (preferred, less creep) or PLA; 0.2 mm layers; 4 perimeters; 40 % infill;
-base face down; no supports (horizontal holes are teardrops; the belt channel on the
-underside bridges 6.4 mm).
+base face down; no supports (horizontal holes are teardrops; the underside is flat).
 """
 
 from enum import Enum
@@ -111,13 +110,7 @@ def _cutouts() -> list[Solid]:
         )
         for z in BEAM_BOLT_Z
     ]
-    # Y belt channel along the underside (the belt back bears on its ceiling)
-    cuts.append(
-        cube([CLAMP.channel_w, b.len_y + 2, CLAMP.channel_d + EPS]).translate(
-            [Y_AXIS.belt_x - CLAMP.channel_w / 2, -b.len_y / 2 - 1, -EPS]
-        )
-    )
-    # M3 heat-set insert pockets for the two belt clamp caps (from below)
+    # M3 heat-set insert pockets for the two belt clamp caps (from below, in the flat underside)
     cuts += [
         cylinder(d=M3_INSERT.hole_d, h=TOL.insert_pocket_depth, fn=FN_HOLE).translate(
             [Y_AXIS.belt_x + sx * CLAMP.screw_dx, cy, -EPS]

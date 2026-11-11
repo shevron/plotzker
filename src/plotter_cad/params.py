@@ -161,19 +161,20 @@ class Drive:
 DRIVE = Drive()
 
 # -----------------------------------------------------------------------------
-# Belt clamps (shared by the Y belt under the gantry brackets and the X belt under
-# the carriage). The belt back bears on the channel ceiling; the cap's ridges sit
-# in the tooth gaps.
+# Belt clamps (one cap design for the Y belts under the gantry brackets and the X belt
+# under the carriage). The mating part has a flat underside; the belt's back bears on it.
+# The cap has a groove (between two rails) that holds the belt sideways, with ridges that
+# sit in the tooth gaps; the rails press on the flat underside and set the squeeze.
 # -----------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class BeltClamp:
-    """Belt clamp channel dimensions."""
+    """Belt clamp cap dimensions."""
 
     squeeze: float = 0.3  #: belt compression in the clamp
     length: float = 20  #: along the belt (10 teeth)
-    t: float = 4  #: cap thickness
+    t: float = 4  #: cap plate thickness (under the groove)
     w: float = 16  #: cap width (across the belt)
     screw_dx: float = 5.5  #: M3 offset from the belt center
     ridge_w: float = 0.9  #: GT2 tooth gap ≈ 1.0
@@ -185,13 +186,18 @@ class BeltClamp:
 
     @property
     def channel_d(self) -> float:
-        """Belt channel depth in the part above the belt."""
+        """Groove depth = rail height: the belt less its squeeze."""
         return GT2.thickness - self.squeeze
 
     @property
     def channel_w(self) -> float:
-        """Belt channel width."""
+        """Groove width."""
         return GT2.width + 0.4
+
+    @property
+    def total_t(self) -> float:
+        """Cap thickness including the rails: from the cap's bottom to the flat underside."""
+        return self.t + self.channel_d
 
 
 CLAMP = BeltClamp()
@@ -308,7 +314,7 @@ class YAxis:
     @property
     def belt_back_z(self) -> float:
         """Back of the belt's top run (abs z)."""
-        return self.scs_top_z + CLAMP.channel_d
+        return self.scs_top_z  # the belt back is flush with the bracket's flat underside
 
     @property
     def belt_pitch_z(self) -> float:
@@ -548,7 +554,7 @@ class XBelt:
     @property
     def back_z(self) -> float:
         """Back of the top run (abs z)."""
-        return CARRIAGE.bridge_z + CLAMP.channel_d
+        return CARRIAGE.bridge_z  # ... and with the carriage's flat underside
 
     @property
     def pulley_axis_z(self) -> float:
@@ -897,6 +903,11 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     yield BEAM.bottom_z >= BEAM.bottom_z_min, "Carriage would hit 15 mm media"
     yield DRIVE.steps_per_mm == 80, "Steps/mm changed — update STATUS.md §5"
+    yield (
+        CLAMP.channel_w > GT2.width
+        and CLAMP.screw_dx - TOL.bolt_hole_d(3) / 2 >= CLAMP.channel_w / 2 + 0.5,
+        "Belt clamp screws would cut into the belt groove",
+    )
     yield -Y_AXIS.belt_x - GT2.width / 2 >= SK10.width / 2 + 3, "Y belt too close to the SK10"
     yield -Y_AXIS.belt_x - CLAMP.w / 2 >= SCS10UU.width / 2 + 1, "Y belt clamp hits the SCS block"
     yield -Y_AXIS.belt_x + CLAMP.w / 2 <= -BRACKET.x_out, "Y belt clamp outside the bracket"

@@ -35,12 +35,12 @@ from plotter_cad.params import (
     X_ENDSTOP,
     Y_AXIS,
 )
+from plotter_cad.parts.belt_clamp import belt_clamp
 from plotter_cad.parts.gantry_end_bracket import BEAM_BOTTOM, FACE_OUT_X, Side, gantry_end_bracket
 from plotter_cad.parts.x_endstop_mount import x_endstop_mount_installed
 from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
 from plotter_cad.parts.x_idler_spacer import x_idler_spacer
 from plotter_cad.parts.x_motor_mount import x_motor_mount_left
-from plotter_cad.parts.y_belt_clamp import y_belt_clamp
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -114,10 +114,10 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
     for z in (BEAM_BOTTOM + VSLOT.unit / 2, BEAM_BOTTOM + 3 * VSLOT.unit / 2):
         items.append(shcs(5, 20).rotate([0, -90, 0]).translate([FACE_OUT_X, 0, z]))
     for cy in (-BRACKET.len_y / 2, BRACKET.len_y / 2 - CLAMP.length):
-        items.append(y_belt_clamp().translate([Y_AXIS.belt_x, cy, -CLAMP.t]).color("Gold"))
+        items.append(belt_clamp().translate([Y_AXIS.belt_x, cy, -CLAMP.total_t]).color("Gold"))
         items.append(
             cube([GT2.width, CLAMP.length, GT2.thickness])
-            .translate([Y_AXIS.belt_x - GT2.width / 2, cy, CLAMP.channel_d - GT2.thickness])
+            .translate([Y_AXIS.belt_x - GT2.width / 2, cy, -GT2.thickness])
             .color("#111")
         )
     # endstop trigger screw: head behind the boss, tip forward

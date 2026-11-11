@@ -69,8 +69,8 @@ names each field descriptively and gives the vendor symbol in its comment (e.g. 
 | Carriage bottom | ≥ 32.8 | media + 3 mm clearance |
 | X beam bottom | **58** | carriage bottom + 24.8 (bottom V-wheels hang below the beam: 9.85 axis-to-face + 11.95 wheel radius + 3 margin) |
 | X beam top | 98 | beam bottom + 40 |
-| Y belt, top run (back of belt) | 34.6 | SCS top + 1.08 mm channel in the gantry bracket underside (6 mm belt, 0.3 mm squeeze) |
-| Y motor shaft / idler axle | ~27.8 | belt back − 0.38 (GT2 pitch line) − 6.37 (20T pitch radius) |
+| Y belt, top run (back of belt) | 33.5 | flush with the flat gantry bracket underside = SCS top (6 mm belt; the cap's 1.08 mm groove gives the 0.3 mm squeeze) |
+| Y motor shaft / idler axle | ~26.8 | belt back − 0.38 (GT2 pitch line) − 6.37 (20T pitch radius) |
 | Y endstop trigger screw | ~48.5 | on top of the gantry bracket, front-outboard corner |
 
 So the gantry end brackets must lift the beam **~24.5 mm above the SCS top face**.

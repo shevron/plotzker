@@ -83,7 +83,7 @@ any new decisions in §3, and update the status line at the top.
 - [x] **T3.2 Gantry end brackets (×2).** Bolt to two SCS10UU (4 × M5 each, 28 × 21 mm), hold
   the 4020 beam square, include the Y belt clamp and the Y endstop trigger. Lift the beam
   bottom to ~58 mm (§6). Bracket bears on the SCS10UU's two 10 mm top flats (measured).
-  → `parts/gantry_end_bracket.py` (left/right), `parts/y_belt_clamp.py` (×4),
+  → `parts/gantry_end_bracket.py` (left/right), `parts/belt_clamp.py` (×4 for Y, ×2 for X),
   `assemblies/gantry.py`; STLs in `stl/`. The endstop switch itself mounts in T3.5.
   - [ ] Follow-up: answer Q12 (beam ends tapped?); test-print one bracket and check the fit
     on the SCS blocks, the beam pocket and the belt clamp before printing the pair.
@@ -109,7 +109,7 @@ any new decisions in §3, and update the status line at the top.
   - [ ] Follow-up: test-print; check belt tension range and the switch trip point.
 - [x] **T3.5 Y motor mounts, Y idlers and belt tensioners** (on the baseboard, in line with
   each shaft), and the Y endstops. Belt 30 mm outboard of each shaft; motor shaft /
-  idler axle at `Y_AXIS.pulley_axis_z` (~27.8 mm). The X− endstop was done in T3.4.
+  idler axle at `Y_AXIS.pulley_axis_z` (~26.8 mm). The X− endstop was done in T3.4.
   → `parts/y_motor_mount.py`, `parts/y_idler_mount.py` (each left + right, so 4 STLs; the
   endstop is a tower on the idler mount), `assemblies/y_drive.py` (also in the skeleton).
   The endstop board was measured with photos (M3, 15 mm pitch, switch across the front edge,
@@ -215,6 +215,7 @@ update the log once it is agreed (README §7.1).
 | D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
 | D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with M4 wood screws (*assumed* size). Costs ~25 mm of baseboard length at the back; belt ~1.5 m per side | ✅ | T3.5, §6 |
 | D26 | The Y motor and idler mounts have a **pocket for their SK10** (cut-out in a 6 mm foot, end wall against the shaft-end face, side walls ±0.2 mm), so the belt line is referenced to the shaft instead of the baseboard layout; mounts are fitted last, around the already aligned SK10s, and screwed down through plain holes (no pre-drilled positions). Pocket clearance to be tuned after a test print; the SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
+| D27 | Belt clamps: flat undersides on the gantry brackets and the X carriage's rear block (no belt channel: no bridges or overhangs); one cap design for all six clamps, with the groove (between two rails) and the tooth ridges in the cap. Belt lines drop 1.08 mm (derived); screws M3×12 | ✅ | T3.2, T3.3, §6 |
 
 ---
 
@@ -263,8 +264,8 @@ hard to get, we adjust.
 | Pen pressure (start point) | ~20–80 g |
 | Baseboard | 18 mm plywood, ~850 × 650 mm |
 | Shaft spacing | 520 mm |
-| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
-| X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~94.8 mm above the baseboard; ~1.2 m belt |
+| Y belt | 30 mm outboard of each shaft; motor/idler axis ~26.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
+| X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~93.8 mm above the baseboard; ~1.2 m belt |
 | Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
 | Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 inserts 36 mm apart |
 | Mechanics footprint | ~600 × ~800 mm |
@@ -281,10 +282,14 @@ README §3; the exact values live in `params.py`.
 **Belt lines:** each Y side has its own belt **30 mm outboard of its shaft** (motor at
 one end, idler at the other, ~1.4 m belt each). The top run is cut and both ends clamp
 under the gantry end bracket; the belt line puts the Y motor shaft and idler axle at
-**~27.8 mm** above the baseboard. The **X belt** is a vertical loop behind the beam (belt
+**~26.8 mm** above the baseboard. The **X belt** is a vertical loop behind the beam (belt
 center 23 mm behind the beam's center plane, ~1.2 m of belt); its top run is cut and
-clamped under the carriage's rear block, ~3.6 mm above the beam top. X motor shaft and
-idler axle run front-to-back at **~94.8 mm** above the baseboard.
+clamped under the carriage's rear block, 2.5 mm above the beam top. X motor shaft and
+idler axle run front-to-back at **~93.8 mm** above the baseboard.
+**Belt clamps (D27):** one cap design (`belt_clamp.py`) for all six clamps. The gantry
+brackets and the carriage's rear block have **flat undersides** (no printed channel or
+bridge); the cap has the groove (between two 1.08 mm rails) that guides the belt, ridges in
+the tooth gaps, and M3×12 screws into heat-set inserts.
 
 **Y drive (T3.5):** per side, the motor sits **behind the rear SK10** with its shaft
 pointing outboard (body inboard, ≥ 3 mm from the SK10; `y_motor_mount.py`: 5 mm plate, foot
@@ -318,7 +323,8 @@ block's 4 M5 bolts (M5×25 there instead of M5×20), so the brackets need no ext
 **Gantry end brackets (T3.2, `parts/gantry_end_bracket.py`, left + mirrored right):**
 a 10 mm base plate on both SCS blocks (8 × M5), a ribbed face plate the beam end bolts to
 (2 × M5 into the beam's end bores, in a 1.5 mm locating pocket), the two Y-belt clamps
-underneath (printed caps with tooth ridges, M3 into heat-set inserts), and an M3 trigger
+underneath (printed caps with a belt groove and tooth ridges, M3×12 into heat-set
+inserts in the flat underside), and an M3 trigger
 screw for the Y endstop that also fine-tunes each side's home position. The **beam end
 sits directly over the shaft**, so the gantry weight bears straight down on the blocks;
 this sets the shaft spacing to **520 mm**. ~70 g each (PETG).

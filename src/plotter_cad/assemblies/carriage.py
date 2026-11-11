@@ -9,8 +9,8 @@ from pythonscad import cube
 
 from plotter_cad.hardware import GT2, eccentric_spacer, hex_nut, metric, shcs, vslot_x, vwheel
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, X_BELT
+from plotter_cad.parts.belt_clamp import belt_clamp
 from plotter_cad.parts.x_carriage import CLAMP_X, WHEEL_X, x_carriage_installed
-from plotter_cad.parts.y_belt_clamp import y_belt_clamp
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -35,9 +35,9 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
         )
     for sx in (-1, 1):
         items.append(
-            y_belt_clamp()
+            belt_clamp()
             .rotate([0, 0, 90])
-            .translate([sx * CLAMP_X + CLAMP.length / 2, X_BELT.y, c.bridge_z - CLAMP.t])
+            .translate([sx * CLAMP_X + CLAMP.length / 2, X_BELT.y, c.bridge_z - CLAMP.total_t])
             .color("Gold")
         )
         items.append(
@@ -46,7 +46,7 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
                 [
                     sx * CLAMP_X - CLAMP.length / 2,
                     X_BELT.y - GT2.width / 2,
-                    c.bridge_z + CLAMP.channel_d - GT2.thickness,
+                    c.bridge_z - GT2.thickness,
                 ]
             )
             .color("#111")

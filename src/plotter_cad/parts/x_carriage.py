@@ -28,14 +28,14 @@ Hardware:
       instead 2 × plain spacer stack 8.3 mm + 2 × M3×12 push screws + 2 × M3 inserts
   4 × M5×35 ISO 4762 + 4 × M5 washers (front) + 4 × M5 nuts (nyloc preferred)
   2 × M3 heat-set inserts — tool-plate clamp screws (tool head supplies the M3 screws)
-  4 × M3 heat-set inserts + 4 × M3×10 ISO 4762 + 2 × y_belt_clamp (printed) — X belt
+  4 × M3 heat-set inserts + 4 × M3×10 ISO 4762 + 2 × belt_clamp (printed) — X belt
   1 × M3×16 ISO 4762 + 2 × M3 nuts — X endstop trigger: screwed into the rear block's
       left end through a captive nut; its head touches the switch; lock nut outside
   zip ties for the tool-head cable
 
 Print: PETG (preferred) or PLA; 0.2 mm layers; 4 perimeters; 40 % infill; front face
-down on the bed; no supports (hook groove, belt channel and side holes are
-self-supporting: 45° walls, short bridges, teardrops).
+down on the bed; no supports (hook groove and side holes are self-supporting:
+45° walls, short bridges, teardrops).
 """
 
 from typing import TYPE_CHECKING
@@ -181,11 +181,8 @@ def _top_tab_cutouts() -> list[Solid]:
 
 
 def _belt_clamp_cutouts() -> list[Solid]:
-    """Belt channels and clamp bolt holes."""
+    """Belt clamp bolt holes (the rear block's underside is flat)."""
     c = CARRIAGE
-    channel = cube([c.rear_w + 2, CLAMP.channel_w, CLAMP.channel_d + EPS]).translate(
-        [-c.rear_w / 2 - 1, X_BELT.y - CLAMP.channel_w / 2, c.bridge_z - EPS]
-    )
     inserts = [
         linear_extrude(teardrop(M3_INSERT.hole_d), height=TOL.insert_pocket_depth).translate(
             [sx * CLAMP_X, X_BELT.y + sy * CLAMP.screw_dx, c.bridge_z - EPS]
@@ -193,7 +190,7 @@ def _belt_clamp_cutouts() -> list[Solid]:
         for sx in (-1, 1)
         for sy in (-1, 1)
     ]
-    return [channel, *inserts]
+    return inserts
 
 
 def _endstop_trigger_cutouts() -> list[Solid]:

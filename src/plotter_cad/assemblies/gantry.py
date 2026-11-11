@@ -6,16 +6,15 @@ Machine frame (``params``). Not printable.
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, mirror, multmatrix, translate
+from pythonscad import cube, mirror, translate
 
 from plotter_cad.hardware import (
-    ENDSTOP,
     GT2,
     IDLER,
     PULLEY,
     SCS10UU,
     VSLOT,
-    endstop,
+    endstop_placed,
     gt2_idler,
     gt2_pulley,
     nema17,
@@ -27,7 +26,6 @@ from plotter_cad.hardware import (
 from plotter_cad.params import (
     BEAM,
     BRACKET,
-    CARRIAGE,
     CLAMP,
     FRAME,
     X_BELT,
@@ -45,9 +43,6 @@ from plotter_cad.parts.y_belt_clamp import y_belt_clamp
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-#: Endstop board orientation: normal +x (switch side), lever pointing −y.
-_ENDSTOP_ORIENTATION = [[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]]
-
 
 def x_drive_local(side: Side) -> list[Solid]:
     """X motor (right) or idler + endstop (left) at one gantry end, left-local frame."""
@@ -59,7 +54,6 @@ def x_drive_local(side: Side) -> list[Solid]:
             nema17().rotate([90, 0, 0]).translate([d.motor_x, d.motor_face_y, axis_z]),
             gt2_pulley().rotate([90, 0, 0]).translate([d.motor_x, d.pulley_hub_y, axis_z]),
         ]
-    board_y = X_ENDSTOP.board_y[1] - ENDSTOP.pcb[0] / 2 - ENDSTOP.hole_x
     return [
         x_idler_mount_installed().color("DarkOrange"),
         x_endstop_mount_installed().color("Orange"),
@@ -69,8 +63,15 @@ def x_drive_local(side: Side) -> list[Solid]:
         .translate([d.idler_x, d.plate_y0, axis_z])
         .color("Orange"),
         shcs(5, 40).rotate([90, 0, 0]).translate([d.idler_x, X_BELT.y - IDLER.width / 2, axis_z]),
-        multmatrix(endstop(), _ENDSTOP_ORIENTATION).translate(
-            [X_ENDSTOP.plate_front_x, board_y, CARRIAGE.trig_z - Y_AXIS.scs_top_z]
+        endstop_placed(
+            [
+                X_ENDSTOP.board_front_x,
+                sum(X_ENDSTOP.board_y) / 2,
+                X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z,
+            ],
+            u=[0, -1, 0],
+            v=[1, 0, 0],
+            w=[0, 0, 1],
         ),
     ]
 
@@ -110,7 +111,7 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
         )
     # endstop trigger screw: head behind the boss, tip forward
     items.append(
-        shcs(3, 16)
+        shcs(3, BRACKET.trig_screw_len)
         .rotate([-90, 0, 0])
         .translate([BRACKET.trig_x, -BRACKET.len_y / 2 + BRACKET.trig_boss[1], BRACKET.trig_z])
     )

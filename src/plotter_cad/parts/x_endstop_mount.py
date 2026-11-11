@@ -1,81 +1,79 @@
-"""X− endstop switch mount (STATUS.md T3.4). Print ×1.
+"""X− endstop switch mount (STATUS.md T3.4, redone in T3.5 for the measured board). Print ×1.
 
-Purpose: holds the X endstop board (Creality type) upright behind the beam at the
-left end, switch facing +x, lever pointing −y. At the carriage's left end of travel
-the head of the carriage's trigger screw presses the lever toward −x. Sits on top of
-the X idler mount; slots give ±4 mm of x adjustment on top of the trigger screw's.
+Purpose: carries the X endstop board (Creality type) flat above the X idler mount at the
+left end of the gantry, components up, front edge toward +x. At the carriage's left end
+of travel the head of its trigger screw pushes the lever (hinged at the +y end of the
+switch, tip toward −y) toward the board. The pad sits on top of the idler plate; slots give
+±4 mm of x adjustment on top of the trigger screw's own.
 
-  top view                          front view (from +x)
-  ┌pad (2 × M3 slots)┐──arm──┐      ┌─plate─┐
-  └──────────────────┘       ║←board│ ▫  ▫  │ ← board holes
-                             ║ lever│  ┌──┐ │
-                             ╚═══►  │  └──┘ │ switch
+  top view                                   side view (from −y)
+  ┌ pad ──────────────────────┐              board  ┌──────┐◄ trigger head
+  │ ⊙slot  ⊙slot   ┌board────┐│              ────────┴──────┴── pad (counterbored)
+  └───────────────┴└─────────┘┘              ──── idler plate top ────
 
 Frame: LEFT bracket-local (``params.XDrive``), z = 0 on the SCS top face
-(:func:`x_endstop_mount_installed`). Board position and hole layout follow
-``hardware.ENDSTOP`` (partly ASSUMED: holes across the width, 4 mm from the far end;
-connector on the switch side).
+(:func:`x_endstop_mount_installed`); :func:`x_endstop_mount` puts the pad bottom on the bed.
+The board position follows ``hardware.ENDSTOP`` (measured) and ``params.XEndstopMount``.
 
-Hardware: 2 × M3×10 ISO 4762 + washers into the idler mount's inserts;
-2 × M3×8 (or the board's own screws) self-tapping into the Ø2.6 pilot holes.
-Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; plate front face down;
-no supports.
+Hardware: 2 × M3×10 ISO 4762 into the idler mount's inserts (heads in the pad's
+counterbores); 2 × M3×6 (or the board's own screws), self-tapping into the Ø2.6 pilots.
+Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; pad bottom down; no supports.
 """
 
 from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull
 
-from plotter_cad.geometry import EPS, FN_HOLE
-from plotter_cad.hardware import ENDSTOP
-from plotter_cad.params import CARRIAGE, TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
+from plotter_cad.geometry import FN_HOLE
+from plotter_cad.hardware import ENDSTOP, metric
+from plotter_cad.params import TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
 
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-TRIG_Z = CARRIAGE.trig_z - Y_AXIS.scs_top_z  #: trigger screw axis, local z
-TOP_Z = X_DRIVE.idler_top_z - Y_AXIS.scs_top_z  #: idler plate top, local z
+PAD_Z = (X_ENDSTOP.pad_z[0] - Y_AXIS.scs_top_z, X_ENDSTOP.pad_z[1] - Y_AXIS.scs_top_z)
 PLATE_YC = X_DRIVE.plate_y0 + X_DRIVE.idler_plate_t / 2
-PLATE_X = (X_ENDSTOP.plate_front_x - X_ENDSTOP.plate_t, X_ENDSTOP.plate_front_x)
-PLATE_Y = (X_ENDSTOP.board_y[0] - 2, X_ENDSTOP.board_y[1] + 2)
-PLATE_Z = (TRIG_Z - ENDSTOP.pcb[1] / 2 - 2, TRIG_Z + ENDSTOP.pcb[1] / 2 + 2)
-ARM_Y = (X_DRIVE.plate_y0, X_DRIVE.plate_y0 + X_DRIVE.idler_plate_t)
-ARM_T = 6
-PAD_X0 = -26
 PILOT_D = 2.6  #: M3 self-tapping into the board's holes
-#: Board hole center (y): holes across the board width, at the far end
-BOARD_HOLE_Y = X_ENDSTOP.board_y[1] - ENDSTOP.pcb[0] / 2 - ENDSTOP.hole_x
+PILOT_DEPTH = 4  #: M3×6 through the 1.5 mm board
+BOARD_YC = sum(X_ENDSTOP.board_y) / 2
+_EDGE = TOL.cbore_d(3) / 2 + TOL.min_wall  #: slot end to pad edge
+PAD_X = (X_DRIVE.endstop_insert_x[0] - X_ENDSTOP.pad_slot - _EDGE, X_ENDSTOP.board_front_x)
+PAD_Y = (
+    X_ENDSTOP.board_y[0] - X_ENDSTOP.pad_margin,
+    max(X_ENDSTOP.board_y[1] + X_ENDSTOP.pad_margin, PLATE_YC + _EDGE),
+)
 
 
 def x_endstop_mount_installed() -> Solid:
     """The mount in the left bracket-local frame."""
     e = X_ENDSTOP
-    plate = cube([e.plate_t, PLATE_Y[1] - PLATE_Y[0], PLATE_Z[1] - PLATE_Z[0]]).translate(
-        [PLATE_X[0], PLATE_Y[0], PLATE_Z[0]]
+    pad = cube([PAD_X[1] - PAD_X[0], PAD_Y[1] - PAD_Y[0], e.pad_t]).translate(
+        [PAD_X[0], PAD_Y[0], PAD_Z[0]]
     )
-    arm = cube([PLATE_X[0] - PAD_X0 + EPS, ARM_Y[1] - ARM_Y[0], ARM_T]).translate(
-        [PAD_X0, ARM_Y[0], TOP_Z]
-    )
-    slots = [
-        hull(
-            *(
-                cylinder(d=TOL.bolt_hole_d(3), h=ARM_T + 2, fn=FN_HOLE).translate(
-                    [x + dx, PLATE_YC, TOP_Z - 1]
+    head_h = metric(3).head_h + 0.5
+    slots = []
+    for x in X_DRIVE.endstop_insert_x:
+        for d, z0, h in (
+            (TOL.bolt_hole_d(3), PAD_Z[0] - 1, e.pad_t + 2),
+            (TOL.cbore_d(3), PAD_Z[1] - head_h, head_h + 1),
+        ):
+            slots.append(
+                hull(
+                    *(
+                        cylinder(d=d, h=h, fn=FN_HOLE).translate([x + dx, PLATE_YC, z0])
+                        for dx in (-e.pad_slot, e.pad_slot)
+                    )
                 )
-                for dx in (-e.pad_slot, e.pad_slot)
             )
-        )
-        for x in X_DRIVE.endstop_insert_x
-    ]
     pilots = [
-        cylinder(d=PILOT_D, h=e.plate_t + 5, fn=FN_HOLE)
-        .rotate([0, -90, 0])
-        .translate([PLATE_X[1] + 1, BOARD_HOLE_Y, TRIG_Z + sz * ENDSTOP.hole_pitch / 2])
-        for sz in (-1, 1)
+        cylinder(d=PILOT_D, h=PILOT_DEPTH + 1, fn=FN_HOLE).translate(
+            [e.hole_x, BOARD_YC + sv * ENDSTOP.hole_pitch / 2, PAD_Z[1] - PILOT_DEPTH]
+        )
+        for sv in (-1, 1)
     ]
-    return (plate | arm) - slots - pilots
+    return pad - slots - pilots
 
 
 def x_endstop_mount() -> Solid:
-    """Print orientation: plate front face (+x) down, arm pointing up."""
-    return x_endstop_mount_installed().rotate([0, 90, 0]).translate([0, 0, X_ENDSTOP.plate_front_x])
+    """Print orientation: pad bottom on the bed."""
+    return x_endstop_mount_installed().translate([0, 0, -PAD_Z[0]])

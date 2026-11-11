@@ -131,7 +131,7 @@ Design rules: mounts are face-mounted, so body length only matters for clearance
 
 | Item | Value |
 |------|-------|
-| Endstop | **Creality-type board** (from a Creality printer): 20 wide × 19 long, 27 long incl. the open switch lever, ~12 thick incl. connector; **2 holes 15 mm apart** (measured). Screw size probably M3, hole orientation (across the width, away from the switch) and PCB thickness *assumed* |
+| Endstop | **Creality-type board** (from a Creality printer), measured with photos (`hardware/endstop.py`): board 20 wide × 19 long × **1.5 thick**, ~12 thick incl. the connector (which overhangs the rear edge ~4 mm, *assumed*). **2 × M3 holes 15 mm apart** across the width at the rear (hole edges 1 mm from the sides, 1.5 mm from the rear edge). Micro switch **across the width at the front edge**: body 13 wide × 6.3 along the board × 5.3 high, protruding 1 mm past the front edge, ~2.5 mm right of center *(assumed)*. Lever: 3.8 wide × 0.3 thick metal strip hinged at the **left** end of the body's front face (board seen from above, connector at the rear), sweeping right: tip **5 mm** past the front edge at rest, **1.5 mm** fully pressed; length ~13.5 mm, hinge ~1.2 mm from the body end *(assumed)*. The trigger pushes it toward the board, along the board's length. Click point not measured (modeled at 75 % of the travel)  |
 | Servo (SG90 class) | Body 22.8 × 12.2 × 22.5, tabs 32.3 long at 15.9 mm height, holes 27.8 apart, shaft 5.9 from one end *(assumed)* |
 | Heat-set insert M3 | Ø4.6 × 5.7 mm, printed hole Ø4.0 *(assumed)* |
 | Fasteners | ISO 4762 / ISO 4032 / ISO 7089 standard dimensions (`hardware/fasteners.py`) |

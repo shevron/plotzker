@@ -501,6 +501,7 @@ class GantryBracket:
     # front-outboard corner; adjusts each side's home position (gantry squaring).
     trig_x: float = -30  #: screw axis, bracket-local x
     trig_boss: tuple[float, float, float] = (12, 9, 10)  #: boss x × y × z, on the base
+    trig_screw_len: float = 16  #: M3 trigger screw length (tip 7 mm in front of the boss)
 
     @property
     def x_in(self) -> float:
@@ -558,6 +559,67 @@ class XBelt:
 X_BELT = XBelt()
 
 # -----------------------------------------------------------------------------
+# X endstop (T3.4, redone in T3.5 for the measured board): the board lies flat
+# (components up, front edge toward +x) on a pad on the idler plate top. The carriage's
+# trigger screw head, moving -x, pushes the lever toward the board. Left bracket-local
+# frame (see X drive below). Board axes: u = -y, v = +x, w = +z.
+# -----------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class XEndstopMount:
+    """X endstop mount: pad on the idler plate, carrying the board flat."""
+
+    pad_t: float = 5  #: pad thickness: the M3 heads sit in counterbores under the board
+    pad_slot: float = 4  #: ±x adjustment of the pad on the idler plate
+    pad_margin: float = 1  #: board edge to pad edge (y)
+
+    @property
+    def head_x_min(self) -> float:
+        """Trigger screw head face at the carriage's end of travel (bracket-local x)."""
+        return (
+            CARRIAGE.end_keepout
+            + CARRIAGE.w / 2
+            - CARRIAGE.rear_w / 2
+            - metric(3).nut_h
+            - metric(3).head_h
+        )
+
+    @property
+    def board_front_x(self) -> float:
+        """Front edge of the board."""
+        return self.head_x_min - ENDSTOP.trigger_v
+
+    @property
+    def board_x(self) -> tuple[float, float]:
+        """Board extent in x: rear edge, front edge."""
+        return (self.board_front_x - ENDSTOP.pcb[0], self.board_front_x)
+
+    @property
+    def board_y(self) -> tuple[float, float]:
+        """Board extent in y: the lever hinge is at +y, its tip toward -y."""
+        yc = CARRIAGE.trig_y + ENDSTOP.contact_u
+        return (yc - ENDSTOP.pcb[1] / 2, yc + ENDSTOP.pcb[1] / 2)
+
+    @property
+    def board_bottom_z(self) -> float:
+        """Board underside (abs z): the lever's center line is at the trigger screw's height."""
+        return CARRIAGE.trig_z - ENDSTOP.lever_z
+
+    @property
+    def pad_z(self) -> tuple[float, float]:
+        """Pad extent in z (the board sits on its top)."""
+        return (self.board_bottom_z - self.pad_t, self.board_bottom_z)
+
+    @property
+    def hole_x(self) -> float:
+        """Board mounting hole line (x)."""
+        return self.board_front_x + ENDSTOP.hole_v
+
+
+X_ENDSTOP = XEndstopMount()
+
+# -----------------------------------------------------------------------------
 # X drive (T3.4): motor mount (right end), idler mount + tensioner and X endstop
 # mount (left end). Designed in the LEFT bracket-local frame (x = 0 at the shaft =
 # beam end, +x inboard, y from the beam center plane, +y behind the beam); the
@@ -581,8 +643,12 @@ class XDrive:
     idler_slot: float = 8  #: axle slot length along x (tension travel; belt ±8 mm)
     idler_plate_t: float = 11.5  #: thick enough to stand alone (fits between the bolt rows)
     idler_plate_x: tuple[float, float] = (-42, -8)
-    idler_top_z: float = 108  #: plate top, abs z (the endstop mount sits here)
     endstop_insert_x: tuple[float, float] = (-22, -12)  #: endstop-mount inserts on the plate top
+
+    @property
+    def idler_top_z(self) -> float:
+        """Plate top, abs z: the X endstop pad sits on it."""
+        return X_ENDSTOP.pad_z[0]
 
     @property
     def bolt_rows(self) -> tuple[float, float]:
@@ -619,51 +685,160 @@ class XDrive:
 
 X_DRIVE = XDrive()
 
+# -----------------------------------------------------------------------------
+# Y drive (T3.5): per side, a motor mount behind the rear SK10, an idler mount with
+# a slot tensioner in front of the front SK10, and a Y endstop mount carried by the
+# baseboard. Designed in the LEFT side frame: x from the shaft axis (belt at
+# ``Y_AXIS.belt_x``, outboard = -x), y and z in the machine frame (z = 0 is the
+# baseboard top). The right side is the mirror image.
+# -----------------------------------------------------------------------------
+
 
 @dataclass(frozen=True)
-class XEndstopMount:
-    """X endstop mount on the idler plate top. Board in the YZ plane, switch facing +x;
-    the carriage's trigger screw head presses the lever toward -x. The lever points
-    -y, its tip just in front of the trigger."""
+class YDrive:
+    """Y motor mount and Y idler mount with tensioner."""
 
-    pre_trip: float = 2  #: trip this far before the carriage reaches its end
-    plate_t: float = 6
-    pad_slot: float = 4  #: ±x adjustment of the mount on the idler plate
-
-    @property
-    def lever_h(self) -> float:
-        """Lever plane above the board. ASSUMED"""
-        return ENDSTOP.pcb[2] + ENDSTOP.switch[2] + 0.5
-
-    @property
-    def head_x_min(self) -> float:
-        """Trigger screw head at the carriage's end of travel (bracket-local x)."""
-        return (
-            CARRIAGE.end_keepout
-            + CARRIAGE.w / 2
-            - CARRIAGE.rear_w / 2
-            - metric(3).nut_h
-            - metric(3).head_h
-        )
+    foot_t: float = 6  #: printed foot on the baseboard (M4 wood screws, counterbored)
+    foot_screw_m: float = 4  #: ASSUMED: wood/chipboard screws into the 18 mm plywood
+    # Idler (toothed 20T on an M5 axle, cantilevered from a plate outboard of it)
+    #: DESIGN (T3.5): axle (mid-slot) in front of the gantry's front face at its end of travel
+    idler_from_front: float = 47
+    idler_slot: float = 8  #: axle slot length along y (belt tension travel)
+    idler_gap: float = 1.25  #: idler flange to plate: one M5 washer + clearance
+    idler_plate_t: float = 9
+    plate_margin: float = 6  #: material around the slot ends
+    head_gap: float = 2.5  #: tension screw head to the gantry front, beyond the head height
+    idler_foot_out: float = 16  #: foot beyond the plate, outboard
+    # Motor (shaft points outboard; body inboard, behind the rear SK10)
+    motor_gap: float = 3  #: rear SK10 face to the motor body
+    hub_gap: float = 1  #: pulley hub to the motor plate
+    motor_plate_t: float = 5
+    motor_foot_out: float = 26  #: foot beyond the plate, outboard (screws under the open side)
+    gusset_len: float = 16
+    gusset_t: float = 3
 
     @property
-    def plate_front_x(self) -> float:
-        """X of the tool-plate front face."""
-        return self.head_x_min + self.pre_trip - self.lever_h
+    def gantry_front_y(self) -> float:
+        """Front face of the gantry bracket at its end of travel (machine y)."""
+        return Y_AXIS.shaft_y0 + SK10.length + Y_AXIS.end_margin
 
     @property
-    def lever_tip_y(self) -> float:
-        """The trigger presses 2 mm from the lever tip."""
-        return CARRIAGE.trig_y - 2
+    def idler_y(self) -> float:
+        """Idler axle, middle of the slot (machine y)."""
+        return self.gantry_front_y - self.idler_from_front
+
+    @property
+    def idler_plate_x(self) -> tuple[float, float]:
+        """Idler plate x extent (outboard of the idler)."""
+        x1 = Y_AXIS.belt_x - IDLER.width / 2 - self.idler_gap
+        return (x1 - self.idler_plate_t, x1)
+
+    @property
+    def idler_plate_y(self) -> tuple[float, float]:
+        """Idler plate y extent: around the slot, up to the tension screw head."""
+        front = self.idler_y - self.idler_slot / 2 - TOL.bolt_hole_d(5) / 2 - self.plate_margin
+        return (front, self.gantry_front_y - metric(3).head_h - self.head_gap)
+
+    @property
+    def idler_top_z(self) -> float:
+        """Idler plate top: level with the idler flange top."""
+        return Y_AXIS.pulley_axis_z + IDLER.flange_d / 2
+
+    @property
+    def idler_foot_x0(self) -> float:
+        """Outboard edge of the idler foot."""
+        return self.idler_plate_x[0] - self.idler_foot_out
+
+    @property
+    def motor_y(self) -> float:
+        """Motor shaft axis (machine y): the body clears the rear SK10."""
+        return Y_AXIS.sk10_y[1] + SK10.length / 2 + self.motor_gap + NEMA17.width / 2
+
+    @property
+    def pulley_hub_x(self) -> float:
+        """Pulley's motor-side face (x); the pulley extends outboard from here."""
+        return Y_AXIS.belt_x + PULLEY.belt_z
+
+    @property
+    def motor_plate_x(self) -> tuple[float, float]:
+        """Motor plate x extent; the motor face is its inboard side."""
+        x0 = self.pulley_hub_x + self.hub_gap
+        return (x0, x0 + self.motor_plate_t)
+
+    @property
+    def motor_plate_y(self) -> tuple[float, float]:
+        """Motor plate y extent (the motor width)."""
+        return (self.motor_y - NEMA17.width / 2, self.motor_y + NEMA17.width / 2)
+
+    @property
+    def motor_top_z(self) -> float:
+        """Top of the motor and its plate."""
+        return Y_AXIS.pulley_axis_z + NEMA17.width / 2
+
+    @property
+    def motor_foot_x0(self) -> float:
+        """Outboard edge of the motor foot."""
+        return self.motor_plate_x[0] - self.motor_foot_out
+
+
+Y_DRIVE = YDrive()
+
+
+@dataclass(frozen=True)
+class YEndstopMount:
+    """Y endstop: the board stands on the idler plate's tower, in the plane of the trigger
+    screw's travel (components toward the machine center, front edge toward +y). The screw
+    tip, moving -y, pushes the lever toward the board. Board axes: v = +y, w = +x (left
+    frame), u = -z on the left side and +z on the right (the board is chiral)."""
+
+    tower_margin: float = 1  #: board edge to tower edge (y)
+
+    @property
+    def trigger_tip_y(self) -> float:
+        """Trigger screw tip at the end of travel (machine y)."""
+        return Y_DRIVE.gantry_front_y + BRACKET.trig_boss[1] - BRACKET.trig_screw_len
+
+    @property
+    def board_front_y(self) -> float:
+        """Front edge of the board."""
+        return self.trigger_tip_y - ENDSTOP.trigger_v
 
     @property
     def board_y(self) -> tuple[float, float]:
-        """Board extent in y: switch end, far end (holes)."""
-        far = self.lever_tip_y + ENDSTOP.len_lever
-        return (far - ENDSTOP.pcb[0], far)
+        """Board extent in y: rear edge, front edge."""
+        return (self.board_front_y - ENDSTOP.pcb[0], self.board_front_y)
+
+    @property
+    def trig_z(self) -> float:
+        """Trigger screw axis (abs z)."""
+        return Y_AXIS.scs_top_z + BRACKET.trig_z
+
+    @property
+    def board_x0(self) -> float:
+        """Board underside (left frame x): the lever's center line is on the trigger axis."""
+        return BRACKET.trig_x - ENDSTOP.lever_z
+
+    @property
+    def tower_x(self) -> tuple[float, float]:
+        """Tower x extent: from the idler plate's outer face to the board's underside."""
+        return (Y_DRIVE.idler_plate_x[0], self.board_x0)
+
+    @property
+    def tower_y(self) -> tuple[float, float]:
+        """Tower y extent."""
+        return (self.board_y[0] - self.tower_margin, self.board_y[1] + self.tower_margin)
+
+    def board_z_center(self, u_z: int) -> float:
+        """Board center height; ``u_z`` = board width direction along z (-1 left, +1 right)."""
+        return self.trig_z - u_z * ENDSTOP.contact_u
+
+    def board_z(self, u_z: int) -> tuple[float, float]:
+        """Board extent in z."""
+        zc = self.board_z_center(u_z)
+        return (zc - ENDSTOP.pcb[1] / 2, zc + ENDSTOP.pcb[1] / 2)
 
 
-X_ENDSTOP = XEndstopMount()
+Y_ENDSTOP = YEndstopMount()
 
 # -----------------------------------------------------------------------------
 # Design checks — the build fails if the parameters break a requirement
@@ -733,9 +908,62 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     yield X_DRIVE.idler_spacer_len > 0, "Idler spacer length"
     yield (
-        X_DRIVE.idler_x + X_DRIVE.idler_slot / 2 + IDLER.flange_d / 2 + 2
-        <= X_ENDSTOP.plate_front_x - X_ENDSTOP.plate_t,
-        "Idler flange hits the endstop plate",
+        X_DRIVE.idler_top_z >= X_BELT.pulley_axis_z + IDLER.flange_d / 2 + 0.5,
+        "X idler flange hits the endstop pad",
+    )
+    yield (
+        X_DRIVE.idler_top_z >= X_BELT.pulley_axis_z + TOL.bolt_hole_d(5) / 2 + TOL.min_wall + 2,
+        "X idler plate too low around the axle slot",
+    )
+    yd, ye = Y_DRIVE, Y_ENDSTOP
+    shaft_left = Y_AXIS.shaft_x[0]
+    yield (
+        shaft_left + yd.idler_foot_x0 >= 3 and shaft_left + yd.motor_foot_x0 >= 3,
+        "Y drive foot hangs over the baseboard edge",
+    )
+    yield (
+        yd.motor_plate_y[1] <= FRAME.board_size[1],
+        "Y motor mount hangs over the back of the baseboard",
+    )
+    yield (
+        yd.motor_plate_y[0] - Y_AXIS.sk10_y[1] - SK10.length / 2 >= yd.motor_gap - 0.01,
+        "Y motor hits the rear SK10",
+    )
+    yield (
+        yd.motor_plate_x[1] - NEMA17.shaft_len_min <= yd.pulley_hub_x - PULLEY.hub_len,
+        "Shortest motor shaft doesn't reach the Y pulley hub",
+    )
+    yield (
+        Y_AXIS.pulley_axis_z - PULLEY.flange_d / 2 >= yd.foot_t + 1,
+        "Y pulley hits the motor foot",
+    )
+    yield (
+        Y_AXIS.pulley_axis_z - NEMA17.width / 2 >= 0,
+        "Y motor body would hit the baseboard",
+    )
+    yield (
+        yd.idler_plate_y[1]
+        - TOL.insert_pocket_depth
+        - (yd.idler_y + yd.idler_slot / 2 + TOL.bolt_hole_d(5) / 2)
+        >= TOL.min_wall,
+        "Y idler tension screw pocket too close to the axle slot",
+    )
+    yield (
+        ye.board_x0 + ENDSTOP.height <= -SK10.body_w / 2 - 1,
+        "Y endstop board (with its connector) hits the front SK10",
+    )
+    yield (
+        yd.idler_y + yd.idler_slot / 2 + IDLER.flange_d / 2 + 1
+        <= ye.board_y[0] - ENDSTOP.connector_overhang,
+        "Y idler hits the Y endstop board's connector",
+    )
+    yield (
+        ye.board_front_y + ENDSTOP.rest_protrusion <= yd.gantry_front_y - 1,
+        "Y endstop lever reaches the gantry bracket",
+    )
+    yield (
+        ye.tower_y[1] <= yd.idler_plate_y[1] and ye.tower_y[0] >= 0,
+        "Y endstop tower outside the idler plate or the baseboard",
     )
 
 
@@ -771,5 +999,10 @@ def report() -> str:
             f"Y belt: back of top run z {fmt(Y_AXIS.belt_back_z)}, pulley/idler axis z "
             f"{fmt(Y_AXIS.pulley_axis_z)}, belt center {fmt(-Y_AXIS.belt_x)} "
             "outboard of each shaft",
+            f"Y drive: idler axle y {fmt(Y_DRIVE.idler_y)} (slot ±{fmt(Y_DRIVE.idler_slot / 2)}), "
+            f"motor axis y {fmt(Y_DRIVE.motor_y)}; endstop board front y "
+            f"{fmt(Y_ENDSTOP.board_front_y)}, trigger tip y {fmt(Y_ENDSTOP.trigger_tip_y)} at the "
+            f"end of travel (X: board front x {fmt(X_ENDSTOP.board_front_x)}, head x "
+            f"{fmt(X_ENDSTOP.head_x_min)})",
         ]
     )

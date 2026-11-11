@@ -1,7 +1,7 @@
 """Machine layout skeleton: baseboard, Y axis, bed, media envelope, gantry and carriage.
 
 Checks the height stack-up, travel and clearances. Real parts where they exist
-(gantry T3.2/T3.4, carriage T3.3); later tasks (T3.5–T3.7) add the Y drive, tool head
+(gantry T3.2/T3.4, carriage T3.3, Y drive T3.5); later tasks (T3.6–T3.7) add the tool head
 and baseboard layout. Not printable. Superseded by the full assembly in T3.7.
 """
 
@@ -11,7 +11,8 @@ from pythonscad import cube, translate
 
 from plotter_cad.assemblies.carriage import carriage_assembly
 from plotter_cad.assemblies.gantry import gantry_assembly
-from plotter_cad.hardware import GT2, PULLEY, SK10, Y_SHAFT, sk10, y_shaft
+from plotter_cad.assemblies.y_drive import y_drive_assembly
+from plotter_cad.hardware import SK10, sk10, y_shaft
 from plotter_cad.params import BEAM, CARRIAGE, FRAME, REQ, TOOL_PLATE, Y_AXIS
 
 if TYPE_CHECKING:
@@ -62,20 +63,7 @@ def skeleton(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list[Solid]:
         .color("Orange", 0.25)
     )
     items += gantry_assembly(gantry_y)
-    # Y belt return runs (lower run, full shaft length) — motors/idlers come in T3.5
-    for i, x in enumerate(Y_AXIS.shaft_x):
-        outboard = 1 if i == 0 else -1
-        items.append(
-            cube([GT2.width, Y_SHAFT.length, GT2.thickness])
-            .translate(
-                [
-                    x + outboard * Y_AXIS.belt_x - GT2.width / 2,
-                    Y_AXIS.shaft_y0,
-                    Y_AXIS.pulley_axis_z - PULLEY.pd / 2 - GT2.thickness + GT2.pitch_line_from_back,
-                ]
-            )
-            .color("#111")
-        )
+    items += y_drive_assembly(gantry_y)
     # X carriage (T3.3); tool-plate area marked in red
     items.append(translate(carriage_assembly(), [carriage_x, gantry_y, 0]))
     items.append(

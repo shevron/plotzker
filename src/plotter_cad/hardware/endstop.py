@@ -1,13 +1,27 @@
 """Creality-type mechanical endstop board (user's, from a Creality printer). Dimensions in mm.
 
-Measured by the user: board 20 wide × 19 long; 27 long including the open switch
-lever; 2 mounting holes 15 apart; ~12 thick including the connector.
+Measured by the user (T3.5, with photos): board 20 wide × 19 long × 1.5 thick; two M3
+mounting holes 15 apart, across the width at the rear (connector) end, hole edges 1 mm
+from the sides and 1.5 mm from the rear edge; ~12 thick including the connector.
+
+The micro switch lies across the board's width at the front edge, its body protruding
+1 mm past the edge: 13 wide × 6.3 along the board × 5.3 above it. A thin metal lever
+(3.8 wide × 0.3 thick) is hinged at the *left* end of the body's front face (board seen
+from above, connector at the rear) and sweeps diagonally to the right: at rest its tip
+is 5 mm past the board's front edge, fully pressed 1.5 mm. A trigger pushing the lever
+toward the board (along the board's length) presses it.
+
+Model frame (all functions here): origin at the front edge of the board's bottom face,
+centered across the width; ``u`` = right, ``v`` = toward the front, ``w`` = up (from the
+board's bottom face; the components are on the +w side). ``u × v = w``.
 """
 
+import math
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder
+from pythonscad import cube, cylinder, multmatrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -15,51 +29,123 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class EndstopSpec:
-    """Mechanical endstop switch dimensions."""
+    """Endstop board, switch and lever dimensions."""
 
-    pcb: tuple[float, float, float] = (19, 20, 1.6)  #: L (lever direction) × W × T; T ASSUMED
-    len_lever: float = 27  #: PCB + open lever (measured)
-    height: float = 12  #: PCB bottom to top of the connector (measured)
-    hole_pitch: float = 15  #: measured
-    hole_m: float = 3  #: probably M3 (user unsure). ASSUMED
-    hole_d: float = 3.2  #: ASSUMED
-    hole_axis: str = "width"  #: holes lie across the 20 mm width. ASSUMED
-    switch: tuple[float, float, float] = (12.8, 5.8, 6.5)  #: KW12-type body. ASSUMED
-    travel_to_trip: float = 1.5  #: lever travel to click. ASSUMED
+    pcb: tuple[float, float, float] = (19, 20, 1.5)  #: length (front-rear) × width × thickness
+    height: float = 12  #: bottom of the board to the top of the connector (measured)
+    hole_pitch: float = 15  #: across the width (measured)
+    hole_m: float = 3
+    hole_d: float = 3.0  #: = 20 - 15 - 2 × 1 mm edge distance
+    hole_from_rear: float = 1.5  #: edge of the hole to the rear edge (measured)
+    body: tuple[float, float, float] = (13, 6.3, 5.3)  #: across × along the board × above it
+    body_overhang: float = 1.0  #: body front face past the board's front edge (measured)
+    body_u: float = 2.5  #: body center, right of the board center. ASSUMED (from the photos)
+    lever_len: float = 13.5  #: hinge to tip. ASSUMED (from the photos)
+    lever_w: float = 3.8  #: across the board's normal (measured)
+    lever_t: float = 0.3
+    pivot_inset: float = 1.2  #: hinge from the body's left end. ASSUMED (from the photos)
+    rest_protrusion: float = 5.0  #: lever tip past the board's front edge at rest (measured)
+    pressed_protrusion: float = 1.5  #: ... fully pressed (measured)
+    contact_inset: float = 2.0  #: DESIGN: the trigger presses this far in from the lever tip
+    #: DESIGN: share of the lever's travel at the contact point that the trigger uses at the
+    #: end of travel. The switch's click point is ASSUMED to lie below this.
+    press_fraction: float = 0.75
+    connector: tuple[float, float] = (11, 9)  #: width × length along the board. ASSUMED
+    connector_overhang: float = 4  #: connector past the rear edge. ASSUMED (from the photos)
 
     @property
-    def hole_x(self) -> float:
-        """Hole line from the board center, on the side away from the switch. ASSUMED"""
-        return -self.pcb[0] / 2 + 4
+    def hole_v(self) -> float:
+        """Hole center line, along the board (negative = behind the front edge)."""
+        return -(self.pcb[0] - self.hole_from_rear - self.hole_d / 2)
+
+    @property
+    def pivot_u(self) -> float:
+        """Lever hinge, across the board."""
+        return self.body_u - self.body[0] / 2 + self.pivot_inset
+
+    @property
+    def lever_z(self) -> float:
+        """Lever center above the board's bottom face (centered on the body). ASSUMED"""
+        return self.pcb[2] + self.body[2] / 2
+
+    @property
+    def contact_s(self) -> float:
+        """Distance of the trigger contact point from the hinge, along the lever."""
+        return self.lever_len - self.contact_inset
+
+    def lever_angle(self, protrusion: float) -> float:
+        """Lever angle (radians) from the board's width axis for a tip ``protrusion``."""
+        return math.asin((protrusion - self.body_overhang) / self.lever_len)
+
+    @property
+    def contact_u(self) -> float:
+        """Trigger contact across the board, with the lever at rest."""
+        return self.pivot_u + self.contact_s * math.cos(self.lever_angle(self.rest_protrusion))
+
+    @property
+    def contact_rest_v(self) -> float:
+        """Lever surface at the contact point, past the board's front edge, at rest."""
+        return self.body_overhang + self.contact_s * math.sin(
+            self.lever_angle(self.rest_protrusion)
+        )
+
+    @property
+    def contact_travel(self) -> float:
+        """Lever travel at the contact point, rest to fully pressed."""
+        return self.contact_s * (
+            math.sin(self.lever_angle(self.rest_protrusion))
+            - math.sin(self.lever_angle(self.pressed_protrusion))
+        )
+
+    @property
+    def trigger_v(self) -> float:
+        """Trigger tip past the board's front edge at the end of travel."""
+        return self.contact_rest_v - self.press_fraction * self.contact_travel
 
 
 ENDSTOP = EndstopSpec()
 
 
-def endstop() -> Solid:
-    """Endstop board.
-
-    Origin: PCB bottom face, center between the mounting holes. Switch on top at the
-    +X edge; the lever reaches ``len_lever`` along +X from the board's -X edge;
-    connector on top at the -X side.
-    """
+def endstop(pressed: bool = False) -> Solid:
+    """Endstop board in the model frame (see the module docstring); lever at rest or pressed."""
     e = ENDSTOP
     length, width, t = e.pcb
     holes = [
-        cylinder(d=e.hole_d, h=t + 2, fn=16).translate([e.hole_x, sy * e.hole_pitch / 2, -1])
-        for sy in (-1, 1)
+        cylinder(d=e.hole_d, h=t + 2, fn=16).translate([su * e.hole_pitch / 2, e.hole_v, -1])
+        for su in (-1, 1)
     ]
-    pcb = (cube([length, width, t]).translate([-length / 2, -width / 2, 0]) - holes).color("Red")
-    switch = (
-        cube(list(e.switch))
-        .translate([length / 2 - e.switch[0], -e.switch[1] / 2, t])
-        .color("Black")
+    pcb = (cube([width, length, t]).translate([-width / 2, -length, 0]) - holes).color("Black")
+    body_w, body_h, body_d = e.body
+    body = (
+        cube([body_w, body_h, body_d])
+        .translate([e.body_u - body_w / 2, e.body_overhang - body_h, t])
+        .color("#222")
     )
+    conn_w, conn_l = e.connector
+    connector = (
+        cube([conn_w, conn_l, e.height - t])
+        .translate([-conn_w / 2, -length - e.connector_overhang, t])
+        .color("White")
+    )
+    protrusion = e.pressed_protrusion if pressed else e.rest_protrusion
     lever = (
-        cube([e.len_lever - length + 3, 4, 0.4])
-        .rotate([0, -6, 0])
-        .translate([length / 2 - 3, -2, t + e.switch[2] - 0.5])
+        cube([e.lever_len, e.lever_t, e.lever_w])
+        .translate([0, -e.lever_t / 2, -e.lever_w / 2])
+        .rotate([0, 0, math.degrees(e.lever_angle(protrusion))])
+        .translate([e.pivot_u, e.body_overhang, e.lever_z])
         .color("Silver")
     )
-    connector = cube([6, 10, e.height - t]).translate([-length / 2 + 1, -5, t]).color("White")
-    return (pcb | switch | lever | connector).translate([-e.hole_x, 0, 0])
+    return pcb | body | connector | lever
+
+
+def endstop_placed(
+    origin: Sequence[float],
+    u: Sequence[float],
+    v: Sequence[float],
+    w: Sequence[float],
+    pressed: bool = False,
+) -> Solid:
+    """The board with its model-frame axes ``u``, ``v``, ``w`` (right-handed) along the given
+    directions of the destination frame and its origin at ``origin``."""
+    matrix = [[u[i], v[i], w[i], origin[i]] for i in range(3)] + [[0, 0, 0, 1]]
+    return multmatrix(endstop(pressed), matrix)

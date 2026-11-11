@@ -7,7 +7,7 @@ render name (``renders/<name>.png``) to the function that builds it.
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
-from plotter_cad.assemblies import carriage, gantry, hardware_gallery, skeleton
+from plotter_cad.assemblies import carriage, gantry, hardware_gallery, skeleton, y_drive
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -17,4 +17,5 @@ ASSEMBLIES: dict[str, Callable[[], list[Solid]]] = {
     "gantry": gantry.gantry_fit_check,
     "hardware_gallery": hardware_gallery.hardware_gallery,
     "skeleton": skeleton.skeleton,
+    "y_drive": y_drive.y_drive_fit_check,
 }

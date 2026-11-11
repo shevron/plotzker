@@ -15,6 +15,8 @@ from plotter_cad.parts import (
     x_idler_spacer,
     x_motor_mount,
     y_belt_clamp,
+    y_idler_mount,
+    y_motor_mount,
 )
 
 PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
@@ -31,3 +33,6 @@ PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
     "x_idler_spacer": x_idler_spacer.x_idler_spacer,
     "x_endstop_mount": x_endstop_mount.x_endstop_mount,
 }
+for _side in gantry_end_bracket.Side:
+    PRINTABLE_PARTS[f"y_motor_mount_{_side.value}"] = partial(y_motor_mount.y_motor_mount, _side)
+    PRINTABLE_PARTS[f"y_idler_mount_{_side.value}"] = partial(y_idler_mount.y_idler_mount, _side)

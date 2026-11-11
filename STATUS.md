@@ -5,13 +5,13 @@ detailed decisions, inventory, key numbers, as-built design notes and ideas. Goa
 requirements, the high-level design and the coding standards are in
 [`README.md`](README.md); references like "README §3.2" point there.
 
-> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.4 done (CAD
-> scaffold, gantry end brackets, X carriage, X motor/idler/endstop mounts; STLs in `stl/`,
-> test prints pending). CAD migrated from OpenSCAD to PythonSCAD (T3.9, D22; identical
+> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.5 done (CAD
+> scaffold, gantry end brackets, X carriage, X motor/idler/endstop mounts, Y motor/idler/
+> endstop mounts (endstop mounts redone for the measured board); STLs in `stl/`, test prints pending). CAD migrated from OpenSCAD to PythonSCAD (T3.9, D22; identical
 > STLs). On trial: SVG 2D sketches for profiles (D23; V-slot 2020/2040). Open: Q12 (beam
 > ends tapped?). Q10 (SVG/PDF toolchain) deferred until the machine runs.
 >
-> **Next:** T3.5 Y motor mounts, idlers, tensioners and Y endstops. Phase 2 can run in
+> **Next:** T3.6 v1 pen holder (tool head; check the servo model first). Phase 2 can run in
 > parallel.
 
 **Contents:** 1 Work plan · 2 Open questions · 3 Decision log · 4 Inventory ·
@@ -106,12 +106,18 @@ any new decisions in §3, and update the status line at the top.
   - [ ] Follow-up: check the endstop board's hole positions and connector side against
     `x_endstop_mount.py` (assumed: holes across the width, 4 mm from the far end; connector
     on the switch side); test-print and check belt tension range and switch trip point.
-- [ ] **T3.5 Y motor mounts, Y idlers and belt tensioners** (on the baseboard, in line with
-  each shaft); endstop mounts for X−, Y−, Y2. Belt center 30 mm outboard of each shaft;
-  motor shaft / idler axle at `y_pulley_axis_z` (~27.8 mm, motor body ~6.7 mm above the
-  board). Y endstops are hit by the bracket's trigger screw (outboard, ~48 mm above the
-  board). Endstops: Creality-type boards (`endstop()` in `hardware/`). *Check first:*
-  screw size (M3?) and where the two holes sit (across the 20 mm width?).
+- [x] **T3.5 Y motor mounts, Y idlers and belt tensioners** (on the baseboard, in line with
+  each shaft), and the Y endstop mounts. Belt 30 mm outboard of each shaft; motor shaft /
+  idler axle at `Y_AXIS.pulley_axis_z` (~27.8 mm). The X− endstop was done in T3.4.
+  → `parts/y_motor_mount.py`, `y_idler_mount.py`, `y_endstop_mount.py` (each left + mirrored
+  right, so 6 STLs), `assemblies/y_drive.py` (also drawn in the skeleton). Endstop board
+  confirmed by the user: M3, holes across the width at the connector end.
+  Checked: no collisions with the gantry, SK10s or shafts at the front, middle or back of
+  Y travel (test); only the endstop lever is touched by the trigger screw at the front end.
+  - [ ] Follow-up: re-measure the endstop hole pitch (15 mm measured; the photo suggests
+    ~17–18 mm); test-print; check belt tension range, the trip point (adjust with the
+    trigger screw length) and the idler plate against the wood-screw positions on the
+    baseboard.
 - [ ] **T3.6 v1 pen holder (tool head).** Vertical slide, V-groove clamp for 7–16 mm pens,
   ~20 mm height adjustment, servo mount, gravity loading with room for added weight; meets
   the README §3.3 requirements. Interface: `TOOL_PLATE` in `params.py` (≤ 50 mm wide, hook
@@ -197,6 +203,7 @@ update the log once it is agreed (README §7.1).
 | D22 | Migrate the CAD from OpenSCAD to PythonSCAD: a `plotter_cad` Python package (`src/`), pip `pythonscad` module for STL export, PythonSCAD app for renders/preview. Ported 1:1 (all 8 STLs geometrically identical); the old `.scad` files were removed afterwards. D2 originally named OpenSCAD | ✅ | README §6, T3.9 |
 | D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | README §6 |
 | D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
+| D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with M4 wood screws (*assumed* size). Costs ~25 mm of baseboard length at the back; belt ~1.4 m per side | ✅ | T3.5, §6 |
 
 ---
 
@@ -223,7 +230,7 @@ hard to get, we adjust.
 | Controller: Creality (newer) | 1? | Not located yet; fallback | Model |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | From a printer | **Voltage (12/24 V), current** |
-| Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 mm (27 mm incl. lever), 2 holes 15 mm apart, ~12 mm thick incl. connector | Screw size (M3?), hole positions |
+| Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, ~12 mm thick incl. connector (`docs/hardware.md`) | Click point, lever length |
 | Plywood, steel sheet, magnets | to buy/cut | Baseboard, bed panel, work holding (README §3.8) | — |
 
 ---
@@ -245,7 +252,7 @@ hard to get, we adjust.
 | Pen pressure (start point) | ~20–80 g |
 | Baseboard | 18 mm plywood, ~850 × 650 mm |
 | Shaft spacing | 520 mm |
-| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard |
+| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard; idler axle y 44, motor axis y 799 (machine frame); ~1.45 m belt per side |
 | X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~94.8 mm above the baseboard; ~1.2 m belt |
 | Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
 | Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 inserts 36 mm apart |
@@ -268,10 +275,21 @@ center 23 mm behind the beam's center plane, ~1.2 m of belt); its top run is cut
 clamped under the carriage's rear block, ~3.6 mm above the beam top. X motor shaft and
 idler axle run front-to-back at **~94.8 mm** above the baseboard.
 
+**Y drive (T3.5):** per side, the motor sits **behind the rear SK10** with its shaft
+pointing outboard (body inboard, ≥ 3 mm from the SK10; `y_motor_mount.py`: 5 mm plate, foot
+extending outboard so the wood screws stay accessible, two gussets). The idler is **in front
+of the front SK10** on an M5 axle held by an outboard plate (`y_idler_mount.py`): the axle
+slides in an 8 mm slot along y, an M3 screw from the plate's rear edge pushes it forward
+to tension, and the axle nut locks it (tension is set with the gantry moved back, since
+the screw head sits just in front of the gantry's front stop). The **Y endstop**
+board stands on a tower on the idler plate, in the plane of the bracket's trigger screw, front edge toward +y: the screw tip presses
+the lever toward the board ~2.2 mm before the end of travel (the screw length sets the trip point). All
+mounts are screwed down with M4 wood screws (assumed) through counterbored feet; the right-hand parts are mirror images, except the tower (the board is chiral).
+
 **X drive (T3.4):** the **X motor** sits behind the beam at the right end
 (`x_motor_mount.py`), the **idler + belt tensioner** at the left end (`x_idler_mount.py`:
 the M5 axle slides in an 8 mm slot, an M3 screw pushes it outward, the axle nut locks it),
-with the **X− endstop** on top of the idler mount (`x_endstop_mount.py`, ±4 mm slots).
+with the **X− endstop** on a pad on top of the idler mount (`x_endstop_mount.py`, ±4 mm slots; the board lies flat, the trigger head presses the lever along the board).
 Both mounts sit on the gantry bracket over the rear SCS block and are clamped by that
 block's 4 M5 bolts (M5×25 there instead of M5×20), so the brackets need no extra holes.
 

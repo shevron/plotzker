@@ -3,10 +3,14 @@ ISO 7089 washers, and M3 heat-set inserts. Dimensions in mm.
 """
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pythonscad import cylinder
 
 from plotter_cad.geometry import cos_deg
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 
 @dataclass(frozen=True)
@@ -62,7 +66,7 @@ M3_INSERT = HeatSetInsert(m=3, od=4.6, length=5.7, hole_d=4.0)  # ASSUMED: commo
 # --- models (fit checks and visuals only) -------------------------------------
 
 
-def shcs(m: float, length: float):
+def shcs(m: float, length: float) -> Solid:
     """Socket head cap screw.
 
     Origin: center of the underside of the head; shank points down -Z.
@@ -73,7 +77,7 @@ def shcs(m: float, length: float):
     return (head | shank).color("DimGray")
 
 
-def hex_nut(m: float):
+def hex_nut(m: float) -> Solid:
     """Hex nut. Origin: center of the bottom face, axis +Z."""
     size = metric(m)
     body = cylinder(d=size.nut_ac, h=size.nut_h, fn=6)
@@ -81,7 +85,7 @@ def hex_nut(m: float):
     return (body - bore).color("Silver")
 
 
-def washer(m: float):
+def washer(m: float) -> Solid:
     """Washer. Origin: center of the bottom face, axis +Z."""
     size = metric(m)
     body = cylinder(d=size.washer_od, h=size.washer_t, fn=24)

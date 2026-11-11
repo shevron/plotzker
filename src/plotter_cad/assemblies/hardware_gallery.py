@@ -3,6 +3,8 @@
 Not printable.
 """
 
+from typing import TYPE_CHECKING
+
 from plotter_cad.hardware import (
     B608,
     B623,
@@ -28,10 +30,14 @@ from plotter_cad.hardware import (
     y_shaft,
 )
 
+if TYPE_CHECKING:
+    from pythonscad import Solid
+
 GRID = 60  #: spacing of the first row
 
 
-def hardware_gallery() -> list:
+def hardware_gallery() -> list[Solid]:
+    """All vendor-part models laid out in rows for a visual check."""
     first_row = [
         sk10(),
         scs10uu(),

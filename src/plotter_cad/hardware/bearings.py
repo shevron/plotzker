@@ -1,8 +1,11 @@
 """Ball and linear bearings. Dimensions in mm."""
 
-from typing import NamedTuple
+from typing import TYPE_CHECKING, NamedTuple
 
 from pythonscad import cylinder
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 
 class Bearing(NamedTuple):
@@ -21,7 +24,7 @@ LM8UU = Bearing(8, 15, 24)
 LM10UU = Bearing(10, 19, 29)
 
 
-def bearing(b: Bearing):
+def bearing(b: Bearing) -> Solid:
     """Generic bearing. Origin: center of one face, axis +Z."""
     body = cylinder(d=b.od, h=b.width, fn=48)
     bore = cylinder(d=b.bore, h=b.width + 2, fn=32).translate([0, 0, -1])

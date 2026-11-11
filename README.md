@@ -643,8 +643,8 @@ source .venv/bin/activate                     # or prefix commands with `uv run`
 `make develop` runs these steps. After changing dependencies in `pyproject.toml`, run it
 (or `uv sync --extra dev`) again; it updates `uv.lock`.
 
-**Shortcuts (`Makefile`):** `make develop` (set up the environment), `make check` (ruff
-lint + format check, changes nothing), `make format` (re-format the code), `make lint`
+**Shortcuts (`Makefile`):** `make develop` (set up the environment), `make check` (mypy,
+ruff lint + format check; changes nothing), `make typecheck` (mypy only), `make format` (re-format the code), `make lint`
 (ruff lint with automatic fixes), `make test` (pytest), `make stl` (all STLs), `make render` (all PNG renders; needs the PythonSCAD app), `make clean` (delete
 `stl/`, `renders/`, caches and build output; keeps `.venv`). `make` lists them.
 

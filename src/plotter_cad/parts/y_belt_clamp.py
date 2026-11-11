@@ -19,6 +19,7 @@ flat side down; no supports.
 """
 
 import math
+from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
 
@@ -26,13 +27,15 @@ from plotter_cad.geometry import EPS, FN_HOLE
 from plotter_cad.hardware import GT2
 from plotter_cad.params import CLAMP, TOL
 
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
-def y_belt_clamp():
+
+def y_belt_clamp() -> Solid:
     """One belt clamp cap, in print orientation."""
     c = CLAMP
     belt_zone = GT2.width - 0.4  # ridges stay inside the 6.4 mm channel
     plate = cube([c.w, c.length, c.t]).translate([-c.w / 2, 0, 0])
-    # ridges across the belt width, at belt pitch
     ridges = [
         cube([belt_zone, c.ridge_w, c.ridge_h + EPS]).translate(
             [-belt_zone / 2, i * GT2.pitch + (GT2.pitch - c.ridge_w) / 2, c.t - EPS]

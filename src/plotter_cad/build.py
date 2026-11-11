@@ -20,7 +20,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-from collections.abc import Iterable, Sequence
+from collections.abc import Collection, Iterable, Sequence
 from pathlib import Path
 
 from plotter_cad import params
@@ -125,7 +125,8 @@ def render_pngs(
     return written
 
 
-def _select(names: Iterable[str] | None, available: dict) -> list[str]:
+def _select(names: Iterable[str] | None, available: Collection[str]) -> list[str]:
+    """Validate ``names`` against ``available``; default to all of them."""
     if not names:
         return list(available)
     unknown = [n for n in names if n not in available]
@@ -137,6 +138,7 @@ def _select(names: Iterable[str] | None, available: dict) -> list[str]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Command-line entry point; returns the process exit code."""
     parser = argparse.ArgumentParser(
         prog="python -m plotter_cad", description=__doc__.split("\n\n")[0]
     )

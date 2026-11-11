@@ -7,10 +7,14 @@ The extrusion profiles are 2D sketches drawn as SVG files next to this module
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pythonscad import cylinder, linear_extrude
 
 from plotter_cad.geometry import load_sketch
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 #: The profile sketches live next to this module.
 SKETCH_DIR = Path(__file__).parent
@@ -73,14 +77,14 @@ VWHEEL = VWheelSpec()
 ECCENTRIC = EccentricSpacerSpec()
 
 
-def vslot_profile(n: tuple[int, int] = (1, 1)):
+def vslot_profile(n: tuple[int, int] = (1, 1)) -> Solid:
     """2D profile of ``n[0] × n[1]`` units (e.g. ``(2, 1)`` = a 2040 lying 40 wide, 20 tall).
 
     Origin: lower-left corner of the profile. The profile is loaded from the SVG sketch
     of that size (:data:`PROFILE_SKETCHES`); to add a size, draw its sketch and register it.
     """
     try:
-        name, quarter_turn = PROFILE_SKETCHES[tuple(n)]
+        name, quarter_turn = PROFILE_SKETCHES[n[0], n[1]]
     except KeyError:
         known = ", ".join(f"{a}×{b}" for a, b in sorted(PROFILE_SKETCHES))
         raise ValueError(f"No V-slot sketch for {n[0]}×{n[1]} units; known: {known}") from None
@@ -91,7 +95,7 @@ def vslot_profile(n: tuple[int, int] = (1, 1)):
     return profile
 
 
-def vslot_x(length: float, size: tuple[int, int] = (1, 1)):
+def vslot_x(length: float, size: tuple[int, int] = (1, 1)) -> Solid:
     """Extrusion along +X. Origin: lower-front-left corner of the profile at x = 0.
 
     ``size`` = (units deep along Y, units tall along Z); the upright 4020 X beam is
@@ -100,7 +104,7 @@ def vslot_x(length: float, size: tuple[int, int] = (1, 1)):
     return linear_extrude(vslot_profile(size), height=length).rotate([90, 0, 90]).color("LightGray")
 
 
-def vslot_y(length: float, size: tuple[int, int] = (1, 1)):
+def vslot_y(length: float, size: tuple[int, int] = (1, 1)) -> Solid:
     """Extrusion along +Y, same profile convention (units along X, units along Z)."""
     return (
         linear_extrude(vslot_profile(size), height=length)
@@ -110,7 +114,7 @@ def vslot_y(length: float, size: tuple[int, int] = (1, 1)):
     )
 
 
-def vwheel():
+def vwheel() -> Solid:
     """V-wheel. Origin: wheel center; axis along Y (rides on X-direction rails)."""
     w = VWHEEL
     inner_d = w.od - 2 * VSLOT.groove_d
@@ -120,7 +124,7 @@ def vwheel():
     return (body - bore).rotate([90, 0, 0]).color("#202020")
 
 
-def eccentric_spacer(rot: float = 0):
+def eccentric_spacer(rot: float = 0) -> Solid:
     """Eccentric spacer.
 
     Origin: on the boss axis at the plate-side face of the hex; the boss points -Y

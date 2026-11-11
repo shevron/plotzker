@@ -6,15 +6,21 @@ Hardware: none. Print: PETG or PLA; 0.2 mm; 100 % infill; upright; no supports.
 Alternative: stack M5 nuts and washers to the same length.
 """
 
+from typing import TYPE_CHECKING
+
 from pythonscad import cylinder
 
 from plotter_cad.geometry import FN_HOLE
 from plotter_cad.params import TOL, X_DRIVE
 
+if TYPE_CHECKING:
+    from pythonscad import Solid
+
 OUTER_D = 8  #: bears on the idler's inner ring
 
 
-def x_idler_spacer():
+def x_idler_spacer() -> Solid:
+    """Spacer between the idler mount and the idler pulley."""
     length = X_DRIVE.idler_spacer_len
     body = cylinder(d=OUTER_D, h=length, fn=48)
     bore = cylinder(d=TOL.bolt_hole_d(5), h=length + 2, fn=FN_HOLE).translate([0, 0, -1])

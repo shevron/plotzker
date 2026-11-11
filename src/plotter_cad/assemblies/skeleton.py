@@ -5,12 +5,17 @@ Checks the height stack-up, travel and clearances. Real parts where they exist
 and baseboard layout. Not printable. Superseded by the full assembly in T3.7.
 """
 
+from typing import TYPE_CHECKING
+
 from pythonscad import cube, translate
 
 from plotter_cad.assemblies.carriage import carriage_assembly
 from plotter_cad.assemblies.gantry import gantry_assembly
 from plotter_cad.hardware import GT2, PULLEY, SK10, Y_SHAFT, sk10, y_shaft
 from plotter_cad.params import BEAM, CARRIAGE, FRAME, REQ, TOOL_PLATE, Y_AXIS
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 
 def gantry_y_at(position: float) -> float:
@@ -25,7 +30,8 @@ def carriage_x_at(position: float) -> float:
     return beam_x0 + CARRIAGE.end_keepout + CARRIAGE.w / 2 + position * CARRIAGE.travel_avail
 
 
-def skeleton(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list:
+def skeleton(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list[Solid]:
+    """Frame, Y axis, gantry and carriage at the given travel fractions (0..1)."""
     gantry_y = gantry_y_at(gantry_pos)
     carriage_x = carriage_x_at(carriage_pos)
     board_x, board_y, board_t = FRAME.board_size
@@ -33,7 +39,6 @@ def skeleton(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list:
     a3_x, a3_y = REQ.media_a3
 
     items = [cube(list(FRAME.board_size)).translate([0, 0, -board_t]).color("BurlyWood", 0.5)]
-    # Y axis: shafts and SK10s
     for x in Y_AXIS.shaft_x:
         items.append(y_shaft().translate([x, Y_AXIS.shaft_y0, Y_AXIS.shaft_z]))
         items += [sk10().translate([x, y, 0]) for y in Y_AXIS.sk10_y]
@@ -56,7 +61,6 @@ def skeleton(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list:
         .translate([(board_x - a3_x) / 2, (board_y - a3_y) / 2, FRAME.bed_top_z])
         .color("Orange", 0.25)
     )
-    # gantry (T3.2, T3.4)
     items += gantry_assembly(gantry_y)
     # Y belt return runs (lower run, full shaft length) — motors/idlers come in T3.5
     for i, x in enumerate(Y_AXIS.shaft_x):
@@ -89,5 +93,6 @@ def skeleton(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list:
 
 
 def clearance_report() -> str:
+    """One-line report of the gap between carriage and media."""
     gap = CARRIAGE.bottom_z - FRAME.media_top_z
     return f"Carriage bottom {CARRIAGE.bottom_z:g} vs media top {FRAME.media_top_z:g} → gap {gap:g}"

@@ -38,11 +38,16 @@ down on the bed; no supports (hook groove, belt channel and side holes are
 self-supporting: 45° walls, short bridges, teardrops).
 """
 
+from typing import TYPE_CHECKING
+
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
 from plotter_cad.geometry import EPS, FN_HOLE, teardrop, teardrop_x
 from plotter_cad.hardware import ECCENTRIC, M3_INSERT, VWHEEL, metric
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT, Preload
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 WHEEL_X = CARRIAGE.wheel_pitch_x / 2  #: wheel axle x (±)
 REAR_Y0 = BEAM.depth / 2 + 0.5  #: rear block front face (behind the beam)
@@ -51,7 +56,8 @@ WIDEN_Y = VWHEEL.width / 2 + 1  #: the bridge may widen behind the top wheels
 CLAMP_X = CARRIAGE.rear_w / 2 - CLAMP.length / 2  #: X belt clamp centers (±)
 
 
-def _body():
+def _body() -> Solid:
+    """Carriage solid before the holes and cutouts."""
     c = CARRIAGE
     plate = cube([c.plate_w, c.plate_t, c.top_z - c.bottom_z]).translate(
         [-c.plate_w / 2, c.plate_front_y, c.bottom_z]
@@ -59,14 +65,12 @@ def _body():
     tab = cube([c.tab_w, c.plate_t, c.tab_h + EPS]).translate(
         [-c.tab_w / 2, c.plate_front_y, c.top_z - EPS]
     )
-    # printed stand-offs under the top wheels (match the eccentric stack)
     standoffs = [
         cylinder(d=c.top_boss_d, h=ECCENTRIC.stack + EPS, fn=32)
         .rotate([-90, 0, 0])
         .translate([sx * WHEEL_X, c.plate_back_y - EPS, c.wheel_z[0]])
         for sx in (-1, 1)
     ]
-    # bridge over the beam top, between the top wheels
     bridge = cube([c.bridge_w, REAR_Y0 - c.plate_back_y + EPS, c.bridge_h]).translate(
         [-c.bridge_w / 2, c.plate_back_y - EPS, c.bridge_z]
     )
@@ -77,14 +81,14 @@ def _body():
             [-c.rear_w / 2, WIDEN_Y + (c.rear_w - c.bridge_w) / 2, c.bridge_z]
         ),
     )
-    # rear block: X belt clamps + X endstop trigger
     rear = cube([c.rear_w, REAR_Y1 - REAR_Y0, c.rear_h]).translate(
         [-c.rear_w / 2, REAR_Y0, c.bridge_z]
     )
     return plate | tab | standoffs | bridge | widening | rear
 
 
-def _wheel_axle_holes() -> list:
+def _wheel_axle_holes() -> list[Solid]:
+    """Wheel axle holes."""
     c = CARRIAGE
     holes = []
     for sx in (-1, 1):
@@ -128,7 +132,8 @@ def _wheel_axle_holes() -> list:
     return holes
 
 
-def _tool_plate_interface() -> list:
+def _tool_plate_interface() -> list[Solid]:
+    """Tool-plate hook groove and mounting holes."""
     c, tp = CARRIAGE, TOOL_PLATE
     # hook groove (French cleat): opening hook_h tall at the face, undercut hook_d
     # downward at 45°; closed ends locate the tool plate in X
@@ -146,7 +151,6 @@ def _tool_plate_interface() -> list:
         .rotate([90, 0, 90])
         .translate([0, c.plate_front_y, 0])
     )
-    # 2 × M3 heat-set inserts for the tool-plate clamp screws
     inserts = [
         cylinder(d=M3_INSERT.hole_d, h=TOL.insert_pocket_depth, fn=FN_HOLE)
         .rotate([-90, 0, 0])
@@ -156,7 +160,8 @@ def _tool_plate_interface() -> list:
     return [groove, *inserts]
 
 
-def _top_tab_cutouts() -> list:
+def _top_tab_cutouts() -> list[Solid]:
+    """Windows for the top connector tabs."""
     c, (conn_w, conn_h) = CARRIAGE, TOOL_PLATE.conn_size
     window = cube([conn_w, c.plate_t + 2, conn_h]).translate(
         [-conn_w / 2, c.plate_front_y - 1, c.top_z + c.tab_h - 3 - conn_h]
@@ -175,7 +180,8 @@ def _top_tab_cutouts() -> list:
     return [window, *zip_slots]
 
 
-def _belt_clamp_cutouts() -> list:
+def _belt_clamp_cutouts() -> list[Solid]:
+    """Belt channels and clamp bolt holes."""
     c = CARRIAGE
     channel = cube([c.rear_w + 2, CLAMP.channel_w, CLAMP.channel_d + EPS]).translate(
         [-c.rear_w / 2 - 1, X_BELT.y - CLAMP.channel_w / 2, c.bridge_z - EPS]
@@ -190,7 +196,7 @@ def _belt_clamp_cutouts() -> list:
     return [channel, *inserts]
 
 
-def _endstop_trigger_cutouts() -> list:
+def _endstop_trigger_cutouts() -> list[Solid]:
     """M3 along -x from the rear block's left end, through a captive nut."""
     c = CARRIAGE
     screw = (
@@ -209,13 +215,13 @@ def _endstop_trigger_cutouts() -> list:
     return [screw, nut]
 
 
-def x_carriage_installed():
+def x_carriage_installed() -> Solid:
     """The carriage in its installed position (carriage-local frame)."""
     cuts = _wheel_axle_holes() + _tool_plate_interface() + _top_tab_cutouts()
     cuts += _belt_clamp_cutouts() + _endstop_trigger_cutouts()
     return _body() - cuts
 
 
-def x_carriage():
+def x_carriage() -> Solid:
     """The carriage in print orientation: front face down on the bed."""
     return x_carriage_installed().rotate([90, 0, 0]).translate([0, 0, -CARRIAGE.plate_front_y])

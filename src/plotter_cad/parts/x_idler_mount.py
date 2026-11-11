@@ -24,11 +24,16 @@ Hardware: toothed 20T GT2 idler (Ø5 bore); 1 × M5×40 ISO 4762 + M5 washer + M
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 """
 
+from typing import TYPE_CHECKING
+
 from pythonscad import cube, cylinder, hull, linear_extrude
 
 from plotter_cad.geometry import EPS, FN_HOLE, teardrop, teardrop_x, teardrop_y
 from plotter_cad.hardware import M3_INSERT, SCS10UU
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 AXIS_Z = X_BELT.pulley_axis_z - Y_AXIS.scs_top_z  #: idler axle, local z
 FOOT_Z0 = BRACKET.base_t
@@ -36,7 +41,7 @@ TOP_Z = X_DRIVE.idler_top_z - Y_AXIS.scs_top_z  #: plate top, local z
 PLATE_YC = X_DRIVE.plate_y0 + X_DRIVE.idler_plate_t / 2  #: plate mid-thickness (y)
 
 
-def x_idler_mount_installed():
+def x_idler_mount_installed() -> Solid:
     """The mount in the left bracket-local frame."""
     d = X_DRIVE
     x0, x1 = d.idler_plate_x
@@ -44,7 +49,6 @@ def x_idler_mount_installed():
         [x0, d.foot_y[0], FOOT_Z0]
     )
     plate = cube([x1 - x0, d.idler_plate_t, TOP_Z - FOOT_Z0]).translate([x0, d.plate_y0, FOOT_Z0])
-    # rear SCS bolts
     bolts = [
         cylinder(d=TOL.bolt_hole_d(5), h=d.foot_t + 2, fn=FN_HOLE).translate(
             [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 - 1]
@@ -52,7 +56,6 @@ def x_idler_mount_installed():
         for hx in (-1, 1)
         for y in d.bolt_rows
     ]
-    # idler axle slot (along x)
     slot = hull(
         *(
             teardrop_y(TOL.bolt_hole_d(5), d.idler_plate_t + 2).translate(
@@ -72,7 +75,6 @@ def x_idler_mount_installed():
     screw = teardrop_x(TOL.bolt_hole_d(3), x1 - d.idler_x).translate(
         [(x1 + d.idler_x) / 2, PLATE_YC, AXIS_Z]
     )
-    # endstop-mount inserts (top)
     endstop_inserts = [
         cylinder(d=M3_INSERT.hole_d, h=TOL.insert_pocket_depth, fn=FN_HOLE).translate(
             [x, PLATE_YC, TOP_Z - TOL.insert_pocket_depth + EPS]
@@ -82,6 +84,6 @@ def x_idler_mount_installed():
     return (foot | plate) - bolts - slot - insert - screw - endstop_inserts
 
 
-def x_idler_mount():
+def x_idler_mount() -> Solid:
     """Print orientation: foot on the bed."""
     return x_idler_mount_installed().translate([0, 0, -FOOT_Z0])

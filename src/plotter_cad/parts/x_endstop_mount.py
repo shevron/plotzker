@@ -22,11 +22,16 @@ Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; plate front face down;
 no supports.
 """
 
+from typing import TYPE_CHECKING
+
 from pythonscad import cube, cylinder, hull
 
 from plotter_cad.geometry import EPS, FN_HOLE
 from plotter_cad.hardware import ENDSTOP
 from plotter_cad.params import CARRIAGE, TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 TRIG_Z = CARRIAGE.trig_z - Y_AXIS.scs_top_z  #: trigger screw axis, local z
 TOP_Z = X_DRIVE.idler_top_z - Y_AXIS.scs_top_z  #: idler plate top, local z
@@ -42,7 +47,7 @@ PILOT_D = 2.6  #: M3 self-tapping into the board's holes
 BOARD_HOLE_Y = X_ENDSTOP.board_y[1] - ENDSTOP.pcb[0] / 2 - ENDSTOP.hole_x
 
 
-def x_endstop_mount_installed():
+def x_endstop_mount_installed() -> Solid:
     """The mount in the left bracket-local frame."""
     e = X_ENDSTOP
     plate = cube([e.plate_t, PLATE_Y[1] - PLATE_Y[0], PLATE_Z[1] - PLATE_Z[0]]).translate(
@@ -51,7 +56,6 @@ def x_endstop_mount_installed():
     arm = cube([PLATE_X[0] - PAD_X0 + EPS, ARM_Y[1] - ARM_Y[0], ARM_T]).translate(
         [PAD_X0, ARM_Y[0], TOP_Z]
     )
-    # pad slots (±pad_slot along x)
     slots = [
         hull(
             *(
@@ -72,6 +76,6 @@ def x_endstop_mount_installed():
     return (plate | arm) - slots - pilots
 
 
-def x_endstop_mount():
+def x_endstop_mount() -> Solid:
     """Print orientation: plate front face (+x) down, arm pointing up."""
     return x_endstop_mount_installed().rotate([0, 90, 0]).translate([0, 0, X_ENDSTOP.plate_front_x])

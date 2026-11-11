@@ -6,12 +6,18 @@ typical values and is adjusted at assembly if needed.
 
 import math
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 
 @dataclass(frozen=True)
 class Gt2BeltSpec:
+    """GT2 belt dimensions."""
+
     pitch: float = 2
     width: float = 6  #: confirmed: plenty on hand
     thickness: float = 1.38  #: total
@@ -64,6 +70,7 @@ class IdlerSpec:
 
     @property
     def pd(self) -> float:
+        """Pitch diameter."""
         return self.teeth * GT2.pitch / math.pi
 
 
@@ -71,7 +78,7 @@ PULLEY = PulleySpec()
 IDLER = IdlerSpec()
 
 
-def gt2_pulley():
+def gt2_pulley() -> Solid:
     """20T pulley. Origin: center of the hub's bottom face (motor side); axis +Z.
 
     The belt runs over z in ``[hub_len + 1, hub_len + 1 + belt width]``.
@@ -87,7 +94,7 @@ def gt2_pulley():
     return (body - bore).color("Gold")
 
 
-def gt2_idler():
+def gt2_idler() -> Solid:
     """Toothed idler. Origin: center, axis Z, symmetric about z = 0."""
     i = IDLER
     body = cylinder(d=i.pd - 0.5, h=i.width, center=True, fn=40)
@@ -99,6 +106,6 @@ def gt2_idler():
     return (body - bore).color("Gold")
 
 
-def gt2_belt(length: float):
+def gt2_belt(length: float) -> Solid:
     """Straight belt run. Origin: start, running +X; width along Z, teeth at y = 0."""
     return cube([length, GT2.thickness, GT2.width]).color("#111")

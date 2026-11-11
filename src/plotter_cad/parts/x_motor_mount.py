@@ -22,11 +22,16 @@ at the X belt line — slide it on the shaft to align with the idler).
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 """
 
+from typing import TYPE_CHECKING
+
 from pythonscad import cube, cylinder
 
 from plotter_cad.geometry import EPS, FN_HOLE, teardrop_y
 from plotter_cad.hardware import NEMA17, SCS10UU
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 AXIS_Z = X_BELT.pulley_axis_z - Y_AXIS.scs_top_z  #: motor axis, local z
 FOOT_Z0 = BRACKET.base_t  #: the foot sits on the bracket base
@@ -35,7 +40,7 @@ PLATE_TOP = AXIS_Z + NEMA17.width / 2
 MOTOR_BOTTOM = AXIS_Z - NEMA17.width / 2
 
 
-def x_motor_mount_left():
+def x_motor_mount_left() -> Solid:
     """The mount as designed, in the left bracket-local frame (not printed like this)."""
     d = X_DRIVE
     foot_x0 = min(-SCS10UU.width / 2 - 1, PLATE_X[0])
@@ -46,11 +51,9 @@ def x_motor_mount_left():
     plate = cube([NEMA17.width, d.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate(
         [PLATE_X[0], d.plate_y0, FOOT_Z0]
     )
-    # rib under the motor (between the bolt columns)
     rib = cube(
         [d.motor_rib_t, d.foot_y[1] - d.motor_face_y + EPS, MOTOR_BOTTOM - 0.5 - FOOT_Z0]
     ).translate([d.motor_x - d.motor_rib_t / 2, d.motor_face_y - EPS, FOOT_Z0])
-    # rear SCS bolts (clamp the foot)
     bolts = [
         cylinder(d=TOL.bolt_hole_d(5), h=d.foot_t + 2, fn=FN_HOLE).translate(
             [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 - 1]
@@ -58,7 +61,6 @@ def x_motor_mount_left():
         for hx in (-1, 1)
         for y in d.bolt_rows
     ]
-    # motor pilot boss + 4 × M3
     plate_mid_y = d.plate_y0 + d.motor_plate_t / 2
     boss = teardrop_y(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate(
         [d.motor_x, plate_mid_y, AXIS_Z]
@@ -77,6 +79,6 @@ def x_motor_mount_left():
     return (foot | plate | rib) - bolts - boss - screws
 
 
-def x_motor_mount():
+def x_motor_mount() -> Solid:
     """The printed part (right end) = mirror image, foot on the bed."""
     return x_motor_mount_left().mirror([1, 0, 0]).translate([0, 0, -FOOT_Z0])

@@ -4,6 +4,8 @@ the X motor / idler / endstop mounts and fasteners (fit check, T3.2 + T3.4).
 Machine frame (``params``). Not printable.
 """
 
+from typing import TYPE_CHECKING
+
 from pythonscad import cube, mirror, multmatrix, translate
 
 from plotter_cad.hardware import (
@@ -40,11 +42,14 @@ from plotter_cad.parts.x_idler_spacer import x_idler_spacer
 from plotter_cad.parts.x_motor_mount import x_motor_mount_left
 from plotter_cad.parts.y_belt_clamp import y_belt_clamp
 
+if TYPE_CHECKING:
+    from pythonscad import Solid
+
 #: Endstop board orientation: normal +x (switch side), lever pointing −y.
 _ENDSTOP_ORIENTATION = [[0, 0, 1, 0], [-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 0, 1]]
 
 
-def x_drive_local(side: Side) -> list:
+def x_drive_local(side: Side) -> list[Solid]:
     """X motor (right) or idler + endstop (left) at one gantry end, left-local frame."""
     axis_z = X_BELT.pulley_axis_z - Y_AXIS.scs_top_z
     d = X_DRIVE
@@ -63,7 +68,6 @@ def x_drive_local(side: Side) -> list:
         .rotate([90, 0, 0])
         .translate([d.idler_x, d.plate_y0, axis_z])
         .color("Orange"),
-        # axle: head in front of the idler
         shcs(5, 40).rotate([90, 0, 0]).translate([d.idler_x, X_BELT.y - IDLER.width / 2, axis_z]),
         multmatrix(endstop(), _ENDSTOP_ORIENTATION).translate(
             [X_ENDSTOP.plate_front_x, board_y, CARRIAGE.trig_z - Y_AXIS.scs_top_z]
@@ -71,13 +75,12 @@ def x_drive_local(side: Side) -> list:
     ]
 
 
-def gantry_end_local(side: Side = Side.LEFT) -> list:
+def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
     """One gantry end in the left bracket-local frame (the caller mirrors the right end).
 
     ``side`` selects the X drive hardware: LEFT = idler + endstop, RIGHT = motor.
     """
     items = [gantry_end_bracket(Side.LEFT).color("DarkOrange")]
-    # SCS blocks under the bracket
     items += [
         scs10uu().translate([0, block * Y_AXIS.scs_pitch / 2, -SCS10UU.height]) for block in (-1, 1)
     ]
@@ -96,10 +99,8 @@ def gantry_end_local(side: Side = Side.LEFT) -> list:
                     )
                 )
     items += x_drive_local(side)
-    # 2 × M5×20 into the beam end
     for z in (BEAM_BOTTOM + VSLOT.unit / 2, BEAM_BOTTOM + 3 * VSLOT.unit / 2):
         items.append(shcs(5, 20).rotate([0, -90, 0]).translate([FACE_OUT_X, 0, z]))
-    # belt clamp caps (ridges up into the channel) + belt ends
     for cy in (-BRACKET.len_y / 2, BRACKET.len_y / 2 - CLAMP.length):
         items.append(y_belt_clamp().translate([Y_AXIS.belt_x, cy, -CLAMP.t]).color("Gold"))
         items.append(
@@ -116,7 +117,7 @@ def gantry_end_local(side: Side = Side.LEFT) -> list:
     return items
 
 
-def gantry_assembly(gantry_y: float) -> list:
+def gantry_assembly(gantry_y: float) -> list[Solid]:
     """The whole gantry with its center (midway between the blocks) at machine y = ``gantry_y``."""
     left_x, right_x = Y_AXIS.shaft_x
     belt_return = (
@@ -142,7 +143,7 @@ def gantry_assembly(gantry_y: float) -> list:
     ]
 
 
-def gantry_fit_check() -> list:
+def gantry_fit_check() -> list[Solid]:
     """The gantry at mid-board on 400 mm stubs of the Y shafts."""
     mid_y = FRAME.board_size[1] / 2
     shafts = [y_shaft(400).translate([x, mid_y - 200, Y_AXIS.shaft_z]) for x in Y_AXIS.shaft_x]

@@ -11,7 +11,7 @@ requires-python = ">=3.14"
 dependencies = ["pythonscad>=1.1"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
 plotter-cad = "plotter_cad.build:main"
@@ -35,6 +35,13 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["plotter_cad"]
 known-third-party = ["pythonscad"]
+
+[tool.mypy]
+python_version = "3.14"
+mypy_path = ["src", "stubs"]
+packages = ["plotter_cad"]
+strict = true
+cache_dir = ".mypy_cache"
 
 [tool.uv]
 python-preference = "only-system"  # use the pyenv interpreter (.python-version), no uv-managed download

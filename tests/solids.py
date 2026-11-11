@@ -51,6 +51,7 @@ def shell_count(solid) -> int:
     parent = list(range(len(points)))
 
     def find(i: int) -> int:
+        """Root of ``i``'s group, with path compression."""
         while parent[i] != i:
             parent[i] = parent[parent[i]]
             i = parent[i]

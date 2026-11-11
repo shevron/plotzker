@@ -31,6 +31,7 @@ underside bridges 6.4 mm).
 """
 
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull
 
@@ -38,8 +39,13 @@ from plotter_cad.geometry import EPS, FN_HOLE, teardrop_x, teardrop_y
 from plotter_cad.hardware import M3_INSERT, SCS10UU, VSLOT, metric
 from plotter_cad.params import BEAM, BRACKET, CLAMP, TOL, Y_AXIS
 
+if TYPE_CHECKING:
+    from pythonscad import Solid
+
 
 class Side(Enum):
+    """Which end of the gantry a part belongs to."""
+
     LEFT = "left"
     RIGHT = "right"
 
@@ -55,7 +61,8 @@ BEAM_BOLT_Z = (BEAM_BOTTOM + VSLOT.unit / 2, BEAM_BOTTOM + 3 * VSLOT.unit / 2)
 CLAMP_Y = (-BRACKET.len_y / 2 + CLAMP.length / 2, BRACKET.len_y / 2 - CLAMP.length / 2)
 
 
-def _body():
+def _body() -> Solid:
+    """Bracket solid before the holes and cutouts."""
     b = BRACKET
     base = cube([b.x_in - b.x_out, b.len_y, b.base_t]).translate([b.x_out, -b.len_y / 2, 0])
     face = cube([b.face_t, b.face_y[1] - b.face_y[0], FACE_TOP]).translate(
@@ -69,18 +76,17 @@ def _body():
         )
         for y0 in b.rib_y0
     ]
-    # Y endstop trigger boss (front-outboard corner)
     bx, by, bz = b.trig_boss
     boss = cube([bx, by, bz + EPS]).translate([b.trig_x - bx / 2, -b.len_y / 2, b.base_t - EPS])
     return base | face | ribs | boss
 
 
-def _cutouts() -> list:
+def _cutouts() -> list[Solid]:
+    """Holes and pockets subtracted from the body."""
     b = BRACKET
     cuts = []
     # carriage notch: between the blocks the base stops at the face plate
     cuts.append(cube([b.x_in, 2 * b.notch_y, b.base_t + 2]).translate([FACE_IN_X, -b.notch_y, -1]))
-    # 8 × M5 clearance holes to the SCS blocks
     cuts += [
         cylinder(d=TOL.bolt_hole_d(5), h=b.base_t + 2, fn=FN_HOLE).translate(
             [
@@ -93,14 +99,12 @@ def _cutouts() -> list:
         for hx in (-1, 1)
         for hy in (-1, 1)
     ]
-    # beam-end locating pocket in the face plate
     clr = TOL.slide
     cuts.append(
         cube([b.recess + 1, BEAM.depth + 2 * clr, BEAM.height + 2 * clr]).translate(
             [FACE_IN_X - b.recess, -BEAM.depth / 2 - clr, BEAM_BOTTOM - clr]
         )
     )
-    # 2 × M5 through the face plate into the beam end bores
     cuts += [
         teardrop_x(TOL.bolt_hole_d(b.beam_bolt_m), b.face_t + 2).translate(
             [(FACE_IN_X + FACE_OUT_X) / 2, 0, z]
@@ -141,7 +145,7 @@ def _cutouts() -> list:
     return cuts
 
 
-def gantry_end_bracket(side: Side = Side.LEFT):
+def gantry_end_bracket(side: Side = Side.LEFT) -> Solid:
     """The bracket for one gantry end, in print orientation (the right one is mirrored)."""
     bracket = _body() - _cutouts()
     return bracket.mirror([1, 0, 0]) if side is Side.RIGHT else bracket

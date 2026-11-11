@@ -4,10 +4,14 @@ Source: docs/hardware.md (vendor table values and measurements). Dimensions in m
 """
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, linear_extrude, polygon
 
 from plotter_cad.geometry import EPS
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 
 @dataclass(frozen=True)
@@ -74,12 +78,12 @@ SK10 = Sk10Spec()
 SCS10UU = Scs10uuSpec()
 
 
-def y_shaft(length: float = Y_SHAFT.length):
+def y_shaft(length: float = Y_SHAFT.length) -> Solid:
     """Ø10 shaft. Origin: start of the shaft on its axis; runs along +Y."""
     return cylinder(d=Y_SHAFT.d, h=length, fn=32).rotate([-90, 0, 0]).color("WhiteSmoke")
 
 
-def sk10():
+def sk10() -> Solid:
     """SK10. Origin: mounting surface under the shaft axis, at mid-thickness; shaft along Y."""
     s = SK10
     body = cube([s.width, s.length, s.base_t]).translate([-s.width / 2, -s.length / 2, 0]) | cube(
@@ -98,7 +102,7 @@ def sk10():
     return (body - bore - slit - holes).color("Gainsboro")
 
 
-def scs10uu():
+def scs10uu() -> Solid:
     """SCS10UU. Origin: block base plane under the shaft axis, at mid-length; shaft along Y."""
     s = SCS10UU
     c = s.top_chamfer

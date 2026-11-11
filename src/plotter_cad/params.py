@@ -43,6 +43,8 @@ from plotter_cad.hardware import (
 
 @dataclass(frozen=True)
 class Tolerances:
+    """Print tolerances."""
+
     bolt: float = 0.4  #: clearance-hole oversize: M3 → 3.4, M5 → 5.4
     slide: float = 0.2  #: sliding fit (diametral)
     press: float = 0.0  #: press fit (0 to -0.1)
@@ -74,9 +76,11 @@ class Tolerances:
         return metric(m).head_d + 2 * self.bolt
 
     def slide_d(self, d: float) -> float:
+        """Hole diameter for a sliding fit on a ``d`` mm part."""
         return d + self.slide
 
     def press_d(self, d: float) -> float:
+        """Hole diameter for a press fit on a ``d`` mm part."""
         return d + self.press
 
 
@@ -89,6 +93,8 @@ TOL = Tolerances()
 
 @dataclass(frozen=True)
 class Requirements:
+    """Requirements the design must meet (README §1)."""
+
     media_a3: tuple[float, float] = (297, 420)  #: A3 short side across X (D10)
     media_max_t: float = 15  #: R2, D15
     x_travel: float = 410  #: target travel (README §4.2)
@@ -113,6 +119,8 @@ REQ = Requirements()
 
 @dataclass(frozen=True)
 class Frame:
+    """Frame boards, bed stack and media height."""
+
     board_size: tuple[float, float, float] = (650, 850, 18)  #: X × Y × thickness (plywood)
     bed_panel_t: float = 9  #: DESIGN (T3.7): 6–9 mm plywood/MDF
     bed_steel_t: float = 0.8  #: DESIGN (T3.7): 0.5–1 mm galvanized steel
@@ -121,10 +129,12 @@ class Frame:
 
     @property
     def bed_top_z(self) -> float:
+        """Z of the top of the bed."""
         return self.bed_adjust_gap + self.bed_panel_t + self.bed_steel_t
 
     @property
     def media_top_z(self) -> float:
+        """Z of the top of the thickest media."""
         return self.bed_top_z + REQ.media_max_t
 
 
@@ -137,11 +147,14 @@ FRAME = Frame()
 
 @dataclass(frozen=True)
 class Drive:
+    """Stepper drive and belt-pulley settings."""
+
     motor_full_steps: int = 200  #: 1.8°
     microsteps: int = 16
 
     @property
     def steps_per_mm(self) -> float:
+        """Steps per mm of belt travel."""
         return self.motor_full_steps * self.microsteps / (PULLEY.teeth * GT2.pitch)
 
 
@@ -156,6 +169,8 @@ DRIVE = Drive()
 
 @dataclass(frozen=True)
 class BeltClamp:
+    """Belt clamp channel dimensions."""
+
     squeeze: float = 0.3  #: belt compression in the clamp
     length: float = 20  #: along the belt (10 teeth)
     t: float = 4  #: cap thickness
@@ -175,6 +190,7 @@ class BeltClamp:
 
     @property
     def channel_w(self) -> float:
+        """Belt channel width."""
         return GT2.width + 0.4
 
 
@@ -200,6 +216,8 @@ CLAMP = BeltClamp()
 
 @dataclass(frozen=True)
 class ToolPlate:
+    """Tool-plate interface between carriage and tool heads."""
+
     w: float = 50  #: DESIGN (T3.3): interface width (X)
     h: float = 45  #: DESIGN (T3.3): height, bottom edge to top of hook
     hook_h: float = 6  #: DESIGN: vertical height of the hook lip
@@ -221,6 +239,7 @@ class ToolPlate:
 
     @property
     def top_z(self) -> float:
+        """Z of the top edge."""
         return self.bottom_z + self.h
 
 
@@ -233,6 +252,8 @@ TOOL_PLATE = ToolPlate()
 
 @dataclass(frozen=True)
 class YAxis:
+    """Y axis: shafts, linear bearing blocks and travel."""
+
     scs_pitch: float = 90  #: DESIGN (T3.2): SCS center to center per side, 80–100
     end_margin: float = 2  #: DESIGN: SCS block ↔ SK10 gap at the travel ends
     belt_x: float = -30  #: Y belt center, bracket-local x (outboard of the shaft)
@@ -260,14 +281,17 @@ class YAxis:
 
     @property
     def shaft_z(self) -> float:
+        """Z of the Y shaft axis."""
         return SK10.shaft_h
 
     @property
     def scs_base_z(self) -> float:
+        """Z of the underside of the SCS blocks."""
         return self.shaft_z - SCS10UU.shaft_h
 
     @property
     def scs_top_z(self) -> float:
+        """Z of the top of the SCS blocks."""
         return self.scs_base_z + SCS10UU.height
 
     @property
@@ -277,6 +301,7 @@ class YAxis:
 
     @property
     def travel_avail(self) -> float:
+        """Available gantry travel along Y."""
         return Y_SHAFT.length - 2 * SK10.length - self.gantry_len_y - 2 * self.end_margin
 
     # Y belt line (fixes the Y motor and idler heights for T3.5)
@@ -287,6 +312,7 @@ class YAxis:
 
     @property
     def belt_pitch_z(self) -> float:
+        """Z of the belt pitch line."""
         return self.belt_back_z - GT2.pitch_line_from_back
 
     @property
@@ -304,6 +330,8 @@ Y_AXIS = YAxis()
 
 @dataclass(frozen=True)
 class Beam:
+    """Gantry beam (V-slot extrusion)."""
+
     length: float = 520
     size: tuple[int, int] = (1, 2)  #: vslot_x size: 20 deep (Y) × 40 tall (Z)
     #: Beam end relative to its shaft axis (+ = inboard). 0 = the beam end sits over
@@ -312,10 +340,12 @@ class Beam:
 
     @property
     def depth(self) -> float:
+        """Extent along Y."""
         return self.size[0] * VSLOT.unit
 
     @property
     def height(self) -> float:
+        """Extent along Z."""
         return self.size[1] * VSLOT.unit
 
     @property
@@ -330,6 +360,7 @@ class Beam:
 
     @property
     def top_z(self) -> float:
+        """Z of the top face."""
         return self.bottom_z + self.height
 
     @property
@@ -355,6 +386,8 @@ class Preload(Enum):
 
 @dataclass(frozen=True)
 class Carriage:
+    """X carriage dimensions."""
+
     #: DESIGN (T3.3): wheel center to center along X; wide enough that the bottom
     #: wheels' bolt heads sit outside the 50 mm tool plate
     wheel_pitch_x: float = 64
@@ -397,10 +430,12 @@ class Carriage:
 
     @property
     def bottom_z(self) -> float:
+        """Z of the underside."""
         return BEAM.bottom_z - self.below_beam
 
     @property
     def top_z(self) -> float:
+        """Z of the top edge."""
         return self.wheel_z[0] + VWHEEL.od / 2 + self.margin_below_wheel
 
     @property
@@ -450,6 +485,8 @@ CARRIAGE = Carriage()
 
 @dataclass(frozen=True)
 class GantryBracket:
+    """Gantry end bracket dimensions."""
+
     base_t: float = 10  #: base plate on the SCS blocks (M5×20 → 10 mm thread engagement)
     x_out: float = -38  #: outboard edge (covers the Y belt clamp)
     face_t: float = 8  #: plate the beam end bolts to (YZ plane)
@@ -496,6 +533,8 @@ BRACKET = GantryBracket()
 
 @dataclass(frozen=True)
 class XBelt:
+    """X belt position."""
+
     #: Belt center behind the beam's rear face. Set so the X motor plate fits between
     #: the gantry bracket's rear bolt rows and long motor shafts clear the beam (T3.4)
     behind_beam_face: float = 13
@@ -530,6 +569,8 @@ X_BELT = XBelt()
 
 @dataclass(frozen=True)
 class XDrive:
+    """X drive: motor, idler and mounting feet."""
+
     foot_t: float = 5  #: foot clamped under the rear SCS bolts
     # Motor
     motor_x: float = 1  #: DESIGN: motor shaft x (near the beam end)
@@ -556,6 +597,7 @@ class XDrive:
 
     @property
     def foot_y(self) -> tuple[float, float]:
+        """Y range of the foot under the SCS block."""
         p, length = Y_AXIS.scs_pitch, SCS10UU.length
         return (p / 2 - length / 2, p / 2 + length / 2)
 
@@ -606,6 +648,7 @@ class XEndstopMount:
 
     @property
     def plate_front_x(self) -> float:
+        """X of the tool-plate front face."""
         return self.head_x_min + self.pre_trip - self.lever_h
 
     @property

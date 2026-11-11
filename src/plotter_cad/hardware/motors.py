@@ -1,12 +1,18 @@
 """NEMA17 stepper motor and SG90-class hobby servo. Dimensions in mm."""
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, linear_extrude, square
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 
 @dataclass(frozen=True)
 class Nema17Spec:
+    """NEMA17 stepper dimensions."""
+
     width: float = 42.3
     length: float = 39.2  #: body length, typical motor on hand (measured)
     length_short: float = 33.5  #: shorter motors on hand (measured)
@@ -43,7 +49,7 @@ NEMA17 = Nema17Spec()
 SG90 = ServoSpec()
 
 
-def nema17(length: float = NEMA17.length):
+def nema17(length: float = NEMA17.length) -> Solid:
     """NEMA17. Origin: center of the mounting face (base of the boss); shaft +Z, body -Z."""
     n = NEMA17
     outline = square([n.width - 2 * n.chamfer] * 2, center=True).offset(
@@ -63,7 +69,7 @@ def nema17(length: float = NEMA17.length):
     return (body - holes).color("#2a2a2a") | (boss | shaft).color("Silver")
 
 
-def servo_sg90():
+def servo_sg90() -> Solid:
     """Servo. Origin: center of the body's bottom face; shaft at the +X end, pointing +Z."""
     s = SG90
     length, width, height = s.body

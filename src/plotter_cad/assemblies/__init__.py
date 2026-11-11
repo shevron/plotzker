@@ -5,10 +5,14 @@ render name (``renders/<name>.png``) to the function that builds it.
 """
 
 from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from plotter_cad.assemblies import carriage, gantry, hardware_gallery, skeleton
 
-ASSEMBLIES: dict[str, Callable[[], list]] = {
+if TYPE_CHECKING:
+    from pythonscad import Solid
+
+ASSEMBLIES: dict[str, Callable[[], list[Solid]]] = {
     "carriage": carriage.carriage_fit_check,
     "gantry": gantry.gantry_fit_check,
     "hardware_gallery": hardware_gallery.hardware_gallery,

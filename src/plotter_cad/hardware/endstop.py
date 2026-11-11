@@ -5,12 +5,18 @@ lever; 2 mounting holes 15 apart; ~12 thick including the connector.
 """
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 
 @dataclass(frozen=True)
 class EndstopSpec:
+    """Mechanical endstop switch dimensions."""
+
     pcb: tuple[float, float, float] = (19, 20, 1.6)  #: L (lever direction) × W × T; T ASSUMED
     len_lever: float = 27  #: PCB + open lever (measured)
     height: float = 12  #: PCB bottom to top of the connector (measured)
@@ -30,7 +36,7 @@ class EndstopSpec:
 ENDSTOP = EndstopSpec()
 
 
-def endstop():
+def endstop() -> Solid:
     """Endstop board.
 
     Origin: PCB bottom face, center between the mounting holes. Switch on top at the

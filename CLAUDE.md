@@ -79,7 +79,7 @@ with a native Python API). Setup and commands are in README §10.
   dependencies managed by uv (`uv sync --extra dev`, locked in `uv.lock`). Run commands
   in the activated `.venv` or with `uv run` (e.g. `uv run python -m pytest`). Don't
   install packages with `pip`; add them to `pyproject.toml` and re-sync. `Makefile`
-  shortcuts: `make develop`, `make check` (ruff, read-only), `make format`, `make lint` (ruff with
+  shortcuts: `make develop`, `make check` (mypy + ruff, read-only), `make typecheck` (mypy), `make format`, `make lint` (ruff with
   fixes), `make test` (pytest), `make stl`, `make render`,
   `make clean`.
 
@@ -121,8 +121,7 @@ with a native Python API). Setup and commands are in README §10.
 ## Python coding standards
 
 - PEP 8, enforced by `ruff format` and `ruff check` (config in `pyproject.toml`,
-  line length 100). Type hints on public functions; docstrings on modules and public
-  functions.
+  line length 100).
 - Import PythonSCAD names explicitly (`from pythonscad import cube, cylinder`), never
   `from pythonscad import *`.
 - Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
@@ -132,6 +131,32 @@ with a native Python API). Setup and commands are in README §10.
   (`from .x_carriage import x_carriage` shadows the submodule); import modules there.
 - Mark assumed values with an `ASSUMED` comment, design choices with `DESIGN (Tn.m)`.
 - (More project-specific guidelines will be added here over time.)
+
+#### Type annotations
+
+- All code must pass type checking with `mypy` (`make typecheck`, part of `make check`;
+  strict mode, config in `pyproject.toml`). Annotate all new functions and public
+  attributes.
+- Follow PEP 604 (`X | Y` unions) and PEP 673 (`Self`).
+- Use `collections.abc` for generic collection types over deprecated `typing` types.
+- Prefer structural typing (duck typing) such as `Protocol`s over strict inheritance,
+  unless inheritance also serves other purposes beyond type adherence (such as code reuse).
+- `pythonscad` ships no type information: the local stub `stubs/pythonscad/__init__.pyi`
+  provides it, including the `Solid` type. `Solid` exists only in the stub, so import it
+  under `if TYPE_CHECKING:` (annotations are lazy in Python 3.14). Extend the stub when
+  using a new PythonSCAD function or method.
+
+#### Comments and docblocks
+
+- Files, classes and functions have a short docblock (at least a one-liner, PEP 257 style)
+  describing the purpose of the unit: "what this is", not "how this works".
+- A Google-style docstring may describe a function in more detail, beyond what naming and
+  type annotations already say, if necessary.
+- Inline comments should be rare, and never explain what the code does or repeat what is
+  obvious from reading it.
+- A short inline comment is fine for a non-obvious block or something others may find
+  confusing or counter-intuitive, but code should be self-documenting; a comment is a
+  last resort.
 
 ## Testing
 

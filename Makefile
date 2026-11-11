@@ -1,7 +1,7 @@
 # Common development commands. Setup details: README §10.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check format lint test stl render
+.PHONY: help develop clean check typecheck format lint test stl render
 
 PYTHON_VERSION := $(shell cat .python-version)
 UV_RUN := uv run --extra dev
@@ -15,12 +15,15 @@ develop:  ## Set up the development environment (.venv on pyenv's Python, all de
 	uv sync --extra dev
 
 clean:  ## Remove all generated files (STLs, renders, caches, build output); keeps .venv
-	rm -rf stl renders build dist .pytest_cache .ruff_cache
+	rm -rf stl renders build dist .pytest_cache .ruff_cache .mypy_cache
 	find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +
 
-check:  ## Run the static code checks (ruff lint + formatting)
+check: typecheck  ## Run the static code checks (ruff lint + formatting, mypy)
 	$(UV_RUN) ruff check .
 	$(UV_RUN) ruff format --check .
+
+typecheck:  ## Run the type checks (mypy)
+	$(UV_RUN) mypy
 
 format:  ## Re-format the code (ruff format)
 	$(UV_RUN) ruff format .

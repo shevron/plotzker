@@ -5,7 +5,7 @@ Carriage-local frame (``params.Carriage``). Not printable.
 
 from pythonscad import cube
 
-from plotter_cad.hardware import GT2, eccentric_spacer, metric, shcs, vslot_x, vwheel
+from plotter_cad.hardware import GT2, eccentric_spacer, hex_nut, metric, shcs, vslot_x, vwheel
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, X_BELT
 from plotter_cad.parts.x_carriage import CLAMP_X, WHEEL_X, x_carriage_installed
 from plotter_cad.parts.y_belt_clamp import y_belt_clamp
@@ -49,8 +49,11 @@ def carriage_assembly(ecc_rot: float = 0):
             .color("#111")
         )
     # X endstop trigger: the screw head outside the rear block's left end touches the
-    # switch; a lock nut sits between head and block, a captive nut inside
-    items.append(shcs(3, 16).rotate([0, -90, 0]).translate([-c.rear_w / 2 - 5, c.trig_y, c.trig_z]))
+    # switch; a lock nut sits between head and block (shown at the end of its
+    # adjustment, as params.XEndstopMount.head_x_min assumes), a captive nut inside
+    lock_nut_x = -c.rear_w / 2 - metric(3).nut_h
+    items.append(hex_nut(3).rotate([0, 90, 0]).translate([lock_nut_x, c.trig_y, c.trig_z]))
+    items.append(shcs(3, 16).rotate([0, -90, 0]).translate([lock_nut_x, c.trig_y, c.trig_z]))
     return items
 
 

@@ -117,8 +117,9 @@ def scs10uu():
     top_cuts = linear_extrude([recess, *edge_chamfers], height=s.length + 2, center=True).rotate(
         [90, 0, 0]
     )
+    # the block is modeled with its LM10UU bushing in place, so the bore is the shaft's
     bore = (
-        cylinder(d=19, h=s.length + 2, center=True, fn=40)
+        cylinder(d=s.shaft_d, h=s.length + 2, center=True, fn=40)
         .rotate([90, 0, 0])
         .translate([0, 0, s.shaft_h])
     )

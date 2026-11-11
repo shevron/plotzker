@@ -2,7 +2,7 @@
 
 import pytest
 
-from plotter_cad.geometry import load_sketch
+from plotter_cad.geometry import load_sketch, teardrop
 from plotter_cad.hardware import VSLOT
 from plotter_cad.hardware.vslot import PROFILE_SKETCHES, SKETCH_DIR, vslot_profile
 
@@ -21,18 +21,20 @@ def outline_stats(sketch) -> tuple[float, list[float], list[float]]:
     return area, lo, hi
 
 
-# Net material areas of the profiles as drawn (slots, bores and the 2040's cavity removed).
-@pytest.mark.parametrize(("size", "area"), [((1, 1), 161.1), ((1, 2), 295.5), ((2, 1), 295.5)])
-def test_vslot_profile(size, area):
-    got_area, lo, hi = outline_stats(vslot_profile(size))
+@pytest.mark.parametrize("size", PROFILE_SKETCHES)
+def test_vslot_profile_fills_its_envelope(size):
+    """Each profile spans exactly its ``n × m`` units from the origin and is not solid."""
+    area, lo, hi = outline_stats(vslot_profile(size))
+    width, height = size[0] * VSLOT.unit, size[1] * VSLOT.unit
     assert lo == pytest.approx([0, 0], abs=1e-6)
-    assert hi == pytest.approx([size[0] * VSLOT.unit, size[1] * VSLOT.unit], abs=1e-6)
-    assert got_area == pytest.approx(area, abs=0.5)
+    assert hi == pytest.approx([width, height], abs=1e-6)
+    assert 0 < area < width * height
 
 
-def test_every_registered_sketch_exists():
-    for name, _ in PROFILE_SKETCHES.values():
-        assert (SKETCH_DIR / name).is_file()
+def test_vslot_profile_lying_flat_is_the_upright_one_rotated():
+    upright, _, _ = outline_stats(vslot_profile((1, 2)))
+    flat, _, _ = outline_stats(vslot_profile((2, 1)))
+    assert flat == pytest.approx(upright)
 
 
 def test_unknown_profile_size():
@@ -45,7 +47,29 @@ def test_missing_sketch(tmp_path):
         load_sketch(tmp_path / "nope.svg")
 
 
+def test_sketch_units_origin_and_holes(tmp_path):
+    """A 30 × 20 mm plate with a 10 × 10 hole, drawn off-center in a 40 × 50 mm sheet."""
+    svg = tmp_path / "plate.svg"
+    svg.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="50mm" viewBox="0 0 40 50">'
+        '<path fill-rule="evenodd" d="M5,25 H35 V45 H5 Z M10,30 H20 V40 H10 Z"/></svg>'
+    )
+    area, lo, hi = outline_stats(load_sketch(svg))
+    assert area == pytest.approx(30 * 20 - 10 * 10)
+    # SVG y runs down from the top of the sheet; CAD y runs up from its bottom
+    assert lo == pytest.approx([5, 5])
+    assert hi == pytest.approx([35, 25])
+
+
 def test_curve_facets_follow_fn():
     coarse = load_sketch(SKETCH_DIR / "vslot_2020.svg")
     fine = load_sketch(SKETCH_DIR / "vslot_2020.svg", fn=64)
     assert sum(map(len, fine.mesh())) > sum(map(len, coarse.mesh()))
+
+
+def test_teardrop_covers_the_hole_and_peaks_at_45_degrees():
+    """As wide as the hole, with the roof's point where two 45° lines off the circle meet."""
+    d = 6
+    _, lo, hi = outline_stats(teardrop(d))
+    assert lo == pytest.approx([-d / 2, -d / 2], abs=1e-3)
+    assert hi == pytest.approx([d / 2, d / 2 * 2**0.5], abs=1e-3)

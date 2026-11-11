@@ -1,62 +1,48 @@
-"""Every printable part renders, sits flat on the bed, and matches its reference geometry.
-
-The reference (volume and bounding box per part) lives in ``reference_parts.json``.
-After an intentional design change, review the new STLs and regenerate it with
-``pytest --update-reference``.
-"""
+"""Every printable part is a sane, printable solid."""
 
 import dataclasses
-import json
-from pathlib import Path
+import math
 
 import pytest
-from pythonscad import export
 
+from plotter_cad import build
 from plotter_cad.params import Preload
 from plotter_cad.parts import PRINTABLE_PARTS
+from solids import bounding_box, shell_count, volume
 
-REFERENCE = Path(__file__).with_name("reference_parts.json")
 
-
-@pytest.fixture(scope="module")
-def part_stats(tmp_path_factory, mesh_stats) -> dict[str, dict]:
-    out = tmp_path_factory.mktemp("stl")
-    stats = {}
-    for name, build in PRINTABLE_PARTS.items():
-        path = out / f"{name}.stl"
-        export(build(), str(path))
-        stats[name] = mesh_stats(path)
-    return stats
+def assert_printable(solid):
+    """One piece with no enclosed voids, resting on the print bed, with real volume."""
+    lo, hi = bounding_box(solid)
+    assert shell_count(solid) == 1, "loose pieces or enclosed voids"
+    assert lo[2] == pytest.approx(0, abs=1e-6), "print face must lie on z = 0"
+    assert 0 < volume(solid) < math.prod(h - low for low, h in zip(lo, hi, strict=True))
 
 
 @pytest.mark.parametrize("name", PRINTABLE_PARTS)
-def test_part_is_solid_and_on_the_bed(part_stats, name):
-    stats = part_stats[name]
-    assert stats["volume"] > 0
-    assert stats["bbox"][0][2] == pytest.approx(0, abs=1e-6), "print face must lie on z = 0"
+def test_part_is_printable(name):
+    assert_printable(PRINTABLE_PARTS[name]())
 
 
-def test_parts_match_reference(part_stats, update_reference):
-    if update_reference:
-        REFERENCE.write_text(json.dumps(part_stats, indent=2, sort_keys=True) + "\n")
-        pytest.skip("reference updated")
-    reference = json.loads(REFERENCE.read_text())
-    assert sorted(reference) == sorted(part_stats), "part list changed: --update-reference"
-    for name, ref in reference.items():
-        got = part_stats[name]
-        assert got["volume"] == pytest.approx(ref["volume"], abs=0.05), name
-        for corner_got, corner_ref in zip(got["bbox"], ref["bbox"], strict=True):
-            assert corner_got == pytest.approx(corner_ref, abs=1e-3), name
-
-
-def test_carriage_slot_preload_fallback(monkeypatch, tmp_path, mesh_stats):
-    """The D21 fallback (slotted bottom axles + push screws) still builds."""
+def test_carriage_slot_preload_fallback(monkeypatch):
+    """The D21 fallback (slotted bottom axles + push screws) is a different, printable part."""
     import plotter_cad.parts.x_carriage as module
 
-    eccentric = tmp_path / "eccentric.stl"
-    export(module.x_carriage(), str(eccentric))
-    slotted_params = dataclasses.replace(module.CARRIAGE, preload=Preload.SLOT)
-    monkeypatch.setattr(module, "CARRIAGE", slotted_params)
-    slot = tmp_path / "slot.stl"
-    export(module.x_carriage(), str(slot))
-    assert 0 < mesh_stats(slot)["volume"] < mesh_stats(eccentric)["volume"]
+    eccentric = module.x_carriage()
+    monkeypatch.setattr(
+        module, "CARRIAGE", dataclasses.replace(module.CARRIAGE, preload=Preload.SLOT)
+    )
+    slotted = module.x_carriage()
+    assert_printable(slotted)
+    assert volume(slotted) != pytest.approx(volume(eccentric))
+
+
+def test_stl_export_writes_every_part(tmp_path):
+    written = build.export_stls(out_dir=tmp_path)
+    assert sorted(path.name for path in written) == sorted(f"{n}.stl" for n in PRINTABLE_PARTS)
+    assert all(path.stat().st_size > 0 for path in written)
+
+
+def test_stl_export_rejects_unknown_names(tmp_path):
+    with pytest.raises(SystemExit, match="Unknown name"):
+        build.export_stls(["no_such_part"], out_dir=tmp_path)

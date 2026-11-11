@@ -116,7 +116,7 @@ with a native Python API). Setup and commands are in README §10.
 - **Before handing over a CAD change:** `python -m pytest` and `ruff check` pass;
   `python -m plotter_cad stl` regenerates `stl/`; `python -m plotter_cad render`
   regenerates `renders/` (needs the PythonSCAD app). If geometry changed on purpose,
-  review the STLs/renders and run `pytest --update-reference`.
+  review the STLs/renders.
 
 ## Python coding standards
 
@@ -132,6 +132,34 @@ with a native Python API). Setup and commands are in README §10.
   (`from .x_carriage import x_carriage` shadows the submodule); import modules there.
 - Mark assumed values with an `ASSUMED` comment, design choices with `DESIGN (Tn.m)`.
 - (More project-specific guidelines will be added here over time.)
+
+## Testing
+
+Tests exist to make changes faster and safer: they should fail when the code is broken
+and stay quiet when a design value changes on purpose. A test that only makes changes
+slower has negative value; delete it.
+
+**Test:**
+- Pure functions that are reused or more than trivial (geometry helpers, the sketch
+  loader, the measuring helpers in `tests/solids.py`).
+- Solids are sane: every printable part is one piece with no enclosed voids, has a
+  plausible volume and rests on the print bed.
+- Assemblies hold together: parts touch what they mount on, nothing floats.
+- Behavior at the public interface: the design rules pass, a broken rule is reported,
+  errors for bad input, the STL export writes its files.
+
+**Don't test:**
+- Parameter or geometry values that are expected to change (key numbers, reference
+  volumes or bounding boxes). That duplicates the configuration and breaks on every
+  intended change. A real constraint belongs in `params.design_checks()` instead.
+- Trivial behavior: Python operators, one-line arithmetic, other libraries.
+- Implementation details and private (`_name`) code.
+- Anything through a mock that replaces the code under test. Overriding a parameter
+  set (e.g. `dataclasses.replace` on a params instance) is fine; faking the
+  implementation is not.
+
+Run with `make test`. Assemblies are fit-check models: when a connection test fails
+because a model is too crude (a missing nut or bushing), fix the model.
 
 ## Firmware
 

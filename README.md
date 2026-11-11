@@ -562,6 +562,9 @@ with a native Python API). Setup and commands are in §6.
   - Sliding fit +0.2 mm; press fit −0.1 to 0 mm
   - Nut traps: across-flats + 0.3 mm
   - Minimum wall: 1.6 mm (4 perimeters at 0.4 mm nozzle)
+- **Handles:** a part that hardware or other parts attach to exposes named handles
+  (`geometry.set_handles` / `get_handle`) and assemblies place things with `.align(handle)`
+  rather than repeating the part's coordinates (D28).
 - Prefer designs printable without supports (teardrop holes from `geometry.py`, 45°
   overhangs); note any required supports in the module docstring.
 - Each part module starts with a docstring: purpose, required hardware (with

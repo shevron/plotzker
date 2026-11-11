@@ -34,6 +34,68 @@ def vadd(a: Sequence[float], b: Sequence[float]) -> tuple[float, ...]:
     return tuple(x + y for x, y in zip(a, b, strict=True))
 
 
+#: A handle: a 4×4 transformation matrix marking a position and orientation on a part.
+Matrix = list[list[float]]
+
+
+def handle(position: Sequence[float], rotation: Sequence[float] = (0, 0, 0)) -> Matrix:
+    """A handle at ``position`` turned by ``rotation`` (degrees about x, y, z, as ``rotate``).
+
+    ``part.align(handle)`` puts a part modeled at the origin where
+    ``part.rotate(rotation).translate(position)`` would.
+    """
+    ax, ay, az = (math.radians(a) for a in rotation)
+    cx, cy, cz = math.cos(ax), math.cos(ay), math.cos(az)
+    sx, sy, sz = math.sin(ax), math.sin(ay), math.sin(az)
+    return [  # Rz · Ry · Rx, then the translation
+        [cz * cy, cz * sy * sx - sz * cx, cz * sy * cx + sz * sx, position[0]],
+        [sz * cy, sz * sy * sx + cz * cx, sz * sy * cx - cz * sx, position[1]],
+        [-sy, cy * sx, cy * cx, position[2]],
+        [0, 0, 0, 1],
+    ]
+
+
+def shift_handle(mat: Matrix, offset: Sequence[float]) -> Matrix:
+    """``mat`` moved by ``offset`` in the frame it is expressed in (not along its own axes)."""
+    moved = [row[:] for row in mat]
+    for i in range(3):
+        moved[i][3] += offset[i]
+    return moved
+
+
+def set_handles(solid: Solid, **handles: Matrix | list[Matrix]) -> Solid:
+    """Attach named handles to ``solid``; they follow it through transforms, mirroring and
+    boolean operations (but not ``fillet``).
+
+    A list becomes the numbered handles ``name_0``, ``name_1``... (PythonSCAD only
+    transforms attributes that are matrices, not lists of them); read it with
+    :func:`get_handles`.
+    """
+    for name, value in handles.items():
+        if isinstance(value[0][0], list):
+            for i, mat in enumerate(value):
+                setattr(solid, f"{name}_{i}", mat)
+        else:
+            setattr(solid, name, value)
+    return solid
+
+
+def get_handle(solid: Solid, name: str) -> Matrix:
+    """The handle ``name`` of ``solid``; a missing name raises ``AttributeError``."""
+    value: Matrix = getattr(solid, name)
+    return value
+
+
+def get_handles(solid: Solid, name: str) -> list[Matrix]:
+    """The numbered handles ``name_0``, ``name_1``... set from a list, in order."""
+    found: list[Matrix] = []
+    while hasattr(solid, f"{name}_{len(found)}"):
+        found.append(get_handle(solid, f"{name}_{len(found)}"))
+    if not found:
+        raise AttributeError(f"{name}_0")
+    return found
+
+
 def box(x0: float, y0: float, z0: float, x1: float, y1: float, z1: float) -> Solid:
     """Axis-aligned box between two corners ``(x0, y0, z0)`` and ``(x1, y1, z1)``."""
     return cube([x1 - x0, y1 - y0, z1 - z0]).translate([x0, y0, z0])

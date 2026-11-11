@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
 
-from plotter_cad.geometry import EPS, FN_HOLE
+from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles
 from plotter_cad.hardware import GT2
 from plotter_cad.params import CLAMP, TOL
 
@@ -56,4 +56,5 @@ def belt_clamp() -> Solid:
         )
         for sx in (-1, 1)
     ]
-    return (plate | rails | ridges) - holes
+    # "mount": the rail tops, where the cap meets the flat underside it clamps against
+    return set_handles((plate | rails | ridges) - holes, mount=handle([0, 0, c.total_t]))

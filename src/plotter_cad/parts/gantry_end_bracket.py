@@ -20,7 +20,7 @@ Modeled in print orientation (base on the bed).
 Hardware per bracket:
   8 × M5×20 ISO 4762 — base to the two SCS10UU blocks (10 mm thread engagement of 12)
   2 × M5×20 ISO 4762 — face plate into the beam end. The 4020's center bores (Ø4.2)
-                       must be tapped M5 (or an M5 screw driven in to cut its own thread)
+                       must be tapped M5 (the user taps the second bore; Q12)
   4 × M3 heat-set inserts (Ø4.6 × 5.7) + 4 × M3×10 ISO 4762 — two Y belt clamps
   2 × belt_clamp (printed)
   1 × M3×16 ISO 4762 + 2 × M3 nuts — Y endstop trigger (adjust, then lock)
@@ -34,7 +34,15 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull
 
-from plotter_cad.geometry import EPS, FN_HOLE, teardrop_x, teardrop_y
+from plotter_cad.geometry import (
+    EPS,
+    FN_HOLE,
+    Matrix,
+    handle,
+    set_handles,
+    teardrop_x,
+    teardrop_y,
+)
 from plotter_cad.hardware import M3_INSERT, SCS10UU, VSLOT, metric
 from plotter_cad.params import BEAM, BRACKET, CLAMP, TOL, Y_AXIS
 
@@ -56,8 +64,36 @@ FACE_OUT_X = FACE_IN_X - BRACKET.face_t  #: outboard face (bolt heads)
 FACE_TOP = BEAM_BOTTOM + BEAM.height + BRACKET.face_above
 #: Beam end bore heights (local z)
 BEAM_BOLT_Z = (BEAM_BOTTOM + VSLOT.unit / 2, BEAM_BOTTOM + 3 * VSLOT.unit / 2)
-#: Belt clamp centers (y)
-CLAMP_Y = (-BRACKET.len_y / 2 + CLAMP.length / 2, BRACKET.len_y / 2 - CLAMP.length / 2)
+
+
+def _block_bolts(block: int) -> list[Matrix]:
+    """Handles of one SCS block's 4 bolts: on the base top, bolt axis along z (head up)."""
+    return [
+        handle(
+            [
+                hx * SCS10UU.hole_pitch_x / 2,
+                block * Y_AXIS.scs_pitch / 2 + hy * SCS10UU.hole_pitch_y / 2,
+                BRACKET.base_t,
+            ]
+        )
+        for hx in (-1, 1)
+        for hy in (-1, 1)
+    ]
+
+
+#: Bolt handles of the front (-y) and rear (+y) SCS block
+BLOCK_BOLTS_FRONT = _block_bolts(-1)
+BLOCK_BOLTS_REAR = _block_bolts(1)
+#: Beam bolts: on the outboard face, axis along +x (heads outboard)
+BEAM_BOLTS = [handle([FACE_OUT_X, 0, z], [0, -90, 0]) for z in BEAM_BOLT_Z]
+#: Belt clamps (front, rear): on the flat underside, belt center, clamp start, running +y
+BELT_CLAMPS = [
+    handle([Y_AXIS.belt_x, y0, 0]) for y0 in (-BRACKET.len_y / 2, BRACKET.len_y / 2 - CLAMP.length)
+]
+#: Y endstop trigger screw: head behind the boss, axis along +y (tip forward, -y)
+TRIGGER_SCREW = handle(
+    [BRACKET.trig_x, -BRACKET.len_y / 2 + BRACKET.trig_boss[1], BRACKET.trig_z], [-90, 0, 0]
+)
 
 
 def _body() -> Solid:
@@ -87,16 +123,10 @@ def _cutouts() -> list[Solid]:
     # carriage notch: between the blocks the base stops at the face plate
     cuts.append(cube([b.x_in, 2 * b.notch_y, b.base_t + 2]).translate([FACE_IN_X, -b.notch_y, -1]))
     cuts += [
-        cylinder(d=TOL.bolt_hole_d(5), h=b.base_t + 2, fn=FN_HOLE).translate(
-            [
-                hx * SCS10UU.hole_pitch_x / 2,
-                block * Y_AXIS.scs_pitch / 2 + hy * SCS10UU.hole_pitch_y / 2,
-                -1,
-            ]
-        )
-        for block in (-1, 1)
-        for hx in (-1, 1)
-        for hy in (-1, 1)
+        cylinder(d=TOL.bolt_hole_d(5), h=b.base_t + 2, fn=FN_HOLE)
+        .translate([0, 0, -b.base_t - 1])
+        .align(bolt)
+        for bolt in (*BLOCK_BOLTS_FRONT, *BLOCK_BOLTS_REAR)
     ]
     clr = TOL.slide
     cuts.append(
@@ -112,10 +142,10 @@ def _cutouts() -> list[Solid]:
     ]
     # M3 heat-set insert pockets for the two belt clamp caps (from below, in the flat underside)
     cuts += [
-        cylinder(d=M3_INSERT.hole_d, h=TOL.insert_pocket_depth, fn=FN_HOLE).translate(
-            [Y_AXIS.belt_x + sx * CLAMP.screw_dx, cy, -EPS]
-        )
-        for cy in CLAMP_Y
+        cylinder(d=M3_INSERT.hole_d, h=TOL.insert_pocket_depth, fn=FN_HOLE)
+        .translate([sx * CLAMP.screw_dx, CLAMP.length / 2, -EPS])
+        .align(clamp)
+        for clamp in BELT_CLAMPS
         for sx in (-1, 1)
     ]
     # Y endstop trigger: M3 along -y through the boss, captive nut from the top
@@ -139,6 +169,18 @@ def _cutouts() -> list[Solid]:
 
 
 def gantry_end_bracket(side: Side = Side.LEFT) -> Solid:
-    """The bracket for one gantry end, in print orientation (the right one is mirrored)."""
-    bracket = _body() - _cutouts()
+    """The bracket for one gantry end, in print orientation (the right one is mirrored).
+
+    Handles for the hardware and parts that meet it: ``block_bolts_front`` and
+    ``block_bolts_rear`` (4 each), ``beam_bolts`` (2), ``belt_clamps`` (front, rear, lists)
+    and ``trigger_screw``; read them with ``geometry.get_handle(s)``.
+    """
+    bracket = set_handles(
+        _body() - _cutouts(),
+        block_bolts_front=BLOCK_BOLTS_FRONT,
+        block_bolts_rear=BLOCK_BOLTS_REAR,
+        beam_bolts=BEAM_BOLTS,
+        belt_clamps=BELT_CLAMPS,
+        trigger_screw=TRIGGER_SCREW,
+    )
     return bracket.mirror([1, 0, 0]) if side is Side.RIGHT else bracket

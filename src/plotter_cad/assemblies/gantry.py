@@ -14,10 +14,12 @@ from plotter_cad.hardware import (
     PULLEY,
     SCS10UU,
     VSLOT,
+    endstop_keepout,
     endstop_placed,
     gt2_idler,
     gt2_pulley,
     nema17,
+    place_in_frame,
     scs10uu,
     shcs,
     vslot_x,
@@ -44,6 +46,24 @@ if TYPE_CHECKING:
     from pythonscad import Solid
 
 
+#: X endstop board frame in the left bracket-local frame: origin, then u, v, w (board axes).
+_X_ENDSTOP_FRAME = (
+    [
+        X_ENDSTOP.board_front_x,
+        sum(X_ENDSTOP.board_y) / 2,
+        X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z,
+    ],
+    [0, -1, 0],
+    [1, 0, 0],
+    [0, 0, 1],
+)
+
+
+def x_endstop_keepout() -> Solid:
+    """Space that must stay free for the X endstop's plug, in the left bracket-local frame."""
+    return place_in_frame(endstop_keepout(), *_X_ENDSTOP_FRAME)
+
+
 def x_drive_local(side: Side) -> list[Solid]:
     """X motor (right) or idler + endstop (left) at one gantry end, left-local frame."""
     axis_z = X_BELT.pulley_axis_z - Y_AXIS.scs_top_z
@@ -63,16 +83,7 @@ def x_drive_local(side: Side) -> list[Solid]:
         .translate([d.idler_x, d.plate_y0, axis_z])
         .color("Orange"),
         shcs(5, 40).rotate([90, 0, 0]).translate([d.idler_x, X_BELT.y - IDLER.width / 2, axis_z]),
-        endstop_placed(
-            [
-                X_ENDSTOP.board_front_x,
-                sum(X_ENDSTOP.board_y) / 2,
-                X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z,
-            ],
-            u=[0, -1, 0],
-            v=[1, 0, 0],
-            w=[0, 0, 1],
-        ),
+        endstop_placed(*_X_ENDSTOP_FRAME),
     ]
 
 

@@ -2,7 +2,9 @@
 
 Measured by the user (T3.5, with photos): board 20 wide × 19 long × 1.5 thick; two M3
 mounting holes 15 apart, across the width at the rear (connector) end, hole edges 1 mm
-from the sides and 1.5 mm from the rear edge; ~12 thick including the connector.
+from the sides and 1.5 mm from the rear edge. The connector, on the component side at
+the rear, is 10 wide × 7.2 long × 5.6 high (normal to the board), 2 mm of it past the rear
+edge; a plug slides onto it from the rear, so the space behind it must stay free.
 
 The micro switch lies across the board's width at the front edge, its body protruding
 1 mm past the edge: 13 wide × 6.3 along the board × 5.3 above it. A thin metal lever
@@ -32,7 +34,6 @@ class EndstopSpec:
     """Endstop board, switch and lever dimensions."""
 
     pcb: tuple[float, float, float] = (19, 20, 1.5)  #: length (front-rear) × width × thickness
-    height: float = 12  #: bottom of the board to the top of the connector (measured)
     hole_pitch: float = 15  #: across the width (measured)
     hole_m: float = 3
     hole_d: float = 3.0  #: = 20 - 15 - 2 × 1 mm edge distance
@@ -46,12 +47,28 @@ class EndstopSpec:
     pivot_inset: float = 1.2  #: hinge from the body's left end. ASSUMED (from the photos)
     rest_protrusion: float = 5.0  #: lever tip past the board's front edge at rest (measured)
     pressed_protrusion: float = 1.5  #: ... fully pressed (measured)
-    contact_inset: float = 2.0  #: DESIGN: the trigger presses this far in from the lever tip
+    #: DESIGN: the trigger presses this far in from the lever tip (raises the right-hand Y
+    #: board enough that its plug space clears the belt)
+    contact_inset: float = 4.0
     #: DESIGN: share of the lever's travel at the contact point that the trigger uses at the
     #: end of travel. The switch's click point is ASSUMED to lie below this.
     press_fraction: float = 0.75
-    connector: tuple[float, float] = (11, 9)  #: width × length along the board. ASSUMED
-    connector_overhang: float = 4  #: connector past the rear edge. ASSUMED (from the photos)
+    connector: tuple[float, float, float] = (10, 7.2, 5.6)  #: width × length × height (measured)
+    connector_overhang: float = 2  #: connector past the rear edge (measured)
+    #: DESIGN: free space behind the connector for a plug and the bend of its wires, and the
+    #: clearance around the plug's sides and top
+    plug_len: float = 15
+    plug_clearance: float = 2
+
+    @property
+    def thickness(self) -> float:
+        """Board underside to the top of the tallest part (body or connector)."""
+        return self.pcb[2] + max(self.body[2], self.connector[2])
+
+    @property
+    def plug_keepout_v(self) -> float:
+        """Rear end of the plug keep-out, behind the front edge (negative)."""
+        return -(self.pcb[0] + self.connector_overhang + self.plug_len)
 
     @property
     def hole_v(self) -> float:
@@ -121,9 +138,9 @@ def endstop(pressed: bool = False) -> Solid:
         .translate([e.body_u - body_w / 2, e.body_overhang - body_h, t])
         .color("#222")
     )
-    conn_w, conn_l = e.connector
+    conn_w, conn_l, conn_h = e.connector
     connector = (
-        cube([conn_w, conn_l, e.height - t])
+        cube([conn_w, conn_l, conn_h])
         .translate([-conn_w / 2, -length - e.connector_overhang, t])
         .color("White")
     )
@@ -138,6 +155,28 @@ def endstop(pressed: bool = False) -> Solid:
     return pcb | body | connector | lever
 
 
+def endstop_keepout() -> Solid:
+    """Space that must stay free behind the connector for a plug, in the model frame."""
+    e = ENDSTOP
+    width = e.connector[0] + 2 * e.plug_clearance
+    rear_face = -(e.pcb[0] + e.connector_overhang)
+    return cube(
+        [width, rear_face - e.plug_keepout_v, e.pcb[2] + e.connector[2] + e.plug_clearance]
+    ).translate([-width / 2, e.plug_keepout_v, 0])
+
+
+def place_in_frame(
+    solid: Solid,
+    origin: Sequence[float],
+    u: Sequence[float],
+    v: Sequence[float],
+    w: Sequence[float],
+) -> Solid:
+    """``solid`` (modeled in the board frame) with its axes along ``u``, ``v``, ``w``."""
+    matrix = [[u[i], v[i], w[i], origin[i]] for i in range(3)] + [[0, 0, 0, 1]]
+    return multmatrix(solid, matrix)
+
+
 def endstop_placed(
     origin: Sequence[float],
     u: Sequence[float],
@@ -147,5 +186,4 @@ def endstop_placed(
 ) -> Solid:
     """The board with its model-frame axes ``u``, ``v``, ``w`` (right-handed) along the given
     directions of the destination frame and its origin at ``origin``."""
-    matrix = [[u[i], v[i], w[i], origin[i]] for i in range(3)] + [[0, 0, 0, 1]]
-    return multmatrix(endstop(pressed), matrix)
+    return place_in_frame(endstop(pressed), origin, u, v, w)

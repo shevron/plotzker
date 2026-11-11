@@ -103,21 +103,28 @@ any new decisions in §3, and update the status line at the top.
   center) so the motor plate fits between the bracket's rear bolt rows and 22.6 mm motor
   shafts clear the beam; the carriage regenerates from `params.py` (new STL; trigger now
   at z ~114.5). Checked: no collisions with the carriage at either end of travel.
-  - [ ] Follow-up: check the endstop board's hole positions and connector side against
-    `x_endstop_mount.py` (assumed: holes across the width, 4 mm from the far end; connector
-    on the switch side); test-print and check belt tension range and switch trip point.
+  - [x] Endstop mount redone in T3.5 for the measured board (it had been modeled wrongly):
+    the board now lies flat on a pad on the idler plate, the trigger screw head pressing the
+    lever along the board's length. The idler plate top dropped to z 105.35 (derived).
+  - [ ] Follow-up: test-print; check belt tension range and the switch trip point.
 - [x] **T3.5 Y motor mounts, Y idlers and belt tensioners** (on the baseboard, in line with
-  each shaft), and the Y endstop mounts. Belt 30 mm outboard of each shaft; motor shaft /
+  each shaft), and the Y endstops. Belt 30 mm outboard of each shaft; motor shaft /
   idler axle at `Y_AXIS.pulley_axis_z` (~27.8 mm). The X− endstop was done in T3.4.
-  → `parts/y_motor_mount.py`, `y_idler_mount.py`, `y_endstop_mount.py` (each left + mirrored
-  right, so 6 STLs), `assemblies/y_drive.py` (also drawn in the skeleton). Endstop board
-  confirmed by the user: M3, holes across the width at the connector end.
+  → `parts/y_motor_mount.py`, `parts/y_idler_mount.py` (each left + right, so 4 STLs; the
+  endstop is a tower on the idler mount), `assemblies/y_drive.py` (also in the skeleton).
+  The endstop board was measured with photos (M3, 15 mm pitch, switch across the front edge,
+  lever hinged at the left, 1.5 mm board, connector 10 × 7.2 × 5.6 mm) and modeled in
+  `hardware/endstop.py`; both endstop mounts (X and Y) follow it. The board is chiral, so
+  the right-hand Y idler mount isn't a pure mirror image (the tower's height differs).
+  Each connector has a 15 mm plug keep-out behind it (tests: nothing intrudes); it pushed
+  the Y idler forward (axle y 32) and moved the trigger contact 4 mm in from the lever tip.
   Checked: no collisions with the gantry, SK10s or shafts at the front, middle or back of
-  Y travel (test); only the endstop lever is touched by the trigger screw at the front end.
-  - [ ] Follow-up: re-measure the endstop hole pitch (15 mm measured; the photo suggests
-    ~17–18 mm); test-print; check belt tension range, the trip point (adjust with the
-    trigger screw length) and the idler plate against the wood-screw positions on the
-    baseboard.
+  Y travel (test); only the trigger pressing the endstop lever.
+  - [ ] Follow-up: test-print; check belt tension range, and the trip point (adjust with the
+    trigger screw length); measure where the switch clicks (modeled at 75 % of the lever's
+    travel) and check the board's assumed body offset (2.5 mm right of center) and lever
+    length (13.5 mm); check that a plug fits on the connectors; check the idler plate against
+    the wood-screw positions.
 - [ ] **T3.6 v1 pen holder (tool head).** Vertical slide, V-groove clamp for 7–16 mm pens,
   ~20 mm height adjustment, servo mount, gravity loading with room for added weight; meets
   the README §3.3 requirements. Interface: `TOOL_PLATE` in `params.py` (≤ 50 mm wide, hook
@@ -203,7 +210,7 @@ update the log once it is agreed (README §7.1).
 | D22 | Migrate the CAD from OpenSCAD to PythonSCAD: a `plotter_cad` Python package (`src/`), pip `pythonscad` module for STL export, PythonSCAD app for renders/preview. Ported 1:1 (all 8 STLs geometrically identical); the old `.scad` files were removed afterwards. D2 originally named OpenSCAD | ✅ | README §6, T3.9 |
 | D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | README §6 |
 | D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
-| D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with M4 wood screws (*assumed* size). Costs ~25 mm of baseboard length at the back; belt ~1.4 m per side | ✅ | T3.5, §6 |
+| D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with M4 wood screws (*assumed* size). Costs ~25 mm of baseboard length at the back; belt ~1.5 m per side | ✅ | T3.5, §6 |
 
 ---
 
@@ -230,7 +237,7 @@ hard to get, we adjust.
 | Controller: Creality (newer) | 1? | Not located yet; fallback | Model |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | From a printer | **Voltage (12/24 V), current** |
-| Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, ~12 mm thick incl. connector (`docs/hardware.md`) | Click point, lever length |
+| Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |
 | Plywood, steel sheet, magnets | to buy/cut | Baseboard, bed panel, work holding (README §3.8) | — |
 
 ---
@@ -252,7 +259,7 @@ hard to get, we adjust.
 | Pen pressure (start point) | ~20–80 g |
 | Baseboard | 18 mm plywood, ~850 × 650 mm |
 | Shaft spacing | 520 mm |
-| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard; idler axle y 44, motor axis y 799 (machine frame); ~1.45 m belt per side |
+| Y belt | 30 mm outboard of each shaft; motor/idler axis ~27.8 mm above the baseboard; idler axle y 32, motor axis y 799 (machine frame); ~1.5 m belt per side |
 | X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~94.8 mm above the baseboard; ~1.2 m belt |
 | Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
 | Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 inserts 36 mm apart |

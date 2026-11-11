@@ -14,11 +14,13 @@ from plotter_cad.hardware import (
     IDLER,
     NEMA17,
     PULLEY,
+    endstop_keepout,
     endstop_placed,
     gt2_idler,
     gt2_pulley,
     hex_nut,
     nema17,
+    place_in_frame,
     shcs,
     sk10,
     washer,
@@ -100,21 +102,28 @@ def y_belt_runs(gantry_y: float) -> list[Solid]:
     ]
 
 
-def y_endstop_board(side: Side, gantry_y: float | None = None) -> Solid:
-    """The endstop board of one side in the machine frame (its chirality can't be mirrored).
-
-    With ``gantry_y`` the lever is drawn pressed if the trigger screw reaches it.
-    """
+def _y_endstop_frame(side: Side) -> tuple[list[float], list[float], list[float], list[float]]:
+    """Endstop board frame in the machine frame (the board is chiral, so it is not mirrored):
+    origin, then u (along z), v (+y) and w (toward the machine center)."""
     left_x, right_x = Y_AXIS.shaft_x
     e = Y_ENDSTOP
-    if side is Side.LEFT:
-        u_z, shaft_x, sign = -1, left_x, 1
-    else:
-        u_z, shaft_x, sign = 1, right_x, -1
+    u_z, shaft_x, sign = (-1, left_x, 1) if side is Side.LEFT else (1, right_x, -1)
     origin = [shaft_x + sign * e.board_x0, e.board_front_y, e.board_z_center(u_z)]
-    # board axes in the machine frame: u along z, v = +y, w = toward the machine center
+    return origin, [0, 0, u_z * sign], [0, 1, 0], [sign, 0, 0]
+
+
+def y_endstop_board(side: Side, gantry_y: float | None = None) -> Solid:
+    """The endstop board of one side in the machine frame.
+
+    With ``gantry_y`` the lever is drawn pressed if the gantry is at its front end.
+    """
     pressed = gantry_y is not None and gantry_y <= gantry_y_at(0) + 1e-6
-    return endstop_placed(origin, [0, 0, u_z * sign], [0, 1, 0], [sign, 0, 0], pressed)
+    return endstop_placed(*_y_endstop_frame(side), pressed)
+
+
+def y_endstop_keepout(side: Side) -> Solid:
+    """Space that must stay free for the Y endstop's plug, in the machine frame."""
+    return place_in_frame(endstop_keepout(), *_y_endstop_frame(side))
 
 
 def y_drive_side_local(gantry_y: float, side: Side = Side.LEFT) -> list[Solid]:

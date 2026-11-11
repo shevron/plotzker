@@ -9,7 +9,13 @@ numbers awaiting a measurement.
 
 from plotter_cad.hardware.bearings import B608, B623, B625, LM6UU, LM8UU, LM10UU, Bearing, bearing
 from plotter_cad.hardware.belts import GT2, IDLER, PULLEY, gt2_belt, gt2_idler, gt2_pulley
-from plotter_cad.hardware.endstop import ENDSTOP, endstop, endstop_placed
+from plotter_cad.hardware.endstop import (
+    ENDSTOP,
+    endstop,
+    endstop_keepout,
+    endstop_placed,
+    place_in_frame,
+)
 from plotter_cad.hardware.fasteners import M3, M3_INSERT, M5, hex_nut, metric, shcs, washer
 from plotter_cad.hardware.linear_motion import SCS10UU, SK10, Y_SHAFT, scs10uu, sk10, y_shaft
 from plotter_cad.hardware.motors import NEMA17, SG90, nema17, servo_sg90
@@ -49,6 +55,7 @@ __all__ = [
     "bearing",
     "eccentric_spacer",
     "endstop",
+    "endstop_keepout",
     "endstop_placed",
     "gt2_belt",
     "gt2_idler",
@@ -56,6 +63,7 @@ __all__ = [
     "hex_nut",
     "metric",
     "nema17",
+    "place_in_frame",
     "scs10uu",
     "servo_sg90",
     "shcs",

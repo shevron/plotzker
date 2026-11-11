@@ -5,10 +5,15 @@ from pythonscad import union
 
 from plotter_cad.assemblies import ASSEMBLIES
 from plotter_cad.assemblies.carriage import carriage_fit_check
-from plotter_cad.assemblies.gantry import gantry_assembly, gantry_end_local, gantry_fit_check
+from plotter_cad.assemblies.gantry import (
+    gantry_assembly,
+    gantry_end_local,
+    gantry_fit_check,
+    x_endstop_keepout,
+)
 from plotter_cad.assemblies.skeleton import carriage_x_at, gantry_y_at
 from plotter_cad.assemblies.y_drive import gantry_y_at as y_gantry_y_at
-from plotter_cad.assemblies.y_drive import y_drive_assembly, y_drive_fit_check
+from plotter_cad.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
 from plotter_cad.hardware import sk10, y_shaft
 from plotter_cad.params import FRAME, Y_AXIS
 from plotter_cad.parts.gantry_end_bracket import Side
@@ -67,3 +72,19 @@ def test_y_drive_clears_the_gantry(position):
     others = union(*flatten(gantry_assembly(gantry_y)), *fixed)
     drive = union(*flatten(y_drive_assembly(gantry_y)))
     assert volume(drive & others) < 2 * 3
+
+
+@pytest.mark.parametrize("position", [0, 1])
+def test_y_endstop_plug_space_is_free(position):
+    """A plug can be pushed onto each Y endstop's connector: nothing is in the way."""
+    gantry_y = y_gantry_y_at(position)
+    solids = [*flatten(y_drive_assembly(gantry_y)), *flatten(gantry_assembly(gantry_y))]
+    for side in Side:
+        keepout = y_endstop_keepout(side)
+        assert all(volume(keepout & s) < 0.1 for s in solids)
+
+
+def test_x_endstop_plug_space_is_free():
+    """A plug can be pushed onto the X endstop's connector: nothing is in the way."""
+    keepout = x_endstop_keepout()
+    assert all(volume(keepout & s) < 0.1 for s in flatten(gantry_end_local(Side.LEFT)))

@@ -701,8 +701,6 @@ class YDrive:
     foot_t: float = 6  #: printed foot on the baseboard (M4 wood screws, counterbored)
     foot_screw_m: float = 4  #: ASSUMED: wood/chipboard screws into the 18 mm plywood
     # Idler (toothed 20T on an M5 axle, cantilevered from a plate outboard of it)
-    #: DESIGN (T3.5): axle (mid-slot) in front of the gantry's front face at its end of travel
-    idler_from_front: float = 47
     idler_slot: float = 8  #: axle slot length along y (belt tension travel)
     idler_gap: float = 1.25  #: idler flange to plate: one M5 washer + clearance
     idler_plate_t: float = 9
@@ -724,8 +722,9 @@ class YDrive:
 
     @property
     def idler_y(self) -> float:
-        """Idler axle, middle of the slot (machine y)."""
-        return self.gantry_front_y - self.idler_from_front
+        """Idler axle, middle of the slot (machine y): the idler stays clear of the endstop
+        board's plug keep-out."""
+        return Y_ENDSTOP.keepout_y0 - 1 - self.idler_slot / 2 - IDLER.flange_d / 2
 
     @property
     def idler_plate_x(self) -> tuple[float, float]:
@@ -807,6 +806,11 @@ class YEndstopMount:
     def board_y(self) -> tuple[float, float]:
         """Board extent in y: rear edge, front edge."""
         return (self.board_front_y - ENDSTOP.pcb[0], self.board_front_y)
+
+    @property
+    def keepout_y0(self) -> float:
+        """Rear end of the plug keep-out behind the connector."""
+        return self.board_front_y + ENDSTOP.plug_keepout_v
 
     @property
     def trig_z(self) -> float:
@@ -949,13 +953,12 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Y idler tension screw pocket too close to the axle slot",
     )
     yield (
-        ye.board_x0 + ENDSTOP.height <= -SK10.body_w / 2 - 1,
+        ye.board_x0 + ENDSTOP.thickness <= -SK10.body_w / 2 - 1,
         "Y endstop board (with its connector) hits the front SK10",
     )
     yield (
-        yd.idler_y + yd.idler_slot / 2 + IDLER.flange_d / 2 + 1
-        <= ye.board_y[0] - ENDSTOP.connector_overhang,
-        "Y idler hits the Y endstop board's connector",
+        yd.idler_y + yd.idler_slot / 2 + IDLER.flange_d / 2 + 1 <= ye.keepout_y0,
+        "Y idler hits the Y endstop plug keep-out",
     )
     yield (
         ye.board_front_y + ENDSTOP.rest_protrusion <= yd.gantry_front_y - 1,

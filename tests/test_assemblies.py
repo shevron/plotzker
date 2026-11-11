@@ -93,15 +93,24 @@ def test_x_endstop_plug_space_is_free():
 
 
 @pytest.mark.parametrize(
-    ("mount", "sk10_y"),
+    ("mount", "sk10_y", "outward"),
     [
-        (y_idler_mount_installed, Y_AXIS.sk10_y[0]),
-        (y_motor_mount_installed, Y_AXIS.sk10_y[1]),
+        (y_idler_mount_installed, Y_AXIS.sk10_y[0], -1),
+        (y_motor_mount_installed, Y_AXIS.sk10_y[1], 1),
     ],
     ids=["idler mount, front SK10", "motor mount, rear SK10"],
 )
-def test_sk10_seats_in_the_mount_pocket(mount, sk10_y):
-    """The SK10 fits in its mount's pocket without overlap and rests against the end wall."""
-    support = sk10().translate([0, sk10_y, 0])
-    assert volume(mount() & support) < 1e-6
-    assert touching(mount(), support)
+def test_sk10_seats_in_the_mount_corner(mount, sk10_y, outward):
+    """The SK10 rests in the corner of its mount's pocket (end wall + outboard side wall) and
+    is free to move toward the open sides."""
+    solid = mount()
+
+    def overlap(dx, dy):
+        return volume(solid & sk10().translate([dx, sk10_y + dy, 0]))
+
+    assert overlap(0, 0) < 1e-6
+    assert touching(solid, sk10().translate([0, sk10_y, 0]))
+    assert overlap(-0.3, 0) > 0.1, "the outboard wall must locate the SK10"
+    assert overlap(0, 0.3 * outward) > 0.1, "the end wall must locate the SK10"
+    assert overlap(0.3, 0) < 1e-6, "the inboard side must be open"
+    assert overlap(0, -0.3 * outward) < 1e-6, "the side toward the other SK10 must be open"

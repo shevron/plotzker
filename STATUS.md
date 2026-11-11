@@ -116,12 +116,12 @@ any new decisions in §3, and update the status line at the top.
   lever hinged at the left, 1.5 mm board, connector 10 × 7.2 × 5.6 mm) and modeled in
   `hardware/endstop.py`; both endstop mounts (X and Y) follow it. The board is chiral, so
   the right-hand Y idler mount isn't a pure mirror image (the tower's height differs).
-  Both mounts also have an SK10 pocket (D26; tested: the SK10 seats without overlap).
+  Both mounts also have an SK10 pocket (D26; tested: the SK10 seats in the corner and the other sides are open).
   Each connector has a 15 mm plug keep-out behind it (tests: nothing intrudes); it pushed
   the Y idler forward (axle y 32) and moved the trigger contact 4 mm in from the lever tip.
   Checked: no collisions with the gantry, SK10s or shafts at the front, middle or back of
   Y travel (test); only the trigger pressing the endstop lever.
-  - [ ] Follow-up: test-print; check the pocket fit on an SK10 (tune `pocket_clear`) and the
+  - [ ] Follow-up: test-print; check the pocket corner against an SK10 and the
     belt tension range, and the trip point (adjust with the
     trigger screw length); measure where the switch clicks (modeled at 75 % of the lever's
     travel) and check the board's assumed body offset (2.5 mm right of center) and lever
@@ -214,7 +214,7 @@ update the log once it is agreed (README §7.1).
 | D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | README §6 |
 | D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
 | D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with M4 wood screws (*assumed* size). Costs ~25 mm of baseboard length at the back; belt ~1.5 m per side | ✅ | T3.5, §6 |
-| D26 | The Y motor and idler mounts have a **pocket for their SK10** (cut-out in a 6 mm foot, end wall against the shaft-end face, side walls ±0.2 mm), so the belt line is referenced to the shaft instead of the baseboard layout; mounts are fitted last, around the already aligned SK10s, and screwed down through plain holes (no pre-drilled positions). Pocket clearance to be tuned after a test print; the SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
+| D26 | The Y motor and idler mounts have a **corner pocket for their SK10** (cut-out in a 6 mm foot: a 24 mm end-wall finger against the shaft-end face and an outboard side wall; open toward the inboard side and the other SK10; the finger is kept short so it stays sturdy), so the belt line is referenced to the SK10's outer face and outboard edge instead of the baseboard layout and SK10 width/chamfer tolerances don't matter. Mounts are fitted last, around the already aligned SK10s, pushed into the corner, and screwed down through plain holes (no pre-drilled positions). The SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
 | D27 | Belt clamps: flat undersides on the gantry brackets and the X carriage's rear block (no belt channel: no bridges or overhangs); one cap design for all six clamps, with the groove (between two rails) and the tooth ridges in the cap. Belt lines drop 1.08 mm (derived); screws M3×12 | ✅ | T3.2, T3.3, §6 |
 
 ---
@@ -301,9 +301,10 @@ the screw head sits just in front of the gantry's front stop). The **Y endstop**
 board stands on a tower on the idler plate, in the plane of the bracket's trigger screw, front edge toward +y: the screw tip presses
 the lever toward the board ~2.2 mm before the end of travel (the screw length sets the trip point). All
 mounts are screwed down with M4 wood screws (assumed) through counterbored feet; the right-hand parts are mirror images, except the tower (the board is chiral).
-Each mount's foot also carries an **SK10 pocket** (`parts/sk10_pocket.py`, D26): a U-shaped cut-out the
-SK10's base sits in (end wall 4 mm against the shaft-end face, side walls ±0.2 mm clearance,
-open toward the other SK10), so the mounts are fitted last around the aligned SK10s.
+Each mount's foot also carries an **SK10 pocket** (`parts/sk10_pocket.py`, D26): a corner cut-out the
+SK10's base sits in (4 mm × 24 mm end-wall finger against the shaft-end face, outboard side wall; open
+toward the inboard side and the other SK10), so the mounts are fitted last, pushed into the corner of
+the aligned SK10s.
 
 **X drive (T3.4):** the **X motor** sits behind the beam at the right end
 (`x_motor_mount.py`), the **idler + belt tensioner** at the left end (`x_idler_mount.py`:

@@ -151,8 +151,9 @@ tighten the supports there, so the gantry aligns the shafts itself.
 **Belt alignment (D26):** each Y motor and idler mount has a pocket for its SK10, so the
 belt line follows the shaft instead of the baseboard drilling. Fit the SK10s and shafts
 first (aligning rail 2 with the gantry as above), move the gantry out of the way, then
-slide each mount along the shaft axis until its pocket seats on its SK10 (end wall against
-the SK10's outer face) and screw it down; the wood screws go straight through the foot
+slide each mount along the shaft axis onto its SK10 and push it into the pocket's corner (end
+wall against the SK10's outer face, side wall against its outboard edge; the other two sides
+are open, so SK10 width and chamfer tolerances don't matter) and screw it down; the wood screws go straight through the foot
 holes, with no pre-drilled positions. The Y endstop (on the idler mount) then sits at a
 fixed distance from the gantry's hard stop.
 

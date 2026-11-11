@@ -706,10 +706,14 @@ class YDrive:
 
     foot_t: float = 6  #: printed foot on the baseboard (M4 wood screws, counterbored)
     foot_screw_m: float = 4  #: ASSUMED: wood/chipboard screws into the 18 mm plywood
-    # SK10 pocket (both mounts): the SK10's base sits in a cut-out of the foot, pushed against
-    # the end wall (shaft end plane); the side walls fix x. Open toward the other SK10.
-    pocket_clear: float = 0.2  #: DESIGN (T3.5): pocket side clearance (per side); tune by print
-    pocket_wall: float = 4  #: side and end walls (the end wall also spaces the motor)
+    # SK10 corner pocket (both mounts): the SK10's base sits in a cut-out of the foot, pushed
+    # into the corner formed by the end wall (against its outer face, the shaft-end plane) and
+    # the outboard side wall. The inboard side and the side toward the other SK10 are open, so
+    # the SK10's width and chamfer tolerances don't matter.
+    pocket_wall: float = 4  #: end wall thickness (it also spaces the motor)
+    #: DESIGN (T3.5): end wall reach from the SK10's outboard edge. Short enough not to be
+    #: fragile (a thin cantilever), long enough to square the mount to the SK10's face
+    pocket_end_len: float = 24
     # Idler (toothed 20T on an M5 axle, cantilevered from a plate outboard of it)
     idler_slot: float = 8  #: axle slot length along y (belt tension travel)
     idler_gap: float = 1.25  #: idler flange to plate: one M5 washer + clearance
@@ -736,8 +740,8 @@ class YDrive:
 
     @property
     def pocket_half(self) -> float:
-        """Half width of the pocket cut-out (across the shaft)."""
-        return SK10.width / 2 + self.pocket_clear
+        """Wall faces at the SK10's nominal outboard edge (no clearance: the SK10 touches it)."""
+        return SK10.width / 2
 
     @property
     def front_pocket_y(self) -> tuple[float, float]:
@@ -976,6 +980,10 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield (
         yd.foot_t <= Y_AXIS.scs_base_z - 0.5,
         "Pocket walls would catch the SCS blocks",
+    )
+    yield (
+        0 < yd.pocket_end_len <= SK10.width,
+        "SK10 pocket end wall must lie within the SK10's width",
     )
     yield (
         yd.front_pocket_y[1] <= yd.gantry_front_y,

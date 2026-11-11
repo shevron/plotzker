@@ -444,6 +444,7 @@ code → `vpype` (merge, sort, simplify paths) → G-code with pen up/down mappe
 | D21 | X-carriage preload: 2 eccentric spacers on the bottom wheel pair. Fallback if 2 can't be found: slotted axle holes + M3 push screw, clamped by the axle nut (`CARRIAGE.preload` in `params.py`) | ✅ | §4.4, Q11 |
 | D22 | Migrate the CAD from OpenSCAD to PythonSCAD: a `plotter_cad` Python package (`src/`), pip `pythonscad` module for STL export, PythonSCAD app for renders/preview. Ported 1:1 (all 8 STLs geometrically identical); the old `.scad` files were removed afterwards | ✅ | §10, T3.9 |
 | D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | §10 |
+| D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
 
 ---
 
@@ -683,6 +684,8 @@ beam = linear_extrude(profile, height=520)
   name as its sketch (`foo.svg` + `foo.py`) that extrudes it.
 - The sketches can be edited in Inkscape or as text; note the dimensions in a comment at
   the top of the file.
+- Parametric/constrained sketches: draw them in your CAD tool (e.g. FreeCAD) and export
+  the solved outline as SVG into the repo (D24); the SVG is the source for PythonSCAD.
 
 **Interactive preview:** open `preview.py` (repo root) in the PythonSCAD app, set the
 part or assembly name at the top, and render (F6). It adds `src/` to the path itself.

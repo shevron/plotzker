@@ -97,3 +97,36 @@ Marlin's `M43` pin-debugging command (`PINS_DEBUGGING`) makes this quick and saf
   classic menu UI.
 - Both together is possible (EXP for the encoder-style UI, serial for touch mode) as long
   as Serial2 isn't also used by EXP1 for the LCD. Decide during bring-up.
+
+## Alternative: Creality Ender 3 board V4.2.2 (fallback)
+
+A second board is on hand. Compared on paper (not yet inspected; items marked *check* need
+confirming on the board). **Status: ZRIB v5.8 stays primary; the final choice is made after
+the Phase 2 bench bring-up (T2.x).**
+
+| Need | ZRIB v5.8 | Ender 3 V4.2.2 | Better |
+|------|-----------|----------------|--------|
+| Drivers | 6 sockets (X, Y, Z, E0, E1, E2), swappable (e.g. TMC2208/2209) | 4 **soldered** (X, Y, Z, E0); *check* chip marking (silent types are common) | ZRIB flexibility; Creality stock quietness |
+| Dual Y (D25) | E0 drives Y2; E1, E2 spare | E0 drives Y2; only Z spare | ZRIB |
+| Endstops | 6 inputs (min/max per axis); 3 spare after X, Y, Y2 | 3 endstop connectors + probe (BLTouch) pin + filament-sensor pin; Y2 would use the Z connector | ZRIB |
+| Pen servo | 2×3 servo header, pin 65 (header to verify) | BLTouch 5-pin header (5 V, GND, servo-capable signal); needs a cable; *check* pin map | ZRIB (slightly) |
+| Extra outputs (solenoid) | Fan 1, Heater 1, bed MOSFETs free | Fewer free MOSFETs | ZRIB |
+| MCU | 8-bit ATmega2560, 16 MHz (enough for a plotter) | 32-bit STM32F103, 72 MHz; more headroom | Creality |
+| Marlin target | No v5.8 definition; `BOARD_ZRIB_V53` close match, pin map to verify | Exact `BOARD_CREALITY_V422`, widely used | Creality |
+| Flashing | USB directly | Bootloader + SD-card flashing with a uniquely named `.bin`; *check* the board has the bootloader | ZRIB |
+| Display / TFT35-E3 | Standard 12864 EXP1/EXP2; Serial2 free for the TFT | Proprietary LCD connector; TFT needs an adapter cable; *check* | ZRIB |
+| SD plotting | microSD | microSD | Tie |
+| Power | 12–24 V | Built for 24 V; *check* PSU | ZRIB |
+
+**Why ZRIB stays primary:** spare drivers/endstops/outputs (the pen-changer plan does not fit
+the Creality board), socketed drivers, EXP/TFT options, 12–24 V input.
+**Why keep Creality as fallback:** known-good Marlin target, 32-bit MCU, and it already covers
+X, Y, Y2 and the servo.
+
+**Switch to the Creality board only if** the ZRIB's 5 V rail browns out under the servo
+(step 6 above), its drivers are unusable, or its pin map can't be verified. Then the pen
+changer and extra endstops are dropped. Creality allocation if used: X, Y, E0 (= Y2, `EXTRUDERS 0`)
+drivers; X−, Y−, Z− connector (= Y2 endstop); servo on the BLTouch header; `BOARD_CREALITY_V422`.
+
+**To record at T2.1 for this board:** MCU marking (STM32F103 vs a clone), driver chip
+markings, bootloader presence, PSU voltage.

@@ -46,6 +46,8 @@ any new decisions in §3, and update the status line at the top.
 
 - [ ] **T2.1 Read the hardware facts.** PSU label (voltage, current); chip markings on all
   6 drivers (A4988/DRV8825/other); microstepping jumpers under each socket; servo model.
+  Also, for the Creality V4.2.2 fallback: MCU and driver chip markings, bootloader present
+  (`docs/controller.md`). The final controller choice (Q1) is made after Phase 2.
   *Done when:* recorded in §4 and `docs/controller.md`.
 - [ ] **T2.2 Configure Marlin.** Marlin 2.1.x; store config in `firmware/` (full
   `Configuration.h` / `Configuration_adv.h` or a diff, plus build notes). Key settings:
@@ -184,7 +186,7 @@ any new decisions in §3, and update the status line at the top.
 
 | ID | Question | Status |
 |----|----------|--------|
-| Q1 | Controller boards | ✅ ZRIB v5.8; Creality board TBD (fallback); TFT35-E3 is a screen/SD sender |
+| Q1 | Controller boards | 🔬 ZRIB v5.8 primary; Creality Ender 3 V4.2.2 fallback (compared in `docs/controller.md`); **final decision after T2.x**. TFT35-E3 is a screen/SD sender |
 | Q2 | Parts inventory | ✅ Enough to proceed; remaining measurements listed in the tasks (T2.1, T3.1) |
 | Q3 | Work area, rail length, media thickness | ✅ A3; ~540 mm Y travel; 0–15 mm media |
 | Q4 | Cartesian vs CoreXY | ✅ Cartesian |
@@ -241,7 +243,7 @@ hard to get, we adjust.
 | Lead screws, linear bearings, misc. bearings | assorted | | Only needed for a stepper Z experiment |
 | Hobby servos | 2+ | Small, SG90-class assumed | Model |
 | **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers ([`docs/controller.md`](docs/controller.md)) | Driver chip type; pin map (bench) |
-| Controller: Creality (newer) | 1? | Not located yet; fallback | Model |
+| Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | From a printer | **Voltage (12/24 V), current** |
 | Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |

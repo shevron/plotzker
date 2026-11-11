@@ -18,7 +18,7 @@ from plotter_cad.hardware.endstop import (
 )
 from plotter_cad.hardware.fasteners import M3, M3_INSERT, M5, hex_nut, metric, shcs, washer
 from plotter_cad.hardware.linear_motion import SCS10UU, SK10, Y_SHAFT, scs10uu, sk10, y_shaft
-from plotter_cad.hardware.motors import NEMA17, SG90, nema17, servo_sg90
+from plotter_cad.hardware.motors import FT90M, NEMA17, nema17, servo_ft90m
 from plotter_cad.hardware.vslot import (
     ECCENTRIC,
     VSLOT,
@@ -35,6 +35,7 @@ __all__ = [
     "B625",
     "ECCENTRIC",
     "ENDSTOP",
+    "FT90M",
     "GT2",
     "IDLER",
     "LM6UU",
@@ -46,7 +47,6 @@ __all__ = [
     "NEMA17",
     "PULLEY",
     "SCS10UU",
-    "SG90",
     "SK10",
     "VSLOT",
     "VWHEEL",
@@ -65,7 +65,7 @@ __all__ = [
     "nema17",
     "place_in_frame",
     "scs10uu",
-    "servo_sg90",
+    "servo_ft90m",
     "shcs",
     "sk10",
     "vslot_x",

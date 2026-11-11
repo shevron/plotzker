@@ -21,7 +21,7 @@ from plotter_cad.hardware import (
     hex_nut,
     nema17,
     scs10uu,
-    servo_sg90,
+    servo_ft90m,
     shcs,
     sk10,
     vslot_x,
@@ -45,7 +45,7 @@ def hardware_gallery() -> list[Solid]:
         gt2_pulley(),
         gt2_idler().translate([0, 0, IDLER.width / 2]),
         vwheel().translate([0, 0, VWHEEL.od / 2]),
-        servo_sg90(),
+        servo_ft90m(),
         endstop(),
     ]
     items = [model.translate([i * GRID, 0, 0]) for i, model in enumerate(first_row)]

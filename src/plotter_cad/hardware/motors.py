@@ -1,4 +1,4 @@
-"""NEMA17 stepper motor and SG90-class hobby servo. Dimensions in mm."""
+"""NEMA17 stepper motor and FeeTech FT90M hobby servo. Dimensions in mm."""
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -32,21 +32,30 @@ class Nema17Spec:
 
 @dataclass(frozen=True)
 class ServoSpec:
-    """SG90-class servo. All values ASSUMED until the servo model is known (T3.6)."""
+    """FeeTech FT90M micro servo (metal gears, digital; T3.6)."""
 
-    body: tuple[float, float, float] = (22.8, 12.2, 22.5)  #: L × W × H
-    tab_len: float = 32.3  #: overall length across the tabs
-    tab_t: float = 2.5
-    tab_z: float = 15.9  #: tab underside above the body bottom
-    hole_pitch: float = 27.8
-    hole_d: float = 2.0
-    shaft_offset: float = 5.9  #: shaft axis from the body end
-    top_h: float = 4.5  #: gear housing above the body
-    shaft_h: float = 3.0  #: spline above the gear housing
+    #: L × W × H below the gear boss: 25.5 overall (measured, excludes the spline) minus
+    #: the 3.8 boss.
+    body: tuple[float, float, float] = (23.2, 12.1, 21.7)
+    tab_len: float = 32.5  #: overall length across the tabs (measured)
+    tab_t: float = 1.6  #: measured
+    tab_z: float = 17.0  #: tab underside above the body bottom (measured)
+    hole_pitch: float = 28.5  #: measured
+    hole_d: float = 1.8  #: measured
+    shaft_offset: float = 5.9  #: shaft axis from the body end (measured)
+    top_h: float = 3.8  #: gear boss above the body (measured)
+    shaft_h: float = 3.0  #: spline above the gear housing. ASSUMED
+    mass_g: float = 13.5  #: vendor figure, confirmed by the user
+    #: Single-sided horn (supplied with the servo, measured): shaft center to tip, and
+    #: 4 holes along the arm; the last is ``horn_last_hole`` from the tip.
+    horn_len: float = 17.0
+    horn_hole_pitch: float = 2.5
+    horn_holes: int = 4
+    horn_last_hole: float = 1.9
 
 
 NEMA17 = Nema17Spec()
-SG90 = ServoSpec()
+FT90M = ServoSpec()
 
 
 def nema17(length: float = NEMA17.length) -> Solid:
@@ -69,9 +78,9 @@ def nema17(length: float = NEMA17.length) -> Solid:
     return (body - holes).color("#2a2a2a") | (boss | shaft).color("Silver")
 
 
-def servo_sg90() -> Solid:
+def servo_ft90m() -> Solid:
     """Servo. Origin: center of the body's bottom face; shaft at the +X end, pointing +Z."""
-    s = SG90
+    s = FT90M
     length, width, height = s.body
     body = cube([length, width, height]).translate([-length / 2, -width / 2, 0])
     tab_holes = [

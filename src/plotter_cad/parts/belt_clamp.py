@@ -14,7 +14,7 @@ Frame: belt center at x = 0, clamp starts at y = 0 and runs +y, bottom on z = 0 
 orientation: rails and ridges up, no supports or bridges). In an assembly the cap hangs
 below the flat underside, its rails touching it.
 
-Hardware per cap: 2 × M3×12 ISO 4762 into M3 heat-set inserts in the bracket / carriage.
+Hardware per cap: 2 × M3×14 ISO 4762 into M3 nuts pressed into the bracket / carriage.
 Print: PETG or PLA; 0.12–0.16 mm layers (fine ridges); 4 perimeters; 100 % infill;
 flat side down; no supports.
 """

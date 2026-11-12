@@ -15,7 +15,7 @@ Frame: LEFT bracket-local (``params.XDrive``), z = 0 on the SCS top face
 (:func:`x_endstop_mount_installed`); :func:`x_endstop_mount` puts the pad bottom on the bed.
 The board position follows ``hardware.ENDSTOP`` (measured) and ``params.XEndstopMount``.
 
-Hardware: 2 × M3×10 ISO 4762 into the idler mount's inserts (heads in the pad's
+Hardware: 2 × M3×10 ISO 4762 into nuts pressed into the idler mount (heads in the pad's
 counterbores); 2 × M3×6 (or the board's own screws), self-tapping into the Ø2.6 pilots.
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; pad bottom down; no supports.
 """
@@ -37,7 +37,7 @@ PILOT_D = 2.6  #: M3 self-tapping into the board's holes
 PILOT_DEPTH = 4  #: M3×6 through the 1.5 mm board
 BOARD_YC = sum(X_ENDSTOP.board_y) / 2
 _EDGE = TOL.cbore_d(3) / 2 + TOL.min_wall  #: slot end to pad edge
-PAD_X = (X_DRIVE.endstop_insert_x[0] - X_ENDSTOP.pad_slot - _EDGE, X_ENDSTOP.board_front_x)
+PAD_X = (X_DRIVE.endstop_screw_x[0] - X_ENDSTOP.pad_slot - _EDGE, X_ENDSTOP.board_front_x)
 PAD_Y = (
     X_ENDSTOP.board_y[0] - X_ENDSTOP.pad_margin,
     max(X_ENDSTOP.board_y[1] + X_ENDSTOP.pad_margin, PLATE_YC + _EDGE),
@@ -52,7 +52,7 @@ def x_endstop_mount_installed() -> Solid:
     )
     head_h = metric(3).head_h + 0.5
     slots = []
-    for x in X_DRIVE.endstop_insert_x:
+    for x in X_DRIVE.endstop_screw_x:
         for d, z0, h in (
             (TOL.bolt_hole_d(3), PAD_Z[0] - 1, e.pad_t + 2),
             (TOL.cbore_d(3), PAD_Z[1] - head_h, head_h + 1),

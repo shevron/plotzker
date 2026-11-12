@@ -22,18 +22,19 @@ mirror image, except for the endstop tower's height and pilots: the board is chi
 the lever hinge sits at the other end (:func:`y_idler_mount`).
 
 Hardware: toothed 20T GT2 idler (Ø5 bore); 1 × M5×30 ISO 4762 + M5 nut (nyloc) + 2 × M5
-washers (one each side of the idler) as the axle, head inboard of the idler; 1 × M3 heat-set
-insert + 1 × M3×20 ISO 4762 (tension screw); 2 × M4 wood screws into the baseboard;
+washers (one each side of the idler) as the axle, head inboard of the idler; 1 × M3 nut
+(pressed into the top slot) + 1 × M3×20 ISO 4762 (tension screw); 2 × M4 wood screws into
+the baseboard;
 the endstop board with 2 × M3×6 (or its own screws) self-tapping into the Ø2.6 pilots.
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 """
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, hull, linear_extrude
+from pythonscad import cube, cylinder, hull
 
-from plotter_cad.geometry import EPS, FN_HOLE, teardrop, teardrop_x, teardrop_y
-from plotter_cad.hardware import ENDSTOP, M3_INSERT, metric
+from plotter_cad.geometry import FN_HOLE, teardrop_x, teardrop_y
+from plotter_cad.hardware import ENDSTOP, metric
 from plotter_cad.params import TOL, Y_AXIS, Y_DRIVE, Y_ENDSTOP
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
@@ -64,15 +65,16 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
             for dy in (-d.idler_slot / 2, d.idler_slot / 2)
         )
     )
-    # tension screw: M3 insert pressed in from the rear edge, clearance through to the slot
-    insert = (
-        linear_extrude(teardrop(M3_INSERT.hole_d), height=TOL.insert_pocket_depth + EPS)
-        .rotate([90, 0, 0])
-        .translate([plate_cx, y1 + EPS, AXIS_Z])
+    # tension screw: M3 clearance hole from the rear edge to the slot; the nut is pressed
+    # into a slot from the top, behind a wall that takes the thrust
+    nut_t = TOL.nut_trap_h(3)
+    nut_y1 = y1 - TOL.nut_wall
+    af, ac = TOL.nut_trap_af(3), TOL.nut_trap_ac(3)
+    nut_slot = cube([af, nut_t, d.idler_top_z - AXIS_Z + ac / 2 + 1]).translate(
+        [plate_cx - af / 2, nut_y1 - nut_t, AXIS_Z - ac / 2]
     )
-    screw_y1 = y1 - TOL.insert_pocket_depth + 1
-    screw = teardrop_y(TOL.bolt_hole_d(3), screw_y1 - d.idler_y).translate(
-        [plate_cx, (screw_y1 + d.idler_y) / 2, AXIS_Z]
+    screw = teardrop_y(TOL.bolt_hole_d(3), y1 + 2 - d.idler_y).translate(
+        [plate_cx, (y1 + 2 + d.idler_y) / 2, AXIS_Z]
     )
     holes = []
     for y in (y0 + 6, y1 - 6):
@@ -102,7 +104,13 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         for sz in (-1, 1)
     ]
     return (
-        (foot | plate | tower | pocket_frame) - pocket_cut - slot - insert - screw - holes - pilots
+        (foot | plate | tower | pocket_frame)
+        - pocket_cut
+        - slot
+        - nut_slot
+        - screw
+        - holes
+        - pilots
     )
 
 

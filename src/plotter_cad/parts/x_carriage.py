@@ -24,11 +24,11 @@ on the print bed (:func:`x_carriage`).
 
 Hardware:
   4 × V-wheel Ø24 × 10 (625 bearings)
-  2 × eccentric spacer (bottom wheels, D21) — the fallback ``Preload.SLOT`` needs
-      instead 2 × plain spacer stack 8.3 mm + 2 × M3×12 push screws + 2 × M3 inserts
+  2 × eccentric spacer (bottom wheels, D21)
   4 × M5×35 ISO 4762 + 4 × M5 washers (front) + 4 × M5 nuts (nyloc preferred)
-  2 × M3 heat-set inserts — tool-plate clamp screws (tool head supplies the M3 screws)
-  4 × M3 heat-set inserts + 4 × M3×10 ISO 4762 + 2 × belt_clamp (printed) — X belt
+  2 × M3 nuts (pressed in from the bottom edge) — tool-plate clamp screws (tool head
+      supplies the M3 screws)
+  4 × M3 nuts (pressed in from the back) + 4 × M3×14 ISO 4762 + 2 × belt_clamp (printed) — X belt
   1 × M3×16 ISO 4762 + 2 × M3 nuts — X endstop trigger: screwed into the rear block's
       left end through a captive nut; its head touches the switch; lock nut outside
   zip ties for the tool-head cable
@@ -42,9 +42,9 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
-from plotter_cad.geometry import EPS, FN_HOLE, teardrop, teardrop_x
-from plotter_cad.hardware import ECCENTRIC, M3_INSERT, VWHEEL, metric
-from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT, Preload
+from plotter_cad.geometry import EPS, FN_HOLE, teardrop_x
+from plotter_cad.hardware import ECCENTRIC, VWHEEL, metric
+from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -98,37 +98,12 @@ def _wheel_axle_holes() -> list[Solid]:
             .rotate([-90, 0, 0])
             .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[0]])
         )
-        if c.preload is Preload.ECCENTRIC:
-            # bottom wheels: hole for the eccentric boss (the M5 moves ±offset inside it)
-            holes.append(
-                cylinder(d=TOL.slide_d(ECCENTRIC.boss_d), h=c.plate_t + 2, fn=FN_HOLE)
-                .rotate([-90, 0, 0])
-                .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[1]])
-            )
-        else:
-            # fallback (D21): vertical slot + M3 push screw from the bottom edge
-            travel = c.preload_slot_travel
-            holes.append(
-                hull(
-                    *(
-                        cylinder(d=TOL.bolt_hole_d(5), h=c.plate_t + 2, fn=FN_HOLE)
-                        .rotate([-90, 0, 0])
-                        .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[1] + dz])
-                        for dz in (-travel / 2, travel / 2)
-                    )
-                )
-            )
-            screw_y = c.plate_front_y + c.plate_t / 2
-            holes.append(
-                linear_extrude(
-                    teardrop(M3_INSERT.hole_d), height=TOL.insert_pocket_depth
-                ).translate([sx * WHEEL_X, screw_y, c.bottom_z - EPS])
-            )
-            holes.append(
-                linear_extrude(
-                    teardrop(TOL.bolt_hole_d(3)), height=c.wheel_z[1] - c.bottom_z
-                ).translate([sx * WHEEL_X, screw_y, c.bottom_z])
-            )
+        # bottom wheels: hole for the eccentric boss (the M5 moves ±offset inside it)
+        holes.append(
+            cylinder(d=TOL.slide_d(ECCENTRIC.boss_d), h=c.plate_t + 2, fn=FN_HOLE)
+            .rotate([-90, 0, 0])
+            .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[1]])
+        )
     return holes
 
 
@@ -151,13 +126,24 @@ def _tool_plate_interface() -> list[Solid]:
         .rotate([90, 0, 90])
         .translate([0, c.plate_front_y, 0])
     )
-    inserts = [
-        cylinder(d=M3_INSERT.hole_d, h=TOL.insert_pocket_depth, fn=FN_HOLE)
-        .rotate([-90, 0, 0])
-        .translate([sx * tp.screw_pitch / 2, c.plate_front_y - EPS, tp.bottom_z + tp.screw_z])
-        for sx in (-1, 1)
-    ]
-    return [groove, *inserts]
+    # M3 clearance holes through the plate; each nut is pressed into a slot from the bottom
+    # edge, behind a wall on the front side that takes the pull of the tool plate's screws
+    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_trap_ac(3), TOL.nut_trap_h(3)
+    screw_zc = tp.bottom_z + tp.screw_z
+    nuts = []
+    for sx in (-1, 1):
+        x = sx * tp.screw_pitch / 2
+        nuts.append(
+            cylinder(d=TOL.bolt_hole_d(3), h=c.plate_t + 2, fn=FN_HOLE)
+            .rotate([-90, 0, 0])
+            .translate([x, c.plate_front_y - 1, screw_zc])
+        )
+        nuts.append(
+            cube([af, nut_t, screw_zc + ac / 2 - tp.bottom_z + 1]).translate(
+                [x - af / 2, c.plate_front_y + TOL.nut_wall, tp.bottom_z - 1]
+            )
+        )
+    return [groove, *nuts]
 
 
 def _top_tab_cutouts() -> list[Solid]:
@@ -181,16 +167,25 @@ def _top_tab_cutouts() -> list[Solid]:
 
 
 def _belt_clamp_cutouts() -> list[Solid]:
-    """Belt clamp bolt holes (the rear block's underside is flat)."""
+    """Belt clamp screw holes and nut slots (the rear block's underside is flat)."""
     c = CARRIAGE
-    inserts = [
-        linear_extrude(teardrop(M3_INSERT.hole_d), height=TOL.insert_pocket_depth).translate(
-            [sx * CLAMP_X, X_BELT.y + sy * CLAMP.screw_dx, c.bridge_z - EPS]
+    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_trap_ac(3), TOL.nut_trap_h(3)
+    cuts = []
+    for sx in (-1, 1):
+        x = sx * CLAMP_X
+        holes = [
+            cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate(
+                [x, X_BELT.y + sy * CLAMP.screw_dx, c.bridge_z - EPS]
+            )
+            for sy in (-1, 1)
+        ]
+        # one slot from the back face takes both nuts (flat on the floor, pressed in)
+        y0 = X_BELT.y - CLAMP.screw_dx - ac / 2
+        slot = cube([af, REAR_Y1 + 1 - y0, nut_t]).translate(
+            [x - af / 2, y0, c.bridge_z + CLAMP.nut_z]
         )
-        for sx in (-1, 1)
-        for sy in (-1, 1)
-    ]
-    return inserts
+        cuts += [*holes, slot]
+    return cuts
 
 
 def _endstop_trigger_cutouts() -> list[Solid]:
@@ -204,7 +199,7 @@ def _endstop_trigger_cutouts() -> list[Solid]:
     nut_t = metric(3).nut_h + TOL.nut
     nut = cube([nut_t, TOL.nut_trap_af(3), c.rear_h]).translate(
         [
-            -c.rear_w / 2 + 5 - nut_t / 2,
+            -c.rear_w / 2 + 3.5 - nut_t / 2,
             c.trig_y - TOL.nut_trap_af(3) / 2,
             c.trig_z - TOL.nut_trap_ac(3) / 2,
         ]

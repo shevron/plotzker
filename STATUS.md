@@ -8,8 +8,7 @@ requirements, the high-level design and the coding standards are in
 > **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.5 done (CAD
 > scaffold, gantry end brackets, X carriage, X motor/idler/endstop mounts, Y motor/idler/
 > endstop mounts (endstop mounts redone for the measured board); STLs in `stl/`, test prints pending). CAD migrated from OpenSCAD to PythonSCAD (T3.9, D22; identical
-> STLs). On trial: SVG 2D sketches for profiles (D23; V-slot 2020/2040). Q12 answered (tap
-> the second bore of each beam end). Q10 (SVG/PDF toolchain) deferred until the machine runs.
+> STLs). On trial: SVG 2D sketches for profiles (D23; V-slot 2020/2040). Q10 (SVG/PDF toolchain) deferred until the machine runs.
 >
 > **Next:** T3.6 v1 pen holder (tool head; check the servo model first). Phase 2 can run in
 > parallel.
@@ -80,20 +79,20 @@ any new decisions in §3, and update the status line at the top.
   - [x] NEMA17: design for 39.2 mm body / 22.6 mm shaft; belt lines must fit the shortest
     shaft on hand (19 mm, 33.5 mm motor); 48 mm clearance envelope.
   - [x] 6 mm GT2 belt; common 20T pulleys and idlers; V-wheels Ø24 × 10. Design for common
-    sizes, adjust at assembly. Eccentric spacers: only a few, don't rely on them (Q11).
+    sizes, adjust at assembly. Eccentric spacers are available (Q11).
   - Remaining measurements moved to the tasks that need them (T3.2, T3.3/T3.5, T3.6).
 - [x] **T3.2 Gantry end brackets (×2).** Bolt to two SCS10UU (4 × M5 each, 28 × 21 mm), hold
   the 4020 beam square, include the Y belt clamp and the Y endstop trigger. Lift the beam
   bottom to ~58 mm (§6). Bracket bears on the SCS10UU's two 10 mm top flats (measured).
   → `parts/gantry_end_bracket.py` (left/right), `parts/belt_clamp.py` (×4 for Y, ×2 for X),
   `assemblies/gantry.py`; STLs in `stl/`. The endstop switch itself mounts in T3.5.
-  - [ ] Follow-up: tap the second bore of each beam end M5 (Q12); test-print one bracket and check the fit
+  - [ ] Follow-up: test-print one bracket and check the fit
     on the SCS blocks, the beam pocket and the belt clamp before printing the pair.
 - [x] **T3.3 X carriage.** 4 V-wheels on the 4020 (eccentric bottom pair, D21), X belt clamp,
   X endstop trigger, tool-plate interface (hook + 2 × M3), connector mount, cable strain relief.
   Eccentric spacers measured (10 mm hex × 7.8, Ø7 × 2.1 boss, ~0.7 mm offset): bottom wheels
   sit 8.3 mm from the plate face; the top wheels match on printed stand-offs.
-  → `parts/x_carriage.py` (+ `Preload.SLOT` fallback),
+  → `parts/x_carriage.py` 
   `assemblies/carriage.py`; STL in `stl/`. Checked: no collision with the gantry
   brackets at either end of travel, incl. a 50 × 60 mm tool-head envelope.
   - [ ] Follow-up: test-print; check wheel preload range, hook-groove fit (with the T3.6 tool
@@ -143,7 +142,7 @@ any new decisions in §3, and update the status line at the top.
   old `.scad` files to the same STLs. Port to a Python package (`src/plotter_cad/`:
   `params.py`, `hardware/`, `parts/`, `assemblies/`, `build.py` CLI) with pytest tests
   and ruff. Checked: all 8 STLs geometrically identical to the OpenSCAD ones (volume,
-  bounding box, cross-sections; incl. the `Preload.SLOT` fallback); assemblies match by
+  bounding box, cross-sections); assemblies match by
   volume and bounding box; same key numbers. The old `.scad` files were removed afterwards.
 - [ ] **T3.10 Roll out handles (D28).** Add handles to the other parts and use `align` in `assemblies/` (Y drive mounts, X carriage, X mounts, endstop frames: `place_in_frame` is a hand-rolled handle; mind the chiral, mirrored endstop board). *Done when:* no assembly re-derives a hole position that a part defines; geometry unchanged.
 
@@ -196,8 +195,8 @@ any new decisions in §3, and update the status line at the top.
 | Q8 | Tool-plate interface and v1 pen holder | ✅ README §3.4 |
 | Q9 | Frame, baseboard and work holding | ✅ README §3.8 (bed material finalized at build) |
 | Q10 | SVG/PDF → G-code toolchain | ⏸ Deferred to phase 7 |
-| Q11 | X-carriage wheel preload | ✅ D21: 2 eccentric spacers on the bottom pair; slot + push-screw fallback |
-| Q12 | Are the 4020 beam ends tapped M5 (gantry brackets bolt into the end bores)? | ✅ Only 1 of the 2 bores per end is tapped: the user taps the other to M5 (≥ 14 mm deep; the bracket's M5×20 engages ~13.5 mm). Check that the existing thread is M5 |
+| Q11 | X-carriage wheel preload | ✅ D21: 2 eccentric spacers on the bottom pair (available; no fallback) |
+| Q12 | Are the 4020 beam ends tapped M5 (gantry brackets bolt into the end bores)? | ✅ Yes: all beam end bores are tapped M5 (done by the user) |
 
 ---
 
@@ -212,7 +211,7 @@ update the log once it is agreed (README §7.1).
 | D11 | Y travel ~540 mm; Y length parametric in CAD | ✅ | README §3.2, Q3 |
 | D17 | Bed: adjustable panel (4 points) with a bonded steel sheet and magnets; acrylic as alternative; no glass | 🟡 Proposed (final choice at build) | README §3.8 |
 | D20 | SVG/PDF toolchain deferred; prove the machine with hand-written/scripted G-code first | ✅ | README §3.9, Q10 |
-| D21 | X-carriage preload: 2 eccentric spacers on the bottom wheel pair. Fallback if 2 can't be found: slotted axle holes + M3 push screw, clamped by the axle nut (`CARRIAGE.preload` in `params.py`) | ✅ | README §3.4, Q11 |
+| D21 | X-carriage preload: 2 eccentric spacers on the bottom wheel pair (available; the slot fallback was dropped) | ✅ | README §3.4, Q11 |
 | D22 | Migrate the CAD from OpenSCAD to PythonSCAD: a `plotter_cad` Python package (`src/`), pip `pythonscad` module for STL export, PythonSCAD app for renders/preview. Ported 1:1 (all 8 STLs geometrically identical); the old `.scad` files were removed afterwards. D2 originally named OpenSCAD | ✅ | README §6, T3.9 |
 | D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | README §6 |
 | D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
@@ -220,6 +219,7 @@ update the log once it is agreed (README §7.1).
 | D26 | The Y motor and idler mounts have a **corner pocket for their SK10** (cut-out in a 6 mm foot: a 24 mm end-wall finger against the shaft-end face and an outboard side wall; open toward the inboard side and the other SK10; the finger is kept short so it stays sturdy), so the belt line is referenced to the SK10's outer face and outboard edge instead of the baseboard layout and SK10 width/chamfer tolerances don't matter. Mounts are fitted last, around the already aligned SK10s, pushed into the corner, and screwed down through plain holes (no pre-drilled positions). The SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
 | D27 | Belt clamps: flat undersides on the gantry brackets and the X carriage's rear block (no belt channel: no bridges or overhangs); one cap design for all six clamps, with the groove (between two rails) and the tooth ridges in the cap. Belt lines drop 1.08 mm (derived); screws M3×12 | ✅ | T3.2, T3.3, §6 |
 | D28 | **Handles and `align()` for assemblies (trial).** Parts that hardware or other parts attach to expose named handles (4×4 matrices set with `geometry.set_handles`, read with `get_handle(s)`); assemblies place the hardware with `.align(handle)` instead of re-deriving hole coordinates, and the part's own cut-outs use the same handle constants, so a hole and its screw can't drift apart. Done for the gantry end bracket and the belt clamp; extend to other parts as they are touched. `fillet` and `MultiToolExporter` evaluated and not adopted yet | ✅ trial | README §7.4, T3.10 |
+| D29 | **No heat-set inserts: pressed-in hex nuts (nut traps) everywhere.** The nut sits in a slot or hex shaft with a wall behind it that takes the load (`TOL.nut_wall`, 2 mm). Y/X idler tension screws: slot from the top; X endstop pad screws: slots from the rear face; belt clamp screws (brackets): hex shafts from the top, nut 4 mm above the underside (`CLAMP.nut_z`), M3×14; X carriage rear block: slot from the back; tool-plate screws: slots from the bottom edge. Dropped the `Preload.SLOT` carriage fallback (eccentric spacers are available) | ✅ | README §7 rule 2 |
 
 ---
 
@@ -232,7 +232,7 @@ hard to get, we adjust.
 | Part | Qty | Details | Still to confirm |
 |------|-----|---------|------------------|
 | 2020 V-slot extrusion | several | **520 mm** long | — |
-| 4020 V-slot extrusion | 2 | **520 mm** long → X beam; V-slot profile confirmed | 1 of 2 end bores per end tapped; tap the other M5 (Q12) |
+| 4020 V-slot extrusion | 2 | **520 mm** long → X beam; V-slot profile confirmed | End bores tapped M5 |
 | Shorter 2020 / 2040 / 4040 extrusions | assorted | e.g. 340 mm 2040 → baseboard runners/feet | Lengths |
 | V-wheels | many | POM V-groove wheels on 625Z bearings (5 mm bore), Ø24 × 10 mm; eccentric spacers: 10 mm hex × 7.8, Ø7 × 2.1 boss, Ø5 bore, ~0.7 mm offset (2 needed, D21) | — |
 | Ø10 mm smooth (optical-axis) shafts | 2 | **700 mm**, hardened → Y axis | — |
@@ -271,7 +271,7 @@ hard to get, we adjust.
 | Y belt | 30 mm outboard of each shaft; motor/idler axis ~26.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
 | X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~93.8 mm above the baseboard; ~1.2 m belt |
 | Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
-| Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 inserts 36 mm apart |
+| Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 nuts 36 mm apart |
 | Mechanics footprint | ~600 × ~800 mm |
 
 `python -m plotter_cad check` prints the current values from `params.py`.
@@ -293,7 +293,8 @@ idler axle run front-to-back at **~93.8 mm** above the baseboard.
 **Belt clamps (D27):** one cap design (`belt_clamp.py`) for all six clamps. The gantry
 brackets and the carriage's rear block have **flat undersides** (no printed channel or
 bridge); the cap has the groove (between two 1.08 mm rails) that guides the belt, ridges in
-the tooth gaps, and M3×12 screws into heat-set inserts.
+the tooth gaps, and M3×14 screws into M3 nuts pressed into the bracket / block (hex shafts from the top on
+the brackets, a slot from the back on the carriage).
 **Handles (D28):** the gantry end bracket exposes `block_bolts_front_0..3`, `block_bolts_rear_0..3`, `beam_bolts_0..1`, `belt_clamps_0..1` (front, rear) and `trigger_screw`; the belt clamp exposes `mount` (rail tops). `gantry_end_local` aligns the screws, clamps and belt pieces to them. PythonSCAD carries a handle through `translate`, `mirror` and boolean operations, but only if it is a matrix attribute (not a list of them; hence the numbered names) and not through `fillet`.
 
 **Y drive (T3.5):** per side, the motor sits **behind the rear SK10** with its shaft
@@ -329,8 +330,8 @@ block's 4 M5 bolts (M5×25 there instead of M5×20), so the brackets need no ext
 **Gantry end brackets (T3.2, `parts/gantry_end_bracket.py`, left + mirrored right):**
 a 10 mm base plate on both SCS blocks (8 × M5), a ribbed face plate the beam end bolts to
 (2 × M5 into the beam's end bores, in a 1.5 mm locating pocket), the two Y-belt clamps
-underneath (printed caps with a belt groove and tooth ridges, M3×12 into heat-set
-inserts in the flat underside), and an M3 trigger
+underneath (printed caps with a belt groove and tooth ridges, M3×14 into pressed-in
+nuts), and an M3 trigger
 screw for the Y endstop that also fine-tunes each side's home position. The **beam end
 sits directly over the shaft**, so the gantry weight bears straight down on the blocks;
 this sets the shaft spacing to **520 mm**. ~70 g each (PETG).

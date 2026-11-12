@@ -202,15 +202,14 @@ printed part. Start simple and evolve; the tool head is expected to be replaced.
 
 **X carriage:**
 - Rides on the upright 4020 beam: 2 V-wheels in the top groove, 2 in the bottom groove
-  (**eccentric spacers on the bottom pair** for preload, D21; only 2 needed). Fallback if
-  2 can't be found: slotted axle holes with an M3 push screw, locked by the axle nut.
+  (**eccentric spacers on the bottom pair** for preload, D21; only 2 needed).
 - Integrates the X belt clamp, the X endstop trigger, and strain relief for the tool-head cable.
 
 **Tool-plate interface v1:**
 - **Hook + 2 × M3:** a French-cleat hook along the top of the interface carries and
   locates the tool head: the carriage has a groove with a 45° undercut (6 mm opening, 3 mm
   deep), closed at both ends so it also locates the tool in X; the tool plate's lip drops
-  into it. Two M3 screws into heat-set inserts on the lower edge clamp it (36 mm apart,
+  into it. Two M3 screws into pressed-in nuts on the lower edge clamp it (36 mm apart,
   7 mm above the bottom edge). Fast to swap and repeatable.
 - **Tool plate envelope:** ≤ 50 mm wide (it sits between the bottom wheels' bolt heads);
   interface 45 mm tall, bottom edge level with the carriage bottom.
@@ -491,7 +490,7 @@ These apply to everyone working on the project, human or AI agent.
 1. **Metric only.** Millimeters, degrees, mm/s (or mm/min where G-code requires it, and
    say which). No imperial units or fasteners.
 2. **Hardware is off-the-shelf or salvaged 3D-printer parts.** Metric hex fasteners
-   (M2.5/M3/M4/M5, ISO 4762 socket head preferred), heat-set inserts or captive nuts,
+   (M2.5/M3/M4/M5, ISO 4762 socket head preferred), pressed-in (captive) hex nuts (**no heat-set inserts**, D29),
    NEMA17 steppers, GT2 belts/pulleys, T8 lead screws, 608/625 bearings, LM6UU/LM8UU,
    Ø10 mm shafts with SK10 supports and SCS10UU blocks, 2020/2040/4020/4040 V-slot extrusion.
    Anything else must be justified and noted in this README.

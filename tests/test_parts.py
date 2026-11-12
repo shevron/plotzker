@@ -1,12 +1,10 @@
 """Every printable part is a sane, printable solid."""
 
-import dataclasses
 import math
 
 import pytest
 
 from plotter_cad import build
-from plotter_cad.params import Preload
 from plotter_cad.parts import PRINTABLE_PARTS
 from solids import bounding_box, shell_count, volume
 
@@ -22,19 +20,6 @@ def assert_printable(solid):
 @pytest.mark.parametrize("name", PRINTABLE_PARTS)
 def test_part_is_printable(name):
     assert_printable(PRINTABLE_PARTS[name]())
-
-
-def test_carriage_slot_preload_fallback(monkeypatch):
-    """The D21 fallback (slotted bottom axles + push screws) is a different, printable part."""
-    import plotter_cad.parts.x_carriage as module
-
-    eccentric = module.x_carriage()
-    monkeypatch.setattr(
-        module, "CARRIAGE", dataclasses.replace(module.CARRIAGE, preload=Preload.SLOT)
-    )
-    slotted = module.x_carriage()
-    assert_printable(slotted)
-    assert volume(slotted) != pytest.approx(volume(eccentric))
 
 
 def test_stl_export_writes_every_part(tmp_path):

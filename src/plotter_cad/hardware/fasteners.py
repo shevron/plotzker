@@ -1,5 +1,5 @@
 """Metric fasteners: ISO 4762 socket head cap screws, ISO 4032 hex nuts,
-ISO 7089 washers, and M3 heat-set inserts. Dimensions in mm.
+ISO 7089 washers. Dimensions in mm.
 """
 
 from dataclasses import dataclass
@@ -48,19 +48,6 @@ def metric(m: float) -> MetricSize:
         return METRIC[m]
     except KeyError:
         raise ValueError(f"No fastener data for M{m}; known: {sorted(METRIC)}") from None
-
-
-@dataclass(frozen=True)
-class HeatSetInsert:
-    """Threaded heat-set insert pressed into a printed hole."""
-
-    m: float
-    od: float  #: knurl outer diameter
-    length: float
-    hole_d: float  #: recommended printed hole
-
-
-M3_INSERT = HeatSetInsert(m=3, od=4.6, length=5.7, hole_d=4.0)  # ASSUMED: common "short" M3
 
 
 # --- models (fit checks and visuals only) -------------------------------------

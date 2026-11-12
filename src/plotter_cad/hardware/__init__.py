@@ -16,7 +16,7 @@ from plotter_cad.hardware.endstop import (
     endstop_placed,
     place_in_frame,
 )
-from plotter_cad.hardware.fasteners import M3, M3_INSERT, M5, hex_nut, metric, shcs, washer
+from plotter_cad.hardware.fasteners import M3, M5, hex_nut, metric, shcs, washer
 from plotter_cad.hardware.linear_motion import SCS10UU, SK10, Y_SHAFT, scs10uu, sk10, y_shaft
 from plotter_cad.hardware.motors import FT90M, NEMA17, nema17, servo_ft90m
 from plotter_cad.hardware.vslot import (
@@ -42,7 +42,6 @@ __all__ = [
     "LM8UU",
     "LM10UU",
     "M3",
-    "M3_INSERT",
     "M5",
     "NEMA17",
     "PULLEY",

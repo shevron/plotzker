@@ -20,8 +20,9 @@ Modeled in print orientation (base on the bed).
 Hardware per bracket:
   8 × M5×20 ISO 4762 — base to the two SCS10UU blocks (10 mm thread engagement of 12)
   2 × M5×20 ISO 4762 — face plate into the beam end. The 4020's center bores (Ø4.2)
-                       must be tapped M5 (the user taps the second bore; Q12)
-  4 × M3 heat-set inserts (Ø4.6 × 5.7) + 4 × M3×10 ISO 4762 — two Y belt clamps
+                       are tapped M5
+  4 × M3 nuts (pressed into the hex shafts from the top) + 4 × M3×14 ISO 4762 — two Y belt
+                       clamps
   2 × belt_clamp (printed)
   1 × M3×16 ISO 4762 + 2 × M3 nuts — Y endstop trigger (adjust, then lock)
 
@@ -43,7 +44,7 @@ from plotter_cad.geometry import (
     teardrop_x,
     teardrop_y,
 )
-from plotter_cad.hardware import M3_INSERT, SCS10UU, VSLOT, metric
+from plotter_cad.hardware import SCS10UU, VSLOT, metric
 from plotter_cad.params import BEAM, BRACKET, CLAMP, TOL, Y_AXIS
 
 if TYPE_CHECKING:
@@ -140,10 +141,16 @@ def _cutouts() -> list[Solid]:
         )
         for z in BEAM_BOLT_Z
     ]
-    # M3 heat-set insert pockets for the two belt clamp caps (from below, in the flat underside)
+    # belt clamp caps: M3 clearance hole up from the flat underside, and a hex shaft from the
+    # top down to a nut pressed in at CLAMP.nut_z (the floor below it takes the pull)
     cuts += [
-        cylinder(d=M3_INSERT.hole_d, h=TOL.insert_pocket_depth, fn=FN_HOLE)
-        .translate([sx * CLAMP.screw_dx, CLAMP.length / 2, -EPS])
+        (
+            cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate([0, 0, -EPS])
+            | cylinder(d=TOL.nut_trap_ac(3), h=FACE_TOP + 1 - CLAMP.nut_z, fn=6).translate(
+                [0, 0, CLAMP.nut_z]
+            )
+        )
+        .translate([sx * CLAMP.screw_dx, CLAMP.length / 2, 0])
         .align(clamp)
         for clamp in BELT_CLAMPS
         for sx in (-1, 1)

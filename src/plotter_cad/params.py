@@ -18,7 +18,6 @@ Units: mm, degrees.
 import math
 from collections.abc import Iterator
 from dataclasses import dataclass
-from enum import Enum
 
 from plotter_cad.geometry import cos_deg
 from plotter_cad.hardware import (
@@ -53,7 +52,7 @@ class Tolerances:
     min_wall: float = 1.6  #: 4 perimeters at 0.4 mm nozzle
     layer_h: float = 0.2
     nozzle_d: float = 0.4
-    insert_pocket_depth: float = 7  #: M3 heat-set insert pocket depth
+    nut_wall: float = 2.0  #: plastic that backs a pressed-in nut (takes the thrust or pull)
 
     def bolt_hole_d(self, m: float) -> float:
         """Clearance hole for an M``m`` bolt."""
@@ -178,6 +177,8 @@ class BeltClamp:
     w: float = 16  #: cap width (across the belt)
     screw_dx: float = 5.5  #: M3 offset from the belt center
     ridge_w: float = 0.9  #: GT2 tooth gap ≈ 1.0
+    #: nut underside above the flat underside it clamps against (the floor below takes the pull)
+    nut_z: float = 4.0
 
     @property
     def ridge_h(self) -> float:
@@ -207,7 +208,7 @@ CLAMP = BeltClamp()
 # -----------------------------------------------------------------------------
 # The carriage front face carries a hook (cleat) along its top edge and two M3
 # clamp points along its bottom edge. A tool head hangs on the hook and is clamped
-# by 2 × M3 into heat-set inserts in the carriage.
+# by 2 × M3 into nuts pressed into the carriage.
 #
 #   carriage face (front view)          side section (tool head hanging)
 #   ┌──────── w ───────────┐                carriage │▒▒╲ hook (45° undercut)
@@ -383,13 +384,6 @@ BEAM = Beam()
 # -----------------------------------------------------------------------------
 
 
-class Preload(Enum):
-    """Bottom-wheel preload (D21)."""
-
-    ECCENTRIC = "eccentric"  #: 2 eccentric spacers on the bottom pair
-    SLOT = "slot"  #: fallback: slotted axle holes + M3 push screw, clamped by the axle nut
-
-
 @dataclass(frozen=True)
 class Carriage:
     """X carriage dimensions."""
@@ -399,8 +393,6 @@ class Carriage:
     wheel_pitch_x: float = 64
     plate_t: float = 8  #: DESIGN (T3.3): front plate thickness
     margin_below_wheel: float = 3  #: DESIGN (T3.3): material below the lowest wheel edge
-    preload: Preload = Preload.ECCENTRIC
-    preload_slot_travel: float = 2  #: DESIGN (T3.3): slot length for the fallback
     #: Printed stand-off under each top wheel: bears on the 625 inner ring only (land ≈ 8)
     top_boss_d: float = 7.5
     bridge_w: float = 34  #: bridge over the beam top, between the top wheels (x)
@@ -649,7 +641,7 @@ class XDrive:
     idler_slot: float = 8  #: axle slot length along x (tension travel; belt ±8 mm)
     idler_plate_t: float = 11.5  #: thick enough to stand alone (fits between the bolt rows)
     idler_plate_x: tuple[float, float] = (-42, -8)
-    endstop_insert_x: tuple[float, float] = (-22, -12)  #: endstop-mount inserts on the plate top
+    endstop_screw_x: tuple[float, float] = (-22, -12)  #: endstop-mount screws into the plate top
 
     @property
     def idler_top_z(self) -> float:
@@ -999,10 +991,11 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     yield (
         yd.idler_plate_y[1]
-        - TOL.insert_pocket_depth
+        - TOL.nut_wall
+        - TOL.nut_trap_h(3)
         - (yd.idler_y + yd.idler_slot / 2 + TOL.bolt_hole_d(5) / 2)
         >= TOL.min_wall,
-        "Y idler tension screw pocket too close to the axle slot",
+        "Y idler tension nut slot too close to the axle slot",
     )
     yield (
         ye.board_x0 + ENDSTOP.thickness <= -SK10.body_w / 2 - 1,

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, linear_extrude, square
+from pythonscad import cube, cylinder, hull, linear_extrude, square
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -97,3 +97,23 @@ def servo_ft90m() -> Solid:
     gear_housing = cylinder(d=width, h=s.top_h, fn=32).translate([shaft_x, 0, height])
     spline = cylinder(d=4.8, h=s.shaft_h, fn=16).translate([shaft_x, 0, height + s.top_h])
     return (body | tabs | gear_housing).color("RoyalBlue") | spline.color("White")
+
+
+def servo_horn() -> Solid:
+    """FT90M single-sided horn. Origin: shaft axis on the horn's back face; arm toward +X,
+    thickness along +Z (``horn_t`` ASSUMED 1.8 mm).
+    """
+    s = FT90M
+    thickness = 1.8
+    hub = cylinder(d=7, h=thickness, fn=32)
+    arm = hull(
+        cylinder(d=7, h=thickness, fn=32),
+        cylinder(d=3.4, h=thickness, fn=24).translate([s.horn_len - 1.7, 0, 0]),
+    )
+    holes = [
+        cylinder(d=1.2, h=thickness + 2, fn=12).translate(
+            [s.horn_len - s.horn_last_hole - i * s.horn_hole_pitch, 0, -1]
+        )
+        for i in range(s.horn_holes)
+    ]
+    return ((hub | arm) - holes).color("WhiteSmoke")

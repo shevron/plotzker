@@ -4,18 +4,19 @@ import pytest
 from pythonscad import union
 
 from plotter_cad.assemblies import ASSEMBLIES
-from plotter_cad.assemblies.carriage import carriage_fit_check
+from plotter_cad.assemblies.carriage import carriage_assembly, carriage_fit_check
 from plotter_cad.assemblies.gantry import (
     gantry_assembly,
     gantry_end_local,
     gantry_fit_check,
     x_endstop_keepout,
 )
+from plotter_cad.assemblies.pen_holder import pen_holder_assembly, pen_holder_items
 from plotter_cad.assemblies.skeleton import carriage_x_at, gantry_y_at
 from plotter_cad.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotter_cad.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
-from plotter_cad.hardware import sk10, y_shaft
-from plotter_cad.params import FRAME, Y_AXIS
+from plotter_cad.hardware import sk10, vslot_x, y_shaft
+from plotter_cad.params import BEAM, FRAME, Y_AXIS
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
 from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
@@ -114,3 +115,33 @@ def test_sk10_seats_in_the_mount_corner(mount, sk10_y, outward):
     assert overlap(0, 0.3 * outward) > 0.1, "the end wall must locate the SK10"
     assert overlap(0.3, 0) < 1e-6, "the inboard side must be open"
     assert overlap(0, -0.3 * outward) < 1e-6, "the side toward the other SK10 must be open"
+
+
+def test_pen_holder_is_connected_with_the_pen_up():
+    """With the slide lifted, the pin carries it: the whole head hangs together."""
+    groups = connected_groups(list(pen_holder_items(pen_up=True).values()))
+    assert len(groups) == 1, f"floating items (indices into the assembly list): {groups[1:]}"
+
+
+# The horn rides on the servo's spline and the pin sits in the horn's hole.
+PEN_HOLDER_MATING_PAIRS = {frozenset(("servo", "horn")), frozenset(("horn", "pin"))}
+
+
+@pytest.mark.parametrize("pen_up", [False, True], ids=["pen down", "pen up"])
+@pytest.mark.parametrize("pen_d", [7, 10, 16])
+def test_pen_holder_parts_do_not_collide(pen_up, pen_d):
+    """Nothing overlaps except the horn on its spline and the pin in its hole: the slide
+    clears the body and servo wall, and pens of every size clear the rod arms and sleeves."""
+    items = list(pen_holder_items(pen_up, pen_d).items())
+    for i, (name_a, a) in enumerate(items):
+        for name_b, b in items[i + 1 :]:
+            if frozenset((name_a, name_b)) not in PEN_HOLDER_MATING_PAIRS:
+                assert volume(a & b) < 0.05, f"{name_a} collides with {name_b}"
+
+
+@pytest.mark.parametrize("pen_up", [False, True], ids=["pen down", "pen up"])
+def test_pen_holder_clears_the_carriage(pen_up):
+    """The tool head hangs on the carriage's face without touching wheels, bolts or beam."""
+    beam = vslot_x(240, BEAM.size).translate([-120, -BEAM.depth / 2, BEAM.bottom_z])
+    carriage = union(*flatten([*carriage_assembly(), beam]))
+    assert all(volume(item & carriage) < 0.05 for item in pen_holder_assembly(pen_up))

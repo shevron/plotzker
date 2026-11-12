@@ -5,13 +5,15 @@ detailed decisions, inventory, key numbers, as-built design notes and ideas. Goa
 requirements, the high-level design and the coding standards are in
 [`README.md`](README.md); references like "README §3.2" point there.
 
-> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.5 done (CAD
-> scaffold, gantry end brackets, X carriage, X motor/idler/endstop mounts, Y motor/idler/
-> endstop mounts (endstop mounts redone for the measured board); STLs in `stl/`, test prints pending). CAD migrated from OpenSCAD to PythonSCAD (T3.9, D22; identical
-> STLs). On trial: SVG 2D sketches for profiles (D23; V-slot 2020/2040). Q10 (SVG/PDF toolchain) deferred until the machine runs.
+> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.6 done (CAD
+> scaffold, gantry end brackets, X carriage, X and Y motor/idler/endstop mounts, v1 pen
+> holder); STLs in `stl/`, test prints pending. CAD migrated from OpenSCAD to PythonSCAD
+> (T3.9, D22; identical STLs). On trial: SVG 2D sketches for profiles (D23), handles and
+> `align()` (D28). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
+> toolchain) deferred until the machine runs.
 >
-> **Next:** T3.6 v1 pen holder (tool head; check the servo model first). Phase 2 can run in
-> parallel.
+> **Next:** T3.7 full assembly and baseboard layout (T3.10 handle rollout can go first or
+> alongside). Phase 2 can run in parallel.
 
 **Contents:** 1 Work plan · 2 Open questions · 3 Decision log · 4 Inventory ·
 5 Key numbers · 6 As-built design notes · 7 Ideas and future possibilities
@@ -129,11 +131,23 @@ any new decisions in §3, and update the status line at the top.
     length (13.5 mm); check that a plug fits on the connectors; check the idler plate against
     the wood-screw positions; measure the SK10 bore offset from the base edges (it limits
     belt parallelism).
-- [ ] **T3.6 v1 pen holder (tool head).** Vertical slide, V-groove clamp for 7–16 mm pens,
-  ~20 mm height adjustment, servo mount, gravity loading with room for added weight; meets
-  the README §3.3 requirements. Interface: `TOOL_PLATE` in `params.py` (≤ 50 mm wide, hook
-  lip for the 45° groove, 2 × M3); cable to the connector window in the carriage top tab.
-  *Check first:* servo model.
+- [x] **T3.6 v1 pen holder (tool head).** Gravity-loaded pen slide on a Ø6 rod in two
+  printed sleeves, lifted by an FT90M servo (D29); V-block + M5 thumbscrew clamp for 7–16 mm
+  pens; the pen's position in the clamp is the ~20 mm height adjustment.
+  → `parts/pen_holder_body.py` (hook lip, 2 × M3, rod arms, servo wall, key rib) and
+  `parts/pen_slide.py` (sleeves, V-block, yoke, lug with the pin slot);
+  `assemblies/pen_holder.py` (fit check with the carriage, pen up and down; pens Ø7, Ø10, Ø16:
+  no collisions); design checks in `params.design_checks()`; STLs in `stl/`.
+  - [ ] Follow-up: test-print both parts. Check the sleeve fit (ream the bores to 6.2 mm) and
+    friction, the key groove, the horn pin (M2 into a horn hole: check the hole diameter) and
+    the servo pilot holes (Ø1.6, *assumed*). Measure the slide's mass and tune the pressure
+    (20–80 g): the slide has no weight pocket yet, so add one (e.g. M5 washers on a screw) if
+    the slide plus pen is too light. Measure the horn thickness and the spline height
+    (*assumed* 1.8 / 3 mm), and the actual slide-to-pen stiffness (pen cantilevers ~30 mm
+    below the clamp). If the printed sleeves stick, use LM6UU bearings or brass-tube bushings.
+  - [ ] Follow-up: cable route from the servo to the carriage connector window; limit angles
+    and `M280` values (T2.4) for ±23° about horizontal; pen holder on the gantry at both ends
+    of travel (T3.7).
 - [ ] **T3.7 Full assembly and baseboard layout.** Assembly model for fit checks (travel,
   clearances, 15 mm media under the head). 1:1 baseboard drilling layout: SK10 positions,
   motor mounts, bed-panel adjustment points, runners, electronics.
@@ -144,7 +158,7 @@ any new decisions in §3, and update the status line at the top.
   and ruff. Checked: all 8 STLs geometrically identical to the OpenSCAD ones (volume,
   bounding box, cross-sections); assemblies match by
   volume and bounding box; same key numbers. The old `.scad` files were removed afterwards.
-- [ ] **T3.10 Roll out handles (D28).** Add handles to the other parts and use `align` in `assemblies/` (Y drive mounts, X carriage, X mounts, endstop frames: `place_in_frame` is a hand-rolled handle; mind the chiral, mirrored endstop board). *Done when:* no assembly re-derives a hole position that a part defines; geometry unchanged.
+- [ ] **T3.10 Roll out handles (D28).** Add handles to the other parts and use `align` in `assemblies/` (Y drive mounts, X carriage, X mounts, the pen holder (servo, rod, screws are placed from `params.PenHolder`), endstop frames: `place_in_frame` is a hand-rolled handle; mind the chiral, mirrored endstop board). *Done when:* no assembly re-derives a hole position that a part defines; geometry unchanged.
 
 #### Phase 4 — Build
 
@@ -219,6 +233,7 @@ update the log once it is agreed (README §7.1).
 | D26 | The Y motor and idler mounts have a **corner pocket for their SK10** (cut-out in a 6 mm foot: a 24 mm end-wall finger against the shaft-end face and an outboard side wall; open toward the inboard side and the other SK10; the finger is kept short so it stays sturdy), so the belt line is referenced to the SK10's outer face and outboard edge instead of the baseboard layout and SK10 width/chamfer tolerances don't matter. Mounts are fitted last, around the already aligned SK10s, pushed into the corner, and screwed down through plain holes (no pre-drilled positions). The SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
 | D27 | Belt clamps: flat undersides on the gantry brackets and the X carriage's rear block (no belt channel: no bridges or overhangs); one cap design for all six clamps, with the groove (between two rails) and the tooth ridges in the cap. Belt lines drop 1.08 mm (derived); screws M3×12 | ✅ | T3.2, T3.3, §6 |
 | D28 | **Handles and `align()` for assemblies (trial).** Parts that hardware or other parts attach to expose named handles (4×4 matrices set with `geometry.set_handles`, read with `get_handle(s)`); assemblies place the hardware with `.align(handle)` instead of re-deriving hole coordinates, and the part's own cut-outs use the same handle constants, so a hole and its screw can't drift apart. Done for the gantry end bracket and the belt clamp; extend to other parts as they are touched. `fillet` and `MultiToolExporter` evaluated and not adopted yet | ✅ trial | README §7.4, T3.10 |
+| D29 | **v1 pen holder (T3.6):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
 | D29 | **No heat-set inserts: pressed-in hex nuts (nut traps) everywhere.** The nut sits in a slot or hex shaft with a wall behind it that takes the load (`TOL.nut_wall`, 2 mm). Y/X idler tension screws: slot from the top; X endstop pad screws: slots from the rear face; belt clamp screws (brackets): hex shafts from the top, nut 4 mm above the underside (`CLAMP.nut_z`), M3×14; X carriage rear block: slot from the back; tool-plate screws: slots from the bottom edge. Dropped the `Preload.SLOT` carriage fallback (eccentric spacers are available) | ✅ | README §7 rule 2 |
 
 ---
@@ -240,8 +255,9 @@ hard to get, we adjust.
 | SCS10UU linear bearing blocks | 4 | 2 per shaft; 35 L × 40 W × 26.5 H mm, shaft center 13 mm above the base, 4 × M5 top holes on 28 × 21 mm, top: two 10 mm raised flats (holes in them) with a 17 mm × 1 mm recess between, 92 g ([`docs/hardware.md`](docs/hardware.md)) | — |
 | NEMA17 stepper motors | ≥ 3 (+1 for optional Z) | Standard 3D-printer type; sizes vary: typical 39.2 mm body / 22.6 mm shaft, short 33.5 / 19 | — |
 | GT2 belt, pulleys, idlers | assorted | 6 mm belt (plenty); common 3D-printer 20T pulleys and idlers | Exact pulley/idler sizes (design for common, adjust) |
-| Lead screws, linear bearings, misc. bearings | assorted | | Only needed for a stepper Z experiment |
-| Hobby servos | 2+ | Small, SG90-class assumed | Model |
+| Lead screws, linear bearings, misc. bearings | assorted | No LM6UU/LM8UU found yet | Only needed for a stepper Z experiment or the pen slide upgrade |
+| Ø6 rod | 1 | ~200 mm, cuttable; the pen holder's rod needs 63 mm | — |
+| Hobby servos | 2+ | **FeeTech FT90M** (metal gears, digital; used for the pen lift) and FS90 (spare); measured in `docs/hardware.md` | Horn thickness, spline height |
 | **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers ([`docs/controller.md`](docs/controller.md)) | Driver chip type; pin map (bench) |
 | Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
@@ -271,6 +287,7 @@ hard to get, we adjust.
 | Y belt | 30 mm outboard of each shaft; motor/idler axis ~26.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
 | X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~93.8 mm above the baseboard; ~1.2 m belt |
 | Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
+| Pen holder | Lift 7 mm / float 3 mm; rod Ø6 × 63 mm; slide 45 mm; pen axis 16–22 mm in front of the carriage face; head depth ~39 mm (servo front), up to z ~105 |
 | Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 nuts 36 mm apart |
 | Mechanics footprint | ~600 × ~800 mm |
 
@@ -348,9 +365,18 @@ this sets the shaft spacing to **520 mm**. ~70 g each (PETG).
 a rear block behind the beam that clamps both ends of the X belt (same clamp caps as Y) and
 holds the X endstop trigger (M3 screw head, pointing −X). Printed front face down, ~64 g.
 
-**v1 pen holder (planned, T3.6):** a printed body on the interface with a vertical slide
-carrying a V-groove pen clamp (centers 7–16 mm pens on one axis; thumbscrew or strap), a
-coarse ~20 mm height adjustment, and a mount for the servo (gravity + servo first).
+**v1 pen holder (T3.6, D29):** two printed parts. The **body** (`pen_holder_body.py`) is a
+50 × 45 mm plate with the hook lip (the carriage groove shrunk by the 0.3 mm gap) and
+2 × M3 counterbored holes, a spine up to z ~105, two arms that hold the Ø6 rod (lower: blind
+seat; upper: through), a key rib, and a wall with a 12.4 × 23.5 mm window for the FT90M (tabs
+rest on the wall's front, M2-class self-tapping pilot holes; outer rib and two webs). Printed on its
+left side. The **slide** (`pen_slide.py`) is a 45 mm column with two 13 mm sleeves (relief
+between), a 90° V-block (apex 11 mm from the carriage face; pens 7–16 mm sit with the axis
+16–22 mm out), a yoke with an M5 nut pocket and thumbscrew pressing the pen into the V, and a
+lug with the pin slot and key groove. Printed back face down. Travel: lift 7 mm, float 3 mm
+(pin travel 10 mm; horn ±23° about horizontal at the second hole, r = 12.6 mm), rod 63 mm.
+Dimensions: `params.PenHolder` (head frame: x across, d forward from the carriage face, z
+absolute). The pen's height is set by sliding it in the clamp.
 
 ---
 

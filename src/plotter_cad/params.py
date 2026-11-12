@@ -23,6 +23,7 @@ from plotter_cad.geometry import cos_deg
 from plotter_cad.hardware import (
     ECCENTRIC,
     ENDSTOP,
+    FT90M,
     GT2,
     IDLER,
     NEMA17,
@@ -251,6 +252,249 @@ class ToolPlate:
 
 
 TOOL_PLATE = ToolPlate()
+
+# -----------------------------------------------------------------------------
+# v1 pen holder (T3.6): gravity-loaded pen slide on a Ø6 rod, lifted by the FT90M
+# -----------------------------------------------------------------------------
+# Head frame (used by the pen-holder parts): x across (0 = carriage center), d forward
+# from the carriage front face (so carriage y = front face − d), z absolute.
+#
+#   side view (looking along +x, carriage on the left)
+#   carriage │ plate │ slide ┌ lug ┐ horn    servo wall ┌ servo ─────────┐
+#   face     │       │ column│     │ pin→   ──────────────────────────────
+#                      V-block + yoke + M5 thumbscrew clamp the pen (axis ~22 mm out)
+#
+# The slide hangs on the rod through two printed sleeves. The servo horn's pin sits in a
+# slot of the slide's lug and lifts the slide by the slot's ceiling; lowering the pin
+# lets the slide drop until the pen touches (gravity sets the pressure) and leaves the
+# slot clearance as float.
+
+
+@dataclass(frozen=True)
+class PenHolder:
+    """v1 pen holder dimensions."""
+
+    # --- pen slide and rod
+    rod_d: float = 6.0  #: Ø6 rod on hand (cut to length, ~63 mm)
+    rod_x: float = 5.5  #: DESIGN (T3.6): rod axis x
+    sleeve_wall: float = 2.0  #: slide material around the rod bore
+    slide_h: float = 45  #: DESIGN (T3.6): slide height (sleeves + relief between)
+    sleeve_len: float = 13  #: DESIGN (T3.6): bearing length at each end of the slide
+    slide_gap: float = 0.6  #: slide back face ↔ tool plate front face
+    slide_z0: float = 47  #: DESIGN (T3.6): slide bottom with the pen on the bed (contact);
+    #: high enough that the plate's M3 screws stay reachable under the slide
+    lift: float = REQ.pen_lift_min + 2  #: DESIGN: pen-up stroke above contact
+    float_travel: float = REQ.pen_float_min  #: DESIGN: slide travel above contact at constant force
+    sink: float = 1.0  #: DESIGN: how far the slide may drop below nominal contact
+    stop_margin: float = 1.0  #: DESIGN: gap between the slide and the upper arm when raised
+    arm_t: float = 5  #: rod arm thickness (z)
+    arm_w: float = 10  #: rod arm boss diameter (a pen of any size must clear it)
+    rod_seat_depth: float = 4  #: blind rod hole in the lower arm
+    # --- pen clamp: 90° V-block, yoke and M5 thumbscrew
+    pen_x: float = 13  #: DESIGN (T3.6): pen axis x
+    apex_d: float = 11  #: DESIGN (T3.6): V apex distance from the carriage face
+    block_half_w: float = 12  #: V-block half width (x)
+    yoke_in: float = 9.6  #: yoke arm inner face, from the pen axis (x)
+    yoke_clear_d: float = 0.7  #: thumbscrew bar ↔ the largest pen
+    yoke_bar_t: float = 8  #: bar thickness (captive M5 nut + walls)
+    yoke_h: float = 22  #: yoke height (z)
+    clamp_screw_len: float = 20  #: M5 screw
+    # --- lift linkage
+    horn_hole: int = 1  #: horn hole used for the pin, counted from the tip's last hole
+    pin_d: float = 2.0  #: M2 screw through the horn hole (ASSUMED horn hole fit)
+    horn_t: float = 1.8  #: ASSUMED: horn thickness
+    horn_clear: float = 0.8  #: lug ↔ horn
+    boss_clear: float = 0.5  #: horn ↔ servo boss
+    pin_reach: float = 3.0  #: how far the pin projects behind the horn into the lug
+    slot_extra_w: float = 0.6  #: lug slot width above the pin diameter and its arc shift
+    slot_extra_h: float = 1.0
+    ceiling_above_z0: float = 22  #: lug slot ceiling above the slide bottom (at contact)
+    lug_t: float = 4.4
+    lug_x0: float = -13.4
+    lug_h: float = 20
+    lug_above: float = 4  #: lug material above the slot ceiling (the lifting edge)
+    # anti-rotation key: rib on the tool plate in a groove of the lug
+    key_x: float = -10.1  #: DESIGN: key center x
+    key_w: float = 3.0
+    key_h: float = 2.6  #: rib height above the plate face
+    # --- servo bracket (wall with a window for the FT90M; the output side faces the plate)
+    servo_clear: float = 0.15  #: servo body ↔ window, per side
+    wall_t: float = 3.0
+    rib_t: float = 1.6  #: outer rib / webs
+    web_t: float = 2.0
+    wall_margin: float = 3.5  #: wall beyond the outermost tab hole (z)
+    wall_extra_z: float = 2.0  #: extra wall height for the horn's swing
+
+    # ---- derived: z
+    @property
+    def lower_arm_top(self) -> float:
+        """Top of the lower rod arm (slide's lowest stop)."""
+        return self.slide_z0 - self.sink
+
+    @property
+    def lower_arm_bottom(self) -> float:
+        """Underside of the lower rod arm."""
+        return self.lower_arm_top - self.arm_t
+
+    @property
+    def upper_arm_bottom(self) -> float:
+        """Underside of the upper rod arm."""
+        return self.slide_z0 + self.slide_h + self.lift + self.stop_margin
+
+    @property
+    def upper_arm_top(self) -> float:
+        """Top of the upper rod arm (and of the body)."""
+        return self.upper_arm_bottom + self.arm_t
+
+    @property
+    def rod_len(self) -> float:
+        """Rod length (from the seat in the lower arm to the top of the upper arm)."""
+        return self.upper_arm_top - (self.lower_arm_top - self.rod_seat_depth)
+
+    @property
+    def pin_travel(self) -> float:
+        """Vertical travel of the pin between pen up and pen down."""
+        return self.lift + self.float_travel
+
+    @property
+    def horn_r(self) -> float:
+        """Radius of the pin hole from the shaft."""
+        return FT90M.horn_len - FT90M.horn_last_hole - self.horn_hole * FT90M.horn_hole_pitch
+
+    @property
+    def slot_ceiling_z(self) -> float:
+        """Lug slot ceiling at contact."""
+        return self.slide_z0 + self.ceiling_above_z0
+
+    @property
+    def lug_z(self) -> tuple[float, float]:
+        """Lug z extent at contact."""
+        top = self.slot_ceiling_z + self.lug_above
+        return top - self.lug_h, top
+
+    @property
+    def pin_down_z(self) -> float:
+        """Pin center, pen down: below the ceiling by the pin radius and the float."""
+        return self.slot_ceiling_z - self.pin_d / 2 - self.float_travel
+
+    @property
+    def pin_up_z(self) -> float:
+        """Pin center, pen up."""
+        return self.pin_down_z + self.pin_travel
+
+    @property
+    def shaft_z(self) -> float:
+        """Servo shaft axis: the pin's mid travel (the horn is horizontal)."""
+        return self.pin_down_z + self.pin_travel / 2
+
+    @property
+    def horn_swing_deg(self) -> float:
+        """Horn rotation either side of horizontal."""
+        return math.degrees(math.asin(self.pin_travel / 2 / self.horn_r))
+
+    @property
+    def servo_body_z(self) -> tuple[float, float]:
+        """Servo body z extent: the shaft is near the lower end."""
+        length = FT90M.body[0]
+        return (
+            self.shaft_z - FT90M.shaft_offset,
+            self.shaft_z + length - FT90M.shaft_offset,
+        )
+
+    @property
+    def servo_center_z(self) -> float:
+        """Servo body center along z (the tab holes are symmetrical about it)."""
+        lo, hi = self.servo_body_z
+        return (lo + hi) / 2
+
+    @property
+    def wall_z(self) -> tuple[float, float]:
+        """Servo wall z extent."""
+        half = FT90M.hole_pitch / 2 + self.wall_margin + self.wall_extra_z
+        return self.servo_center_z - half, self.servo_center_z + half
+
+    # ---- derived: x
+    @property
+    def servo_x(self) -> float:
+        """Servo center and shaft x: against the outer rib."""
+        return -TOOL_PLATE.w / 2 + self.rib_t + self.servo_clear + FT90M.body[1] / 2
+
+    @property
+    def pin_x(self) -> float:
+        """Pin x at the horn's horizontal position."""
+        return self.servo_x + self.horn_r
+
+    @property
+    def slot_x(self) -> tuple[float, float]:
+        """Lug slot x extent: wide enough for the pin on its arc (x shifts by
+        ``horn_r (1 - cos swing)`` between mid travel and the ends)."""
+        shift = self.horn_r * (1 - math.cos(math.radians(self.horn_swing_deg)))
+        center = self.pin_x - shift / 2
+        half = (self.pin_d + shift + self.slot_extra_w) / 2
+        return center - half, center + half
+
+    @property
+    def wall_x(self) -> tuple[float, float]:
+        """Servo wall x extent."""
+        return -TOOL_PLATE.w / 2, self.servo_x + FT90M.body[1] / 2 + self.servo_clear + 2
+
+    # ---- derived: d
+    @property
+    def plate_d(self) -> tuple[float, float]:
+        """Tool plate back and front faces."""
+        return TOOL_PLATE.fit_gap, TOOL_PLATE.fit_gap + TOOL_PLATE.plate_t
+
+    @property
+    def slide_d0(self) -> float:
+        """Slide back face."""
+        return self.plate_d[1] + self.slide_gap
+
+    @property
+    def sleeve_od(self) -> float:
+        """Slide column diameter."""
+        return self.rod_d + TOL.slide + 2 * self.sleeve_wall
+
+    @property
+    def rod_d_pos(self) -> float:
+        """Rod axis distance from the carriage face."""
+        return self.slide_d0 + self.sleeve_od / 2
+
+    @property
+    def horn_d(self) -> tuple[float, float]:
+        """Horn back and front faces."""
+        back = self.slide_d0 + self.lug_t + self.horn_clear
+        return back, back + self.horn_t
+
+    @property
+    def wall_d(self) -> float:
+        """Servo wall front face (the servo tabs rest on it)."""
+        body_h = FT90M.body[2]
+        past_tabs = body_h - FT90M.tab_z - FT90M.tab_t
+        return self.horn_d[1] + self.boss_clear + FT90M.top_h + past_tabs
+
+    @property
+    def servo_front_d(self) -> float:
+        """Front end of the servo body."""
+        return self.wall_d + FT90M.tab_z + FT90M.tab_t
+
+    def pen_axis_d(self, pen_d: float) -> float:
+        """Distance of a pen's axis from the carriage face, held in the 90° V."""
+        return self.apex_d + pen_d / 2 * math.sqrt(2)
+
+    @property
+    def yoke_bar_d(self) -> tuple[float, float]:
+        """Thumbscrew bar back and front faces."""
+        back = self.pen_axis_d(REQ.pen_d_range[1]) + REQ.pen_d_range[1] / 2 + self.yoke_clear_d
+        return back, back + self.yoke_bar_t
+
+    @property
+    def yoke_z(self) -> tuple[float, float]:
+        """Yoke z extent (at the slide's mid-height)."""
+        mid = self.slide_z0 + self.slide_h / 2
+        return mid - self.yoke_h / 2, mid + self.yoke_h / 2
+
+
+PEN = PenHolder()
 
 # -----------------------------------------------------------------------------
 # Y axis (D6, D11, D13) and the height stack-up below the beam
@@ -1012,6 +1256,40 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield (
         ye.tower_y[1] <= yd.idler_plate_y[1] and ye.tower_y[0] >= 0,
         "Y endstop tower outside the idler plate or the baseboard",
+    )
+    # --- pen holder (T3.6)
+    pn = PEN
+    pen_lo, pen_hi = REQ.pen_d_range
+    yield pn.lift >= REQ.pen_lift_min, "Pen lift stroke below the requirement"
+    yield pn.float_travel >= REQ.pen_float_min, "Pen float below the requirement"
+    yield (
+        pn.pen_axis_d(pen_hi) <= REQ.pen_axis_max_offset,
+        f"Largest pen axis {pn.pen_axis_d(pen_hi):g} mm from the carriage face",
+    )
+    yield (
+        pn.pen_x + pn.block_half_w <= TOOL_PLATE.w / 2 and pn.wall_x[0] >= -TOOL_PLATE.w / 2,
+        "Pen holder wider than the tool plate",
+    )
+    yield (
+        pn.lower_arm_bottom >= TOOL_PLATE.bottom_z,
+        "Lower rod arm below the carriage bottom (media clearance)",
+    )
+    for pen_d in (pen_lo, pen_hi):
+        reach = math.hypot(pn.pen_x - pn.rod_x, pn.pen_axis_d(pen_d) - pn.rod_d_pos)
+        yield (
+            reach >= max(pn.sleeve_od, pn.arm_w) / 2 + pen_d / 2 + 0.3,
+            f"A {pen_d:g} mm pen hits the rod sleeve or arm",
+        )
+    yield pn.yoke_in >= pen_hi / 2 + 1, "Yoke arms too close to the largest pen"
+    yield (
+        pn.servo_x + FT90M.horn_len <= pn.rod_x - pn.sleeve_od / 2 + 0.3,
+        "Servo horn tip reaches the pen slide column",
+    )
+    yield pn.horn_swing_deg <= 40, "Pen-lift linkage needs too large a horn swing"
+    groove = (pn.key_x - TOL.slide_d(pn.key_w) / 2, pn.key_x + TOL.slide_d(pn.key_w) / 2)
+    yield (
+        groove[0] - pn.lug_x0 >= TOL.min_wall and pn.slot_x[0] - groove[1] >= 1.5,
+        "Key groove too close to the lug edge or the pin slot",
     )
 
 

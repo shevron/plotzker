@@ -9,33 +9,34 @@ where the screws stay accessible with the motor fitted.
   belt ═◯pulley┃plate┃ motor body →         ┌─────────┐
         ═══════╋     ┃ (inboard)            │ ◯ motor │ plate
   ─ foot ──────┸─────┘                      └─────────┘ ← gussets at both ends
-                                            ──── foot (4 × M4 wood screws)
+                                            ──── foot (2 × 4×25 countersunk wood screws)
 
 Frame: left side frame (``params.YDrive``: x from the shaft, machine y, z = baseboard
 top); the part is printed foot down in the same orientation. The right-hand part is the
 mirror image (:func:`y_motor_mount`).
 
 Hardware: 4 × M3×10 ISO 4762 (motor, from the pulley side); 20T GT2 pulley on the motor
-(hub toward the motor, belt center on the belt line); 4 × M4 wood screws into the baseboard.
+(hub toward the motor, belt center on the belt line); 2 × 4×25 countersunk wood screws
+into the baseboard (through 9 mm bosses on the foot).
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 """
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, hull
+from pythonscad import cube, hull
 
-from plotter_cad.geometry import EPS, FN_HOLE, teardrop_x
-from plotter_cad.hardware import NEMA17, metric
-from plotter_cad.params import TOL, Y_AXIS, Y_DRIVE
+from plotter_cad.geometry import EPS, teardrop_x
+from plotter_cad.hardware import NEMA17
+from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
+from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
 
 if TYPE_CHECKING:
     from pythonscad import Solid
 
 AXIS_Z = Y_AXIS.pulley_axis_z  #: motor axis height
-SCREW_M = 4  #: wood screws into the baseboard
-SCREW_INSET = 6  #: foot screws from the plate ends (y)
+SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the plate ends (y)
 
 
 def y_motor_mount_installed() -> Solid:
@@ -68,19 +69,11 @@ def y_motor_mount_installed() -> Solid:
         for dy in (-1, 1)
         for dz in (-1, 1)
     ]
-    foot_x = d.motor_foot_x0 + TOL.cbore_d(SCREW_M) / 2 + TOL.min_wall
-    holes = []
-    for y in (y0 + SCREW_INSET, y1 - SCREW_INSET):
-        holes.append(
-            cylinder(d=TOL.bolt_hole_d(SCREW_M), h=d.foot_t + 2, fn=FN_HOLE).translate(
-                [foot_x, y, -1]
-            )
-        )
-        holes.append(
-            cylinder(d=TOL.cbore_d(SCREW_M), h=metric(SCREW_M).head_h + 1, fn=FN_HOLE).translate(
-                [foot_x, y, d.foot_t - metric(SCREW_M).head_h]
-            )
-        )
+    foot_x = d.motor_foot_x0 + WOOD_SCREW.boss_d / 2
+    screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
+    bosses = [wood_screw_boss(foot_x, y) for y in screw_ys]
+    holes = [wood_screw_hole(foot_x, y) for y in screw_ys]
+    foot = foot | bosses[0] | bosses[1]
     return (foot | plate | gussets | pocket_frame) - pocket_cut - boss - screws - holes
 
 

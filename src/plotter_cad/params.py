@@ -145,6 +145,42 @@ class Frame:
 
 FRAME = Frame()
 
+
+@dataclass(frozen=True)
+class WoodScrew:
+    """The wood screws on hand for fixing printed parts to the baseboard: 4 × 25 mm,
+    countersunk. They are long: under a thin foot they would reach through the plywood, so
+    printed parts carry a boss (``boss_t`` thick) at every screw."""
+
+    m: float = 4
+    length: float = 25
+    head_d: float = 8.0  #: ASSUMED: countersunk head diameter
+    tip_margin: float = 2  #: plywood left under the screw tip
+    boss_d: float = 13  #: boss diameter (room for the countersink and a wall)
+
+    @property
+    def boss_t(self) -> float:
+        """Thickness under the head so that the tip stops ``tip_margin`` short of the far face."""
+        return self.length - (FRAME.board_size[2] - self.tip_margin)
+
+    @property
+    def hole_d(self) -> float:
+        """Clearance hole."""
+        return self.m + TOL.bolt
+
+    @property
+    def sink_d(self) -> float:
+        """Countersink diameter at the surface (head plus clearance)."""
+        return self.head_d + 2 * TOL.bolt
+
+    @property
+    def sink_h(self) -> float:
+        """Countersink depth (90° cone)."""
+        return (self.sink_d - self.hole_d) / 2
+
+
+WOOD_SCREW = WoodScrew()
+
 # -----------------------------------------------------------------------------
 # Drive (D7)
 # -----------------------------------------------------------------------------
@@ -531,10 +567,6 @@ class ZribMount:
     leg_w: float = 8  #: along u (an M3 nut fits)
     leg_t: float = 9  #: along v (a nut slot reaches past the screw axis, with a wall)
     leg_gap: float = 11  #: board edge to the leg's inner face
-    wood_screw_m: float = 4  #: 4 mm countersunk wood screws (on hand)
-    wood_screw_len: float = 25  #: the shortest on hand
-    wood_screw_head_d: float = 8.0  #: ASSUMED: countersunk head diameter
-    boss_t: float = 9  #: boss thickness: the 25 mm screw must not reach through 18 mm plywood
     wood_screw_gap: float = 4  #: board edge to the screw center, along u
     wood_screw_v: float = 5  #: from the post row inward (v), clear of the strap for a driver
     boss_d: float = 11.5  #: round boss that takes the screw head
@@ -1047,8 +1079,7 @@ X_DRIVE = XDrive()
 class YDrive:
     """Y motor mount and Y idler mount with tensioner."""
 
-    foot_t: float = 6  #: printed foot on the baseboard (M4 wood screws, counterbored)
-    foot_screw_m: float = 4  #: ASSUMED: wood/chipboard screws into the 18 mm plywood
+    foot_t: float = 6  #: printed foot on the baseboard; the screws go through bosses (WOOD_SCREW)
     # SK10 corner pocket (both mounts): the SK10's base sits in a cut-out of the foot, pushed
     # into the corner formed by the end wall (against its outer face, the shaft-end plane) and
     # the outboard side wall. The inboard side and the side toward the other SK10 are open, so
@@ -1333,8 +1364,8 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Front pocket reaches into the gantry's travel",
     )
     yield (
-        Y_AXIS.pulley_axis_z - PULLEY.flange_d / 2 >= yd.foot_t + 1,
-        "Y pulley hits the motor foot",
+        Y_AXIS.pulley_axis_z - PULLEY.flange_d / 2 >= max(yd.foot_t, WOOD_SCREW.boss_t) + 1,
+        "Y pulley hits the motor foot or a screw boss",
     )
     yield (
         Y_AXIS.pulley_axis_z - NEMA17.width / 2 >= 0,
@@ -1372,14 +1403,17 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     yield (
         zm.wood_screw_u + zm.boss_d / 2 <= zm.leg_u[0] - 1
-        and zm.wood_screw_u - zm.wood_screw_head_d / 2 >= ZRIB.width / 2,
+        and zm.wood_screw_u - WOOD_SCREW.head_d / 2 >= ZRIB.width / 2,
         "ZRIB mount wood screw boss hits the leg, or its head is not reachable beside the board",
     )
     yield (
-        zm.wood_screw_len - zm.boss_t <= FRAME.board_size[2] - 2,
+        WOOD_SCREW.length - WOOD_SCREW.boss_t <= FRAME.board_size[2] - 2,
         "ZRIB mount wood screws would reach through the baseboard",
     )
-    yield zm.boss_t > zm.rail_t and -zm.board_z - zm.boss_t >= 1, "ZRIB mount boss hits the board"
+    yield (
+        WOOD_SCREW.boss_t > zm.rail_t and -zm.board_z - WOOD_SCREW.boss_t >= 1,
+        "ZRIB mount boss hits the board",
+    )
     # --- pen holder (T3.6)
     pn = PEN
     pen_lo, pen_hi = REQ.pen_d_range

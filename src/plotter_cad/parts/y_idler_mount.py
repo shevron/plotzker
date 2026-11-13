@@ -14,7 +14,7 @@ carries the endstop board in the plane of the gantry bracket's trigger screw (se
   │ slot │ ← M5 axle slides here (±4 mm)    ◯═══╡    │  axle through
   │      │                                      └────┘  the plate
   ├──────┘                                    ──foot──   (nut outboard)
-  └ foot (2 × M4 wood screws)
+  └ foot (2 × 4×25 countersunk wood screws)
 
 Frame: left side frame (``params.YDrive``: x from the shaft, machine y, z = baseboard
 top); the part is printed foot down in the same orientation. The right-hand part is the
@@ -23,8 +23,8 @@ the lever hinge sits at the other end (:func:`y_idler_mount`).
 
 Hardware: toothed 20T GT2 idler (Ø5 bore); 1 × M5×30 ISO 4762 + M5 nut (nyloc) + 2 × M5
 washers (one each side of the idler) as the axle, head inboard of the idler; 1 × M3 nut
-(pressed into the top slot) + 1 × M3×20 ISO 4762 (tension screw); 2 × M4 wood screws into
-the baseboard;
+(pressed into the top slot) + 1 × M3×20 ISO 4762 (tension screw); 2 × 4×25 countersunk wood
+screws into the baseboard (through 9 mm bosses on the foot);
 the endstop board with 2 × M3×6 (or its own screws) self-tapping into the Ø2.6 pilots.
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 """
@@ -34,16 +34,17 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, cylinder, hull
 
 from plotter_cad.geometry import FN_HOLE, teardrop_x, teardrop_y
-from plotter_cad.hardware import ENDSTOP, metric
-from plotter_cad.params import TOL, Y_AXIS, Y_DRIVE, Y_ENDSTOP
+from plotter_cad.hardware import ENDSTOP
+from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
+from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
 
 if TYPE_CHECKING:
     from pythonscad import Solid
 
 AXIS_Z = Y_AXIS.pulley_axis_z  #: idler axle height
-SCREW_M = 4  #: wood screws into the baseboard
+SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the plate ends (y)
 PILOT_D = 2.6  #: M3 self-tapping into the endstop board's holes
 PILOT_DEPTH = 5  #: M3×6 through the 1.5 mm board
 
@@ -76,17 +77,10 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     screw = teardrop_y(TOL.bolt_hole_d(3), y1 + 2 - d.idler_y).translate(
         [plate_cx, (y1 + 2 + d.idler_y) / 2, AXIS_Z]
     )
-    holes = []
-    for y in (y0 + 6, y1 - 6):
-        x = d.idler_foot_x0 + d.idler_foot_out / 2
-        holes.append(
-            cylinder(d=TOL.bolt_hole_d(SCREW_M), h=d.foot_t + 2, fn=FN_HOLE).translate([x, y, -1])
-        )
-        holes.append(
-            cylinder(d=TOL.cbore_d(SCREW_M), h=metric(SCREW_M).head_h + 1, fn=FN_HOLE).translate(
-                [x, y, d.foot_t - metric(SCREW_M).head_h]
-            )
-        )
+    screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
+    screw_x = d.idler_foot_x0 + d.idler_foot_out / 2
+    holes = [wood_screw_hole(screw_x, y) for y in screw_ys]
+    foot = foot | wood_screw_boss(screw_x, screw_ys[0]) | wood_screw_boss(screw_x, screw_ys[1])
     # endstop tower: the board stands against its inboard face
     e = Y_ENDSTOP
     u_z = -1 if side is Side.LEFT else 1

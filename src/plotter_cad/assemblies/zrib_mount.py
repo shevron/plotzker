@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from pythonscad import cube
 
 from plotter_cad.hardware import ZRIB, countersunk_screw, hex_nut, shcs, zrib
-from plotter_cad.params import FRAME, TOL, ZMOUNT
+from plotter_cad.params import FRAME, TOL, WOOD_SCREW, ZMOUNT
 from plotter_cad.parts.zrib_guard import zrib_guard
 from plotter_cad.parts.zrib_hanger import zrib_hanger_mount
 
@@ -35,9 +35,9 @@ def zrib_mount_assembly() -> list[Solid]:
             items.append(shcs(3, 12).rotate([180, 0, 0]).translate([u, sv * post_v, board_bottom]))
             items.append(hex_nut(3).translate([u, sv * post_v, -nut_t]))
             items.append(
-                countersunk_screw(m.wood_screw_m, m.wood_screw_len, m.wood_screw_head_d)
+                countersunk_screw(WOOD_SCREW.m, WOOD_SCREW.length, WOOD_SCREW.head_d)
                 .rotate([180, 0, 0])
-                .translate([sx * m.wood_screw_u, sv * wood_v, -m.boss_t])
+                .translate([sx * m.wood_screw_u, sv * wood_v, -WOOD_SCREW.boss_t])
             )
             items.append(
                 shcs(3, m.strap_screw_len)

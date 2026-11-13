@@ -34,8 +34,8 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, cylinder, linear_extrude
 
 from plotter_cad.geometry import FN_HOLE, teardrop
-from plotter_cad.hardware import ZRIB, metric
-from plotter_cad.params import TOL, ZMOUNT
+from plotter_cad.hardware import ZRIB
+from plotter_cad.params import TOL, WOOD_SCREW, ZMOUNT
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -64,12 +64,11 @@ def zrib_hanger_mount() -> Solid:
         post = cylinder(d=m.post_d, h=m.post_h + 0.01, fn=FN_HOLE).translate(
             [sx * ZRIB.hole_pitch[0] / 2, m.post_v, -m.rail_t - m.post_h]
         )
-        boss = cylinder(d=m.boss_d, h=m.boss_t, fn=FN_HOLE).translate(
-            [sx * m.wood_screw_u, m.post_v + m.wood_screw_v, -m.boss_t]
+        boss = cylinder(d=m.boss_d, h=WOOD_SCREW.boss_t, fn=FN_HOLE).translate(
+            [sx * m.wood_screw_u, m.post_v + m.wood_screw_v, -WOOD_SCREW.boss_t]
         )
         body = body | post | boss
 
-    m3, wood = metric(3), metric(m.wood_screw_m)
     nut_t, nut_ac = TOL.nut_trap_h(3), TOL.nut_trap_ac(3)
     for sx in (-1, 1):
         u = sx * ZRIB.hole_pitch[0] / 2
@@ -79,13 +78,11 @@ def zrib_hanger_mount() -> Solid:
         body = body - cylinder(d=nut_ac, h=nut_t + 1, fn=6).translate([u, m.post_v, -nut_t])
         us = sx * m.wood_screw_u
         vs = m.post_v + m.wood_screw_v
-        body = body - _hole_z(wood.m + TOL.bolt, us, vs, -m.boss_t - 1, 1)
+        body = body - _hole_z(WOOD_SCREW.hole_d, us, vs, -WOOD_SCREW.boss_t - 1, 1)
         # countersink (90°), wide end on the boss's underside
-        head_d = m.wood_screw_head_d + 2 * TOL.bolt
-        cone_h = (head_d - wood.m - TOL.bolt) / 2
         body = body - cylinder(
-            d1=head_d + 2, d2=wood.m + TOL.bolt, h=cone_h + 1, fn=FN_HOLE
-        ).translate([us, vs, -m.boss_t - 1])
+            d1=WOOD_SCREW.sink_d + 2, d2=WOOD_SCREW.hole_d, h=WOOD_SCREW.sink_h + 1, fn=FN_HOLE
+        ).translate([us, vs, -WOOD_SCREW.boss_t - 1])
         # strap screw: hole up the leg, nut slot pressed in from the outer face
         us = sx * m.strap_screw_u
         body = body - _hole_z(
@@ -100,7 +97,6 @@ def zrib_hanger_mount() -> Solid:
             m.strap_nut_z,
             m.strap_nut_z + nut_t,
         )
-    del m3
     return body
 
 

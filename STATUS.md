@@ -124,9 +124,9 @@ any new decisions in §3, and update the status line at the top.
   the Y idler forward (axle y 32) and moved the trigger contact 4 mm in from the lever tip.
   Checked: no collisions with the gantry, SK10s or shafts at the front, middle or back of
   Y travel (test); only the trigger pressing the endstop lever.
-  - [ ] Follow-up: the only wood screws on hand are 4 × 25 mm *countersunk*, but the Y mounts are
-    counterbored (cap-head style) feet 6 mm thick: a 25 mm screw would reach ~19 mm into the 18 mm
-    baseboard. Buy shorter screws (e.g. 4 × 16, pan head) or change the feet.
+  - [x] Fixed for the 4 × 25 mm countersunk wood screws on hand: both mounts' feet have 13 mm
+    bosses 9 mm thick (`params.WOOD_SCREW`, `parts/wood_screw.py`) with a 90° countersink, so
+    the screws stop 2 mm short of the baseboard's underside; the feet stay 6 mm thick.
   - [ ] Follow-up: test-print; check the pocket corner against an SK10 and the
     belt tension range, and the trip point (adjust with the
     trigger screw length); measure where the switch clicks (modeled at 75 % of the lever's
@@ -240,7 +240,7 @@ update the log once it is agreed (README §7.1).
 | D22 | Migrate the CAD from OpenSCAD to PythonSCAD: a `plotter_cad` Python package (`src/`), pip `pythonscad` module for STL export, PythonSCAD app for renders/preview. Ported 1:1 (all 8 STLs geometrically identical); the old `.scad` files were removed afterwards. D2 originally named OpenSCAD | ✅ | README §6, T3.9 |
 | D23 | **Experiment:** 2D sketches as SVG files next to the module that extrudes them (sketch → extrude workflow), loaded with `geometry.load_sketch()`. First use: the V-slot 2020/2040 profiles (`hardware/vslot_2020.svg`, `vslot_2040.svg`). PythonSCAD stays the only 3D source; printable parts stay fully parametric in Python for now | 🔬 Trial | README §6 |
 | D24 | Parametric sketch formats researched (`docs/sketch-formats.md`): no open interchange format carries sketch constraints. A Python constraint-sketch module (python-solvespace) was tried on the 2020 profile and **rejected**: it doesn't allow GUI drawing and adds little over plain PythonSCAD. **Stay with SVG (D23)**: designers draw and constrain in their CAD tool (e.g. FreeCAD) and export SVG. Revisit: automate the export with FreeCAD as a dependency | ✅ | `docs/sketch-formats.md` |
-| D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with M4 wood screws (*assumed* size). Costs ~25 mm of baseboard length at the back; belt ~1.5 m per side | ✅ | T3.5, §6 |
+| D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with 4 × 25 countersunk wood screws through 9 mm bosses. Costs ~25 mm of baseboard length at the back; belt ~1.5 m per side | ✅ | T3.5, §6 |
 | D26 | The Y motor and idler mounts have a **corner pocket for their SK10** (cut-out in a 6 mm foot: a 24 mm end-wall finger against the shaft-end face and an outboard side wall; open toward the inboard side and the other SK10; the finger is kept short so it stays sturdy), so the belt line is referenced to the SK10's outer face and outboard edge instead of the baseboard layout and SK10 width/chamfer tolerances don't matter. Mounts are fitted last, around the already aligned SK10s, pushed into the corner, and screwed down through plain holes (no pre-drilled positions). The SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
 | D27 | Belt clamps: flat undersides on the gantry brackets and the X carriage's rear block (no belt channel: no bridges or overhangs); one cap design for all six clamps, with the groove (between two rails) and the tooth ridges in the cap. Belt lines drop 1.08 mm (derived); screws M3×12 | ✅ | T3.2, T3.3, §6 |
 | D28 | **Handles and `align()` for assemblies (trial).** Parts that hardware or other parts attach to expose named handles (4×4 matrices set with `geometry.set_handles`, read with `get_handle(s)`); assemblies place the hardware with `.align(handle)` instead of re-deriving hole coordinates, and the part's own cut-outs use the same handle constants, so a hole and its screw can't drift apart. Done for the gantry end bracket and the belt clamp; extend to other parts as they are touched. `fillet` and `MultiToolExporter` evaluated and not adopted yet | ✅ trial | README §7.4, T3.10 |
@@ -276,7 +276,7 @@ hard to get, we adjust.
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm** (user) | Mounting holes, terminal side |
 | Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |
-| Wood screws | many | **4 × 25 mm, countersunk** (the shortest on hand); too long for 18 mm plywood under a 6 mm foot, see T3.5 follow-up | Head diameter |
+| Wood screws | many | **4 × 25 mm, countersunk** (the shortest on hand); printed parts use 9 mm bosses so they don't reach through the 18 mm plywood | Head diameter (assumed 8 mm) |
 | Plywood, steel sheet, magnets | to buy/cut | Baseboard, bed panel, work holding (README §3.8) | — |
 
 ---
@@ -337,7 +337,7 @@ to tension, and the axle nut locks it (tension is set with the gantry moved back
 the screw head sits just in front of the gantry's front stop). The **Y endstop**
 board stands on a tower on the idler plate, in the plane of the bracket's trigger screw, front edge toward +y: the screw tip presses
 the lever toward the board ~2.2 mm before the end of travel (the screw length sets the trip point). All
-mounts are screwed down with M4 wood screws (assumed) through counterbored feet; the right-hand parts are mirror images, except the tower (the board is chiral).
+mounts are screwed down with 4 × 25 countersunk wood screws through 9 mm bosses on the feet; the right-hand parts are mirror images, except the tower (the board is chiral).
 Each mount's foot also carries an **SK10 pocket** (`parts/sk10_pocket.py`, D26): a corner cut-out the
 SK10's base sits in (4 mm × 24 mm end-wall finger against the shaft-end face, outboard side wall; open
 toward the inboard side and the other SK10), so the mounts are fitted last, pushed into the corner of

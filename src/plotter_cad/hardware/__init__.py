@@ -16,7 +16,7 @@ from plotter_cad.hardware.endstop import (
     endstop_placed,
     place_in_frame,
 )
-from plotter_cad.hardware.fasteners import M3, M5, hex_nut, metric, shcs, washer
+from plotter_cad.hardware.fasteners import M3, M5, countersunk_screw, hex_nut, metric, shcs, washer
 from plotter_cad.hardware.linear_motion import SCS10UU, SK10, Y_SHAFT, scs10uu, sk10, y_shaft
 from plotter_cad.hardware.motors import FT90M, NEMA17, nema17, servo_ft90m, servo_horn
 from plotter_cad.hardware.vslot import (
@@ -28,6 +28,7 @@ from plotter_cad.hardware.vslot import (
     vslot_y,
     vwheel,
 )
+from plotter_cad.hardware.zrib import ZRIB, zrib
 
 __all__ = [
     "B608",
@@ -50,8 +51,10 @@ __all__ = [
     "VSLOT",
     "VWHEEL",
     "Y_SHAFT",
+    "ZRIB",
     "Bearing",
     "bearing",
+    "countersunk_screw",
     "eccentric_spacer",
     "endstop",
     "endstop_keepout",
@@ -73,4 +76,5 @@ __all__ = [
     "vwheel",
     "washer",
     "y_shaft",
+    "zrib",
 ]  # fmt: skip

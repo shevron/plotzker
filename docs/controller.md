@@ -20,6 +20,15 @@ before building. Based on photos of the board (2026-11-10) and Marlin's
 | 5 V supply | **Switching (buck) regulator** (large inductor) + small linear regulator; USB/VREG power-select jumper | Buck regulator should be good for a small servo; confirm under load |
 | Power / outputs | Screw terminals: power in (12–24 V), heated bed, hotend(s), AUX-12V; JST fan and thermistor (E0TEMP, BTEMP) connectors | Heater outputs unused for heating; MOSFET outputs could drive a solenoid |
 
+## Dimensions (measured by the user)
+
+| Item | Value |
+|------|-------|
+| Board (not in a case) | **95 × 110 mm** |
+| Tallest part | **22 mm** above the board: the heat sinks on the motor drivers (keep clear of any case) |
+| Mounting holes | 4 × **Ø3**, in the corners, **80 × 100 mm** apart (80 across the 95 mm side, 100 along the 110 mm side) |
+| Rear edge (the 110 mm side) | **USB-B** and the **DC input terminal** at the right, the **microSD slot** in the middle: this edge must stay accessible |
+
 ## Marlin board definition
 
 Marlin has three ZRIB definitions: `BOARD_ZRIB_V20`, `BOARD_ZRIB_V52`, `BOARD_ZRIB_V53`.
@@ -85,7 +94,7 @@ Marlin's `M43` pin-debugging command (`PINS_DEBUGGING`) makes this quick and saf
    brown out. If it resets, power the servo from a separate 5 V buck converter (common GND).
 7. **AUX connector (right edge, 5-pin):** identify its pins with a multimeter. It may be
    a serial port, which would be convenient for the TFT35-E3.
-8. **PSU voltage:** read the label (12 V or 24 V). The board accepts 12–24 V.
+8. **PSU voltage:** ✅ Cheng Liang P360W24V, **24 V, 15 A max**, 215 × 113 × 50 mm (user). The board accepts 12–24 V.
 
 ## TFT35-E3 connection options
 

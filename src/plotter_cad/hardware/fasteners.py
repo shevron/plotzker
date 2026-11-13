@@ -64,6 +64,14 @@ def shcs(m: float, length: float) -> Solid:
     return (head | shank).color("DimGray")
 
 
+def countersunk_screw(m: float, length: float, head_d: float) -> Solid:
+    """Countersunk (90°) screw. Origin: center of the head's top face; shank points down -Z."""
+    h = (head_d - m) / 2
+    head = cylinder(d1=m, d2=head_d, h=h, fn=24).translate([0, 0, -h])
+    shank = cylinder(d=m, h=length - h + 0.01, fn=16).translate([0, 0, -length])
+    return (head | shank).color("DimGray")
+
+
 def hex_nut(m: float) -> Solid:
     """Hex nut. Origin: center of the bottom face, axis +Z."""
     size = metric(m)

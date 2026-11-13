@@ -33,6 +33,7 @@ from plotter_cad.hardware import (
     VSLOT,
     VWHEEL,
     Y_SHAFT,
+    ZRIB,
     metric,
 )
 
@@ -121,7 +122,11 @@ REQ = Requirements()
 class Frame:
     """Frame boards, bed stack and media height."""
 
-    board_size: tuple[float, float, float] = (650, 850, 18)  #: X × Y × thickness (plywood)
+    board_size: tuple[float, float, float] = (
+        700,
+        900,
+        18,
+    )  #: X × Y × thickness (plywood; wider than the mechanics, D30)
     bed_panel_t: float = 9  #: DESIGN (T3.7): 6–9 mm plywood/MDF
     bed_steel_t: float = 0.8  #: DESIGN (T3.7): 0.5–1 mm galvanized steel
     bed_adjust_gap: float = 5  #: DESIGN (T3.7): baseboard → panel underside, mid-adjustment
@@ -495,6 +500,108 @@ class PenHolder:
 
 
 PEN = PenHolder()
+
+# -----------------------------------------------------------------------------
+# ZRIB mount under the baseboard (T3.7, D30)
+# -----------------------------------------------------------------------------
+# Two identical hangers (mirror images) screwed to the underside of the baseboard, one on
+# each long side of the board; four posts carry the ZRIB with its components pointing down
+# (heat sinks in free air), and two light straps under the legs guard the board's edges.
+#
+# Mount frame: u along the board's 110 mm (rear) edge = machine X, v toward the rear = machine
+# Y, z up with 0 at the underside of the baseboard (the mount hangs at negative z).
+#
+#   side view along v (one hanger)            ▒▒ rail     ░ board  ▓ strap
+#   baseboard ════════════════════════════
+#   rail      ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒    ← wood screws at u = ±60 (outside the board)
+#   post                ┃  ░░░░░░░░░░░  ┃            posts at the board's holes (u = ±50)
+#   leg  ▒             board with parts ↓           ▒ leg
+#        ▒                                        ▒
+#   strap ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+
+
+@dataclass(frozen=True)
+class ZribMount:
+    """ZRIB hangers and guard straps."""
+
+    rail_t: float = 6  #: DESIGN (T3.7): hanger rail thickness (z)
+    plate_t: float = 5  #: hanger rail thickness (v)
+    post_d: float = 9
+    post_h: float = 5  #: board's solder side to the rail underside (room for the pin tails)
+    leg_w: float = 8  #: along u (an M3 nut fits)
+    leg_t: float = 9  #: along v (a nut slot reaches past the screw axis, with a wall)
+    leg_gap: float = 11  #: board edge to the leg's inner face
+    wood_screw_m: float = 4  #: 4 mm countersunk wood screws (on hand)
+    wood_screw_len: float = 25  #: the shortest on hand
+    wood_screw_head_d: float = 8.0  #: ASSUMED: countersunk head diameter
+    boss_t: float = 9  #: boss thickness: the 25 mm screw must not reach through 18 mm plywood
+    wood_screw_gap: float = 4  #: board edge to the screw center, along u
+    wood_screw_v: float = 5  #: from the post row inward (v), clear of the strap for a driver
+    boss_d: float = 11.5  #: round boss that takes the screw head
+    strap_t: float = 3
+    strap_gap: float = 3  #: heat sink tops to the strap
+    strap_screw_len: float = 12  #: M3
+
+    @property
+    def board_z(self) -> float:
+        """Solder-side face of the board (negative z)."""
+        return -(self.rail_t + self.post_h)
+
+    @property
+    def sink_bottom_z(self) -> float:
+        """Lowest point of the heat sinks."""
+        return self.board_z - ZRIB.height
+
+    @property
+    def strap_top_z(self) -> float:
+        """Top face of the strap."""
+        return self.sink_bottom_z - self.strap_gap
+
+    @property
+    def strap_bottom_z(self) -> float:
+        """Underside of the strap = the mount's total drop below the baseboard."""
+        return self.strap_top_z - self.strap_t
+
+    @property
+    def leg_u(self) -> tuple[float, float]:
+        """Leg extent along u (positive side)."""
+        inner = ZRIB.width / 2 + self.leg_gap
+        return inner, inner + self.leg_w
+
+    @property
+    def wood_screw_u(self) -> float:
+        """Wood screw position along u (positive side)."""
+        return ZRIB.width / 2 + self.wood_screw_gap
+
+    @property
+    def post_v(self) -> float:
+        """Post row (negative-v side hanger): -hole pitch / 2."""
+        return -ZRIB.hole_pitch[1] / 2
+
+    @property
+    def plate_v(self) -> tuple[float, float]:
+        """Plate extent along v (negative-v hanger): the outer face is flush with the posts'."""
+        outer = self.post_v - self.post_d / 2
+        return outer, outer + self.plate_t
+
+    @property
+    def strap_screw_u(self) -> float:
+        """Strap screw position along u (positive side): the leg's center."""
+        return sum(self.leg_u) / 2
+
+    @property
+    def strap_screw_v(self) -> float:
+        """Strap screw position along v (negative-v hanger): the leg's center."""
+        return self.plate_v[0] + self.leg_t / 2
+
+    @property
+    def strap_nut_z(self) -> float:
+        """Bottom of the strap screw's nut slot (the leg's end wall below it is 2 mm)."""
+        return self.strap_top_z + 2
+
+
+ZMOUNT = ZribMount()
+
 
 # -----------------------------------------------------------------------------
 # Y axis (D6, D11, D13) and the height stack-up below the beam
@@ -1257,6 +1364,22 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         ye.tower_y[1] <= yd.idler_plate_y[1] and ye.tower_y[0] >= 0,
         "Y endstop tower outside the idler plate or the baseboard",
     )
+    # --- ZRIB mount (T3.7)
+    zm = ZMOUNT
+    yield (
+        -zm.strap_bottom_z <= 40,
+        f"ZRIB mount hangs {-zm.strap_bottom_z:g} mm below the baseboard (2040 on edge: 40)",
+    )
+    yield (
+        zm.wood_screw_u + zm.boss_d / 2 <= zm.leg_u[0] - 1
+        and zm.wood_screw_u - zm.wood_screw_head_d / 2 >= ZRIB.width / 2,
+        "ZRIB mount wood screw boss hits the leg, or its head is not reachable beside the board",
+    )
+    yield (
+        zm.wood_screw_len - zm.boss_t <= FRAME.board_size[2] - 2,
+        "ZRIB mount wood screws would reach through the baseboard",
+    )
+    yield zm.boss_t > zm.rail_t and -zm.board_z - zm.boss_t >= 1, "ZRIB mount boss hits the board"
     # --- pen holder (T3.6)
     pn = PEN
     pen_lo, pen_hi = REQ.pen_d_range

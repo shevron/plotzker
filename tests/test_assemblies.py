@@ -15,6 +15,7 @@ from plotter_cad.assemblies.pen_holder import pen_holder_assembly, pen_holder_it
 from plotter_cad.assemblies.skeleton import carriage_x_at, gantry_y_at
 from plotter_cad.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotter_cad.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
+from plotter_cad.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
 from plotter_cad.hardware import sk10, vslot_x, y_shaft
 from plotter_cad.params import BEAM, FRAME, Y_AXIS
 from plotter_cad.parts.gantry_end_bracket import Side
@@ -37,6 +38,7 @@ def test_assembly_builds(name):
         lambda: gantry_end_local(Side.LEFT),
         lambda: gantry_end_local(Side.RIGHT),
         gantry_fit_check,
+        zrib_mount_fit_check,
         lambda: y_drive_fit_check(0),
         lambda: y_drive_fit_check(1),
     ],
@@ -45,6 +47,7 @@ def test_assembly_builds(name):
         "left gantry end",
         "right gantry end",
         "gantry on the shafts",
+        "ZRIB under the baseboard",
         "Y drive, gantry at the front",
         "Y drive, gantry at the back",
     ],
@@ -145,3 +148,12 @@ def test_pen_holder_clears_the_carriage(pen_up):
     beam = vslot_x(240, BEAM.size).translate([-120, -BEAM.depth / 2, BEAM.bottom_z])
     carriage = union(*flatten([*carriage_assembly(), beam]))
     assert all(volume(item & carriage) < 0.05 for item in pen_holder_assembly(pen_up))
+
+
+def test_zrib_mount_parts_do_not_collide():
+    """Hangers, board, straps and fasteners clear each other (the wood screws sit in the
+    plywood, which is not part of the mount) and the board hangs free of the baseboard."""
+    items = list(zrib_mount_assembly())
+    for i, a in enumerate(items):
+        for b in items[i + 1 :]:
+            assert volume(a & b) < 0.5  # a screw and its nut meet in their facets

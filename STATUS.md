@@ -124,6 +124,9 @@ any new decisions in §3, and update the status line at the top.
   the Y idler forward (axle y 32) and moved the trigger contact 4 mm in from the lever tip.
   Checked: no collisions with the gantry, SK10s or shafts at the front, middle or back of
   Y travel (test); only the trigger pressing the endstop lever.
+  - [ ] Follow-up: the only wood screws on hand are 4 × 25 mm *countersunk*, but the Y mounts are
+    counterbored (cap-head style) feet 6 mm thick: a 25 mm screw would reach ~19 mm into the 18 mm
+    baseboard. Buy shorter screws (e.g. 4 × 16, pan head) or change the feet.
   - [ ] Follow-up: test-print; check the pocket corner against an SK10 and the
     belt tension range, and the trip point (adjust with the
     trigger screw length); measure where the switch clicks (modeled at 75 % of the lever's
@@ -151,6 +154,13 @@ any new decisions in §3, and update the status line at the top.
 - [ ] **T3.7 Full assembly and baseboard layout.** Assembly model for fit checks (travel,
   clearances, 15 mm media under the head). 1:1 baseboard drilling layout: SK10 positions,
   motor mounts, bed-panel adjustment points, runners, electronics.
+  - [x] ZRIB mount (D30): `parts/zrib_hanger.py` ×2 and `parts/zrib_guard.py` ×2, `hardware/zrib.py`,
+    `assemblies/zrib_mount.py`; the mount hangs 39 mm below the baseboard (a 2040 runner on edge is
+    40). Checked: the board threads between the legs from below, no collisions, everything
+    connected; the PCB thickness (1.6) and the tall-part layout are *assumed*.
+  - [ ] Still to do for T3.7: bed posts (4 × M5), runner layout (3 × 520 mm 2040 on edge), the 1:1
+    baseboard drilling layout, the full assembly, and the pen holder and ZRIB at the gantry
+    ends of travel. Follow-up for the ZRIB mount: test-print; check the nut slots, the 4 × 25 countersunk wood screws (the bosses are 9 mm thick so the screws stop 2 mm short of the baseboard's top face; head diameter *assumed* 8 mm), and the posts' 5 mm height against the board's pin tails.
 - [ ] **T3.8 Cable management.** Drag chain or cable guide from the gantry to the board.
 - [x] **T3.9 Migrate the CAD to PythonSCAD (D22).** Sanity test: PythonSCAD renders the
   old `.scad` files to the same STLs. Port to a Python package (`src/plotter_cad/`:
@@ -211,6 +221,7 @@ any new decisions in §3, and update the status line at the top.
 | Q10 | SVG/PDF → G-code toolchain | ⏸ Deferred to phase 7 |
 | Q11 | X-carriage wheel preload | ✅ D21: 2 eccentric spacers on the bottom pair (available; no fallback) |
 | Q12 | Are the 4020 beam ends tapped M5 (gantry brackets bolt into the end bores)? | ✅ Yes: all beam end bores are tapped M5 (done by the user) |
+| Q13 | Under-board space for the ZRIB | ✅ Board 95 × 110 mm, 22 mm from its bottom to the heat sink tops, 4 × Ø3 holes 100 × 80 mm; mounted under the baseboard with its components down (D30, `parts/zrib_hanger.py`) |
 
 ---
 
@@ -234,6 +245,7 @@ update the log once it is agreed (README §7.1).
 | D27 | Belt clamps: flat undersides on the gantry brackets and the X carriage's rear block (no belt channel: no bridges or overhangs); one cap design for all six clamps, with the groove (between two rails) and the tooth ridges in the cap. Belt lines drop 1.08 mm (derived); screws M3×12 | ✅ | T3.2, T3.3, §6 |
 | D28 | **Handles and `align()` for assemblies (trial).** Parts that hardware or other parts attach to expose named handles (4×4 matrices set with `geometry.set_handles`, read with `get_handle(s)`); assemblies place the hardware with `.align(handle)` instead of re-deriving hole coordinates, and the part's own cut-outs use the same handle constants, so a hole and its screw can't drift apart. Done for the gantry end bracket and the belt clamp; extend to other parts as they are touched. `fillet` and `MultiToolExporter` evaluated and not adopted yet | ✅ trial | README §7.4, T3.10 |
 | D29 | **v1 pen holder (T3.6):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
+| D30 | **Baseboard and bed (T3.7), first decisions:** baseboard **700 × 900 × 18 mm** (the Y drive reaches x 4.5–645.5 and y 18–821 on the old 650 × 850); bed panel on **4 × M5 screw + nut posts** (adjust from above); the **ZRIB goes under the baseboard between the runners**, the **PSU stands off the board on its own base** (its fan inlet is on the bottom face and needs ≥ 25 mm of free air; under the board that would need an 80 mm drop; also keeps mains off the plywood); runners from the extrusions on hand, 2040 on edge with low feet. The **ZRIB is mounted bare** on two printed hangers with a minimal guard strap each (no case: exposed electronics, free airflow; the strap is optional) | 🟡 | README §3.8, T3.7 |
 | D29 | **No heat-set inserts: pressed-in hex nuts (nut traps) everywhere.** The nut sits in a slot or hex shaft with a wall behind it that takes the load (`TOL.nut_wall`, 2 mm). Y/X idler tension screws: slot from the top; X endstop pad screws: slots from the rear face; belt clamp screws (brackets): hex shafts from the top, nut 4 mm above the underside (`CLAMP.nut_z`), M3×14; X carriage rear block: slot from the back; tool-plate screws: slots from the bottom edge. Dropped the `Preload.SLOT` carriage fallback (eccentric spacers are available) | ✅ | README §7 rule 2 |
 
 ---
@@ -248,7 +260,8 @@ hard to get, we adjust.
 |------|-----|---------|------------------|
 | 2020 V-slot extrusion | several | **520 mm** long | — |
 | 4020 V-slot extrusion | 2 | **520 mm** long → X beam; V-slot profile confirmed | End bores tapped M5 |
-| Shorter 2020 / 2040 / 4040 extrusions | assorted | e.g. 340 mm 2040 → baseboard runners/feet | Lengths |
+| 2040 V-slot extrusion | 3 | **520 mm** long → baseboard runners | — |
+| Shorter 2020 / 2040 / 4040 extrusions | a few | e.g. 340 mm 2040 | Lengths |
 | V-wheels | many | POM V-groove wheels on 625Z bearings (5 mm bore), Ø24 × 10 mm; eccentric spacers: 10 mm hex × 7.8, Ø7 × 2.1 boss, Ø5 bore, ~0.7 mm offset (2 needed, D21) | — |
 | Ø10 mm smooth (optical-axis) shafts | 2 | **700 mm**, hardened → Y axis | — |
 | SK10 shaft supports | 4 | End supports, shaft center **20 mm** above the mounting surface; 2 × M5 on 32 mm, 42 W × 37.5 H × 14 L ([`docs/hardware.md`](docs/hardware.md)) | — |
@@ -258,11 +271,12 @@ hard to get, we adjust.
 | Lead screws, linear bearings, misc. bearings | assorted | No LM6UU/LM8UU found yet | Only needed for a stepper Z experiment or the pen slide upgrade |
 | Ø6 rod | 1 | ~200 mm, cuttable; the pen holder's rod needs 63 mm | — |
 | Hobby servos | 2+ | **FeeTech FT90M** (metal gears, digital; used for the pen lift) and FS90 (spare); measured in `docs/hardware.md` | Horn thickness, spline height |
-| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers ([`docs/controller.md`](docs/controller.md)) | Driver chip type; pin map (bench) |
+| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers; **95 × 110 × 22 mm**, 4 × Ø3 holes 80 × 100 mm, out of its case ([`docs/controller.md`](docs/controller.md)) | Driver chip type; pin map (bench) |
 | Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
-| Power supply | 1 | From a printer | **Voltage (12/24 V), current** |
+| Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm** (user) | Mounting holes, terminal side |
 | Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |
+| Wood screws | many | **4 × 25 mm, countersunk** (the shortest on hand); too long for 18 mm plywood under a 6 mm foot, see T3.5 follow-up | Head diameter |
 | Plywood, steel sheet, magnets | to buy/cut | Baseboard, bed panel, work holding (README §3.8) | — |
 
 ---
@@ -282,7 +296,7 @@ hard to get, we adjust.
 | Expected shaft sag | 0.2–0.4 mm |
 | Pen head | ≥ 5 mm lift, ≥ 3 mm float, ~20 mm manual height adjust, 7–16 mm pens |
 | Pen pressure (start point) | ~20–80 g |
-| Baseboard | 18 mm plywood, ~850 × 650 mm |
+| Baseboard | 18 mm plywood, ~900 × 700 mm |
 | Shaft spacing | 520 mm |
 | Y belt | 30 mm outboard of each shaft; motor/idler axis ~26.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
 | X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~93.8 mm above the baseboard; ~1.2 m belt |

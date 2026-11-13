@@ -19,6 +19,8 @@ from plotter_cad.parts import (
     x_motor_mount,
     y_idler_mount,
     y_motor_mount,
+    zrib_guard,
+    zrib_hanger,
 )
 
 PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
@@ -32,6 +34,8 @@ PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
     "pen_holder_body": pen_holder_body.pen_holder_body,
     "pen_slide": pen_slide.pen_slide,
     "x_carriage": x_carriage.x_carriage,
+    "zrib_hanger": zrib_hanger.zrib_hanger,
+    "zrib_guard": zrib_guard.zrib_guard,
     "x_motor_mount": x_motor_mount.x_motor_mount,
     "x_idler_mount": x_idler_mount.x_idler_mount,
     "x_idler_spacer": x_idler_spacer.x_idler_spacer,

@@ -259,8 +259,10 @@ Not needed for v1.
 
 ### 3.6 Power
 
-- Re-use the printer PSU; **voltage to be read from the label** (the board accepts 12–24 V).
-  With no heaters, three to four steppers draw far below a printer PSU's rating.
+- Re-use the printer PSU: a **24 V, 15 A** unit (Cheng Liang P360W24V, 215 × 113 × 50 mm; the board
+  accepts 12–24 V). With no heaters, three to four steppers draw far below its rating.
+  The PSU stands **off the baseboard** on its own base (D30): its fan inlet is on the bottom
+  face and needs free air, and the mains terminals stay off the machine's plywood.
 - The servo runs from the ZRIB's buck 5 V regulator. Check during bring-up that the board
   doesn't reset when the servo stalls. If it does, add a separate 5 V buck converter
   (common GND).
@@ -282,13 +284,13 @@ baseboard**. The bed only needs to be parallel to the plane the pen moves in, no
 with gravity.
 
 **Baseboard:**
-- **18 mm plywood** (birch/multiplex), about **850 × 650 mm**: the mechanics plus room for
+- **18 mm plywood** (birch/multiplex), about **900 × 700 mm**: the mechanics plus room for
   electronics.
 - **Extrusion runners** (2040/2020 offcuts) screwed across the underside, perpendicular
   to the shafts. They stop the board bowing, act as feet, and leave space underneath for
-  the PSU and wiring.
-- Electronics: the ZRIB (in its metal bracket) and the PSU under the board between the
-  runners, or along the rear edge behind the Y motors. Driver cooling fan.
+  the ZRIB and wiring.
+- Electronics: the ZRIB (in its metal bracket) under the board between the runners; the
+  PSU beside the machine (§3.6). Driver cooling fan.
 - Cables moving with the gantry (X motor, X endstop, tool head): printed drag chain or a
   loose loom.
 
@@ -352,7 +354,7 @@ and newer) are in the decision log in [`STATUS.md`](STATUS.md).
 | D13 | Dual Y motors with one endstop per side (auto-squaring) | §3.2 |
 | D14 | Pen-lift mechanism chosen by experiment; start with gravity + servo | §3.3 |
 | D15 | Media thickness 0–15 mm | R2 |
-| D16 | 18 mm plywood baseboard (~850 × 650 mm) with extrusion runners underneath; shafts and bed share it as the reference | §3.8 |
+| D16 | 18 mm plywood baseboard (~900 × 700 mm) with extrusion runners underneath; shafts and bed share it as the reference | §3.8 |
 | D18 | Pen head absorbs ±1.5 mm Z error: ≥ 3 mm float with near-constant pressure, ≥ 5 mm lift | §3.8 |
 | D19 | Heaters disabled in firmware (`EXTRUDERS 0`, sensors 0) and left unconnected | §3.5 |
 

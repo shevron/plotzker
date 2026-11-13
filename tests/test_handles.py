@@ -3,7 +3,14 @@
 import pytest
 from pythonscad import cylinder
 
-from plotter_cad.geometry import get_handle, get_handles, handle, shift_handle
+from plotter_cad.geometry import (
+    frame_axes,
+    frame_handle,
+    get_handle,
+    get_handles,
+    handle,
+    shift_handle,
+)
 from plotter_cad.params import BRACKET, CLAMP
 from plotter_cad.parts.belt_clamp import belt_clamp
 from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket
@@ -47,3 +54,9 @@ def test_belt_clamp_mounts_flush_under_the_bracket():
     lo, hi = bounding_box(clamp.align(mount, get_handle(clamp, "mount")))
     assert hi[2] == pytest.approx(0, abs=1e-9)
     assert lo[2] == pytest.approx(-CLAMP.total_t)
+
+
+def test_frame_handle_roundtrips_a_left_handed_frame():
+    """A chiral part's frame (here left-handed) survives frame_handle → frame_axes unchanged."""
+    origin, u, v, w = [1, 2, 3], [0, 0, -1], [0, 1, 0], [-1, 0, 0]
+    assert frame_axes(frame_handle(origin, u, v, w)) == (origin, u, v, w)

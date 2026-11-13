@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, mirror, translate
 
 from plotter_cad.assemblies.gantry import gantry_assembly
+from plotter_cad.geometry import Matrix, frame_axes, get_handle, get_handles, handle, shift_handle
 from plotter_cad.hardware import (
     GT2,
     IDLER,
-    NEMA17,
     PULLEY,
     endstop_keepout,
     endstop_placed,
@@ -26,7 +26,7 @@ from plotter_cad.hardware import (
     washer,
     y_shaft,
 )
-from plotter_cad.params import BRACKET, FRAME, Y_AXIS, Y_DRIVE, Y_ENDSTOP
+from plotter_cad.params import BRACKET, FRAME, Y_AXIS, Y_DRIVE
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
 from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
@@ -37,48 +37,39 @@ if TYPE_CHECKING:
 _AXLE_LEN = 30  #: M5 idler axle
 
 
+def _at_x(mat: Matrix, x: float) -> Matrix:
+    """``mat`` moved along x to ``x`` (the hardware stack along an axle)."""
+    return shift_handle(mat, [x - mat[0][3], 0, 0])
+
+
 def y_idler_end_local(side: Side = Side.LEFT) -> list[Solid]:
     """Idler end of the left side: idler mount, idler, axle, tension screw, endstop."""
-    d, belt_x, axis_z = Y_DRIVE, Y_AXIS.belt_x, Y_AXIS.pulley_axis_z
-    x_out = d.idler_plate_x[0]  #: outboard face of the plate
-    y_rear = d.idler_plate_y[1]
-    plate_cx = sum(d.idler_plate_x) / 2
+    belt_x = Y_AXIS.belt_x
+    mount = y_idler_mount_installed(side)
+    axle = get_handle(mount, "axle")
+    x_out = Y_DRIVE.idler_plate_x[0]  #: outboard face of the plate
+    outboard = handle([x_out - 1, axle[1][3], axle[2][3]], [0, -90, 0])  #: nut side, facing out
     inboard = belt_x + IDLER.width / 2 + 1  #: idler flange + one washer
     return [
-        y_idler_mount_installed(side).color("DarkOrange"),
-        gt2_idler().rotate([0, 90, 0]).translate([belt_x, d.idler_y, axis_z]),
-        washer(5).rotate([0, 90, 0]).translate([belt_x + IDLER.width / 2, d.idler_y, axis_z]),
-        washer(5).rotate([0, 90, 0]).translate([belt_x - IDLER.width / 2 - 1, d.idler_y, axis_z]),
-        shcs(5, _AXLE_LEN).rotate([0, 90, 0]).translate([inboard, d.idler_y, axis_z]),
-        washer(5).rotate([0, 90, 0]).translate([x_out - 1, d.idler_y, axis_z]),
-        hex_nut(5).rotate([0, -90, 0]).translate([x_out - 1, d.idler_y, axis_z]),
-        shcs(3, 20).rotate([-90, 0, 0]).translate([plate_cx, y_rear, axis_z]),
+        mount.color("DarkOrange"),
+        gt2_idler().align(_at_x(axle, belt_x)),
+        washer(5).align(_at_x(axle, belt_x + IDLER.width / 2)),
+        washer(5).align(_at_x(axle, belt_x - IDLER.width / 2 - 1)),
+        shcs(5, _AXLE_LEN).align(_at_x(axle, inboard)),
+        washer(5).align(_at_x(axle, x_out - 1)),
+        hex_nut(5).align(outboard),
+        shcs(3, 20).align(get_handle(mount, "tension_screw")),
     ]
 
 
 def y_motor_end_local() -> list[Solid]:
     """Motor end of the left side: motor mount, motor, pulley, motor screws."""
-    d, axis_z = Y_DRIVE, Y_AXIS.pulley_axis_z
-    x_face = d.motor_plate_x[1]
-    pulley_x = d.pulley_hub_x
-    screws = [
-        shcs(3, 10)
-        .rotate([0, -90, 0])
-        .translate(
-            [
-                d.motor_plate_x[0],
-                d.motor_y + dy * NEMA17.hole_pitch / 2,
-                axis_z + dz * NEMA17.hole_pitch / 2,
-            ]
-        )
-        for dy in (-1, 1)
-        for dz in (-1, 1)
-    ]
+    mount = y_motor_mount_installed()
     return [
-        y_motor_mount_installed().color("DarkOrange"),
-        nema17().rotate([0, -90, 0]).translate([x_face, d.motor_y, axis_z]),
-        gt2_pulley().rotate([0, -90, 0]).translate([pulley_x, d.motor_y, axis_z]),
-        *screws,
+        mount.color("DarkOrange"),
+        nema17().align(get_handle(mount, "motor")),
+        gt2_pulley().align(get_handle(mount, "pulley")),
+        *(shcs(3, 10).align(screw) for screw in get_handles(mount, "motor_screws")),
     ]
 
 
@@ -103,13 +94,14 @@ def y_belt_runs(gantry_y: float) -> list[Solid]:
 
 
 def _y_endstop_frame(side: Side) -> tuple[list[float], list[float], list[float], list[float]]:
-    """Endstop board frame in the machine frame (the board is chiral, so it is not mirrored):
-    origin, then u (along z), v (+y) and w (toward the machine center)."""
+    """Endstop board frame in the machine frame (origin, then u, v, w), from the mount's
+    handle in the left side frame. The right side is mirrored in x, but the chiral board is not
+    mirrored with it: its u axis flips instead."""
     left_x, right_x = Y_AXIS.shaft_x
-    e = Y_ENDSTOP
-    u_z, shaft_x, sign = (-1, left_x, 1) if side is Side.LEFT else (1, right_x, -1)
-    origin = [shaft_x + sign * e.board_x0, e.board_front_y, e.board_z_center(u_z)]
-    return origin, [0, 0, u_z * sign], [0, 1, 0], [sign, 0, 0]
+    origin, u, v, w = frame_axes(get_handle(y_idler_mount_installed(side), "board"))
+    if side is Side.LEFT:
+        return [left_x + origin[0], *origin[1:]], u, v, w
+    return [right_x - origin[0], *origin[1:]], [-c for c in u], v, [-w[0], w[1], w[2]]
 
 
 def y_endstop_board(side: Side, gantry_y: float | None = None) -> Solid:

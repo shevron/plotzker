@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
 
-from plotter_cad.geometry import EPS, FN_HOLE, teardrop_y
+from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_y
 from plotter_cad.hardware import NEMA17, SCS10UU
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
 
@@ -38,6 +38,10 @@ FOOT_Z0 = BRACKET.base_t  #: the foot sits on the bracket base
 PLATE_X = (X_DRIVE.motor_x - NEMA17.width / 2, X_DRIVE.motor_x + NEMA17.width / 2)
 PLATE_TOP = AXIS_Z + NEMA17.width / 2
 MOTOR_BOTTOM = AXIS_Z - NEMA17.width / 2
+#: Motor: its face on the plate's front face, shaft axis along -y toward the beam
+MOTOR: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.motor_face_y, AXIS_Z], [90, 0, 0])
+#: Pulley: hub on the shaft
+PULLEY: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.pulley_hub_y, AXIS_Z], [90, 0, 0])
 
 
 def x_motor_mount_left() -> Solid:
@@ -76,7 +80,7 @@ def x_motor_mount_left() -> Solid:
         for dx in (-1, 1)
         for dz in (-1, 1)
     ]
-    return (foot | plate | rib) - bolts - boss - screws
+    return set_handles((foot | plate | rib) - bolts - boss - screws, motor=MOTOR, pulley=PULLEY)
 
 
 def x_motor_mount() -> Solid:

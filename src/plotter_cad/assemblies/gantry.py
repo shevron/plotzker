@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, mirror, translate
 
-from plotter_cad.geometry import get_handle, get_handles, shift_handle
+from plotter_cad.geometry import frame_axes, get_handle, get_handles, shift_handle
 from plotter_cad.hardware import (
     GT2,
     IDLER,
@@ -33,7 +33,6 @@ from plotter_cad.params import (
     LOOM,
     X_BELT,
     X_DRIVE,
-    X_ENDSTOP,
     Y_AXIS,
 )
 from plotter_cad.parts.belt_clamp import belt_clamp
@@ -48,44 +47,32 @@ if TYPE_CHECKING:
     from pythonscad import Solid
 
 
-#: X endstop board frame in the left bracket-local frame: origin, then u, v, w (board axes).
-_X_ENDSTOP_FRAME = (
-    [
-        X_ENDSTOP.board_front_x,
-        sum(X_ENDSTOP.board_y) / 2,
-        X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z,
-    ],
-    [0, -1, 0],
-    [1, 0, 0],
-    [0, 0, 1],
-)
-
-
 def x_endstop_keepout() -> Solid:
     """Space that must stay free for the X endstop's plug, in the left bracket-local frame."""
-    return place_in_frame(endstop_keepout(), *_X_ENDSTOP_FRAME)
+    return place_in_frame(
+        endstop_keepout(), *frame_axes(get_handle(x_endstop_mount_installed(), "board"))
+    )
 
 
 def x_drive_local(side: Side) -> list[Solid]:
     """X motor (right) or idler + endstop (left) at one gantry end, left-local frame."""
-    axis_z = X_BELT.pulley_axis_z - Y_AXIS.scs_top_z
-    d = X_DRIVE
     if side is Side.RIGHT:
+        mount = x_motor_mount_left()
         return [
-            x_motor_mount_left().color("DarkOrange"),
-            nema17().rotate([90, 0, 0]).translate([d.motor_x, d.motor_face_y, axis_z]),
-            gt2_pulley().rotate([90, 0, 0]).translate([d.motor_x, d.pulley_hub_y, axis_z]),
+            mount.color("DarkOrange"),
+            nema17().align(get_handle(mount, "motor")),
+            gt2_pulley().align(get_handle(mount, "pulley")),
         ]
+    mount = x_idler_mount_installed()
+    axle = get_handle(mount, "axle")
+    endstop = x_endstop_mount_installed()
     return [
-        x_idler_mount_installed().color("DarkOrange"),
-        x_endstop_mount_installed().color("Orange"),
-        gt2_idler().rotate([90, 0, 0]).translate([d.idler_x, X_BELT.y, axis_z]),
-        x_idler_spacer()
-        .rotate([90, 0, 0])
-        .translate([d.idler_x, d.plate_y0, axis_z])
-        .color("Orange"),
-        shcs(5, 40).rotate([90, 0, 0]).translate([d.idler_x, X_BELT.y - IDLER.width / 2, axis_z]),
-        endstop_placed(*_X_ENDSTOP_FRAME),
+        mount.color("DarkOrange"),
+        endstop.color("Orange"),
+        gt2_idler().align(shift_handle(axle, [0, X_BELT.y - axle[1][3], 0])),
+        x_idler_spacer().align(axle).color("Orange"),
+        shcs(5, 40).align(shift_handle(axle, [0, X_BELT.y - IDLER.width / 2 - axle[1][3], 0])),
+        endstop_placed(*frame_axes(get_handle(endstop, "board"))),
     ]
 
 

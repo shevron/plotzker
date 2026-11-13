@@ -33,7 +33,15 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull
 
-from plotter_cad.geometry import FN_HOLE, teardrop_x, teardrop_y
+from plotter_cad.geometry import (
+    FN_HOLE,
+    Matrix,
+    frame_handle,
+    handle,
+    set_handles,
+    teardrop_x,
+    teardrop_y,
+)
 from plotter_cad.hardware import ENDSTOP
 from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP
 from plotter_cad.parts.gantry_end_bracket import Side
@@ -47,6 +55,12 @@ AXIS_Z = Y_AXIS.pulley_axis_z  #: idler axle height
 SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the plate ends (y)
 PILOT_D = 2.6  #: M3 self-tapping into the endstop board's holes
 PILOT_DEPTH = 5  #: M3×6 through the 1.5 mm board
+
+_PLATE_CX = sum(Y_DRIVE.idler_plate_x) / 2
+#: Idler axle: on the plate's inboard face, along +x, in the middle of the slot
+AXLE: Matrix = handle([Y_DRIVE.idler_plate_x[1], Y_DRIVE.idler_y, AXIS_Z], [0, 90, 0])
+#: Tension screw: head on the plate's rear edge, along +y toward the slot
+TENSION_SCREW: Matrix = handle([_PLATE_CX, Y_DRIVE.idler_plate_y[1], AXIS_Z], [-90, 0, 0])
 
 
 def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
@@ -97,7 +111,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         )
         for sz in (-1, 1)
     ]
-    return (
+    mount = (
         (foot | plate | tower | pocket_frame)
         - pocket_cut
         - slot
@@ -106,6 +120,10 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         - holes
         - pilots
     )
+    board = frame_handle(
+        [e.board_x0, e.board_front_y, zc], [0, 0, u_z], [0, 1, 0], [1, 0, 0]
+    )  #: the endstop board's frame (the board is chiral: its u axis follows the side)
+    return set_handles(mount, axle=AXLE, tension_screw=TENSION_SCREW, board=board)
 
 
 def y_idler_mount(side: Side = Side.LEFT) -> Solid:

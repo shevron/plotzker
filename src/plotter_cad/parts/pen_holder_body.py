@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, linear_extrude, polygon
 
-from plotter_cad.geometry import FN_HOLE, teardrop
+from plotter_cad.geometry import FN_HOLE, Matrix, handle, set_handles, teardrop
 from plotter_cad.hardware import FT90M
 from plotter_cad.params import PEN, TOL, TOOL_PLATE
 
@@ -38,6 +38,26 @@ if TYPE_CHECKING:
     from pythonscad import Solid
 
 PILOT_D = 1.6  #: pilot hole for the servo's self-tapping screws. ASSUMED
+
+#: Rod: bottom end (seated in the lower arm), axis along +z
+ROD: Matrix = handle([PEN.rod_x, PEN.rod_d_pos, PEN.upper_arm_top - PEN.rod_len])
+#: Servo: output facing the plate, in the window (its own model is turned into place)
+SERVO: Matrix = handle([PEN.servo_x, PEN.servo_front_d, PEN.servo_center_z], [0, 90, 270])
+#: Horn: on the servo shaft, in the gap behind the wall; the model is turned about its own
+#: axis by the pen-lift angle before it is aligned
+HORN: Matrix = handle([PEN.servo_x, PEN.horn_d[0], PEN.shaft_z], [-90, 0, 0])
+#: Clamp screws (tool plate to carriage): at the counterbore floors, along +d into the carriage
+CLAMP_SCREWS = [
+    handle(
+        [
+            sx * TOOL_PLATE.screw_pitch / 2,
+            PEN.plate_d[1] - 3,
+            TOOL_PLATE.bottom_z + TOOL_PLATE.screw_z,
+        ],
+        [-90, 0, 0],
+    )
+    for sx in (-1, 1)
+]
 
 
 def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> Solid:
@@ -175,7 +195,7 @@ def pen_holder_body_head() -> Solid:
     cuts = [*_screw_holes(), *arm_cuts, *bracket_cuts]
     for cut in cuts:
         body = body - cut
-    return body
+    return set_handles(body, rod=ROD, servo=SERVO, horn=HORN, clamp_screws=CLAMP_SCREWS)
 
 
 def pen_holder_body() -> Solid:

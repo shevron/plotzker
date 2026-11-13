@@ -33,12 +33,46 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, linear_extrude
 
-from plotter_cad.geometry import FN_HOLE, teardrop
+from plotter_cad.geometry import FN_HOLE, Matrix, handle, set_handles, teardrop
 from plotter_cad.hardware import ZRIB
 from plotter_cad.params import TOL, WOOD_SCREW, ZMOUNT
 
 if TYPE_CHECKING:
     from pythonscad import Solid
+
+
+def _handles() -> dict[str, Matrix | list[Matrix]]:
+    """Handles of the negative-v hanger for the hardware that meets it (mount frame)."""
+    m = ZMOUNT
+    board_bottom = m.board_z - ZRIB.pcb_t
+    sides = (-1, 1)
+    return {
+        "board": handle([0, 0, m.board_z], [0, 180, 0]),
+        #: M3×12 up through the post and rail, head under the board's solder side
+        "board_screws": [
+            handle([sx * ZRIB.hole_pitch[0] / 2, m.post_v, board_bottom], [180, 0, 0])
+            for sx in sides
+        ],
+        "post_nuts": [
+            handle([sx * ZRIB.hole_pitch[0] / 2, m.post_v, -TOL.nut_trap_h(3)]) for sx in sides
+        ],
+        "wood_screws": [
+            handle(
+                [sx * m.wood_screw_u, m.post_v + m.wood_screw_v, -WOOD_SCREW.boss_t], [180, 0, 0]
+            )
+            for sx in sides
+        ],
+        "strap_screws": [
+            handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_bottom_z], [180, 0, 0])
+            for sx in sides
+        ],
+        #: flats along u, as the slots are cut
+        "strap_nuts": [
+            handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_nut_z], [0, 0, 30])
+            for sx in sides
+        ],
+        "strap": handle([0, m.strap_screw_v - m.leg_t / 2, m.strap_bottom_z]),
+    }
 
 
 def _box(u0: float, u1: float, v0: float, v1: float, z0: float, z1: float) -> Solid:
@@ -97,7 +131,7 @@ def zrib_hanger_mount() -> Solid:
             m.strap_nut_z,
             m.strap_nut_z + nut_t,
         )
-    return body
+    return set_handles(body, **_handles())
 
 
 def zrib_hanger() -> Solid:

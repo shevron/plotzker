@@ -42,7 +42,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
-from plotter_cad.geometry import EPS, FN_HOLE, teardrop_x
+from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_x
 from plotter_cad.hardware import ECCENTRIC, VWHEEL, metric
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
 
@@ -54,6 +54,25 @@ REAR_Y0 = BEAM.depth / 2 + 0.5  #: rear block front face (behind the beam)
 REAR_Y1 = X_BELT.y + CLAMP.w / 2 + 1  #: rear block back face
 WIDEN_Y = VWHEEL.width / 2 + 1  #: the bridge may widen behind the top wheels
 CLAMP_X = CARRIAGE.rear_w / 2 - CLAMP.length / 2  #: X belt clamp centers (±)
+
+#: Wheel axle bolts (top pair, bottom pair): on the plate's front face, along +y into the plate
+WHEEL_AXLES_TOP = [
+    handle([sx * WHEEL_X, CARRIAGE.plate_front_y, CARRIAGE.wheel_z[0]], [90, 0, 0])
+    for sx in (-1, 1)
+]
+WHEEL_AXLES_BOTTOM = [
+    handle([sx * WHEEL_X, CARRIAGE.plate_front_y, CARRIAGE.wheel_z[1]], [90, 0, 0])
+    for sx in (-1, 1)
+]
+#: X belt clamps (left, right): on the rear block's flat underside, belt center, running along x
+BELT_CLAMPS = [
+    handle([sx * CLAMP_X + CLAMP.length / 2, X_BELT.y, CARRIAGE.bridge_z], [0, 0, 90])
+    for sx in (-1, 1)
+]
+#: X endstop trigger screw: on the rear block's left end, along +x into the block
+TRIGGER_SCREW: Matrix = handle(
+    [-CARRIAGE.rear_w / 2, CARRIAGE.trig_y, CARRIAGE.trig_z], [0, -90, 0]
+)
 
 
 def _body() -> Solid:
@@ -211,7 +230,13 @@ def x_carriage_installed() -> Solid:
     """The carriage in its installed position (carriage-local frame)."""
     cuts = _wheel_axle_holes() + _tool_plate_interface() + _top_tab_cutouts()
     cuts += _belt_clamp_cutouts() + _endstop_trigger_cutouts()
-    return _body() - cuts
+    return set_handles(
+        _body() - cuts,
+        wheel_axles_top=WHEEL_AXLES_TOP,
+        wheel_axles_bottom=WHEEL_AXLES_BOTTOM,
+        belt_clamps=BELT_CLAMPS,
+        trigger_screw=TRIGGER_SCREW,
+    )
 
 
 def x_carriage() -> Solid:

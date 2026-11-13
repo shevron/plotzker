@@ -55,6 +55,24 @@ def handle(position: Sequence[float], rotation: Sequence[float] = (0, 0, 0)) -> 
     ]
 
 
+def frame_handle(
+    origin: Sequence[float], u: Sequence[float], v: Sequence[float], w: Sequence[float]
+) -> Matrix:
+    """A handle from an origin and three axis vectors (the columns of its rotation). Unlike
+    :func:`handle` the axes may be left-handed: a mirrored, chiral part keeps its own frame."""
+    return [[u[i], v[i], w[i], origin[i]] for i in range(3)] + [[0, 0, 0, 1]]
+
+
+def frame_axes(mat: Matrix) -> tuple[list[float], list[float], list[float], list[float]]:
+    """Origin and axes ``(origin, u, v, w)`` of a handle (the inverse of :func:`frame_handle`)."""
+    return (
+        [mat[i][3] for i in range(3)],
+        [mat[i][0] for i in range(3)],
+        [mat[i][1] for i in range(3)],
+        [mat[i][2] for i in range(3)],
+    )
+
+
 def shift_handle(mat: Matrix, offset: Sequence[float]) -> Matrix:
     """``mat`` moved by ``offset`` in the frame it is expressed in (not along its own axes)."""
     moved = [row[:] for row in mat]

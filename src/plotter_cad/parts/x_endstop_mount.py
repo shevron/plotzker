@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull
 
-from plotter_cad.geometry import FN_HOLE
+from plotter_cad.geometry import FN_HOLE, Matrix, frame_handle, set_handles
 from plotter_cad.hardware import ENDSTOP, metric
 from plotter_cad.params import TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
 
@@ -37,6 +37,17 @@ PILOT_D = 2.6  #: M3 self-tapping into the board's holes
 PILOT_DEPTH = 4  #: M3×6 through the 1.5 mm board
 BOARD_YC = sum(X_ENDSTOP.board_y) / 2
 _EDGE = TOL.cbore_d(3) / 2 + TOL.min_wall  #: slot end to pad edge
+#: The endstop board's frame (origin, then its u, v, w axes), left bracket-local
+BOARD: Matrix = frame_handle(
+    [
+        X_ENDSTOP.board_front_x,
+        sum(X_ENDSTOP.board_y) / 2,
+        X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z,
+    ],
+    [0, -1, 0],
+    [1, 0, 0],
+    [0, 0, 1],
+)
 PAD_X = (X_DRIVE.endstop_screw_x[0] - X_ENDSTOP.pad_slot - _EDGE, X_ENDSTOP.board_front_x)
 PAD_Y = (
     X_ENDSTOP.board_y[0] - X_ENDSTOP.pad_margin,
@@ -71,7 +82,7 @@ def x_endstop_mount_installed() -> Solid:
         )
         for sv in (-1, 1)
     ]
-    return pad - slots - pilots
+    return set_handles(pad - slots - pilots, board=BOARD)
 
 
 def x_endstop_mount() -> Solid:

@@ -5,7 +5,7 @@ detailed decisions, inventory, key numbers, as-built design notes and ideas. Goa
 requirements, the high-level design and the coding standards are in
 [`README.md`](README.md); references like "README §3.2" point there.
 
-> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.7 done (CAD
+> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.7 and T3.9–T3.10 done (CAD
 > scaffold, gantry end brackets, X carriage, X and Y motor/idler/endstop mounts, v1 pen
 > holder, full assembly and the 1:1 baseboard drilling layout); STLs in `stl/`, test prints
 > pending. CAD migrated from OpenSCAD to PythonSCAD
@@ -13,7 +13,7 @@ requirements, the high-level design and the coding standards are in
 > `align()` (D28). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
 > toolchain) deferred until the machine runs.
 >
-> **Next:** T3.8 X cable (needs your choice; the Y loom is modeled), then T3.10 (T3.10 handle rollout can go first or alongside). Phase 2
+> **Next:** T3.8 X cable (the ribbon festoon mock-up decides; the Y loom is modeled). Phase 2
 > can run in parallel; the first test prints and the baseboard drilling (T4.1) are unblocked.
 
 **Contents:** 1 Work plan · 2 Open questions · 3 Decision log · 4 Inventory ·
@@ -252,7 +252,17 @@ any new decisions in §3, and update the status line at the top.
   - [ ] Follow-up: test-print the anchor and one rail; check the zip tie path, the nut slots (M3 from
     the outboard edge), that the loom seats in the groove without the bend flattening it, and the
     real loom diameter and bend radius against the *assumed* 8 / 16 mm.
-- [ ] **T3.10 Roll out handles (D28).** Add handles to the other parts and use `align` in `assemblies/` (Y drive mounts, X carriage, X mounts, the pen holder (servo, rod, screws are placed from `params.PenHolder`), endstop frames: `place_in_frame` is a hand-rolled handle; mind the chiral, mirrored endstop board). *Done when:* no assembly re-derives a hole position that a part defines; geometry unchanged.
+- [x] **T3.10 Roll out handles (D28).** Handles are on the X carriage (wheel axles, belt clamps,
+  trigger screw), the Y motor and idler mounts (motor, pulley, motor screws, axle, tension screw,
+  endstop board frame), the X motor and idler mounts and the X endstop mount (motor, pulley, axle,
+  board frame), the pen holder body and slide (rod, servo, horn, clamp screws, thumbscrew and its
+  nut) and the ZRIB hanger (board, screws, nuts, strap); the assemblies place hardware with
+  `.align()` instead of repeating coordinates. The chiral Y endstop board keeps its own frame
+  (`geometry.frame_handle` / `frame_axes`, allowed to be left-handed) and flips its u axis on the
+  right side. Geometry unchanged: before and after, every assembly item and every part has the
+  same volume and bounding box (one 0.1 mm rounding flip in the servo). Left as hand-derived on
+  purpose: hardware stacks along an axle (washers, idler, nut offsets), which are hardware
+  dimensions, and the pen holder's pin (its horn hole depends on the lift angle).
 
 #### Phase 4 — Build
 
@@ -327,7 +337,7 @@ update the log once it is agreed (README §7.1).
 | D25 | Y drive layout: motor **behind the rear SK10**, shaft outboard, belt 30 mm outboard of the shaft; idler with slot tensioner in front of the front SK10; Y endstops at the **front** on both sides, on a tower of the idler mount; printed mounts screwed to the baseboard with 4 × 25 countersunk wood screws through 9 mm bosses. Costs ~25 mm of baseboard length at the back; belt ~1.5 m per side | ✅ | T3.5, §6 |
 | D26 | The Y motor and idler mounts have a **corner pocket for their SK10** (cut-out in a 6 mm foot: a 24 mm end-wall finger against the shaft-end face and an outboard side wall; open toward the inboard side and the other SK10; the finger is kept short so it stays sturdy), so the belt line is referenced to the SK10's outer face and outboard edge instead of the baseboard layout and SK10 width/chamfer tolerances don't matter. Mounts are fitted last, around the already aligned SK10s, pushed into the corner, and screwed down through plain holes (no pre-drilled positions). The SK10's own bore tolerance limits the result | ✅ | README §3.2, T3.5 |
 | D27 | Belt clamps: flat undersides on the gantry brackets and the X carriage's rear block (no belt channel: no bridges or overhangs); one cap design for all six clamps, with the groove (between two rails) and the tooth ridges in the cap. Belt lines drop 1.08 mm (derived); screws M3×12 | ✅ | T3.2, T3.3, §6 |
-| D28 | **Handles and `align()` for assemblies (trial).** Parts that hardware or other parts attach to expose named handles (4×4 matrices set with `geometry.set_handles`, read with `get_handle(s)`); assemblies place the hardware with `.align(handle)` instead of re-deriving hole coordinates, and the part's own cut-outs use the same handle constants, so a hole and its screw can't drift apart. Done for the gantry end bracket and the belt clamp; extend to other parts as they are touched. `fillet` and `MultiToolExporter` evaluated and not adopted yet | ✅ trial | README §7.4, T3.10 |
+| D28 | **Handles and `align()` for assemblies (trial).** Parts that hardware or other parts attach to expose named handles (4×4 matrices set with `geometry.set_handles`, read with `get_handle(s)`); assemblies place the hardware with `.align(handle)` instead of re-deriving hole coordinates, and the part's own cut-outs use the same handle constants, so a hole and its screw can't drift apart. Rolled out to the carriage, the X and Y mounts, the pen holder and the ZRIB hanger in T3.10 (chiral boards use `frame_handle`). `fillet` and `MultiToolExporter` evaluated and not adopted yet | ✅ trial | README §7.4, T3.10 |
 | D29 | **v1 pen holder (T3.6):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
 | D30 | **Baseboard and bed (T3.7), first decisions:** baseboard **700 × 900 × 18 mm** (the Y drive reaches x 4.5–645.5 and y 18–821 on the old 650 × 850); bed panel on **4 × M5 screw + nut posts** (adjust from above); the **ZRIB goes under the baseboard between the runners**, the **PSU stands off the board on its own base** (its fan inlet is on the bottom face and needs ≥ 25 mm of free air; under the board that would need an 80 mm drop; also keeps mains off the plywood); runners from the extrusions on hand, 2040 on edge with low feet. The **ZRIB is mounted bare** on two printed hangers with a minimal guard strap each (no case: exposed electronics, free airflow; the strap is optional) | 🟡 | README §3.8, T3.7 |
 | D31 | **Baseboard layout (T3.7), detail of D30:** 3 runners (2040 on edge, 520 mm, along X under the board, y 150 / 450 / 750), each fixed with 4 × M5×30 countersunk screws into drop-in T-nuts in the top slot; **bed posts = M5×45 stud from below + spring + nut on top of the panel** (turn the nut to level; the panel is 9 mm, so the nuts stand proud and the **steel sheet stops 24 mm short of the panel edge**, 352 × 432, still larger than A3); posts 15 mm from the panel corners; SK10s on M5×35 bolts with nut and washer under the board, the right rail's holes oversized (Ø7) for alignment; ZRIB mount centered between runners 1 and 2 at x 520. Y mounts stay un-drilled (D26). The layout is generated (`python -m plotter_cad layout`), not drawn by hand | 🟡 | T3.7, §6 |

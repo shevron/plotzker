@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull
 
-from plotter_cad.geometry import FN_HOLE, teardrop_x, teardrop_y
+from plotter_cad.geometry import FN_HOLE, Matrix, handle, set_handles, teardrop_x, teardrop_y
 from plotter_cad.hardware import SCS10UU
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
 
@@ -40,6 +40,8 @@ FOOT_Z0 = BRACKET.base_t
 TOP_Z = X_DRIVE.idler_top_z - Y_AXIS.scs_top_z  #: plate top, local z
 SCREW_RELIEF = 4.0  #: hole below the endstop nuts for the screw tips
 PLATE_YC = X_DRIVE.plate_y0 + X_DRIVE.idler_plate_t / 2  #: plate mid-thickness (y)
+#: Idler axle: on the plate's front face (toward the beam), along +y through the slot's middle
+AXLE: Matrix = handle([X_DRIVE.idler_x, X_DRIVE.plate_y0, AXIS_Z], [90, 0, 0])
 
 
 def x_idler_mount_installed() -> Solid:
@@ -90,7 +92,8 @@ def x_idler_mount_installed() -> Solid:
         ).translate([x, PLATE_YC, nut_z1 - nut_t - SCREW_RELIEF])
         for x in d.endstop_screw_x
     ]
-    return (foot | plate) - bolts - slot - tension_nut - screw - endstop_nuts - endstop_holes
+    mount = (foot | plate) - bolts - slot - tension_nut - screw - endstop_nuts - endstop_holes
+    return set_handles(mount, axle=AXLE)
 
 
 def x_idler_mount() -> Solid:

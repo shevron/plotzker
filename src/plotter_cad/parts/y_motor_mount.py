@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, hull
 
-from plotter_cad.geometry import EPS, teardrop_x
+from plotter_cad.geometry import EPS, Matrix, handle, set_handles, teardrop_x
 from plotter_cad.hardware import NEMA17
 from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE
 from plotter_cad.parts.gantry_end_bracket import Side
@@ -37,6 +37,24 @@ if TYPE_CHECKING:
 
 AXIS_Z = Y_AXIS.pulley_axis_z  #: motor axis height
 SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the plate ends (y)
+
+#: Motor mounting screws: on the plate's outboard face (the pulley side), axis along +x
+MOTOR_SCREWS = [
+    handle(
+        [
+            Y_DRIVE.motor_plate_x[0],
+            Y_DRIVE.motor_y + dy * NEMA17.hole_pitch / 2,
+            AXIS_Z + dz * NEMA17.hole_pitch / 2,
+        ],
+        [0, -90, 0],
+    )
+    for dy in (-1, 1)
+    for dz in (-1, 1)
+]
+#: Motor: its face on the plate's inboard face, shaft axis along -x (outboard)
+MOTOR: Matrix = handle([Y_DRIVE.motor_plate_x[1], Y_DRIVE.motor_y, AXIS_Z], [0, -90, 0])
+#: Pulley: hub on the shaft just outboard of the plate, same axis
+PULLEY: Matrix = handle([Y_DRIVE.pulley_hub_x, Y_DRIVE.motor_y, AXIS_Z], [0, -90, 0])
 
 
 def y_motor_mount_installed() -> Solid:
@@ -60,21 +78,17 @@ def y_motor_mount_installed() -> Solid:
     )
     screws = [
         teardrop_x(TOL.bolt_hole_d(3), d.motor_plate_t + 2).translate(
-            [
-                plate_cx,
-                d.motor_y + dy * NEMA17.hole_pitch / 2,
-                AXIS_Z + dz * NEMA17.hole_pitch / 2,
-            ]
+            [plate_cx, screw[1][3], screw[2][3]]
         )
-        for dy in (-1, 1)
-        for dz in (-1, 1)
+        for screw in MOTOR_SCREWS
     ]
     foot_x = d.motor_foot_x0 + WOOD_SCREW.boss_d / 2
     screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
     bosses = [wood_screw_boss(foot_x, y) for y in screw_ys]
     holes = [wood_screw_hole(foot_x, y) for y in screw_ys]
     foot = foot | bosses[0] | bosses[1]
-    return (foot | plate | gussets | pocket_frame) - pocket_cut - boss - screws - holes
+    mount = (foot | plate | gussets | pocket_frame) - pocket_cut - boss - screws - holes
+    return set_handles(mount, motor_screws=MOTOR_SCREWS, motor=MOTOR, pulley=PULLEY)
 
 
 def y_motor_mount(side: Side = Side.LEFT) -> Solid:

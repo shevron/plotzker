@@ -27,11 +27,19 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, linear_extrude, polygon
 
-from plotter_cad.geometry import FN_HOLE, teardrop
+from plotter_cad.geometry import FN_HOLE, Matrix, handle, set_handles, teardrop
 from plotter_cad.params import PEN, TOL
 
 if TYPE_CHECKING:
     from pythonscad import Solid
+
+
+#: Thumbscrew: on the yoke bar's front face (pen side), along +d toward the pen
+THUMBSCREW: Matrix = handle([PEN.pen_x, PEN.yoke_bar_d[1], sum(PEN.yoke_z) / 2], [-90, 0, 0])
+#: Its nut: pressed into the yoke bar from the front, same axis
+THUMBSCREW_NUT: Matrix = handle(
+    [PEN.pen_x, PEN.yoke_bar_d[1] - TOL.nut_trap_h(5), sum(PEN.yoke_z) / 2], [-90, 0, 0]
+)
 
 
 def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> Solid:
@@ -126,7 +134,7 @@ def pen_slide_head() -> Solid:
     slide = _body()
     for cut in _cuts():
         slide = slide - cut
-    return slide
+    return set_handles(slide, thumbscrew=THUMBSCREW, thumbscrew_nut=THUMBSCREW_NUT)
 
 
 def pen_slide() -> Solid:

@@ -6,7 +6,8 @@ Usage (from the repository root, with the package installed or ``src`` on the pa
     python -m plotter_cad stl              # all printable parts → stl/
     python -m plotter_cad stl x_carriage   # one part
     python -m plotter_cad render           # parts + assemblies → renders/*.png
-    python -m plotter_cad all              # check, stl, render
+    python -m plotter_cad layout           # baseboard drilling layout → docs/
+    python -m plotter_cad all              # check, stl, render, layout
 
 STL export uses the ``pythonscad`` Python module. PNG rendering needs the PythonSCAD
 application (``pythonscad`` on the PATH, or ``--pythonscad PATH`` / ``$PYTHONSCAD``):
@@ -29,6 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = Path(__file__).resolve().parents[1]
 STL_DIR = REPO_ROOT / "stl"
 RENDER_DIR = REPO_ROOT / "renders"
+DOCS_DIR = REPO_ROOT / "docs"
 
 #: Image size and camera options passed to PythonSCAD for every render.
 RENDER_OPTIONS = (
@@ -64,6 +66,17 @@ def export_stls(names: Iterable[str] | None = None, out_dir: Path = STL_DIR) -> 
         export(PRINTABLE_PARTS[name](), str(path))
         print(f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}")
         written.append(path)
+    return written
+
+
+def export_layout(out_dir: Path = DOCS_DIR) -> list[Path]:
+    """Write the 1:1 baseboard drilling layout (SVG + hole table); returns the paths."""
+    from plotter_cad.layout import write_layout
+
+    params.check_design()
+    written = write_layout(out_dir)
+    for path in written:
+        print(f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}")
     return written
 
 
@@ -151,7 +164,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     render.add_argument("names", nargs="*", help="part/assembly names (default: all)")
     render.add_argument("--out", type=Path, default=RENDER_DIR)
     render.add_argument("--pythonscad", help="path to the PythonSCAD binary")
-    everything = sub.add_parser("all", help="check, stl and render")
+    layout = sub.add_parser("layout", help="write the baseboard drilling layout (SVG + table)")
+    layout.add_argument("--out", type=Path, default=DOCS_DIR)
+    everything = sub.add_parser("all", help="check, stl, render and layout")
     everything.add_argument("--pythonscad", help="path to the PythonSCAD binary")
     args = parser.parse_args(argv)
 
@@ -162,9 +177,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             export_stls(args.names, args.out)
         elif args.command == "render":
             render_pngs(args.names, args.out, args.pythonscad)
+        elif args.command == "layout":
+            export_layout(args.out)
         else:
             check()
             export_stls()
+            export_layout()
             render_pngs(binary=args.pythonscad)
     except (params.DesignError, FileNotFoundError, RuntimeError) as exc:
         print(exc, file=sys.stderr)

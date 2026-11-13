@@ -5,7 +5,7 @@ ISO 7089 washers. Dimensions in mm.
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pythonscad import cylinder
+from pythonscad import cube, cylinder
 
 from plotter_cad.geometry import cos_deg
 
@@ -86,3 +86,20 @@ def washer(m: float) -> Solid:
     body = cylinder(d=size.washer_od, h=size.washer_t, fn=24)
     bore = cylinder(d=m + 0.3, h=3, fn=16).translate([0, 0, -1])
     return (body - bore).color("Silver")
+
+
+def t_nut(m: float, thickness: float = 4.0) -> Solid:
+    """Drop-in T-nut for the 6 mm slot of 2020/2040 V-slot (simplified plate).
+
+    Origin: center of the top face; axis along Z, the plate lies in XY (long side along X).
+    """
+    plate = cube([11, 9.5, thickness]).translate([-5.5, -4.75, -thickness])
+    bore = cylinder(d=m, h=thickness + 2, fn=16).translate([0, 0, -thickness - 1])
+    return (plate - bore).color("Silver")
+
+
+def spring(od: float, id_: float, length: float) -> Solid:
+    """Compression spring as a plain tube. Origin: center of the bottom face, axis +Z."""
+    return (
+        cylinder(d=od, h=length, fn=32) - cylinder(d=id_, h=length + 2, fn=32).translate([0, 0, -1])
+    ).color("SteelBlue")

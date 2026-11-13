@@ -5,15 +5,16 @@ detailed decisions, inventory, key numbers, as-built design notes and ideas. Goa
 requirements, the high-level design and the coding standards are in
 [`README.md`](README.md); references like "README §3.2" point there.
 
-> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.6 done (CAD
+> **Status:** Phase 1 (architecture) complete. Phase 3 in progress: T3.1–T3.7 done (CAD
 > scaffold, gantry end brackets, X carriage, X and Y motor/idler/endstop mounts, v1 pen
-> holder); STLs in `stl/`, test prints pending. CAD migrated from OpenSCAD to PythonSCAD
+> holder, full assembly and the 1:1 baseboard drilling layout); STLs in `stl/`, test prints
+> pending. CAD migrated from OpenSCAD to PythonSCAD
 > (T3.9, D22; identical STLs). On trial: SVG 2D sketches for profiles (D23), handles and
 > `align()` (D28). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
 > toolchain) deferred until the machine runs.
 >
-> **Next:** T3.7 full assembly and baseboard layout (T3.10 handle rollout can go first or
-> alongside). Phase 2 can run in parallel.
+> **Next:** T3.8 cable management (T3.10 handle rollout can go first or alongside). Phase 2
+> can run in parallel; the first test prints and the baseboard drilling (T4.1) are unblocked.
 
 **Contents:** 1 Work plan · 2 Open questions · 3 Decision log · 4 Inventory ·
 5 Key numbers · 6 As-built design notes · 7 Ideas and future possibilities
@@ -150,17 +151,35 @@ any new decisions in §3, and update the status line at the top.
     below the clamp). If the printed sleeves stick, use LM6UU bearings or brass-tube bushings.
   - [ ] Follow-up: cable route from the servo to the carriage connector window; limit angles
     and `M280` values (T2.4) for ±23° about horizontal; pen holder on the gantry at both ends
-    of travel (T3.7).
-- [ ] **T3.7 Full assembly and baseboard layout.** Assembly model for fit checks (travel,
+    of travel (done in T3.7: clear at all four corners).
+- [x] **T3.7 Full assembly and baseboard layout.** Assembly model for fit checks (travel,
   clearances, 15 mm media under the head). 1:1 baseboard drilling layout: SK10 positions,
   motor mounts, bed-panel adjustment points, runners, electronics.
   - [x] ZRIB mount (D30): `parts/zrib_hanger.py` ×2 and `parts/zrib_guard.py` ×2, `hardware/zrib.py`,
     `assemblies/zrib_mount.py`; the mount hangs 39 mm below the baseboard (a 2040 runner on edge is
     40). Checked: the board threads between the legs from below, no collisions, everything
     connected; the PCB thickness (1.6) and the tall-part layout are *assumed*.
-  - [ ] Still to do for T3.7: bed posts (4 × M5), runner layout (3 × 520 mm 2040 on edge), the 1:1
-    baseboard drilling layout, the full assembly, and the pen holder and ZRIB at the gantry
-    ends of travel. Follow-up for the ZRIB mount: test-print; check the nut slots, the 4 × 25 countersunk wood screws (the bosses are 9 mm thick so the screws stop 2 mm short of the baseboard's top face; head diameter *assumed* 8 mm), and the posts' 5 mm height against the board's pin tails.
+  - [x] Layout (D31, `params.BASEBOARD`): three 520 mm 2040 runners on edge along X, 300 mm apart
+    (y 150 / 450 / 750), 4 M5 countersunk screws each into drop-in T-nuts; four bed posts (M5×45
+    studs from below, spring, nut on top of the panel) 15 mm in from the panel corners; the ZRIB
+    mount between runners 1 and 2, toward the right (x 520, y 300, USB side facing +y); SK10s on
+    M5×35 bolts with nut and washer underneath, oversized Ø7 holes under the right rail so the
+    gantry can align it (README §3.2). The Y mounts are *not* pre-drilled (D26).
+  - [x] `layout.py` + `python -m plotter_cad layout` → `docs/baseboard-layout.svg` (1:1, print at
+    100 %) and `docs/baseboard-holes.md` (28 holes, coordinates from the front-left corner), both
+    generated from `params.py`.
+  - [x] `assemblies/baseboard.py` (drilled board, runners and screws, SK10 bolts, bed and posts,
+    ZRIB) and `assemblies/machine.py` (everything, pen holder included; `renders/machine.png`).
+    Design checks added: runners and posts on the board and clear of each other and of the ZRIB
+    mount, nuts clear of the steel and the carriage, and the **pen reaches all of a centered A3
+    sheet** (pen x 150–576, y 138–683 vs A3 x 201–499, y 240–660). Tests: the machine is connected;
+    the pen holder, up and down, clears everything at the four travel corners; fasteners sit in
+    their holes; no part of the ZRIB mount touches a runner.
+  - [ ] Follow-up (test print and build): the ZRIB mount (nut slots, wood screws, 5 mm post height
+    against the board's pin tails); check the bed panel's sag between the four posts (est. 0.2–0.4
+    mm; add a fifth post at the center if it shows) and the T-nut thickness and lip (*assumed* 4 /
+    1.8); the pilot holes (Ø2.5) in your plywood; the USB cable reaches the board's rear edge
+    between runners 1 and 2 (95 mm gap, entering from the side), else move the mount.
 - [ ] **T3.8 Cable management.** Drag chain or cable guide from the gantry to the board.
 - [x] **T3.9 Migrate the CAD to PythonSCAD (D22).** Sanity test: PythonSCAD renders the
   old `.scad` files to the same STLs. Port to a Python package (`src/plotter_cad/`:
@@ -246,6 +265,7 @@ update the log once it is agreed (README §7.1).
 | D28 | **Handles and `align()` for assemblies (trial).** Parts that hardware or other parts attach to expose named handles (4×4 matrices set with `geometry.set_handles`, read with `get_handle(s)`); assemblies place the hardware with `.align(handle)` instead of re-deriving hole coordinates, and the part's own cut-outs use the same handle constants, so a hole and its screw can't drift apart. Done for the gantry end bracket and the belt clamp; extend to other parts as they are touched. `fillet` and `MultiToolExporter` evaluated and not adopted yet | ✅ trial | README §7.4, T3.10 |
 | D29 | **v1 pen holder (T3.6):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
 | D30 | **Baseboard and bed (T3.7), first decisions:** baseboard **700 × 900 × 18 mm** (the Y drive reaches x 4.5–645.5 and y 18–821 on the old 650 × 850); bed panel on **4 × M5 screw + nut posts** (adjust from above); the **ZRIB goes under the baseboard between the runners**, the **PSU stands off the board on its own base** (its fan inlet is on the bottom face and needs ≥ 25 mm of free air; under the board that would need an 80 mm drop; also keeps mains off the plywood); runners from the extrusions on hand, 2040 on edge with low feet. The **ZRIB is mounted bare** on two printed hangers with a minimal guard strap each (no case: exposed electronics, free airflow; the strap is optional) | 🟡 | README §3.8, T3.7 |
+| D31 | **Baseboard layout (T3.7), detail of D30:** 3 runners (2040 on edge, 520 mm, along X under the board, y 150 / 450 / 750), each fixed with 4 × M5×30 countersunk screws into drop-in T-nuts in the top slot; **bed posts = M5×45 stud from below + spring + nut on top of the panel** (turn the nut to level; the panel is 9 mm, so the nuts stand proud and the **steel sheet stops 24 mm short of the panel edge**, 352 × 432, still larger than A3); posts 15 mm from the panel corners; SK10s on M5×35 bolts with nut and washer under the board, the right rail's holes oversized (Ø7) for alignment; ZRIB mount centered between runners 1 and 2 at x 520. Y mounts stay un-drilled (D26). The layout is generated (`python -m plotter_cad layout`), not drawn by hand | 🟡 | T3.7, §6 |
 | D29 | **No heat-set inserts: pressed-in hex nuts (nut traps) everywhere.** The nut sits in a slot or hex shaft with a wall behind it that takes the load (`TOL.nut_wall`, 2 mm). Y/X idler tension screws: slot from the top; X endstop pad screws: slots from the rear face; belt clamp screws (brackets): hex shafts from the top, nut 4 mm above the underside (`CLAMP.nut_z`), M3×14; X carriage rear block: slot from the back; tool-plate screws: slots from the bottom edge. Dropped the `Preload.SLOT` carriage fallback (eccentric spacers are available) | ✅ | README §7 rule 2 |
 
 ---
@@ -277,6 +297,7 @@ hard to get, we adjust.
 | Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm** (user) | Mounting holes, terminal side |
 | Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |
 | Wood screws | many | **4 × 25 mm, countersunk** (the shortest on hand); printed parts use 9 mm bosses so they don't reach through the 18 mm plywood | Head diameter (assumed 8 mm) |
+| M5 hardware for the baseboard | to buy | 12 × M5×30 countersunk + 12 drop-in T-nuts (runners); 8 × M5×35 + nuts + washers (SK10s); 4 × M5×45 + washers, nuts and springs Ø9 × 12 (bed posts); common sizes | T-nut thickness and slot lip (*assumed* 4 / 1.8) |
 | Plywood, steel sheet, magnets | to buy/cut | Baseboard, bed panel, work holding (README §3.8) | — |
 
 ---
@@ -296,7 +317,9 @@ hard to get, we adjust.
 | Expected shaft sag | 0.2–0.4 mm |
 | Pen head | ≥ 5 mm lift, ≥ 3 mm float, ~20 mm manual height adjust, 7–16 mm pens |
 | Pen pressure (start point) | ~20–80 g |
-| Baseboard | 18 mm plywood, ~900 × 700 mm |
+| Baseboard | 18 mm plywood, 700 × 900 mm; runners (2040 on edge) at y 150 / 450 / 750, x 90–610; 28 holes in `docs/baseboard-holes.md` |
+| Bed | Panel 400 × 480 × 9 on 4 posts (x 165 / 535, y 225 / 675), steel 352 × 432 × 0.8; top ~14.8 mm; post nuts up to z 22.7 |
+| Pen reach (10 mm pen) | x 150–576, y 138–683 (A3 centered: x 201–499, y 240–660) |
 | Shaft spacing | 520 mm |
 | Y belt | 30 mm outboard of each shaft; motor/idler axis ~26.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
 | X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~93.8 mm above the baseboard; ~1.2 m belt |
@@ -378,6 +401,16 @@ this sets the shaft spacing to **520 mm**. ~70 g each (PETG).
 (D21), all on M5×35. A bridge over the middle of the beam (between the top wheels) carries
 a rear block behind the beam that clamps both ends of the X belt (same clamp caps as Y) and
 holds the X endstop trigger (M3 screw head, pointing −X). Printed front face down, ~64 g.
+
+**Baseboard and bed (T3.7, D30, D31):** the plywood (700 × 900 × 18) carries, on top, the SK10s
+(M5×35 bolts, nuts and washers underneath), the Y mounts (wood screws, not pre-drilled) and the bed
+panel on four posts; underneath, three 2040 runners on edge (feet, 40 mm tall) and the ZRIB mount
+(39 mm drop). A post is an M5 stud whose head and washer sit under the board; a spring (Ø9 × 12,
+compressed to the 5 mm gap) pushes the panel up against a washer and nut on top, which sets the
+corner height (gap 2–8 mm). The panel's top-face nuts are why the steel stops short of the edge.
+The ZRIB mount sits between runners 1 and 2 (95 mm gap each side of its footprint) so the board's
+rear edge (USB, DC, SD) faces runner 2; reach it from the right side of the machine. Everything
+the drilling needs is in `params.BASEBOARD`; `layout.py` turns it into the SVG and the hole table.
 
 **v1 pen holder (T3.6, D29):** two printed parts. The **body** (`pen_holder_body.py`) is a
 50 × 45 mm plate with the hook lip (the carriage groove shrunk by the 0.3 mm gap) and

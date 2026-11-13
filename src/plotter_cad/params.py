@@ -130,7 +130,26 @@ class Frame:
     bed_panel_t: float = 9  #: DESIGN (T3.7): 6–9 mm plywood/MDF
     bed_steel_t: float = 0.8  #: DESIGN (T3.7): 0.5–1 mm galvanized steel
     bed_adjust_gap: float = 5  #: DESIGN (T3.7): baseboard → panel underside, mid-adjustment
-    bed_size: tuple[float, float] = (400, 480)  #: DESIGN (T3.7): steel/panel X × Y
+    bed_size: tuple[float, float] = (400, 480)  #: DESIGN (T3.7): panel X × Y
+    #: DESIGN (T3.7): the steel sheet stops this far short of the panel edge, which leaves the
+    #: panel corners free for the adjustment posts' nuts (they stand above the panel)
+    steel_margin: float = 24
+
+    @property
+    def bed_origin(self) -> tuple[float, float]:
+        """Front-left corner of the bed panel (centered on the baseboard)."""
+        return (
+            (self.board_size[0] - self.bed_size[0]) / 2,
+            (self.board_size[1] - self.bed_size[1]) / 2,
+        )
+
+    @property
+    def steel_size(self) -> tuple[float, float]:
+        """Steel sheet X × Y."""
+        return (
+            self.bed_size[0] - 2 * self.steel_margin,
+            self.bed_size[1] - 2 * self.steel_margin,
+        )
 
     @property
     def bed_top_z(self) -> float:
@@ -694,6 +713,12 @@ class YAxis:
         """Available gantry travel along Y."""
         return Y_SHAFT.length - 2 * SK10.length - self.gantry_len_y - 2 * self.end_margin
 
+    @property
+    def gantry_y_range(self) -> tuple[float, float]:
+        """Gantry center along Y (machine frame) at the front and back ends of travel."""
+        front = self.shaft_y0 + SK10.length + self.end_margin + self.gantry_len_y / 2
+        return (front, front + self.travel_avail)
+
     # Y belt line (fixes the Y motor and idler heights for T3.5)
     @property
     def belt_back_z(self) -> float:
@@ -852,6 +877,13 @@ class Carriage:
     def travel_avail(self) -> float:
         """X travel available."""
         return BEAM.length - self.w - 2 * self.end_keepout
+
+    @property
+    def center_x_range(self) -> tuple[float, float]:
+        """Carriage center along X (machine frame) at the left and right ends of travel."""
+        beam_x0 = (FRAME.board_size[0] - BEAM.length) / 2
+        left = beam_x0 + self.end_keepout + self.w / 2
+        return (left, left + self.travel_avail)
 
 
 CARRIAGE = Carriage()
@@ -1254,6 +1286,116 @@ class YEndstopMount:
 Y_ENDSTOP = YEndstopMount()
 
 # -----------------------------------------------------------------------------
+# Baseboard layout (T3.7, D31): runners underneath, SK10 holes, bed posts, ZRIB position
+# -----------------------------------------------------------------------------
+# Machine frame, seen from above (x across, y front to back); ▒ = runner on the underside:
+#
+#   y 900 ┌──────────────────────────────────────────────┐
+#         │  Y motor mounts (not pre-drilled, D26)       │
+#   y 750 │   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ runner 3 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒    │
+#         │      ◎ post                       ◎ post     │  bed posts (M5 stud from below)
+#   y 450 │   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ runner 2 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒    │
+#         │              ZRIB under here →  [ZRIB]       │  between runners 1 and 2
+#   y 150 │   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ runner 1 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒    │
+#         │  SK10 ▪▪                             ▪▪ SK10 │
+#   y   0 └──────────────────────────────────────────────┘
+
+
+@dataclass(frozen=True)
+class Baseboard:
+    """Runners, bed posts and the ZRIB position on the baseboard."""
+
+    # Runners: 2040 offcuts on edge (20 wide along y, 40 tall), along X under the board
+    runner_len: float = 520
+    runner_w: float = 20
+    runner_h: float = 40
+    runner_pitch: float = 300  #: DESIGN (T3.7): runner to runner; the middle one is centered
+    runner_screws: int = 4  #: per runner: M5 countersunk into drop-in T-nuts in the top slot
+    runner_screw_len: float = 30
+    runner_screw_head_d: float = 10.0  #: M5 countersunk head (ISO 10642)
+    tnut_t: float = 4.0  #: ASSUMED: M5 drop-in T-nut thickness
+    slot_lip_t: float = 1.8  #: ASSUMED: wall between the profile's top face and the T-nut
+    # SK10 fixing: M5 bolts through the baseboard, nut and washer underneath
+    sk10_bolt_len: float = 35
+    #: DESIGN (T3.7): holes under the second rail's SK10s are oversized, so the gantry aligns
+    #: that rail (README §3.2)
+    sk10_float_hole_d: float = 7.0
+    # Bed posts: an M5 stud from below (head under the board) carries the panel on a spring; a
+    # nut on top of the panel pulls it down. Turn the nut to level the corner (README §3.8)
+    post_inset: float = 15  #: panel corner to post axis
+    post_bolt_len: float = 45
+    post_adjust: float = 3  #: DESIGN: panel height range ± around ``Frame.bed_adjust_gap``
+    spring_od: float = 9
+    spring_id: float = 6
+    spring_len: float = 12  #: free length
+    # ZRIB: centered between the first two runners, toward the right (its USB side faces +y)
+    zrib_from_right: float = 180
+    pilot_d: float = 2.5  #: DESIGN: pilot hole for the 4 mm wood screws (hangers)
+
+    @property
+    def runner_x(self) -> tuple[float, float]:
+        """Runner extent along X (centered on the board, like the beam)."""
+        x0 = (FRAME.board_size[0] - self.runner_len) / 2
+        return (x0, x0 + self.runner_len)
+
+    @property
+    def runner_y(self) -> tuple[float, float, float]:
+        """Runner center lines along Y."""
+        mid = FRAME.board_size[1] / 2
+        return (mid - self.runner_pitch, mid, mid + self.runner_pitch)
+
+    @property
+    def runner_screw_x(self) -> tuple[float, ...]:
+        """Screw positions along a runner, evenly spread."""
+        x0, x1 = self.runner_x
+        step = (x1 - x0) / self.runner_screws
+        return tuple(x0 + (i + 0.5) * step for i in range(self.runner_screws))
+
+    @property
+    def sk10_hole_x(self) -> tuple[float, float]:
+        """SK10 hole offsets from the shaft axis."""
+        return (-SK10.hole_pitch / 2, SK10.hole_pitch / 2)
+
+    @property
+    def post_xy(self) -> tuple[tuple[float, float], ...]:
+        """Bed post axes: four points near the panel corners."""
+        x0, y0 = FRAME.bed_origin
+        bx, by = FRAME.bed_size
+        i = self.post_inset
+        return tuple((x, y) for x in (x0 + i, x0 + bx - i) for y in (y0 + i, y0 + by - i))
+
+    @property
+    def zrib_center(self) -> tuple[float, float]:
+        """ZRIB mount origin (the board's center) in the machine frame."""
+        return (
+            FRAME.board_size[0] - self.zrib_from_right,
+            (self.runner_y[0] + self.runner_y[1]) / 2,
+        )
+
+    @property
+    def zrib_pilot_xy(self) -> tuple[tuple[float, float], ...]:
+        """Pilot holes for the hangers' wood screws (mount frame u → x, v → y)."""
+        cx, cy = self.zrib_center
+        u = ZMOUNT.wood_screw_u
+        v = abs(ZMOUNT.post_v + ZMOUNT.wood_screw_v)
+        return tuple((cx + su * u, cy + sv * v) for sv in (-1, 1) for su in (-1, 1))
+
+    @property
+    def post_stud_z(self) -> float:
+        """Underside of the bolt head's washer: the head hangs under the board."""
+        return -FRAME.board_size[2] - metric(5).washer_t
+
+    @property
+    def nut_top_z(self) -> float:
+        """Top of the post's nut at the highest panel setting."""
+        m5 = metric(5)
+        top_panel = FRAME.bed_adjust_gap + self.post_adjust + FRAME.bed_panel_t
+        return top_panel + m5.washer_t + m5.nut_h
+
+
+BASEBOARD = Baseboard()
+
+# -----------------------------------------------------------------------------
 # Design checks — the build fails if the parameters break a requirement
 # -----------------------------------------------------------------------------
 
@@ -1395,6 +1537,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         ye.tower_y[1] <= yd.idler_plate_y[1] and ye.tower_y[0] >= 0,
         "Y endstop tower outside the idler plate or the baseboard",
     )
+    pen_lo, pen_hi = REQ.pen_d_range
     # --- ZRIB mount (T3.7)
     zm = ZMOUNT
     yield (
@@ -1414,9 +1557,71 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         WOOD_SCREW.boss_t > zm.rail_t and -zm.board_z - WOOD_SCREW.boss_t >= 1,
         "ZRIB mount boss hits the board",
     )
+    # --- baseboard layout (T3.7)
+    bb = BASEBOARD
+    bx, by, _ = FRAME.board_size
+    yield (
+        bb.runner_x[0] >= 0
+        and bb.runner_x[1] <= bx
+        and bb.runner_y[0] - bb.runner_w / 2 >= 0
+        and bb.runner_y[2] + bb.runner_w / 2 <= by,
+        "A runner hangs over the baseboard edge",
+    )
+    zrib_half_v = abs(zm.plate_v[0])
+    yield (
+        bb.runner_pitch / 2 - bb.runner_w / 2 - zrib_half_v >= 5
+        and bb.zrib_center[0] + zm.leg_u[1] <= bx,
+        "The ZRIB mount does not fit between the runners or on the baseboard",
+    )
+    zx0, zx1 = bb.zrib_center[0] - zm.leg_u[1], bb.zrib_center[0] + zm.leg_u[1]
+    zy0, zy1 = bb.zrib_center[1] - zrib_half_v, bb.zrib_center[1] + zrib_half_v
+    head_r = m5.washer_od / 2 + 2  #: bolt head and washer under the board, plus room
+    yield (
+        all(abs(y - ry) >= bb.runner_w / 2 + head_r for _, y in bb.post_xy for ry in bb.runner_y),
+        "A bed post bolt head sits under a runner",
+    )
+    yield (
+        not any(
+            zx0 - head_r < x < zx1 + head_r and zy0 - head_r < y < zy1 + head_r
+            for x, y in bb.post_xy
+        ),
+        "A bed post bolt head hits the ZRIB mount",
+    )
+    yield (
+        FRAME.steel_margin >= bb.post_inset + m5.washer_od / 2 + 1
+        and bb.post_inset >= m5.washer_od / 2 + 3,
+        "The bed post nuts hit the steel sheet or hang over the panel edge",
+    )
+    yield (
+        FRAME.steel_size[0] >= REQ.media_a3[0] and FRAME.steel_size[1] >= REQ.media_a3[1],
+        "The steel sheet is smaller than A3",
+    )
+    yield (
+        bb.post_stud_z + bb.post_bolt_len >= bb.nut_top_z + 1
+        and FRAME.bed_adjust_gap - bb.post_adjust >= 1
+        and bb.spring_len >= FRAME.bed_adjust_gap + bb.post_adjust
+        and bb.spring_id >= m5.m + 0.5,
+        "Bed post: stud too short, panel too low, or spring too short at the highest setting",
+    )
+    yield (
+        bb.nut_top_z + 1 <= CARRIAGE.bottom_z,
+        "Bed post nuts reach into the carriage's path",
+    )
+    pen_x_lo = CARRIAGE.center_x_range[0] + PEN.pen_x
+    pen_x_hi = CARRIAGE.center_x_range[1] + PEN.pen_x
+    pen_y_lo = Y_AXIS.gantry_y_range[0] + CARRIAGE.plate_front_y - PEN.pen_axis_d(pen_hi)
+    pen_y_hi = Y_AXIS.gantry_y_range[1] + CARRIAGE.plate_front_y - PEN.pen_axis_d(pen_lo)
+    a3_x, a3_y = REQ.media_a3
+    yield (
+        pen_x_lo <= (bx - a3_x) / 2 and pen_x_hi >= (bx + a3_x) / 2,
+        f"The pen cannot reach all of A3 along X ({pen_x_lo:g}…{pen_x_hi:g})",
+    )
+    yield (
+        pen_y_lo <= (by - a3_y) / 2 and pen_y_hi >= (by + a3_y) / 2,
+        f"The pen cannot reach all of A3 along Y ({pen_y_lo:g}…{pen_y_hi:g})",
+    )
     # --- pen holder (T3.6)
     pn = PEN
-    pen_lo, pen_hi = REQ.pen_d_range
     yield pn.lift >= REQ.pen_lift_min, "Pen lift stroke below the requirement"
     yield pn.float_travel >= REQ.pen_float_min, "Pen float below the requirement"
     yield (

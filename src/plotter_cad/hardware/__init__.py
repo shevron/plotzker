@@ -16,7 +16,17 @@ from plotter_cad.hardware.endstop import (
     endstop_placed,
     place_in_frame,
 )
-from plotter_cad.hardware.fasteners import M3, M5, countersunk_screw, hex_nut, metric, shcs, washer
+from plotter_cad.hardware.fasteners import (
+    M3,
+    M5,
+    countersunk_screw,
+    hex_nut,
+    metric,
+    shcs,
+    spring,
+    t_nut,
+    washer,
+)
 from plotter_cad.hardware.linear_motion import SCS10UU, SK10, Y_SHAFT, scs10uu, sk10, y_shaft
 from plotter_cad.hardware.motors import FT90M, NEMA17, nema17, servo_ft90m, servo_horn
 from plotter_cad.hardware.vslot import (
@@ -71,6 +81,8 @@ __all__ = [
     "servo_horn",
     "shcs",
     "sk10",
+    "spring",
+    "t_nut",
     "vslot_x",
     "vslot_y",
     "vwheel",

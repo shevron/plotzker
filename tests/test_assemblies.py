@@ -3,7 +3,7 @@
 import pytest
 from pythonscad import union
 
-from plotter_cad.assemblies import ASSEMBLIES
+from plotter_cad.assemblies import ASSEMBLIES, baseboard
 from plotter_cad.assemblies.carriage import carriage_assembly, carriage_fit_check
 from plotter_cad.assemblies.gantry import (
     gantry_assembly,
@@ -11,17 +11,18 @@ from plotter_cad.assemblies.gantry import (
     gantry_fit_check,
     x_endstop_keepout,
 )
+from plotter_cad.assemblies.machine import pen_holder_at
 from plotter_cad.assemblies.pen_holder import pen_holder_assembly, pen_holder_items
-from plotter_cad.assemblies.skeleton import carriage_x_at, gantry_y_at
+from plotter_cad.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_parts
 from plotter_cad.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotter_cad.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
 from plotter_cad.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
 from plotter_cad.hardware import sk10, vslot_x, y_shaft
-from plotter_cad.params import BEAM, FRAME, Y_AXIS
+from plotter_cad.params import BEAM, CARRIAGE, FRAME, Y_AXIS
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
 from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
-from solids import connected_groups, flatten, touching, volume
+from solids import bounding_box, connected_groups, flatten, touching, volume
 
 
 @pytest.mark.parametrize("name", ASSEMBLIES)
@@ -157,3 +158,44 @@ def test_zrib_mount_parts_do_not_collide():
     for i, a in enumerate(items):
         for b in items[i + 1 :]:
             assert volume(a & b) < 0.5  # a screw and its nut meet in their facets
+
+
+# --- the whole machine (T3.7)
+
+#: gantry and carriage at their four corners of travel (front/back, left/right)
+TRAVEL_CORNERS = [(g, c) for g in (0, 1) for c in (0, 1)]
+CORNER_IDS = ["front left", "front right", "back left", "back right"]
+
+
+def test_machine_is_connected():
+    """Board, runners, shafts, bed and ZRIB hold together with the gantry and carriage on the
+    shafts. The pen holder hangs on the carriage with a printing gap, so it is left out."""
+    groups = connected_groups(
+        [*baseboard.fixed_assembly(), *moving_parts(0.5, 0.5)],
+    )
+    assert len(groups) == 1, f"floating items (indices into the assembly list): {groups[1:]}"
+
+
+@pytest.mark.parametrize(("gantry", "carriage"), TRAVEL_CORNERS, ids=CORNER_IDS)
+def test_pen_holder_clears_the_machine_at_the_travel_corners(gantry, carriage):
+    """The tool head and the pen, up and down, hit nothing with the gantry and carriage at
+    the four corners of travel (the carriage's own trigger on the X endstop lever aside)."""
+    fixed = union(*flatten([*baseboard.fixed_assembly(), *moving_parts(gantry, carriage)]))
+    for pen_up in (False, True):
+        head = pen_holder_at(gantry, carriage, pen_up)
+        pen = [item for item in head if volume(item & fixed) > 0.05]
+        assert len(pen) <= 1, "more than the pen touches the machine"
+        if pen_up:
+            assert not pen
+
+
+def test_bed_posts_clear_the_carriage_path():
+    """Nothing of the bed posts rises into the height the carriage and tool head sweep."""
+    for item in baseboard.bed():
+        assert bounding_box(item)[1][2] < CARRIAGE.bottom_z
+
+
+def test_zrib_mount_fits_between_the_runners():
+    """No part of the ZRIB mount or board touches a runner."""
+    runner_solids = union(*flatten(baseboard.runners()))
+    assert volume(runner_solids & union(*flatten(baseboard.zrib()))) < 1e-6

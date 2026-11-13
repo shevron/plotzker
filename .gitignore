@@ -8,3 +8,7 @@ __pycache__/
 # Generated: make stl, make render
 stl/
 renders/
+freecad/stl/
+freecad/components.json
+freecad/*.FCStd
+freecad/*.FCBak

@@ -7,6 +7,7 @@ Usage (from the repository root, with the package installed or ``src`` on the pa
     python -m plotter_cad stl x_carriage   # one part
     python -m plotter_cad render           # parts + assemblies → renders/*.png
     python -m plotter_cad layout           # baseboard drilling layout → docs/
+    python -m plotter_cad freecad          # machine components for the FreeCAD assembly → freecad/
     python -m plotter_cad all              # check, stl, render, layout
 
 STL export uses the ``pythonscad`` Python module. PNG rendering needs the PythonSCAD
@@ -164,6 +165,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     render.add_argument("names", nargs="*", help="part/assembly names (default: all)")
     render.add_argument("--out", type=Path, default=RENDER_DIR)
     render.add_argument("--pythonscad", help="path to the PythonSCAD binary")
+    sub.add_parser("freecad", help="export the machine components for the FreeCAD assembly")
     layout = sub.add_parser("layout", help="write the baseboard drilling layout (SVG + table)")
     layout.add_argument("--out", type=Path, default=DOCS_DIR)
     everything = sub.add_parser("all", help="check, stl, render and layout")
@@ -177,6 +179,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             export_stls(args.names, args.out)
         elif args.command == "render":
             render_pngs(args.names, args.out, args.pythonscad)
+        elif args.command == "freecad":
+            from plotter_cad.freecad_export import export_freecad
+
+            export_freecad()
         elif args.command == "layout":
             export_layout(args.out)
         else:

@@ -1,7 +1,7 @@
 # Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check typecheck format lint test stl render
+.PHONY: help develop clean check typecheck format lint test stl render freecad
 
 PYTHON_VERSION := $(shell cat .python-version)
 UV_RUN := uv run --extra dev
@@ -14,8 +14,8 @@ develop:  ## Set up the development environment (.venv on pyenv's Python, all de
 	test -d .venv || uv venv --python "$$(pyenv which python)"
 	uv sync --extra dev
 
-clean:  ## Remove all generated files (STLs, renders, caches, build output); keeps .venv
-	rm -rf stl renders build dist .pytest_cache .ruff_cache .mypy_cache
+clean:  ## Remove all generated files (STLs, renders, FreeCAD assembly, caches, build output); keeps .venv
+	rm -rf stl renders freecad/stl freecad/components.json freecad/*.FCStd freecad/*.FCBak build dist .pytest_cache .ruff_cache .mypy_cache
 	find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +
 
 check: typecheck  ## Run the static code checks (ruff lint + formatting, mypy)
@@ -39,3 +39,9 @@ stl:  ## Generate the STLs of all printable parts into stl/
 
 render:  ## Generate PNG renders of all parts and assemblies into renders/ (needs the PythonSCAD app)
 	$(UV_RUN) python -m plotter_cad render
+
+FREECAD_BIN ?= /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd
+
+freecad:  ## Build the FreeCAD Assembly (freecad/PenPlotter.FCStd; needs FreeCAD 1.x, see freecad/README.md)
+	$(UV_RUN) python -m plotter_cad freecad
+	$(FREECAD_BIN) freecad/build_assembly.py

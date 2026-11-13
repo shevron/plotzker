@@ -13,7 +13,7 @@ requirements, the high-level design and the coding standards are in
 > `align()` (D28). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
 > toolchain) deferred until the machine runs.
 >
-> **Next:** T3.8 cable management (T3.10 handle rollout can go first or alongside). Phase 2
+> **Next:** T3.8 X cable (needs your choice; the Y loom is modeled), then T3.10 (T3.10 handle rollout can go first or alongside). Phase 2
 > can run in parallel; the first test prints and the baseboard drilling (T4.1) are unblocked.
 
 **Contents:** 1 Work plan · 2 Open questions · 3 Decision log · 4 Inventory ·
@@ -180,13 +180,78 @@ any new decisions in §3, and update the status line at the top.
     mm; add a fifth post at the center if it shows) and the T-nut thickness and lip (*assumed* 4 /
     1.8); the pilot holes (Ø2.5) in your plywood; the USB cable reaches the board's rear edge
     between runners 1 and 2 (95 mm gap, entering from the side), else move the mount.
-- [ ] **T3.8 Cable management.** Drag chain or cable guide from the gantry to the board.
-- [x] **T3.9 Migrate the CAD to PythonSCAD (D22).** Sanity test: PythonSCAD renders the
-  old `.scad` files to the same STLs. Port to a Python package (`src/plotter_cad/`:
-  `params.py`, `hardware/`, `parts/`, `assemblies/`, `build.py` CLI) with pytest tests
-  and ruff. Checked: all 8 STLs geometrically identical to the OpenSCAD ones (volume,
-  bounding box, cross-sections); assemblies match by
-  volume and bounding box; same key numbers. The old `.scad` files were removed afterwards.
+- [ ] **T3.8 Cable management** (D32: loose loom on printed support rails). Moving cables: X
+  motor, X endstop (gantry, move in Y) and the pen servo (carriage, move in X and Y); the Y motors
+  and Y endstops are static.
+  - [ ] **Loom spec (user builds it to this; the CAD is designed against it, values *assumed*
+    until the real loom exists).** Conductors on the gantry loom: X motor 4 (24 AWG or thicker:
+    ~1.5 A), X endstop 3 (signal, GND, 5 V), pen servo 3 (signal, GND, 5 V) = 10; servo and endstop
+    wires may be 26–28 AWG. Outer diameter of the finished bundle in its sleeve **≤ 8 mm**, flexible
+    (silicone or fine-stranded wire; no stiff solid-core), bend radius **≤ 16 mm** (2 × diameter).
+    Round loom is enough: a flat ribbon would save width but 28 AWG ribbon is marginal for the
+    motor current and needs a connector board, so it is not worth it unless the bundle can't get
+    under 8 mm. Length: from the ZRIB to the gantry anchor about **1.1 m** (half the Y travel
+    ~270 mm for the fold, the run along the board to the ZRIB, and slack); cut at build. The X
+    part: carriage to beam end about **0.5 m** of the servo and endstop wires only (the motor wires
+    leave at the beam end), with 15 cm spare. Connectors: keep each device's plug on the device end
+    (servo, endstop, motor) and use one small inline connector or terminal block at the gantry
+    anchor, so the gantry can be taken off.
+  - [x] Y loom (`params.LOOM`, `parts/loom_anchor.py` ×1, `parts/loom_rail.py` ×6,
+    `assemblies/loom.py`): the anchor block sits on the right bracket's base outboard of the X motor
+    mount (2 × M3×16 into nuts pressed in from the outboard edge; groove along x, zip tie through two
+    slots and a channel under the block; relief for the loom's first bend). The loom leaves
+    outboard, drops 40 mm to the baseboard at x = shaft + 48, runs back along the board, folds in a
+    U (R 16, legs 32 apart) and returns along x = shaft + 80 to a Ø12 hole at (690, 150) in the
+    baseboard, then under the board to the ZRIB. The fold travels half as far as the gantry; with
+    the gantry at the back it just clears the drop (apex y 781, 5 mm short of the Y motor mount).
+    Lying loom length 666 mm. Six rail segments (80 mm, every 100 mm from y 200) keep the loom off
+    the belt: wall face 42 mm from the shaft, foot toward the belt, 2 wood screws each, not
+    pre-drilled (laid out by tape). No outer rail: the strip beside the belt is too narrow for
+    one. Design checks and tests (loom clears everything at front, middle and back).
+  - [ ] **X cable: options discussed (kept here so we can revert).** Moving cables: the servo and
+    X-endstop wires (6 thin conductors) between the carriage and the right beam end; the X motor is
+    fixed at the right end. Travel 426 mm; the carriage needs ~200 mm of slack as it moves.
+    | Option | Verdict |
+    |--------|---------|
+    | Sleeve hanging behind the beam | Rejected: droops onto the bed |
+    | U fold on the beam top | Rejected: the carriage bridge rides there; 20 mm is too narrow |
+    | Drag chain (7×7, bend R ~18, 45–60 mm fold, may overhang a beam end) | Not pursued: the fold can sit past the beam end, but the chain then needs a ~520 mm tray at z ≥ 118 (above the X motor body, z ≤ 115, and the endstop/trigger at the left end) and a carriage mount; the tray cannot hang from the beam top (carriage bridge) or rear (X belt loop 13 mm behind the face), so it would hang from both gantry brackets: heavy |
+    | Flat silicone ribbon in the 10 mm gap between the beam's rear face and the belt, shallow vertical loop at the carriage | Fallback: lightest; ribbon fatigue under repeated flex |
+    | Cut X travel to ~350 mm to free room | Fallback: README R3 only needs ≥ 320; doesn't remove the support problem for a chain |
+    | Take-up (floating) pulley, elastic cord (D33) | Analyzed, **not recommended** (see below) |
+    | Ribbon festoon in the beam's two rear T-slots | **Candidate to try**: see below |
+  - [ ] **D33 take-up pulley: analysis.** Layout that fits: both legs at z ≈ 121, y 36 / 46 behind
+    the carriage's rear block (above the X motor, z ≤ 115, and the left endstop board, z ≤ 117.4),
+    fixed clamp on an L-post from the beam's lower rear T-slot (z 68, behind the belt) at x ≈ 580,
+    leg 2 clamped to the carriage's rear block. Blockers: (1) the pulley moves half the carriage
+    travel = 213 mm, and an elastic cord stretched over 213 mm changes its force 3× or more (a
+    weight over a pulley would be constant but needs 106+ mm of free vertical room beside the
+    left bracket, where the Y belt clamps are); (2) the left anchor must be left of the pulley,
+    i.e. a new tower on the X idler mount (its top is at z 105, the endstop board at 117);
+    (3) a rod for the pulley to ride on, or the pulley swings. Cable sag is not a problem (0.5 N
+    tension gives ~2 mm over 480 mm).
+  - [ ] **Ribbon festoon in the beam's rear T-slots (chosen to try, D33; mock-up first).** The 4020's
+    rear face has two T-slots, 20 mm apart (z 68 and 88). A thin flat ribbon lies in the lower
+    slot (fixed run), makes a free U (R ~ 10) outside the face and returns in the upper slot (moving
+    run); the slots guide both runs and the U moves along the beam at half the carriage speed. No
+    tray, no tension element. The fixed end is at the right (x ≈ 595, ribbon leaves the slot mouth
+    there and joins the Y loom at the bracket); the moving end leaves the upper slot next to the
+    carriage through a small printed shoe on the rear block and clamps there. Numbers: ribbon about
+    0.55 m in the slots (lower run 478 → 265 mm, upper run 20 → 233 mm as the carriage goes left to
+    right) plus the lead to the Y loom. **The carriage pushes the upper run toward the fold when
+    it moves left**, so the ribbon must be stiff enough to push through its slot.
+  - [ ] **Mock-up (user, before any CAD).** Ribbon spec: flat, silicone-insulated, 6 conductors
+    (28–30 AWG; 3 servo, 3 endstop), **thickness ≤ 1.2 mm, width ≤ 7.5 mm** (it stands on edge in the
+    slot cavity: 12 mm wide, 6.1 deep behind a 1.85 mm lip, 6.2 mm neck), about 0.7 m. Test on a
+    spare 520 mm 2040 or 4020 offcut with the slots as the rear face: (1) lay 0.3 m in one slot and
+    form the U into the other; (2) push and pull the free end by hand over ~200 mm at the speeds
+    of a plot (≈ 100 mm/s) and watch whether the ribbon buckles out of the slot, drags, or
+    snags at the neck; (3) 1000 back-and-forth cycles; check the insulation for wear and continuity.
+    Report: pass / buckles / drags, and the ribbon's width, thickness and bend radius. If it
+    fails, the fallbacks are a short drag chain with a tray, or cutting X travel (table above).
+  - [ ] Follow-up: test-print the anchor and one rail; check the zip tie path, the nut slots (M3 from
+    the outboard edge), that the loom seats in the groove without the bend flattening it, and the
+    real loom diameter and bend radius against the *assumed* 8 / 16 mm.
 - [ ] **T3.10 Roll out handles (D28).** Add handles to the other parts and use `align` in `assemblies/` (Y drive mounts, X carriage, X mounts, the pen holder (servo, rod, screws are placed from `params.PenHolder`), endstop frames: `place_in_frame` is a hand-rolled handle; mind the chiral, mirrored endstop board). *Done when:* no assembly re-derives a hole position that a part defines; geometry unchanged.
 
 #### Phase 4 — Build
@@ -266,6 +331,7 @@ update the log once it is agreed (README §7.1).
 | D29 | **v1 pen holder (T3.6):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
 | D30 | **Baseboard and bed (T3.7), first decisions:** baseboard **700 × 900 × 18 mm** (the Y drive reaches x 4.5–645.5 and y 18–821 on the old 650 × 850); bed panel on **4 × M5 screw + nut posts** (adjust from above); the **ZRIB goes under the baseboard between the runners**, the **PSU stands off the board on its own base** (its fan inlet is on the bottom face and needs ≥ 25 mm of free air; under the board that would need an 80 mm drop; also keeps mains off the plywood); runners from the extrusions on hand, 2040 on edge with low feet. The **ZRIB is mounted bare** on two printed hangers with a minimal guard strap each (no case: exposed electronics, free airflow; the strap is optional) | 🟡 | README §3.8, T3.7 |
 | D31 | **Baseboard layout (T3.7), detail of D30:** 3 runners (2040 on edge, 520 mm, along X under the board, y 150 / 450 / 750), each fixed with 4 × M5×30 countersunk screws into drop-in T-nuts in the top slot; **bed posts = M5×45 stud from below + spring + nut on top of the panel** (turn the nut to level; the panel is 9 mm, so the nuts stand proud and the **steel sheet stops 24 mm short of the panel edge**, 352 × 432, still larger than A3); posts 15 mm from the panel corners; SK10s on M5×35 bolts with nut and washer under the board, the right rail's holes oversized (Ø7) for alignment; ZRIB mount centered between runners 1 and 2 at x 520. Y mounts stay un-drilled (D26). The layout is generated (`python -m plotter_cad layout`), not drawn by hand | 🟡 | T3.7, §6 |
+| D32 | **Cable management (T3.8):** loose loom on printed support rails, not drag chains, for Y: a round loom (Ø8) folded in a U on the baseboard in the outboard strip beside the right Y belt, guided by an inner rail. X: ribbon festoon in the beam's rear T-slots (D33, trial after a mock-up; the other X options are in T3.8). Rejected: drag chains (more printed length), flat ribbon (custom connectors). Revisit if the loom drags or fatigues | 🟡 | T3.8 |
 | D29 | **No heat-set inserts: pressed-in hex nuts (nut traps) everywhere.** The nut sits in a slot or hex shaft with a wall behind it that takes the load (`TOL.nut_wall`, 2 mm). Y/X idler tension screws: slot from the top; X endstop pad screws: slots from the rear face; belt clamp screws (brackets): hex shafts from the top, nut 4 mm above the underside (`CLAMP.nut_z`), M3×14; X carriage rear block: slot from the back; tool-plate screws: slots from the bottom edge. Dropped the `Preload.SLOT` carriage fallback (eccentric spacers are available) | ✅ | README §7 rule 2 |
 
 ---
@@ -319,6 +385,7 @@ hard to get, we adjust.
 | Pen pressure (start point) | ~20–80 g |
 | Baseboard | 18 mm plywood, 700 × 900 mm; runners (2040 on edge) at y 150 / 450 / 750, x 90–610; 28 holes in `docs/baseboard-holes.md` |
 | Bed | Panel 400 × 480 × 9 on 4 posts (x 165 / 535, y 225 / 675), steel 352 × 432 × 0.8; top ~14.8 mm; post nuts up to z 22.7 |
+| Y loom | Ø8, R 16; lying length 666 mm; hole (690, 150); rails wall at shaft + 42; fold apex y 781 at the back end |
 | Pen reach (10 mm pen) | x 150–576, y 138–683 (A3 centered: x 201–499, y 240–660) |
 | Shaft spacing | 520 mm |
 | Y belt | 30 mm outboard of each shaft; motor/idler axis ~26.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |

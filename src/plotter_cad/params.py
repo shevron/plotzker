@@ -1286,6 +1286,124 @@ class YEndstopMount:
 Y_ENDSTOP = YEndstopMount()
 
 # -----------------------------------------------------------------------------
+# Y loom (T3.8, D32): one round loom from the gantry's right bracket, folded in a U on the
+# baseboard beside the right Y belt, through a hole in the baseboard to the ZRIB
+# -----------------------------------------------------------------------------
+# Top view of the strip right of the right shaft (x from the shaft; ▒ = inner rail segments):
+#
+#    belt │▒│ moving leg      static leg │ edge          U fold travels with the gantry:
+#    +30  │▒│ +48                +80     │ +90           the fold sits half as far from the
+#         rail 40…42.5   (loom Ø8, R 16)                 anchor as the gantry does
+
+
+@dataclass(frozen=True)
+class Loom:
+    """The gantry loom (dimensions of the finished loom: ASSUMED until it is built) and the
+    parts that guide it."""
+
+    d: float = 8  #: ASSUMED: loom outer diameter (STATUS.md T3.8 spec)
+    bend_r: float = 16  #: ASSUMED: tightest bend radius (centerline)
+    tie_w: float = 3.6  #: zip tie width
+    tie_t: float = 1.5  #: zip tie thickness
+    # Anchor block on the right bracket's base, outboard of the X motor mount (bracket-local frame)
+    anchor_x: tuple[float, float] = (-38, -23)  #: flush with the base's outboard edge
+    anchor_y: tuple[float, float] = (12, 42)  #: between the beam rib and the belt clamp
+    anchor_h: float = 12
+    anchor_screw_x: float = -30.5
+    anchor_screw_y: tuple[float, float] = (15, 39)  #: M3 pair, either side of the groove
+    anchor_screw_len: float = 16
+    # Path (offsets from the right shaft axis x; machine y)
+    moving_dx: float = 48  #: lying leg that follows the gantry
+    static_dx: float = 80  #: lying leg that stays
+    rail_dx: float = 42  #: loom-side face of the inner rail
+    rail_t: float = 2.5
+    rail_h: float = 12
+    rail_len: float = 80
+    rail_pitch: float = 100
+    rail_count: int = 6
+    rail_y0: float = 200  #: first segment's start
+    foot_w: float = 14  #: rail foot, on the belt side
+    hole_d: float = 12  #: baseboard hole to the ZRIB
+    hole_y: float = 150  #: static anchor: the hole's y (the loom ends there)
+    exit_dy: float = 27  #: anchor groove axis behind the gantry center
+
+    @property
+    def anchor_cy(self) -> float:
+        """Groove axis along the block (bracket-local y)."""
+        return sum(self.anchor_y) / 2
+
+    @property
+    def groove_z(self) -> float:
+        """Loom axis in the anchor groove, bracket-local z."""
+        return BRACKET.base_t + self.anchor_h - 4.5
+
+    def drop_arc(self, steps: int = 7) -> list[tuple[float, float]]:
+        """Axis of the loom's bend from the groove down toward the baseboard, as (bracket-local
+        x, bracket-local z) points. The bend starts before the loom leaves the block, so the
+        anchor carries a relief along it."""
+        x0 = -(self.moving_dx - self.bend_r)
+        return [
+            (
+                x0 - self.bend_r * math.sin(a),
+                self.groove_z - self.bend_r + self.bend_r * math.cos(a),
+            )
+            for a in (math.radians(90 * i / (steps - 1)) for i in range(steps))
+        ]
+
+    @property
+    def lying_z(self) -> float:
+        """Axis of the loom lying on the baseboard."""
+        return self.d / 2
+
+    @property
+    def hole_x(self) -> float:
+        """Static leg x and the baseboard hole (machine frame)."""
+        return Y_AXIS.shaft_x[1] + self.static_dx
+
+    @property
+    def moving_x(self) -> float:
+        """Moving leg x (machine frame)."""
+        return Y_AXIS.shaft_x[1] + self.moving_dx
+
+    @property
+    def rail_x(self) -> float:
+        """Loom-side face of the inner rail (machine frame)."""
+        return Y_AXIS.shaft_x[1] + self.rail_dx
+
+    @property
+    def rail_starts(self) -> tuple[float, ...]:
+        """Start y of each rail segment."""
+        return tuple(self.rail_y0 + i * self.rail_pitch for i in range(self.rail_count))
+
+    @property
+    def fold_width(self) -> float:
+        """Distance between the legs' axes (= 2 R, set by the fold)."""
+        return self.static_dx - self.moving_dx
+
+    def start_y(self, gantry_y: float) -> float:
+        """Where the moving leg starts to lie on the baseboard (after the drop)."""
+        return gantry_y + self.exit_dy + self.bend_r
+
+    @property
+    def lying_len(self) -> float:
+        """Length of loom lying on the baseboard: fixed, set so that the fold just clears the
+        drop with the gantry at the back end."""
+        back = Y_AXIS.gantry_y_range[1]
+        return math.pi * self.bend_r + self.start_y(back) - self.hole_y
+
+    def fold_y(self, gantry_y: float) -> float:
+        """Where the U fold starts (the straight legs end), for the gantry at ``gantry_y``."""
+        return (self.lying_len - math.pi * self.bend_r + self.hole_y + self.start_y(gantry_y)) / 2
+
+    @property
+    def apex_y(self) -> float:
+        """Rearmost point of the fold (gantry at the back end)."""
+        return self.fold_y(Y_AXIS.gantry_y_range[1]) + self.bend_r
+
+
+LOOM = Loom()
+
+# -----------------------------------------------------------------------------
 # Baseboard layout (T3.7, D31): runners underneath, SK10 holes, bed posts, ZRIB position
 # -----------------------------------------------------------------------------
 # Machine frame, seen from above (x across, y front to back); ▒ = runner on the underside:
@@ -1619,6 +1737,29 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield (
         pen_y_lo <= (by - a3_y) / 2 and pen_y_hi >= (by + a3_y) / 2,
         f"The pen cannot reach all of A3 along Y ({pen_y_lo:g}…{pen_y_hi:g})",
+    )
+    # --- Y loom (T3.8)
+    lm = LOOM
+    yield lm.fold_width >= 2 * lm.bend_r, "The loom fold is tighter than the loom's bend radius"
+    yield (
+        lm.moving_x - lm.d / 2 >= lm.rail_x + 1
+        and bx - (lm.hole_x + max(lm.d, lm.hole_d) / 2) >= 3,
+        "The loom legs don't fit between the rail and the baseboard edge",
+    )
+    yield (
+        lm.rail_starts[-1] + lm.rail_len <= Y_DRIVE.motor_plate_y[0] - 3
+        and lm.apex_y + lm.d / 2 + 1 <= Y_DRIVE.motor_plate_y[0],
+        "The loom fold or its rails reach the right Y motor mount",
+    )
+    yield (
+        Y_AXIS.pulley_axis_z - PULLEY.pd / 2 - GT2.pitch_line_from_back >= WOOD_SCREW.boss_t + 1,
+        "The Y belt's lower run hits a loom rail foot's screw boss",
+    )
+    yield (
+        BRACKET.face_y[1] < lm.anchor_y[0]
+        and lm.anchor_y[1] <= BRACKET.len_y / 2 - CLAMP.length
+        and lm.anchor_x[0] >= BRACKET.x_out,
+        "The loom anchor block is not within the free area of the bracket's base",
     )
     # --- pen holder (T3.6)
     pn = PEN

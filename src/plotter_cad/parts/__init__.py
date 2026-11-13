@@ -10,6 +10,8 @@ from functools import partial
 from plotter_cad.parts import (
     belt_clamp,
     gantry_end_bracket,
+    loom_anchor,
+    loom_rail,
     pen_holder_body,
     pen_slide,
     x_carriage,
@@ -31,6 +33,8 @@ PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
         gantry_end_bracket.gantry_end_bracket, gantry_end_bracket.Side.RIGHT
     ),
     "belt_clamp": belt_clamp.belt_clamp,
+    "loom_anchor": loom_anchor.loom_anchor,
+    "loom_rail": loom_rail.loom_rail,
     "pen_holder_body": pen_holder_body.pen_holder_body,
     "pen_slide": pen_slide.pen_slide,
     "x_carriage": x_carriage.x_carriage,

@@ -3,7 +3,7 @@
 import pytest
 from pythonscad import union
 
-from plotter_cad.assemblies import ASSEMBLIES, baseboard
+from plotter_cad.assemblies import ASSEMBLIES, baseboard, loom
 from plotter_cad.assemblies.carriage import carriage_assembly, carriage_fit_check
 from plotter_cad.assemblies.gantry import (
     gantry_assembly,
@@ -199,3 +199,22 @@ def test_zrib_mount_fits_between_the_runners():
     """No part of the ZRIB mount or board touches a runner."""
     runner_solids = union(*flatten(baseboard.runners()))
     assert volume(runner_solids & union(*flatten(baseboard.zrib()))) < 1e-6
+
+
+@pytest.mark.parametrize(
+    "gantry", [0, 0.5, 1], ids=["gantry front", "gantry middle", "gantry back"]
+)
+def test_y_loom_clears_the_machine(gantry):
+    """The loom, along its whole path, touches nothing but the baseboard it lies on: it sits
+    in the anchor's groove, outside the belt and rails, and clear of the Y motor mount."""
+    others = [*baseboard.fixed_assembly(), *loom.rails(), *moving_parts(gantry, 0.5)]
+    for capsule in loom.y_loom(gantry_y_at(gantry)):
+        for item in flatten(others):
+            assert volume(capsule & item) < 0.5
+
+
+def test_loom_anchor_is_held_by_its_screws():
+    """The anchor block sits on the right bracket and its screws reach the nut slots."""
+    right = list(flatten(gantry_end_local(Side.RIGHT)))
+    anchor = next(i for i in right if volume(i) > 0 and bounding_box(i)[0][2] > 9.9)
+    assert touching(anchor, right[0])

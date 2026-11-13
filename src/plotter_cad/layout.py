@@ -16,6 +16,7 @@ from plotter_cad.hardware import SK10
 from plotter_cad.params import (
     BASEBOARD,
     FRAME,
+    LOOM,
     REQ,
     TOL,
     WOOD_SCREW,
@@ -76,6 +77,9 @@ def board_holes() -> list[Hole]:
             )
     for x, y in bb.post_xy:
         holes.append(Hole("Bed posts", x, y, m5, note="M5 stud, head under the board"))
+    holes.append(
+        Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_d, note="Y loom to the ZRIB; deburr")
+    )
     for x, y in bb.zrib_pilot_xy:
         holes.append(
             Hole(
@@ -190,6 +194,20 @@ def drilling_svg() -> str:
         rect(x0, y0, x1, y1, 'fill="#fde9d0" fill-opacity="0.6" stroke="#c60" stroke-width="0.4"')
         text((x0 + x1) / 2, y1 + 4, f"{name}: not pre-drilled", anchor="middle", size=5)
 
+    for y0 in LOOM.rail_starts:
+        rect(
+            LOOM.rail_x - LOOM.rail_t - LOOM.foot_w,
+            y0,
+            LOOM.rail_x,
+            y0 + LOOM.rail_len,
+            'fill="#dde8f5" stroke="#06c" stroke-width="0.4"',
+        )
+    text(
+        LOOM.rail_x - 40,
+        LOOM.rail_y0 - 8,
+        "loom rails: not pre-drilled, wall 42 from the shaft",
+        size=5,
+    )
     holes = board_holes()
     for i, h in enumerate(holes, 1):
         color = "#c00" if h.side == SIDE_TOP else "#06c"

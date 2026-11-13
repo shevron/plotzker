@@ -25,6 +25,8 @@ Hardware per bracket:
                        clamps
   2 × belt_clamp (printed)
   1 × M3×16 ISO 4762 + 2 × M3 nuts — Y endstop trigger (adjust, then lock)
+  Right bracket only: 2 × M3 nuts (pressed into slots from the outboard edge) for the loom
+                       anchor (``loom_anchor.py``); the left bracket has no such holes
 
 Print: PETG (preferred, less creep) or PLA; 0.2 mm layers; 4 perimeters; 40 % infill;
 base face down; no supports (horizontal holes are teardrops; the underside is flat).
@@ -45,7 +47,7 @@ from plotter_cad.geometry import (
     teardrop_y,
 )
 from plotter_cad.hardware import SCS10UU, VSLOT, metric
-from plotter_cad.params import BEAM, BRACKET, CLAMP, TOL, Y_AXIS
+from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, Y_AXIS
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -91,6 +93,8 @@ BEAM_BOLTS = [handle([FACE_OUT_X, 0, z], [0, -90, 0]) for z in BEAM_BOLT_Z]
 BELT_CLAMPS = [
     handle([Y_AXIS.belt_x, y0, 0]) for y0 in (-BRACKET.len_y / 2, BRACKET.len_y / 2 - CLAMP.length)
 ]
+#: Loom anchor screws (right bracket): on the base top, axis along z (head up)
+LOOM_ANCHOR = [handle([LOOM.anchor_screw_x, y, BRACKET.base_t]) for y in LOOM.anchor_screw_y]
 #: Y endstop trigger screw: head behind the boss, axis along +y (tip forward, -y)
 TRIGGER_SCREW = handle(
     [BRACKET.trig_x, -BRACKET.len_y / 2 + BRACKET.trig_boss[1], BRACKET.trig_z], [-90, 0, 0]
@@ -115,6 +119,24 @@ def _body() -> Solid:
     bx, by, bz = b.trig_boss
     boss = cube([bx, by, bz + EPS]).translate([b.trig_x - bx / 2, -b.len_y / 2, b.base_t - EPS])
     return base | face | ribs | boss
+
+
+def _loom_cutouts() -> list[Solid]:
+    """M3 holes from the top and nut slots from the outboard edge for the loom anchor."""
+    nut_t, af = TOL.nut_trap_h(3), TOL.nut_trap_af(3)
+    top = BRACKET.base_t - TOL.nut_wall  #: plastic above the nut takes the pull
+    cuts = []
+    for h in LOOM_ANCHOR:
+        x, y = h[0][3], h[1][3]
+        cuts.append(
+            cylinder(d=TOL.bolt_hole_d(3), h=BRACKET.base_t, fn=FN_HOLE).translate([x, y, 0])
+        )
+        cuts.append(
+            cube([x - BRACKET.x_out + af, af, nut_t]).translate(
+                [BRACKET.x_out - 1, y - af / 2, top - nut_t]
+            )
+        )
+    return cuts
 
 
 def _cutouts() -> list[Solid]:
@@ -175,19 +197,30 @@ def _cutouts() -> list[Solid]:
     return cuts
 
 
-def gantry_end_bracket(side: Side = Side.LEFT) -> Solid:
-    """The bracket for one gantry end, in print orientation (the right one is mirrored).
+def gantry_end_bracket_local(side: Side = Side.LEFT) -> Solid:
+    """The bracket in the left bracket-local frame, with the features of ``side`` (the right
+    one carries the loom anchor holes); the assembly mirrors the whole right end.
 
     Handles for the hardware and parts that meet it: ``block_bolts_front`` and
-    ``block_bolts_rear`` (4 each), ``beam_bolts`` (2), ``belt_clamps`` (front, rear, lists)
-    and ``trigger_screw``; read them with ``geometry.get_handle(s)``.
+    ``block_bolts_rear`` (4 each), ``beam_bolts`` (2), ``belt_clamps`` (front, rear, lists),
+    ``trigger_screw`` and, on the right bracket, ``loom_anchor`` (2); read them with
+    ``geometry.get_handle(s)``.
     """
-    bracket = set_handles(
-        _body() - _cutouts(),
-        block_bolts_front=BLOCK_BOLTS_FRONT,
-        block_bolts_rear=BLOCK_BOLTS_REAR,
-        beam_bolts=BEAM_BOLTS,
-        belt_clamps=BELT_CLAMPS,
-        trigger_screw=TRIGGER_SCREW,
-    )
+    handles: dict[str, Matrix | list[Matrix]] = {
+        "block_bolts_front": BLOCK_BOLTS_FRONT,
+        "block_bolts_rear": BLOCK_BOLTS_REAR,
+        "beam_bolts": BEAM_BOLTS,
+        "belt_clamps": BELT_CLAMPS,
+        "trigger_screw": TRIGGER_SCREW,
+    }
+    cuts = _cutouts()
+    if side is Side.RIGHT:
+        handles["loom_anchor"] = LOOM_ANCHOR
+        cuts += _loom_cutouts()
+    return set_handles(_body() - cuts, **handles)
+
+
+def gantry_end_bracket(side: Side = Side.LEFT) -> Solid:
+    """The bracket for one gantry end, in print orientation (the right one is mirrored)."""
+    bracket = gantry_end_bracket_local(side)
     return bracket.mirror([1, 0, 0]) if side is Side.RIGHT else bracket

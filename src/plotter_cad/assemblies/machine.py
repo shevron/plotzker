@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import translate
 
-from plotter_cad.assemblies import baseboard
+from plotter_cad.assemblies import baseboard, loom
 from plotter_cad.assemblies.pen_holder import pen_holder_assembly
 from plotter_cad.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_parts
 
@@ -33,7 +33,9 @@ def machine_assembly(
     """Everything, with the gantry and carriage at the given travel fractions (0..1)."""
     return [
         *baseboard.fixed_assembly(),
+        *loom.rails(),
         *moving_parts(gantry_pos, carriage_pos),
+        *loom.y_loom(gantry_y_at(gantry_pos)),
         *pen_holder_at(gantry_pos, carriage_pos, pen_up),
     ]
 

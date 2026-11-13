@@ -30,13 +30,15 @@ from plotter_cad.params import (
     BRACKET,
     CLAMP,
     FRAME,
+    LOOM,
     X_BELT,
     X_DRIVE,
     X_ENDSTOP,
     Y_AXIS,
 )
 from plotter_cad.parts.belt_clamp import belt_clamp
-from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket
+from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket_local
+from plotter_cad.parts.loom_anchor import loom_anchor_installed
 from plotter_cad.parts.x_endstop_mount import x_endstop_mount_installed
 from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
 from plotter_cad.parts.x_idler_spacer import x_idler_spacer
@@ -92,7 +94,7 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
 
     ``side`` selects the X drive hardware: LEFT = idler + endstop, RIGHT = motor.
     """
-    bracket = gantry_end_bracket(Side.LEFT)
+    bracket = gantry_end_bracket_local(side)
     items = [bracket.color("DarkOrange")]
     items += [
         scs10uu().translate([0, block * Y_AXIS.scs_pitch / 2, -SCS10UU.height]) for block in (-1, 1)
@@ -115,6 +117,12 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
             .color("#111")
         )
     items.append(shcs(3, BRACKET.trig_screw_len).align(get_handle(bracket, "trigger_screw")))
+    if side is Side.RIGHT:
+        items.append(loom_anchor_installed().color("DarkOrange"))
+        items += [
+            shcs(3, LOOM.anchor_screw_len).align(shift_handle(h, [0, 0, LOOM.anchor_h]))
+            for h in get_handles(bracket, "loom_anchor")
+        ]
     return items
 
 

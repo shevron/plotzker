@@ -49,7 +49,8 @@ class Tolerances:
     bolt: float = 0.4  #: clearance-hole oversize: M3 → 3.4, M5 → 5.4
     slide: float = 0.2  #: sliding fit (diametral)
     press: float = 0.0  #: press fit (0 to -0.1)
-    nut: float = 0.3  #: nut trap: across-flats oversize
+    nut: float = 0.1  #: nut trap: across-flats oversize (snug: nuts are pressed in)
+    nut_t: float = 0.3  #: nut trap: thickness oversize (slot the nut slides into)
     gap: float = 0.3  #: general clearance between mating printed parts
     min_wall: float = 1.6  #: 4 perimeters at 0.4 mm nozzle
     layer_h: float = 0.2
@@ -70,7 +71,7 @@ class Tolerances:
 
     def nut_trap_h(self, m: float) -> float:
         """Height (thickness) of a nut trap slot."""
-        return metric(m).nut_h + self.nut
+        return metric(m).nut_h + self.nut_t
 
     def cbore_d(self, m: float) -> float:
         """Counterbore for a socket head cap screw head."""

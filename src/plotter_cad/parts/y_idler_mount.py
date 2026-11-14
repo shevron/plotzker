@@ -18,14 +18,14 @@ carries the endstop board in the plane of the gantry bracket's trigger screw (se
 
 Frame: left side frame (``params.YDrive``: x from the shaft, machine y, z = baseboard
 top); the part is printed foot down in the same orientation. The right-hand part is the
-mirror image, except for the endstop tower's height and pilots: the board is chiral, so
+mirror image, except for the endstop tower's height and holes: the board is chiral, so
 the lever hinge sits at the other end (:func:`y_idler_mount`).
 
 Hardware: toothed 20T GT2 idler (Ø5 bore); 1 × M5×30 ISO 4762 + M5 nut (nyloc) + 2 × M5
 washers (one each side of the idler) as the axle, head inboard of the idler; 1 × M3 nut
 (pressed into the top slot) + 1 × M3×20 ISO 4762 (tension screw); 2 × 4×25 countersunk wood
 screws into the baseboard (through 9 mm bosses on the foot);
-the endstop board with 2 × M3×6 (or its own screws) self-tapping into the Ø2.6 pilots.
+the endstop board with 2 × M3×12 into 2 × M3 nuts pressed into the tower's outboard face.
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 """
 
@@ -53,8 +53,6 @@ if TYPE_CHECKING:
 
 AXIS_Z = Y_AXIS.pulley_axis_z  #: idler axle height
 SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the plate ends (y)
-PILOT_D = 2.6  #: M3 self-tapping into the endstop board's holes
-PILOT_DEPTH = 5  #: M3×6 through the 1.5 mm board
 
 _PLATE_CX = sum(Y_DRIVE.idler_plate_x) / 2
 #: Idler axle: on the plate's inboard face, along +x, in the middle of the slot
@@ -103,14 +101,21 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         [e.tower_x[0], e.tower_y[0], 0]
     )
     zc = e.board_z_center(u_z)
-    pilots = [
-        cylinder(d=PILOT_D, h=PILOT_DEPTH + 1, fn=FN_HOLE)
-        .rotate([0, -90, 0])
-        .translate(
-            [e.board_x0 + 1, e.board_front_y + ENDSTOP.hole_v, zc + sz * ENDSTOP.hole_pitch / 2]
+    board_holes = []
+    for sz in (-1, 1):
+        y, z = e.board_front_y + ENDSTOP.hole_v, zc + sz * ENDSTOP.hole_pitch / 2
+        # M3 clearance through the tower, and a hex pocket for the nut in its outboard face
+        # (corners up: no support needed)
+        board_holes.append(
+            cylinder(d=TOL.bolt_hole_d(3), h=e.tower_x[1] - e.tower_x[0] + 2, fn=FN_HOLE)
+            .rotate([0, 90, 0])
+            .translate([e.tower_x[0] - 1, y, z])
         )
-        for sz in (-1, 1)
-    ]
+        board_holes.append(
+            cylinder(d=TOL.nut_trap_ac(3), h=TOL.nut_trap_h(3) + 1, fn=6)
+            .rotate([0, 90, 0])
+            .translate([e.tower_x[0] - 1, y, z])
+        )
     mount = (
         (foot | plate | tower | pocket_frame)
         - pocket_cut
@@ -118,7 +123,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         - nut_slot
         - screw
         - holes
-        - pilots
+        - board_holes
     )
     board = frame_handle(
         [e.board_x0, e.board_front_y, zc], [0, 0, u_z], [0, 1, 0], [1, 0, 0]

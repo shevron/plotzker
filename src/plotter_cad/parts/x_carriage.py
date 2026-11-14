@@ -43,7 +43,7 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
 from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_x
-from plotter_cad.hardware import ECCENTRIC, VWHEEL, metric
+from plotter_cad.hardware import ECCENTRIC, VWHEEL
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
 
 if TYPE_CHECKING:
@@ -215,7 +215,7 @@ def _endstop_trigger_cutouts() -> list[Solid]:
         .rotate([-90, 0, 0])
         .translate([-c.rear_w / 2 + 8, c.trig_y, c.trig_z])
     )
-    nut_t = metric(3).nut_h + TOL.nut
+    nut_t = TOL.nut_trap_h(3)
     nut = cube([nut_t, TOL.nut_trap_af(3), c.rear_h]).translate(
         [
             -c.rear_w / 2 + 3.5 - nut_t / 2,

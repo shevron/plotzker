@@ -16,7 +16,8 @@ Frame: LEFT bracket-local (``params.XDrive``), z = 0 on the SCS top face
 The board position follows ``hardware.ENDSTOP`` (measured) and ``params.XEndstopMount``.
 
 Hardware: 2 × M3×10 ISO 4762 into nuts pressed into the idler mount (heads in the pad's
-counterbores); 2 × M3×6 (or the board's own screws), self-tapping into the Ø2.6 pilots.
+counterbores); 2 × M3×6 through the board into 2 × M3 nuts pressed into hex pockets in
+the pad's underside.
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; pad bottom down; no supports.
 """
 
@@ -33,8 +34,6 @@ if TYPE_CHECKING:
 
 PAD_Z = (X_ENDSTOP.pad_z[0] - Y_AXIS.scs_top_z, X_ENDSTOP.pad_z[1] - Y_AXIS.scs_top_z)
 PLATE_YC = X_DRIVE.plate_y0 + X_DRIVE.idler_plate_t / 2
-PILOT_D = 2.6  #: M3 self-tapping into the board's holes
-PILOT_DEPTH = 4  #: M3×6 through the 1.5 mm board
 BOARD_YC = sum(X_ENDSTOP.board_y) / 2
 _EDGE = TOL.cbore_d(3) / 2 + TOL.min_wall  #: slot end to pad edge
 #: The endstop board's frame (origin, then its u, v, w axes), left bracket-local
@@ -76,13 +75,21 @@ def x_endstop_mount_installed() -> Solid:
                     )
                 )
             )
-    pilots = [
-        cylinder(d=PILOT_D, h=PILOT_DEPTH + 1, fn=FN_HOLE).translate(
-            [e.hole_x, BOARD_YC + sv * ENDSTOP.hole_pitch / 2, PAD_Z[1] - PILOT_DEPTH]
+    # board screws: clearance holes through the pad, a nut pressed into a hex pocket in the
+    # pad's underside (the roof above it takes the pull)
+    nut_t = TOL.nut_trap_h(3)
+    board_holes = []
+    for sv in (-1, 1):
+        y = BOARD_YC + sv * ENDSTOP.hole_pitch / 2
+        board_holes.append(
+            cylinder(d=TOL.bolt_hole_d(3), h=e.pad_t + 2, fn=FN_HOLE).translate(
+                [e.hole_x, y, PAD_Z[0] - 1]
+            )
         )
-        for sv in (-1, 1)
-    ]
-    return set_handles(pad - slots - pilots, board=BOARD)
+        board_holes.append(
+            cylinder(d=TOL.nut_trap_ac(3), h=nut_t + 1, fn=6).translate([e.hole_x, y, PAD_Z[0] - 1])
+        )
+    return set_handles(pad - slots - board_holes, board=BOARD)
 
 
 def x_endstop_mount() -> Solid:

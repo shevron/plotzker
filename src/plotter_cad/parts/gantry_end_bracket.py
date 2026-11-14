@@ -46,7 +46,7 @@ from plotter_cad.geometry import (
     teardrop_x,
     teardrop_y,
 )
-from plotter_cad.hardware import SCS10UU, VSLOT, metric
+from plotter_cad.hardware import SCS10UU, VSLOT
 from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, Y_AXIS
 
 if TYPE_CHECKING:
@@ -184,7 +184,7 @@ def _cutouts() -> list[Solid]:
             [b.trig_x, boss_mid_y, b.trig_z]
         )
     )
-    nut_t = metric(3).nut_h + TOL.nut
+    nut_t = TOL.nut_trap_h(3)
     cuts.append(
         cube([TOL.nut_trap_af(3), nut_t, FACE_TOP]).translate(
             [

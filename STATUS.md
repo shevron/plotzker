@@ -296,12 +296,18 @@ the printed carriage, motor mount and idler mount are the test pieces.
   narrower across and ~0.1 thicker: `TOL.nut_slot` = 0.3 (AF oversize), `TOL.nut_t` = 0.1.
   Expected printed pocket: 5.6 AF (0.1 per side) × 2.45 thick. The two-nut clamp slots keep a
   rectangular slot until T3.13. Reprint to check (a small test piece with slots would do).
-- [ ] **T3.13 Belt clamp nuts: two nuts in one pocket.** Inserting two nuts one after the
+- [x] **T3.13 Belt clamp nuts: two nuts in one pocket.** Inserting two nuts one after the
   other into one pocket is very hard (the second is hard to seat). Find another solution: a
   pocket exactly two nuts long so both can be pushed flat against each other, or a different
   clamp fastening (one nut per screw, a longer screw into one nut, separate pockets, or a
   clamp plate with its own threads). Propose options with a trade-off table (§7.1) before
   changing anything.
+  Done (user's choice: separate side slots): each of the 4 carriage clamp nuts has its own
+  hex-profile pocket (`nut_slot`): the rear nut from the back face (~5 mm push), the front nut
+  from the nearer end of the block (~10 mm push), flat-first, with the 4 mm roof above kept so
+  the belt bearing face is intact; no clash with the trigger screw (z 52.7 vs the nuts at 57.6).
+  The Y clamps in the gantry brackets use axial hex shafts from the top and are unchanged. Reprint
+  the carriage.
 - [ ] **T3.14 X endstop: bolt and switch not aligned in Z.** The trigger bolt head hits ~2 mm
   too low and barely brushes the lever's underside. Main suspect: solder joints protrude up to
   ~1.8 mm from the underside of the endstop board, so it can't sit flat on the idler mount's

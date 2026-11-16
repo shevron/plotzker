@@ -28,7 +28,8 @@ Hardware:
   4 × M5×42 ISO 4762 + 4 × M5 washers (front, in 2 mm counterbores) + 4 × M5 nuts (nyloc preferred)
   2 × M3 nuts (pressed in from the bottom edge) — tool-plate clamp screws (tool head
       supplies the M3 screws)
-  4 × M3 nuts (pressed in from the back) + 4 × M3×14 ISO 4762 + 2 × belt_clamp (printed) — X belt
+  4 × M3 nuts (rear pair pressed in from the back face, front pair from the block's ends)
+      + 4 × M3×14 ISO 4762 + 2 × belt_clamp (printed) — X belt
   1 × M3×16 ISO 4762 + 2 × M3 nuts — X endstop trigger: screwed into the rear block's
       left end through a captive nut; its head touches the switch; lock nut outside
   zip ties for the tool-head cable
@@ -42,7 +43,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
-from plotter_cad.geometry import EPS, FN_HOLE, Matrix, cos_deg, handle, set_handles, teardrop_x
+from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_x
 from plotter_cad.hardware import ECCENTRIC, metric
 from plotter_cad.nut_slot import nut_slot
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
@@ -198,24 +199,24 @@ def _top_tab_cutouts() -> list[Solid]:
 
 def _belt_clamp_cutouts() -> list[Solid]:
     """Belt clamp screw holes and nut slots (the rear block's top is flat)."""
-    nut_t = TOL.nut_trap_h(3)
-    af = TOL.nut_trap_af(3)
-    ac = (metric(3).nut_af + TOL.nut_slot) / cos_deg(30)  # T3.13 replaces this two-nut slot
+    nut_z = X_BELT.back_z - CLAMP.nut_z - TOL.nut_trap_h(3) / 2  #: nut center (roof above it)
     cuts = []
     for sx in (-1, 1):
         x = sx * CLAMP_X
-        holes = [
-            cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate(
-                [x, X_BELT.y + sy * CLAMP.screw_dx, X_BELT.back_z + EPS - CLAMP.nut_z - 1]
+        for sy in (-1, 1):
+            y = X_BELT.y + sy * CLAMP.screw_dx
+            cuts.append(
+                cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate(
+                    [x, y, X_BELT.back_z + EPS - CLAMP.nut_z - 1]
+                )
             )
-            for sy in (-1, 1)
-        ]
-        # one slot from the back face takes both nuts (the roof above takes the pull)
-        y0 = X_BELT.y - CLAMP.screw_dx - af / 2
-        slot = cube([ac, REAR_Y1 + 1 - y0, nut_t]).translate(
-            [x - ac / 2, y0, X_BELT.back_z - CLAMP.nut_z - nut_t]
-        )
-        cuts += [*holes, slot]
+            # each nut has its own pocket: the rear one is pressed in from the back face, the
+            # front one from the block's end (the nearer one), flat-first (T3.13)
+            if sy > 0:
+                slot = nut_slot(3, REAR_Y1 + 1 - y, "z", "+y")
+            else:
+                slot = nut_slot(3, CARRIAGE.rear_w / 2 + 1 - CLAMP_X, "z", "+x" if sx > 0 else "-x")
+            cuts.append(slot.translate([x, y, nut_z]))
     return cuts
 
 

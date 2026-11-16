@@ -818,6 +818,9 @@ class Carriage:
     tab_w: float = 24  #: top tab (connector + strain relief) width
     tab_h: float = 15  #: top tab height above the plate
     zip_slot: tuple[float, float] = (4, 2)  #: zip-tie slot (x × z)
+    #: X endstop trigger screw (M3): short, so the captive nut cannot pull it off its axis
+    #: (T3.14); it still reaches ~3 mm through the nut at the end of its adjustment
+    trig_screw_len: float = 12
     trig_dy: float = -0.5  #: X endstop trigger screw: y behind the X belt center (plug space)
 
     @property

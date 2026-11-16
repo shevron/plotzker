@@ -30,7 +30,7 @@ Hardware:
       supplies the M3 screws)
   4 × M3 nuts (rear pair pressed in from the back face, front pair from the block's ends)
       + 4 × M3×14 ISO 4762 + 2 × belt_clamp (printed) — X belt
-  1 × M3×16 ISO 4762 + 2 × M3 nuts — X endstop trigger: screwed into the rear block's
+  1 × M3×12 ISO 4762 + 2 × M3 nuts — X endstop trigger: screwed into the rear block's
       left end through a captive nut; its head touches the switch; lock nut outside
   zip ties for the tool-head cable
 
@@ -224,7 +224,7 @@ def _endstop_trigger_cutouts() -> list[Solid]:
     """M3 along -x from the rear block's left end, through a captive nut."""
     c = CARRIAGE
     screw = (
-        teardrop_x(TOL.bolt_hole_d(3), 18)
+        teardrop_x(TOL.slide_d(3), 18)  # snug: the screw must not wobble (T3.14)
         .rotate([-90, 0, 0])
         .translate([-c.rear_w / 2 + 8, c.trig_y, c.trig_z])
     )

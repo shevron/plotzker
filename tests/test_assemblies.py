@@ -266,3 +266,14 @@ def test_x_endstop_board_seats_flat_over_its_solder():
         [X_ENDSTOP.hole_x, yc + ENDSTOP.hole_pitch / 2, board_bottom - 0.2]
     )
     assert volume(pad & mount) > 1
+
+
+def test_x_trigger_screw_reaches_through_its_captive_nut():
+    """T3.14: the short trigger screw still engages its captive nut with ~3 mm to spare."""
+    from plotter_cad.hardware import metric
+    from plotter_cad.params import CARRIAGE
+
+    head_underside = -CARRIAGE.rear_w / 2 - metric(3).nut_h  # end of adjustment, outermost lock nut
+    tip = head_underside + CARRIAGE.trig_screw_len
+    nut_far_face = -CARRIAGE.rear_w / 2 + 3.5 + metric(3).nut_h / 2
+    assert tip - nut_far_face >= 3

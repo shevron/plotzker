@@ -325,6 +325,10 @@ the printed carriage, motor mount and idler mount are the test pieces.
   reprint, if it still misses, measure the printed trigger screw axis height above the foot top
   (design 4.15 mm above the board seat) and the foot thickness (5 mm). The Y endstops are
   not yet checked for the same solder issue.
+  Second contributing factor (user): the trigger screw's hole was a loose fit and the screw (M3×16)
+  long, so tightening it into the captive nut pulled the shank down and the head rose. Done:
+  screw shortened to **M3×12** (`CARRIAGE.trig_screw_len`, still ~5 mm through the nut at the
+  end of adjustment) and the hole is now a snug Ø3.2 (`TOL.slide_d(3)`, was 3.4). Reprint the carriage.
 
 #### Phase 4 — Build
 

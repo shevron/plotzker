@@ -65,7 +65,9 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
     trigger = get_handle(carriage, "trigger_screw")
     lock_nut_x = trigger[0][3] - metric(3).nut_h
     items.append(hex_nut(3).align(handle([lock_nut_x, trigger[1][3], trigger[2][3]], [0, 90, 0])))
-    items.append(shcs(3, 16).align(shift_handle(trigger, [-metric(3).nut_h, 0, 0])))
+    items.append(
+        shcs(3, CARRIAGE.trig_screw_len).align(shift_handle(trigger, [-metric(3).nut_h, 0, 0]))
+    )
     return items
 
 

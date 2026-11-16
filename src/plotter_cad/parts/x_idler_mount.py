@@ -28,7 +28,7 @@ Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, hull
+from pythonscad import cube, cylinder, hull, union
 
 from plotter_cad.geometry import (
     EPS,
@@ -126,7 +126,23 @@ def x_idler_mount_installed() -> Solid:
         board_holes.append(
             cylinder(d=TOL.nut_trap_ac(3), h=nut_t + 1, fn=6).translate([e.hole_x, y, FOOT_Z0 - 1])
         )
-    mount = (foot | plate) - bolts - slot - tension_nut - screw - board_holes
+    # solder relief: the board's underside has joints and pins sticking out up to 1.8 mm, so
+    # the foot under it is recessed except for a land round each screw hole (T3.14)
+    relief = cube(
+        [e.board_x[1] - e.board_x[0] + 0.6, e.board_y[1] - e.board_y[0] + 0.6, e.relief_depth + 1]
+    ).translate([e.board_x[0] - 0.3, e.board_y[0] - 0.3, FOOT_Z0 + d.foot_t - e.relief_depth])
+    lands = [
+        cylinder(d=e.land_d, h=e.relief_depth + 3, fn=FN_HOLE).translate(
+            [
+                e.hole_x,
+                BOARD_YC + sv * ENDSTOP.hole_pitch / 2,
+                FOOT_Z0 + d.foot_t - e.relief_depth - 1,
+            ]
+        )
+        for sv in (-1, 1)
+    ]
+    relief = relief - union(*lands)
+    mount = (foot | plate) - bolts - slot - tension_nut - screw - board_holes - relief
     return set_handles(mount, axle=AXLE, board=BOARD)
 
 

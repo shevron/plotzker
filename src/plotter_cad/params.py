@@ -1008,6 +1008,11 @@ X_BELT = XBelt()
 class XEndstopMount:
     """X endstop: the board lies directly on the idler mount's foot (Creality type)."""
 
+    #: DESIGN (T3.14): recess in the foot under the board, for the solder joints and pins that
+    #: protrude up to 1.8 mm (measured) from its underside, so the board seats flat on the lands
+    relief_depth: float = 2.2
+    land_d: float = 6  #: flat land around each board screw hole
+
     @property
     def head_x_min(self) -> float:
         """Trigger screw head face at the carriage's end of travel (bracket-local x)."""

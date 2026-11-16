@@ -236,3 +236,33 @@ def test_x_motor_screws_clear_the_mount_bolts():
     assert volume(union(*m3) & union(*m5)) < 1e-3
     # and the heads sit inside the counterbores
     assert volume(union(*m5) & mount) < 1e-3
+
+
+def test_x_endstop_board_seats_flat_over_its_solder():
+    """T3.14: solder joints stick out up to 1.8 mm under the board; only the lands touch it."""
+    from pythonscad import cube, cylinder
+
+    from plotter_cad.geometry import get_handle
+    from plotter_cad.hardware import ENDSTOP
+    from plotter_cad.params import X_ENDSTOP
+    from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
+
+    mount = x_idler_mount_installed()
+    board_bottom = X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z
+    yc = sum(X_ENDSTOP.board_y) / 2
+    solder = cube([ENDSTOP.pcb[0] - 2, ENDSTOP.pcb[1] - 2, 1.8]).translate(
+        [X_ENDSTOP.board_x[0] + 1, X_ENDSTOP.board_y[0] + 1, board_bottom - 1.8]
+    )
+    lands = [
+        cylinder(d=X_ENDSTOP.land_d + 0.2, h=5, fn=24).translate(
+            [X_ENDSTOP.hole_x, yc + s * ENDSTOP.hole_pitch / 2, board_bottom - 3]
+        )
+        for s in (-1, 1)
+    ]
+    assert get_handle(mount, "board")
+    assert volume((solder - union(*lands)) & mount) < 1e-3
+    # and the board's underside still rests on the lands
+    pad = cylinder(d=X_ENDSTOP.land_d - 1, h=0.4, fn=24).translate(
+        [X_ENDSTOP.hole_x, yc + ENDSTOP.hole_pitch / 2, board_bottom - 0.2]
+    )
+    assert volume(pad & mount) > 1

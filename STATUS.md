@@ -315,6 +315,17 @@ the printed carriage, motor mount and idler mount are the test pieces.
   and re-measure the board and lever (`hardware/`, `docs/hardware.md`); ask the user for
   measurements and photos. Check whether the Y endstops have the same problem.
 
+  Measured (user): flat PCB underside 1.8 mm above the table (solder up to 1.8 mm, uneven, tallest
+  at the NC leg, front-left); lever 4.2–8.0 above the lowest solder tip = 2.4–6.2 above the flat
+  underside, which matches the model (`lever_z` 4.15). So the board was sitting ~1.8 mm too high
+  on its solder. Done: the idler foot is recessed 2.2 mm under the board (`XEndstopMount.relief_depth`)
+  except for Ø6 lands round the two screw holes, with a test using a 1.8 mm solder slab. That
+  explains ~1.8 mm of the ~2 mm miss, but not why the head only "brushes" the lever (the model
+  says a Ø5.3 head centered on the axis still overlaps the raised lever by ~2.6 mm): after the
+  reprint, if it still misses, measure the printed trigger screw axis height above the foot top
+  (design 4.15 mm above the board seat) and the foot thickness (5 mm). The Y endstops are
+  not yet checked for the same solder issue.
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.

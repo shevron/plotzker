@@ -8,6 +8,8 @@ This file holds what rarely changes: goals, requirements, the high-level design 
 rationale, the repository layout, and the coding standards and contribution guidelines for
 humans and AI agents alike.
 
+**Repository:** <https://github.com/shevron/plotzker> (`git clone git@github.com:shevron/plotzker.git`).
+
 | File | Purpose |
 |------|---------|
 | `README.md` (this file) | Overview, goals, high-level design and decisions, standards, contribution guidelines |

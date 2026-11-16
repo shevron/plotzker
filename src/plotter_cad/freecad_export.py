@@ -353,8 +353,14 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
         fasteners += take(n_beam)
         clamps = take(2 * n_clamps)
         fasteners += take(1)  # endstop trigger screw
+        anchor: list[Solid] = []
+        if side is Side.RIGHT:  # the Y loom anchor block and its screws
+            anchor = take(1)
+            fasteners += take(len(items) - cursor)
         assert cursor == len(items), (cursor, len(items))
         ex.add(f"gantry_fasteners_{label}", fasteners, "gantry", FASTENER)
+        if anchor:
+            ex.add("loom_anchor", anchor[0], "gantry", PRINTED)
         ex.add(f"y_belt_clamps_{label}", clamps[0::2], "gantry", GOLD)
         ex.add(f"y_belt_clamped_{label}", clamps[1::2], "gantry", DARK)
         names: tuple[str, ...]

@@ -25,7 +25,7 @@ on the print bed (:func:`x_carriage`).
 Hardware:
   4 × V-wheel Ø24 × 10 (625 bearings)
   2 × eccentric spacer (bottom wheels, D21)
-  4 × M5×35 ISO 4762 + 4 × M5 washers (front) + 4 × M5 nuts (nyloc preferred)
+  4 × M5×42 ISO 4762 + 4 × M5 washers (front, in 2 mm counterbores) + 4 × M5 nuts (nyloc preferred)
   2 × M3 nuts (pressed in from the bottom edge) — tool-plate clamp screws (tool head
       supplies the M3 screws)
   4 × M3 nuts (pressed in from the back) + 4 × M3×14 ISO 4762 + 2 × belt_clamp (printed) — X belt
@@ -43,7 +43,7 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
 from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_x
-from plotter_cad.hardware import ECCENTRIC, VWHEEL
+from plotter_cad.hardware import ECCENTRIC, VWHEEL, metric
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
 
 if TYPE_CHECKING:
@@ -53,6 +53,7 @@ WHEEL_X = CARRIAGE.wheel_pitch_x / 2  #: wheel axle x (±)
 REAR_Y0 = BEAM.depth / 2 + 0.5  #: rear block front face (behind the beam)
 REAR_Y1 = X_BELT.y + CLAMP.w / 2 + 1  #: rear block back face
 WIDEN_Y = VWHEEL.width / 2 + 1  #: the bridge may widen behind the top wheels
+REAR_Y_FULL = WIDEN_Y + (CARRIAGE.rear_w - CARRIAGE.bridge_w) / 2  #: the 45° flanks end here
 CLAMP_X = CARRIAGE.rear_w / 2 - CLAMP.length / 2  #: X belt clamp centers (±)
 
 #: Wheel axle bolts (top pair, bottom pair): on the plate's front face, along +y into the plate
@@ -96,12 +97,10 @@ def _body() -> Solid:
     # widening (45°) from the bridge into the rear block, behind the wheels
     widening = hull(
         cube([c.bridge_w, EPS, c.rear_h]).translate([-c.bridge_w / 2, WIDEN_Y, c.bridge_z]),
-        cube([c.rear_w, EPS, c.rear_h]).translate(
-            [-c.rear_w / 2, WIDEN_Y + (c.rear_w - c.bridge_w) / 2, c.bridge_z]
-        ),
+        cube([c.rear_w, EPS, c.rear_h]).translate([-c.rear_w / 2, REAR_Y_FULL, c.bridge_z]),
     )
-    rear = cube([c.rear_w, REAR_Y1 - REAR_Y0, c.rear_h]).translate(
-        [-c.rear_w / 2, REAR_Y0, c.bridge_z]
+    rear = cube([c.rear_w, REAR_Y1 - REAR_Y_FULL, c.rear_h]).translate(
+        [-c.rear_w / 2, REAR_Y_FULL, c.bridge_z]
     )
     return plate | tab | standoffs | bridge | widening | rear
 
@@ -120,6 +119,17 @@ def _wheel_axle_holes() -> list[Solid]:
         # bottom wheels: hole for the eccentric boss (the M5 moves ±offset inside it)
         holes.append(
             cylinder(d=TOL.slide_d(ECCENTRIC.boss_d), h=c.plate_t + 2, fn=FN_HOLE)
+            .rotate([-90, 0, 0])
+            .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[1]])
+        )
+        # counterbore for the bolt head and washer on the front face
+        holes.append(
+            cylinder(d=TOL.slide_d(metric(5).washer_od), h=c.head_recess + 1, fn=FN_HOLE)
+            .rotate([-90, 0, 0])
+            .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[0]])
+        )
+        holes.append(
+            cylinder(d=TOL.slide_d(metric(5).washer_od), h=c.head_recess + 1, fn=FN_HOLE)
             .rotate([-90, 0, 0])
             .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[1]])
         )
@@ -147,7 +157,7 @@ def _tool_plate_interface() -> list[Solid]:
     )
     # M3 clearance holes through the plate; each nut is pressed into a slot from the bottom
     # edge, behind a wall on the front side that takes the pull of the tool plate's screws
-    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_trap_ac(3), TOL.nut_trap_h(3)
+    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_slot_ac(3), TOL.nut_trap_h(3)
     screw_zc = tp.bottom_z + tp.screw_z
     nuts = []
     for sx in (-1, 1):
@@ -158,8 +168,8 @@ def _tool_plate_interface() -> list[Solid]:
             .translate([x, c.plate_front_y - 1, screw_zc])
         )
         nuts.append(
-            cube([af, nut_t, screw_zc + ac / 2 - tp.bottom_z + 1]).translate(
-                [x - af / 2, c.plate_front_y + TOL.nut_wall, tp.bottom_z - 1]
+            cube([ac, nut_t, screw_zc + af / 2 - tp.bottom_z + 1]).translate(
+                [x - ac / 2, c.plate_front_y + TOL.nut_wall, tp.bottom_z - 1]
             )
         )
     return [groove, *nuts]
@@ -188,7 +198,7 @@ def _top_tab_cutouts() -> list[Solid]:
 def _belt_clamp_cutouts() -> list[Solid]:
     """Belt clamp screw holes and nut slots (the rear block's underside is flat)."""
     c = CARRIAGE
-    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_trap_ac(3), TOL.nut_trap_h(3)
+    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_slot_ac(3), TOL.nut_trap_h(3)
     cuts = []
     for sx in (-1, 1):
         x = sx * CLAMP_X
@@ -199,9 +209,9 @@ def _belt_clamp_cutouts() -> list[Solid]:
             for sy in (-1, 1)
         ]
         # one slot from the back face takes both nuts (flat on the floor, pressed in)
-        y0 = X_BELT.y - CLAMP.screw_dx - ac / 2
-        slot = cube([af, REAR_Y1 + 1 - y0, nut_t]).translate(
-            [x - af / 2, y0, c.bridge_z + CLAMP.nut_z]
+        y0 = X_BELT.y - CLAMP.screw_dx - af / 2
+        slot = cube([ac, REAR_Y1 + 1 - y0, nut_t]).translate(
+            [x - ac / 2, y0, c.bridge_z + CLAMP.nut_z]
         )
         cuts += [*holes, slot]
     return cuts
@@ -216,11 +226,11 @@ def _endstop_trigger_cutouts() -> list[Solid]:
         .translate([-c.rear_w / 2 + 8, c.trig_y, c.trig_z])
     )
     nut_t = TOL.nut_trap_h(3)
-    nut = cube([nut_t, TOL.nut_trap_af(3), c.rear_h]).translate(
+    nut = cube([nut_t, TOL.nut_slot_ac(3), c.rear_h]).translate(
         [
             -c.rear_w / 2 + 3.5 - nut_t / 2,
-            c.trig_y - TOL.nut_trap_af(3) / 2,
-            c.trig_z - TOL.nut_trap_ac(3) / 2,
+            c.trig_y - TOL.nut_slot_ac(3) / 2,
+            c.trig_z - TOL.nut_trap_af(3) / 2,
         ]
     )
     return [screw, nut]

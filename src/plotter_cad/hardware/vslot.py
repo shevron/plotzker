@@ -62,7 +62,7 @@ class EccentricSpacerSpec:
     hex_af: float = 10
     hex_ac: float = 11.4
     bore: float = 5  #: M5 bolt through it
-    boss_d: float = 7  #: boss that sits in the carriage plate
+    boss_d: float = 7.1  #: boss that sits in the carriage plate (measured)
     boss_len: float = 2.1  #: boss length into the carriage plate
     back_len: float = 0.5  #: short boss on the wheel side of the hex (approx.)
 

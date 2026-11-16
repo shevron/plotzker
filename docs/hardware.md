@@ -125,7 +125,7 @@ Design rules: mounts are face-mounted, so body length only matters for clearance
 | V-wheel | **Ø24 × 10 mm** (user), POM on 2 × 625 bearings |
 | Wheel axis to the extrusion face | **9.85** (standard 39.7 mm wheel spacing across 20 mm) *(assumed)* |
 | Plain spacers | 6 mm *(assumed)* |
-| Eccentric spacers | 2 used on the carriage's bottom wheels (D21). **Measured:** hex 10 across flats / 11.4 across corners, **7.8 long**; Ø5 bore (M5); Ø7 boss **2.1 long** (into the plate) plus a ~0.5 mm boss on the wheel side; bore offset ~0.7 mm (±0.7 → 1.4 mm of adjustment; approximate). Plate face → wheel = **8.3 mm**: the top wheels must sit at the same distance |
+| Eccentric spacers | 2 used on the carriage's bottom wheels (D21). **Measured:** hex 10 across flats / 11.4 across corners, **7.8 long**; Ø5 bore (M5); Ø**7.1** boss (re-measured after the first print) **2.1 long** (into the plate) plus a ~0.5 mm boss on the wheel side; bore offset ~0.7 mm (±0.7 → 1.4 mm of adjustment; approximate). Plate face → wheel = **8.3 mm**: the top wheels must sit at the same distance |
 
 ### Endstop, servo, fasteners
 

@@ -93,8 +93,13 @@ any new decisions in §3, and update the status line at the top.
     on the SCS blocks, the beam pocket and the belt clamp before printing the pair.
 - [x] **T3.3 X carriage.** 4 V-wheels on the 4020 (eccentric bottom pair, D21), X belt clamp,
   X endstop trigger, tool-plate interface (hook + 2 × M3), connector mount, cable strain relief.
-  Eccentric spacers measured (10 mm hex × 7.8, Ø7 × 2.1 boss, ~0.7 mm offset): bottom wheels
+  Eccentric spacers measured (10 mm hex × 7.8, Ø7.1 × 2.1 boss, ~0.7 mm offset): bottom wheels
   sit 8.3 mm from the plate face; the top wheels match on printed stand-offs.
+  After the first print: boss hole +0.1 (boss measured Ø7.1), the rear block's 45° flanks now run
+  straight into full width (no horizontal ledge to print), 2 mm counterbores for the axle bolt
+  washers/heads (M5×42 bolts). Trigger-nut and tool-plate M3 slots are flat-first (README §7.4,
+  `TOL.nut_slot`); so are all other pressed-in slots (X belt clamp, gantry bracket trigger and
+  loom anchor, X/Y idler tension and endstop nuts, Z-rib strap nuts).
   → `parts/x_carriage.py` 
   `assemblies/carriage.py`; STL in `stl/`. Checked: no collision with the gantry
   brackets at either end of travel, incl. a 50 × 60 mm tool-head envelope.
@@ -358,7 +363,7 @@ hard to get, we adjust.
 | 4020 V-slot extrusion | 2 | **520 mm** long → X beam; V-slot profile confirmed | End bores tapped M5 |
 | 2040 V-slot extrusion | 3 | **520 mm** long → baseboard runners | — |
 | Shorter 2020 / 2040 / 4040 extrusions | a few | e.g. 340 mm 2040 | Lengths |
-| V-wheels | many | POM V-groove wheels on 625Z bearings (5 mm bore), Ø24 × 10 mm; eccentric spacers: 10 mm hex × 7.8, Ø7 × 2.1 boss, Ø5 bore, ~0.7 mm offset (2 needed, D21) | — |
+| V-wheels | many | POM V-groove wheels on 625Z bearings (5 mm bore), Ø24 × 10 mm; eccentric spacers: 10 mm hex × 7.8, Ø7.1 × 2.1 boss, Ø5 bore, ~0.7 mm offset (2 needed, D21) | — |
 | Ø10 mm smooth (optical-axis) shafts | 2 | **700 mm**, hardened → Y axis | — |
 | SK10 shaft supports | 4 | End supports, shaft center **20 mm** above the mounting surface; 2 × M5 on 32 mm, 42 W × 37.5 H × 14 L ([`docs/hardware.md`](docs/hardware.md)) | — |
 | SCS10UU linear bearing blocks | 4 | 2 per shaft; 35 L × 40 W × 26.5 H mm, shaft center 13 mm above the base, 4 × M5 top holes on 28 × 21 mm, top: two 10 mm raised flats (holes in them) with a 17 mm × 1 mm recess between, 92 g ([`docs/hardware.md`](docs/hardware.md)) | — |
@@ -475,7 +480,7 @@ this sets the shaft spacing to **520 mm**. ~70 g each (PETG).
 
 **X carriage (T3.3, `parts/x_carriage.py`):** an 8 mm front plate with 4 V-wheels
 64 mm apart: top pair on printed 8.3 mm stand-offs, bottom pair on the eccentric spacers
-(D21), all on M5×35. A bridge over the middle of the beam (between the top wheels) carries
+(D21), all on M5×42 bolts (washer and head in 2 mm counterbores on the front face). A bridge over the middle of the beam (between the top wheels) carries
 a rear block behind the beam that clamps both ends of the X belt (same clamp caps as Y) and
 holds the X endstop trigger (M3 screw head, pointing −X). Printed front face down, ~64 g.
 

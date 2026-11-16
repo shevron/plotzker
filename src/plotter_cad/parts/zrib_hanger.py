@@ -66,10 +66,9 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
             handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_bottom_z], [180, 0, 0])
             for sx in sides
         ],
-        #: flats along u, as the slots are cut
+        #: corners along u (a flat leads into the slot, README §7.4)
         "strap_nuts": [
-            handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_nut_z], [0, 0, 30])
-            for sx in sides
+            handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_nut_z]) for sx in sides
         ],
         "strap": handle([0, m.strap_screw_v - m.leg_t / 2, m.strap_bottom_z]),
     }
@@ -122,12 +121,12 @@ def zrib_hanger_mount() -> Solid:
         body = body - _hole_z(
             TOL.bolt_hole_d(3), us, m.strap_screw_v, m.strap_top_z - 1, m.strap_nut_z + nut_t + 5
         )
-        af = TOL.nut_trap_af(3)
+        af, ac = TOL.nut_trap_af(3), TOL.nut_slot_ac(3)
         body = body - _box(
-            us - af / 2,
-            us + af / 2,
+            us - ac / 2,
+            us + ac / 2,
             v0 - 1,
-            m.strap_screw_v + nut_ac / 2,
+            m.strap_screw_v + af / 2,
             m.strap_nut_z,
             m.strap_nut_z + nut_t,
         )

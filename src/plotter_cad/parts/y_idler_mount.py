@@ -82,9 +82,9 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     # into a slot from the top, behind a wall that takes the thrust
     nut_t = TOL.nut_trap_h(3)
     nut_y1 = y1 - TOL.nut_wall
-    af, ac = TOL.nut_trap_af(3), TOL.nut_trap_ac(3)
-    nut_slot = cube([af, nut_t, d.idler_top_z - AXIS_Z + ac / 2 + 1]).translate(
-        [plate_cx - af / 2, nut_y1 - nut_t, AXIS_Z - ac / 2]
+    af, ac = TOL.nut_trap_af(3), TOL.nut_slot_ac(3)
+    nut_slot = cube([ac, nut_t, d.idler_top_z - AXIS_Z + af / 2 + 1]).translate(
+        [plate_cx - ac / 2, nut_y1 - nut_t, AXIS_Z - af / 2]
     )
     screw = teardrop_y(TOL.bolt_hole_d(3), y1 + 2 - d.idler_y).translate(
         [plate_cx, (y1 + 2 + d.idler_y) / 2, AXIS_Z]

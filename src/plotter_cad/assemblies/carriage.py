@@ -17,6 +17,9 @@ if TYPE_CHECKING:
     from pythonscad import Solid
 
 
+AXLE_BOLT_L = 42  #: M5 axle bolt length (washer and head sit in the counterbore)
+
+
 def _on_beam_plane(axle: Matrix) -> Matrix:
     """A wheel's position: on the axle's line, at the beam's center plane (no rotation)."""
     return handle([axle[0][3], 0, axle[2][3]])
@@ -34,7 +37,9 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
         wheel_top = _on_beam_plane(axle_top)
         wheel_bottom = _on_beam_plane(axle_bottom)
         items.append(vwheel().align(wheel_top))
-        items.append(shcs(5, 35).align(shift_handle(axle_top, [0, -wash, 0])))
+        items.append(
+            shcs(5, AXLE_BOLT_L).align(shift_handle(axle_top, [0, -wash + c.head_recess, 0]))
+        )
         # bottom wheels on eccentric spacers (the bolt sits ECCENTRIC.offset off the boss axis)
         items.append(vwheel().align(wheel_bottom))
         items.append(
@@ -42,7 +47,9 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
                 handle([wheel_bottom[0][3], c.plate_back_y, wheel_bottom[2][3]])
             )
         )
-        items.append(shcs(5, 35).align(shift_handle(axle_bottom, [0, -wash, 0])))
+        items.append(
+            shcs(5, AXLE_BOLT_L).align(shift_handle(axle_bottom, [0, -wash + c.head_recess, 0]))
+        )
     for mount in get_handles(carriage, "belt_clamps"):
         clamp = belt_clamp()
         items.append(clamp.align(mount, get_handle(clamp, "mount")).color("Gold"))

@@ -69,10 +69,10 @@ def x_idler_mount_installed() -> Solid:
     )
     # tension screw: M3 clearance hole from the inboard edge to the slot; the nut is pressed
     # into a slot from the top, behind a wall that takes the thrust
-    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_trap_ac(3), TOL.nut_trap_h(3)
+    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_slot_ac(3), TOL.nut_trap_h(3)
     nut_x1 = x1 - TOL.nut_wall
-    tension_nut = cube([nut_t, af, TOP_Z - AXIS_Z + ac / 2 + 1]).translate(
-        [nut_x1 - nut_t, PLATE_YC - af / 2, AXIS_Z - ac / 2]
+    tension_nut = cube([nut_t, ac, TOP_Z - AXIS_Z + af / 2 + 1]).translate(
+        [nut_x1 - nut_t, PLATE_YC - ac / 2, AXIS_Z - af / 2]
     )
     screw = teardrop_x(TOL.bolt_hole_d(3), x1 + 2 - d.idler_x).translate(
         [(x1 + 2 + d.idler_x) / 2, PLATE_YC, AXIS_Z]
@@ -81,8 +81,8 @@ def x_idler_mount_installed() -> Solid:
     # under a roof wall that takes the pull; a relief hole below takes the screw tip
     nut_z1 = TOP_Z - TOL.nut_wall
     endstop_nuts = [
-        cube([af, d.plate_y0 + d.idler_plate_t - PLATE_YC + ac / 2 + 1, nut_t]).translate(
-            [x - af / 2, PLATE_YC - ac / 2, nut_z1 - nut_t]
+        cube([ac, d.plate_y0 + d.idler_plate_t - PLATE_YC + af / 2 + 1, nut_t]).translate(
+            [x - ac / 2, PLATE_YC - af / 2, nut_z1 - nut_t]
         )
         for x in d.endstop_screw_x
     ]

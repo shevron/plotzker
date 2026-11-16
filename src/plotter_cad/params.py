@@ -50,6 +50,8 @@ class Tolerances:
     slide: float = 0.2  #: sliding fit (diametral)
     press: float = 0.0  #: press fit (0 to -0.1)
     nut: float = 0.1  #: nut trap: across-flats oversize (snug: nuts are pressed in)
+    #: slot a nut is pressed into flat-first: extra clearance across the corners (prints narrow)
+    nut_slot: float = 0.3
     nut_t: float = 0.3  #: nut trap: thickness oversize (slot the nut slides into)
     gap: float = 0.3  #: general clearance between mating printed parts
     min_wall: float = 1.6  #: 4 perimeters at 0.4 mm nozzle
@@ -68,6 +70,14 @@ class Tolerances:
     def nut_trap_ac(self, m: float) -> float:
         """Across corners of a nut trap (for a 6-sided cylinder)."""
         return self.nut_trap_af(m) / cos_deg(30)
+
+    def nut_slot_ac(self, m: float) -> float:
+        """Width of a slot a nut is pressed into with a flat facing the pressing direction.
+
+        The nut's corners point sideways, so this is its across-corners size plus ``nut_slot``.
+        The slot's depth along the pressing direction is :meth:`nut_trap_af`.
+        """
+        return (metric(m).nut_af + self.nut_slot) / cos_deg(30)
 
     def nut_trap_h(self, m: float) -> float:
         """Height (thickness) of a nut trap slot."""
@@ -801,6 +811,9 @@ class Carriage:
     #: wheels' bolt heads sit outside the 50 mm tool plate
     wheel_pitch_x: float = 64
     plate_t: float = 8  #: DESIGN (T3.3): front plate thickness
+    #: DESIGN: counterbore depth for the axle bolts' washers and heads on the front face
+    #: (lets M5×42 bolts replace the M5×35)
+    head_recess: float = 2
     margin_below_wheel: float = 3  #: DESIGN (T3.3): material below the lowest wheel edge
     #: Printed stand-off under each top wheel: bears on the 625 inner ring only (land ≈ 8)
     top_boss_d: float = 7.5

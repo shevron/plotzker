@@ -123,7 +123,7 @@ def _body() -> Solid:
 
 def _loom_cutouts() -> list[Solid]:
     """M3 holes from the top and nut slots from the outboard edge for the loom anchor."""
-    nut_t, af = TOL.nut_trap_h(3), TOL.nut_trap_af(3)
+    nut_t, af, ac = TOL.nut_trap_h(3), TOL.nut_trap_af(3), TOL.nut_slot_ac(3)
     top = BRACKET.base_t - TOL.nut_wall  #: plastic above the nut takes the pull
     cuts = []
     for h in LOOM_ANCHOR:
@@ -132,8 +132,8 @@ def _loom_cutouts() -> list[Solid]:
             cylinder(d=TOL.bolt_hole_d(3), h=BRACKET.base_t, fn=FN_HOLE).translate([x, y, 0])
         )
         cuts.append(
-            cube([x - BRACKET.x_out + af, af, nut_t]).translate(
-                [BRACKET.x_out - 1, y - af / 2, top - nut_t]
+            cube([x - BRACKET.x_out + af / 2 + 1, ac, nut_t]).translate(
+                [BRACKET.x_out - 1, y - ac / 2, top - nut_t]
             )
         )
     return cuts
@@ -186,11 +186,11 @@ def _cutouts() -> list[Solid]:
     )
     nut_t = TOL.nut_trap_h(3)
     cuts.append(
-        cube([TOL.nut_trap_af(3), nut_t, FACE_TOP]).translate(
+        cube([TOL.nut_slot_ac(3), nut_t, FACE_TOP]).translate(
             [
-                b.trig_x - TOL.nut_trap_af(3) / 2,
+                b.trig_x - TOL.nut_slot_ac(3) / 2,
                 boss_mid_y - nut_t / 2,
-                b.trig_z - TOL.nut_trap_ac(3) / 2,
+                b.trig_z - TOL.nut_trap_af(3) / 2,
             ]
         )
     )

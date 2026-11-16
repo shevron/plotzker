@@ -17,9 +17,11 @@ from plotter_cad.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_p
 from plotter_cad.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotter_cad.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
 from plotter_cad.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
-from plotter_cad.hardware import sk10, vslot_x, y_shaft
-from plotter_cad.params import BEAM, CARRIAGE, FRAME, Y_AXIS
-from plotter_cad.parts.gantry_end_bracket import Side
+from plotter_cad.geometry import get_handles, shift_handle
+from plotter_cad.hardware import shcs, sk10, vslot_x, y_shaft
+from plotter_cad.params import BEAM, CARRIAGE, FRAME, X_DRIVE, Y_AXIS
+from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket_local
+from plotter_cad.parts.x_motor_mount import x_motor_mount_left
 from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
 from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
 from solids import bounding_box, connected_groups, flatten, touching, volume
@@ -218,3 +220,19 @@ def test_loom_anchor_is_held_by_its_screws():
     right = list(flatten(gantry_end_local(Side.RIGHT)))
     anchor = next(i for i in right if volume(i) > 0 and bounding_box(i)[0][2] > 9.9)
     assert touching(anchor, right[0])
+
+
+def test_x_motor_screws_clear_the_mount_bolts():
+    """T3.11: the motor's M3 heads and the mount's M5 heads must both fit."""
+    mount = x_motor_mount_left()
+    bracket = gantry_end_bracket_local(Side.RIGHT)
+    m3 = [shcs(3, 10).align(h) for h in get_handles(mount, "motor_screws")]
+    m5 = [
+        shcs(5, 25).align(shift_handle(h, [0, 0, X_DRIVE.foot_t - X_DRIVE.foot_head_recess]))
+        for h in get_handles(bracket, "block_bolts_rear")
+        if h[1][3] < Y_AXIS.scs_pitch / 2
+    ]
+    assert len(m3) == 4 and len(m5) == 2
+    assert volume(union(*m3) & union(*m5)) < 1e-3
+    # and the heads sit inside the counterbores
+    assert volume(union(*m5) & mount) < 1e-3

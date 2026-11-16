@@ -50,9 +50,10 @@ class Tolerances:
     slide: float = 0.2  #: sliding fit (diametral)
     press: float = 0.0  #: press fit (0 to -0.1)
     nut: float = 0.1  #: nut trap: across-flats oversize (snug: nuts are pressed in)
-    #: slot a nut is pressed into flat-first: extra clearance across the corners (prints narrow)
+    #: hex-profile nut slot (`nut_slot.nut_slot`): across-flats oversize, ~0.1 mm per side plus
+    #: the ~0.1 mm the print comes out narrow
     nut_slot: float = 0.3
-    nut_t: float = 0.3  #: nut trap: thickness oversize (slot the nut slides into)
+    nut_t: float = 0.1  #: nut trap: thickness oversize (the print comes out ~0.1 thicker)
     gap: float = 0.3  #: general clearance between mating printed parts
     min_wall: float = 1.6  #: 4 perimeters at 0.4 mm nozzle
     layer_h: float = 0.2
@@ -70,14 +71,6 @@ class Tolerances:
     def nut_trap_ac(self, m: float) -> float:
         """Across corners of a nut trap (for a 6-sided cylinder)."""
         return self.nut_trap_af(m) / cos_deg(30)
-
-    def nut_slot_ac(self, m: float) -> float:
-        """Width of a slot a nut is pressed into with a flat facing the pressing direction.
-
-        The nut's corners point sideways, so this is its across-corners size plus ``nut_slot``.
-        The slot's depth along the pressing direction is :meth:`nut_trap_af`.
-        """
-        return (metric(m).nut_af + self.nut_slot) / cos_deg(30)
 
     def nut_trap_h(self, m: float) -> float:
         """Height (thickness) of a nut trap slot."""
@@ -1070,6 +1063,9 @@ class XDrive:
     """X drive: motor, idler and mounting feet."""
 
     foot_t: float = 5  #: foot clamped under the rear SCS bolts
+    #: DESIGN (T3.11): counterbore for the motor mount's M5 heads, so they clear the motor's
+    #: lowest M3 screw heads (the thread engagement of the M5×25 grows to the block's 12 mm)
+    foot_head_recess: float = 2
     # Motor
     motor_x: float = 1  #: DESIGN: motor shaft x (near the beam end)
     motor_plate_t: float = 5  #: front face = plate_y0

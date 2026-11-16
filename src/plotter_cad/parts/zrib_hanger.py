@@ -35,6 +35,7 @@ from pythonscad import cube, cylinder, linear_extrude
 
 from plotter_cad.geometry import FN_HOLE, Matrix, handle, set_handles, teardrop
 from plotter_cad.hardware import ZRIB
+from plotter_cad.nut_slot import nut_slot
 from plotter_cad.params import TOL, WOOD_SCREW, ZMOUNT
 
 if TYPE_CHECKING:
@@ -121,14 +122,8 @@ def zrib_hanger_mount() -> Solid:
         body = body - _hole_z(
             TOL.bolt_hole_d(3), us, m.strap_screw_v, m.strap_top_z - 1, m.strap_nut_z + nut_t + 5
         )
-        af, ac = TOL.nut_trap_af(3), TOL.nut_slot_ac(3)
-        body = body - _box(
-            us - ac / 2,
-            us + ac / 2,
-            v0 - 1,
-            m.strap_screw_v + af / 2,
-            m.strap_nut_z,
-            m.strap_nut_z + nut_t,
+        body = body - nut_slot(3, m.strap_screw_v - v0 + 1, "z", "-y").translate(
+            [us, m.strap_screw_v, m.strap_nut_z + nut_t / 2]
         )
     return set_handles(body, **_handles())
 

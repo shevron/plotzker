@@ -33,7 +33,7 @@ class MetricSize:
 
 _SIZES = (
     MetricSize(2.5, head_d=4.5, head_h=2.5, nut_af=5.0, nut_h=2.0, washer_od=5.0, washer_t=0.5),
-    MetricSize(3, head_d=5.5, head_h=3.0, nut_af=5.5, nut_h=2.4, washer_od=7.0, washer_t=0.5),
+    MetricSize(3, head_d=5.5, head_h=3.0, nut_af=5.4, nut_h=2.25, washer_od=7.0, washer_t=0.5),
     MetricSize(4, head_d=7.0, head_h=4.0, nut_af=7.0, nut_h=3.2, washer_od=9.0, washer_t=0.8),
     MetricSize(5, head_d=8.5, head_h=5.0, nut_af=8.0, nut_h=4.7, washer_od=10.0, washer_t=1.0),
 )

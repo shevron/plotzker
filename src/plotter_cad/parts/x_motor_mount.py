@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, cylinder
 
 from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_y
-from plotter_cad.hardware import NEMA17, SCS10UU
+from plotter_cad.hardware import NEMA17, SCS10UU, metric
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
 
 if TYPE_CHECKING:
@@ -43,6 +43,19 @@ MOTOR_BOTTOM = AXIS_Z - NEMA17.width / 2
 MOTOR: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.motor_face_y, AXIS_Z], [90, 0, 0])
 #: Pulley: hub on the shaft
 PULLEY: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.pulley_hub_y, AXIS_Z], [90, 0, 0])
+#: The 4 motor M3 screws: heads on the plate's beam side (rear face), shanks toward +y
+MOTOR_SCREWS: list[Matrix] = [
+    handle(
+        [
+            X_DRIVE.motor_x + dx * NEMA17.hole_pitch / 2,
+            X_DRIVE.plate_y0,
+            AXIS_Z + dz * NEMA17.hole_pitch / 2,
+        ],
+        [90, 0, 0],
+    )
+    for dx in (-1, 1)
+    for dz in (-1, 1)
+]
 
 
 def x_motor_mount_left() -> Solid:
@@ -66,6 +79,13 @@ def x_motor_mount_left() -> Solid:
         for hx in (-1, 1)
         for y in d.bolt_rows[:1]
     ]
+    recess = [
+        cylinder(d=TOL.slide_d(metric(5).head_d), h=d.foot_head_recess + 1, fn=FN_HOLE).translate(
+            [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 + d.foot_t - d.foot_head_recess]
+        )
+        for hx in (-1, 1)
+        for y in d.bolt_rows[:1]
+    ]
     plate_mid_y = d.plate_y0 + d.motor_plate_t / 2
     boss = teardrop_y(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate(
         [d.motor_x, plate_mid_y, AXIS_Z]
@@ -81,7 +101,8 @@ def x_motor_mount_left() -> Solid:
         for dx in (-1, 1)
         for dz in (-1, 1)
     ]
-    return set_handles((foot | plate | rib) - bolts - boss - screws, motor=MOTOR, pulley=PULLEY)
+    mount = (foot | plate | rib) - bolts - recess - boss - screws
+    return set_handles(mount, motor=MOTOR, pulley=PULLEY, motor_screws=MOTOR_SCREWS)
 
 
 def x_motor_mount() -> Solid:

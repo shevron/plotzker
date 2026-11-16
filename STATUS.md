@@ -269,6 +269,46 @@ any new decisions in §3, and update the status line at the top.
   purpose: hardware stacks along an axle (washers, idler, nut offsets), which are hardware
   dimensions, and the pen holder's pin (its horn hole depends on the lift angle).
 
+**Fixes after the first test print of the belt-at-bottom design (D34).** Tackle one at a time;
+the printed carriage, motor mount and idler mount are the test pieces.
+
+- [x] **T3.11 X motor mount: M5 heads collide with the M3 motor bolts.** The heads of the M5
+  bolts that clamp the mount to the bracket hit the heads of the two bottom M3 motor bolts, so
+  both cannot be fitted. Preferred fix: counterbore the M5 heads ~2 mm into the foot (check the
+  foot is thick enough). Fallback: raise the motor, and with it the pulley axis, idler and belt,
+  by 1–2 mm (re-check D34's 1 mm motor clearance and the carriage). Rejected: fixing the motor
+  with only its two top M3 screws.
+  Done: 2 mm counterbores (`XDrive.foot_head_recess`) for the two M5×25 heads in the foot (3 mm
+  left under them; thread engagement in the SCS block is now 12 mm = its full thread depth).
+  The M3×10 motor screws are now modelled (handle `motor_screws`) and a test checks they clear
+  the M5 heads (10.9 mm³ overlap before, none now). Reprint the motor mount.
+- [x] **T3.12 Side-inserted M3 nut pockets are too loose.** The pockets for nuts slid in
+  sideways (perpendicular to the bolt axis) let the nut play and spin as the bolt is tightened,
+  worst in deep pockets where the nut can't be held by hand. Suspect: the flat-first rule (§7.4)
+  and/or the pocket thickness (`TOL.nut_slot`). Measure the printed pockets against the nuts,
+  retune the clearances, and revisit the flat-first rule for side-inserted slots (it targets
+  pressed-in vertical pockets; the user suggests it may need reverting here).
+  Done (user's choice: hex-profile pocket): new `nut_slot.nut_slot()` (floor and lower walls follow
+  the hex, straight walls to the entrance, no supports) replaces the rectangular slots at the
+  gantry bracket (loom ×2, trigger), Y and X idler tension nuts, ZRIB hanger strap nuts and the
+  carriage (tool plate ×2, trigger). Measured M3 nut: 5.4 AF × 2.25 (model was 5.5 × 2.4).
+  Measured printed slot (PETG) 6.6 wide × 2.8 thick for a design of 6.70 × 2.7, i.e. ~0.1
+  narrower across and ~0.1 thicker: `TOL.nut_slot` = 0.3 (AF oversize), `TOL.nut_t` = 0.1.
+  Expected printed pocket: 5.6 AF (0.1 per side) × 2.45 thick. The two-nut clamp slots keep a
+  rectangular slot until T3.13. Reprint to check (a small test piece with slots would do).
+- [ ] **T3.13 Belt clamp nuts: two nuts in one pocket.** Inserting two nuts one after the
+  other into one pocket is very hard (the second is hard to seat). Find another solution: a
+  pocket exactly two nuts long so both can be pushed flat against each other, or a different
+  clamp fastening (one nut per screw, a longer screw into one nut, separate pockets, or a
+  clamp plate with its own threads). Propose options with a trade-off table (§7.1) before
+  changing anything.
+- [ ] **T3.14 X endstop: bolt and switch not aligned in Z.** The trigger bolt head hits ~2 mm
+  too low and barely brushes the lever's underside. Main suspect: solder joints protrude up to
+  ~1.8 mm from the underside of the endstop board, so it can't sit flat on the idler mount's
+  foot. Accommodate the protrusions (relief pockets or a recess under the board, or a spacer),
+  and re-measure the board and lever (`hardware/`, `docs/hardware.md`); ask the user for
+  measurements and photos. Check whether the Y endstops have the same problem.
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.

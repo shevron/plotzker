@@ -61,6 +61,7 @@ def x_drive_local(side: Side) -> list[Solid]:
             mount.color("DarkOrange"),
             nema17().align(get_handle(mount, "motor")),
             gt2_pulley().align(get_handle(mount, "pulley")),
+            *[shcs(3, 10).align(h) for h in get_handles(mount, "motor_screws")],
         ]
     mount = x_idler_mount_installed()
     axle = get_handle(mount, "axle")
@@ -85,13 +86,15 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
     ]
     # 8 × M5 into the blocks; the rear block's 4 also clamp the X motor/idler foot (M5×25)
     items += [shcs(5, 20).align(bolt) for bolt in get_handles(bracket, "block_bolts_front")]
+    foot_top = X_DRIVE.foot_t
+    recess = X_DRIVE.foot_head_recess if side is Side.RIGHT else 0  # motor mount: counterbored
     for bolt in get_handles(bracket, "block_bolts_rear"):
         # the idler mount's foot clamps the rear row; the motor mount's the front row
         rear_row = bolt[1][3] > Y_AXIS.scs_pitch / 2
         clamped = rear_row if side is Side.LEFT else not rear_row
         items.append(
             shcs(5, 25 if clamped else 20).align(
-                shift_handle(bolt, [0, 0, X_DRIVE.foot_t if clamped else 0])
+                shift_handle(bolt, [0, 0, foot_top - recess if clamped else 0])
             )
         )
     items += x_drive_local(side)

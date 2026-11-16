@@ -42,8 +42,9 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
-from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_x
+from plotter_cad.geometry import EPS, FN_HOLE, Matrix, cos_deg, handle, set_handles, teardrop_x
 from plotter_cad.hardware import ECCENTRIC, metric
+from plotter_cad.nut_slot import nut_slot
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
 
 if TYPE_CHECKING:
@@ -157,7 +158,7 @@ def _tool_plate_interface() -> list[Solid]:
     )
     # M3 clearance holes through the plate; each nut is pressed into a slot from the bottom
     # edge, behind a wall on the front side that takes the pull of the tool plate's screws
-    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_slot_ac(3), TOL.nut_trap_h(3)
+    nut_t = TOL.nut_trap_h(3)
     screw_zc = tp.bottom_z + tp.screw_z
     nuts = []
     for sx in (-1, 1):
@@ -168,8 +169,8 @@ def _tool_plate_interface() -> list[Solid]:
             .translate([x, c.plate_front_y - 1, screw_zc])
         )
         nuts.append(
-            cube([ac, nut_t, screw_zc + af / 2 - tp.bottom_z + 1]).translate(
-                [x - ac / 2, c.plate_front_y + TOL.nut_wall, tp.bottom_z - 1]
+            nut_slot(3, screw_zc - tp.bottom_z + 1, "y", "-z").translate(
+                [x, c.plate_front_y + TOL.nut_wall + nut_t / 2, screw_zc]
             )
         )
     return [groove, *nuts]
@@ -197,7 +198,9 @@ def _top_tab_cutouts() -> list[Solid]:
 
 def _belt_clamp_cutouts() -> list[Solid]:
     """Belt clamp screw holes and nut slots (the rear block's top is flat)."""
-    af, ac, nut_t = TOL.nut_trap_af(3), TOL.nut_slot_ac(3), TOL.nut_trap_h(3)
+    nut_t = TOL.nut_trap_h(3)
+    af = TOL.nut_trap_af(3)
+    ac = (metric(3).nut_af + TOL.nut_slot) / cos_deg(30)  # T3.13 replaces this two-nut slot
     cuts = []
     for sx in (-1, 1):
         x = sx * CLAMP_X
@@ -224,16 +227,9 @@ def _endstop_trigger_cutouts() -> list[Solid]:
         .rotate([-90, 0, 0])
         .translate([-c.rear_w / 2 + 8, c.trig_y, c.trig_z])
     )
-    nut_t = TOL.nut_trap_h(3)
     # the nut is pressed in from the underside (the belt bears on the top face)
-    nut = cube(
-        [nut_t, TOL.nut_slot_ac(3), c.trig_z + TOL.nut_trap_af(3) / 2 - c.block_z + 1]
-    ).translate(
-        [
-            -c.rear_w / 2 + 3.5 - nut_t / 2,
-            c.trig_y - TOL.nut_slot_ac(3) / 2,
-            c.block_z - 1,
-        ]
+    nut = nut_slot(3, c.trig_z - c.block_z + 1, "x", "-z").translate(
+        [-c.rear_w / 2 + 3.5, c.trig_y, c.trig_z]
     )
     return [screw, nut]
 

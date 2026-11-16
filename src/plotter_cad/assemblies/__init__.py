@@ -17,6 +17,7 @@ from plotter_cad.assemblies import (
     y_drive,
     zrib_mount,
 )
+from plotter_cad.parts.gantry_end_bracket import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -24,6 +25,8 @@ if TYPE_CHECKING:
 ASSEMBLIES: dict[str, Callable[[], list[Solid]]] = {
     "carriage": carriage.carriage_fit_check,
     "gantry": gantry.gantry_fit_check,
+    "gantry_end_left": lambda: gantry.gantry_end_local(Side.LEFT),  # idler, endstop (close-up)
+    "gantry_end_right": lambda: gantry.gantry_end_local(Side.RIGHT),  # motor (close-up)
     "hardware_gallery": hardware_gallery.hardware_gallery,
     "machine": machine.machine,
     "pen_holder": pen_holder.pen_holder_fit_check,

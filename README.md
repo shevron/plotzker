@@ -368,7 +368,7 @@ Plotter/
 ├── STATUS.md            ← ongoing development: work plan, decisions, open questions
 ├── CLAUDE.md            ← instructions specific to AI agents
 ├── pyproject.toml       ← Python project: plotter_cad package, deps, pytest/ruff/mypy/uv config
-├── Makefile             ← shortcuts: make develop / check / typecheck / format / lint / test / stl / render / clean
+├── Makefile             ← shortcuts: make develop / check / typecheck / format / lint / test / stl / render / render-inspect / clean
 ├── uv.lock              ← locked dependency versions (uv)
 ├── .python-version      ← Python version for pyenv and uv (3.14)
 ├── docs/
@@ -421,6 +421,7 @@ source .venv/bin/activate                     # or prefix commands with `uv run`
 ruff lint + format check; changes nothing), `make typecheck` (mypy only), `make format`
 (re-format the code), `make lint` (ruff lint with automatic fixes), `make test` (pytest),
 `make stl` (all STLs), `make render` (all PNG renders; needs the PythonSCAD app),
+`make render-inspect` (every view of each part and assembly into `renders/inspect/`; `NAMES="x_carriage gantry_end_left"` limits it),
 `make clean` (delete `stl/`, `renders/`, caches and build output; keeps `.venv`).
 `make` lists them.
 
@@ -433,7 +434,7 @@ For renders and interactive preview, also install the PythonSCAD app
 |---------|--------------|
 | `python -m plotter_cad check` | Design checks + key numbers |
 | `python -m plotter_cad stl [names]` | Export printable parts to `stl/` |
-| `python -m plotter_cad render [names]` | PNGs of parts and assemblies to `renders/` (needs the app; `--pythonscad PATH` or `$PYTHONSCAD`) |
+| `python -m plotter_cad render [names]` | PNGs of parts and assemblies to `renders/` (needs the app; `--pythonscad PATH` or `$PYTHONSCAD`); `--inspect` renders iso, rear iso, front, rear, left, right and top views into `renders/inspect/<name>_<view>.png` |
 | `python -m plotter_cad layout` | Baseboard drilling layout: `docs/baseboard-layout.svg` (1:1) and `docs/baseboard-holes.md` |
 | `python -m plotter_cad all` | All of the above |
 | `python -m pytest` | Tests: design rules hold, every part is a sane printable solid, assembly parts connect (philosophy: §7.6) |
@@ -585,7 +586,10 @@ with a native Python API). Setup and commands are in §6.
 - **Before handing over a CAD change:** `make check` and `make test` pass;
   `python -m plotter_cad stl` regenerates `stl/`; `python -m plotter_cad render`
   regenerates `renders/` (needs the PythonSCAD app). If geometry changed on purpose,
-  review the STLs/renders.
+  review the STLs/renders, and **look at the change from all sides**:
+  `make render-inspect NAMES="<parts and assemblies you touched>"` (rear, side and top views
+  as well as the normal one; `gantry_end_left` / `gantry_end_right` are close-ups of the
+  X drive ends) and open the PNGs. Passing tests don't catch features that look wrong.
 
 ### 7.5 Python coding standards
 

@@ -1,7 +1,7 @@
 # Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check typecheck format lint test stl render freecad
+.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad
 
 PYTHON_VERSION := $(shell cat .python-version)
 UV_RUN := uv run --extra dev
@@ -39,6 +39,9 @@ stl:  ## Generate the STLs of all printable parts into stl/
 
 render:  ## Generate PNG renders of all parts and assemblies into renders/ (needs the PythonSCAD app)
 	$(UV_RUN) python -m plotter_cad render
+
+render-inspect:  ## Render every view (iso, rear iso, front, rear, left, right, top) into renders/inspect/; NAMES="x_carriage gantry" limits it
+	$(UV_RUN) python -m plotter_cad render --inspect $(NAMES)
 
 FREECAD_BIN ?= /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd
 

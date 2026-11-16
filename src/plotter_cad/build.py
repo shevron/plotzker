@@ -6,6 +6,7 @@ Usage (from the repository root, with the package installed or ``src`` on the pa
     python -m plotter_cad stl              # all printable parts → stl/
     python -m plotter_cad stl x_carriage   # one part
     python -m plotter_cad render           # parts + assemblies → renders/*.png
+    python -m plotter_cad render --inspect # all views → renders/inspect/<name>_<view>.png
     python -m plotter_cad layout           # baseboard drilling layout → docs/
     python -m plotter_cad freecad          # machine components for the FreeCAD assembly → freecad/
     python -m plotter_cad all              # check, stl, render, layout
@@ -41,6 +42,18 @@ RENDER_OPTIONS = (
     "--projection=p",
     "--colorscheme=Tomorrow",
 )
+
+#: Inspection views: name → camera rotation (x, y, z in degrees, OpenSCAD convention; the
+#: distance and center come from ``--viewall`` / ``--autocenter``). The first is the normal view.
+INSPECT_VIEWS: dict[str, tuple[float, float, float]] = {
+    "iso": (55, 0, 25),
+    "iso_rear": (55, 0, 205),
+    "front": (90, 0, 0),
+    "rear": (90, 0, 180),
+    "left": (90, 0, 90),
+    "right": (90, 0, 270),
+    "top": (0, 0, 0),
+}
 
 
 def check() -> None:
@@ -99,9 +112,17 @@ def find_pythonscad(explicit: str | None = None) -> str:
 
 
 def render_pngs(
-    names: Iterable[str] | None = None, out_dir: Path = RENDER_DIR, binary: str | None = None
+    names: Iterable[str] | None = None,
+    out_dir: Path = RENDER_DIR,
+    binary: str | None = None,
+    inspect: bool = False,
 ) -> list[Path]:
-    """Render parts and assemblies to PNG with the PythonSCAD application."""
+    """Render parts and assemblies to PNG with the PythonSCAD application.
+
+    One normal view per name (``renders/<name>.png``), or with ``inspect`` every view of
+    ``INSPECT_VIEWS`` (``renders/inspect/<name>_<view>.png``) for checking a change from
+    all sides.
+    """
     from plotter_cad.assemblies import ASSEMBLIES
     from plotter_cad.parts import PRINTABLE_PARTS
 
@@ -110,6 +131,12 @@ def render_pngs(
         **{n: "parts:PRINTABLE_PARTS" for n in PRINTABLE_PARTS},
         **{n: "assemblies:ASSEMBLIES" for n in ASSEMBLIES},
     }
+    views: dict[str, tuple[float, float, float] | None]
+    if inspect:
+        out_dir = out_dir / "inspect"
+        views = dict(INSPECT_VIEWS)
+    else:
+        views = {"": None}
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     with tempfile.TemporaryDirectory() as tmp:
@@ -127,15 +154,20 @@ def render_pngs(
                     """
                 )
             )
-            path = out_dir / f"{name}.png"
-            cmd = [exe, "--trust-python", "-o", str(path), *RENDER_OPTIONS, str(driver)]
-            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            if result.returncode != 0 or not path.exists():
-                raise RuntimeError(f"Render of {name} failed:\n{result.stdout}\n{result.stderr}")
-            print(
-                f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}"
-            )
-            written.append(path)
+            for view, rotation in views.items():
+                path = out_dir / (f"{name}_{view}.png" if view else f"{name}.png")
+                cmd = [exe, "--trust-python", "-o", str(path), *RENDER_OPTIONS]
+                if rotation:
+                    cmd.append(f"--camera=0,0,0,{','.join(f'{a:g}' for a in rotation)},500")
+                cmd.append(str(driver))
+                result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+                if result.returncode != 0 or not path.exists():
+                    raise RuntimeError(
+                        f"Render of {name} {view} failed:\n{result.stdout}\n{result.stderr}"
+                    )
+                shown = path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path
+                print(f"wrote {shown}")
+                written.append(path)
     return written
 
 
@@ -164,6 +196,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     render = sub.add_parser("render", help="render parts and assemblies to PNG (needs PythonSCAD)")
     render.add_argument("names", nargs="*", help="part/assembly names (default: all)")
     render.add_argument("--out", type=Path, default=RENDER_DIR)
+    render.add_argument(
+        "--inspect",
+        action="store_true",
+        help="render all views (iso, rear iso, front, rear, left, right, top) to renders/inspect/",
+    )
     render.add_argument("--pythonscad", help="path to the PythonSCAD binary")
     sub.add_parser("freecad", help="export the machine components for the FreeCAD assembly")
     layout = sub.add_parser("layout", help="write the baseboard drilling layout (SVG + table)")
@@ -178,7 +215,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif args.command == "stl":
             export_stls(args.names, args.out)
         elif args.command == "render":
-            render_pngs(args.names, args.out, args.pythonscad)
+            render_pngs(args.names, args.out, args.pythonscad, args.inspect)
         elif args.command == "freecad":
             from plotter_cad.freecad_export import export_freecad
 

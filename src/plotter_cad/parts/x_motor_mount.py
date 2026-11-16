@@ -2,8 +2,9 @@
 
 Purpose: holds the X NEMA17 behind the beam at the right end of the gantry, shaft
 pointing forward (−y) so the 20T pulley sits on the X belt line. The foot sits on the
-right gantry bracket's base over the rear SCS block and is clamped by that block's
-4 × M5 (they become M5×25). A rib under the motor carries its weight.
+right gantry bracket's base over the rear SCS block and is clamped by that block's front
+2 × M5 (they become M5×25); the motor body hangs just above the rear row's bolt heads.
+A low rib under the motor rests on the base and carries its weight.
 
   side view (looking along x)          top view
        plate                               ┌─motor─┐
@@ -16,8 +17,8 @@ Frame: designed in the LEFT bracket-local frame (``params.XDrive``), z = 0 on th
 top face (:func:`x_motor_mount_left`). The printed part is the mirror image (it goes
 on the right end): :func:`x_motor_mount`.
 
-Hardware: 4 × M3×10 ISO 4762 (motor); 4 × M5×25 ISO 4762 replacing the rear SCS bolts
-of the right bracket; 20T GT2 pulley on the motor (hub toward the motor, belt center
+Hardware: 4 × M3×10 ISO 4762 (motor); 2 × M5×25 ISO 4762 replacing the rear SCS bolts
+of the right bracket's front row; 20T GT2 pulley on the motor (hub toward the motor, belt center
 at the X belt line — slide it on the shaft to align with the idler).
 Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 """
@@ -49,8 +50,8 @@ def x_motor_mount_left() -> Solid:
     d = X_DRIVE
     foot_x0 = min(-SCS10UU.width / 2 - 1, PLATE_X[0])
     foot_x1 = max(SCS10UU.width / 2, PLATE_X[1])
-    foot = cube([foot_x1 - foot_x0, d.foot_y[1] - d.foot_y[0], d.foot_t]).translate(
-        [foot_x0, d.foot_y[0], FOOT_Z0]
+    foot = cube([foot_x1 - foot_x0, d.motor_foot_y[1] - d.motor_foot_y[0], d.foot_t]).translate(
+        [foot_x0, d.motor_foot_y[0], FOOT_Z0]
     )
     plate = cube([NEMA17.width, d.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate(
         [PLATE_X[0], d.plate_y0, FOOT_Z0]
@@ -63,7 +64,7 @@ def x_motor_mount_left() -> Solid:
             [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
-        for y in d.bolt_rows
+        for y in d.bolt_rows[:1]
     ]
     plate_mid_y = d.plate_y0 + d.motor_plate_t / 2
     boss = teardrop_y(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate(

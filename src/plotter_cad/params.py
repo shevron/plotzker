@@ -821,12 +821,11 @@ class Carriage:
     bridge_clear: float = 2.5  #: bridge underside above the beam top
     bridge_h: float = 17.5
     rear_w: float = 52  #: rear clamp block width (x): two X belt clamps
-    rear_h: float = 17.5  #: tall enough for the endstop trigger above the clamps
+    rear_h: float = 17.5  #: rear clamp block height (its top is the X belt's flat bearing face)
     tab_w: float = 24  #: top tab (connector + strain relief) width
     tab_h: float = 15  #: top tab height above the plate
     zip_slot: tuple[float, float] = (4, 2)  #: zip-tie slot (x × z)
-    trig_z_above: float = 14  #: X endstop trigger screw: height above the bridge underside
-    trig_y: float = 27.5  #: ... and its y
+    trig_dy: float = -0.5  #: X endstop trigger screw: y behind the X belt center (plug space)
 
     @property
     def w(self) -> float:
@@ -870,13 +869,24 @@ class Carriage:
 
     @property
     def bridge_z(self) -> float:
-        """Bridge / rear block underside (abs z)."""
-        return BEAM.top_z + self.bridge_clear
+        """Bridge underside (abs z): the bridge passes under the beam (DESIGN: X belt at the
+        bottom of the carriage)."""
+        return BEAM.bottom_z - self.bridge_clear - self.bridge_h
+
+    @property
+    def block_z(self) -> float:
+        """Rear block underside (abs z); its top is the X belt's bearing face."""
+        return X_BELT.back_z - self.rear_h
+
+    @property
+    def trig_y(self) -> float:
+        """X endstop trigger screw y."""
+        return X_BELT.y + self.trig_dy
 
     @property
     def trig_z(self) -> float:
-        """X endstop trigger screw axis (abs z)."""
-        return self.bridge_z + self.trig_z_above
+        """X endstop trigger screw axis (abs z): the lever's height above the board's shelf."""
+        return X_ENDSTOP.board_bottom_z + ENDSTOP.lever_z
 
     @property
     def end_keepout(self) -> float:
@@ -955,7 +965,7 @@ BRACKET = GantryBracket()
 
 # -----------------------------------------------------------------------------
 # X belt: vertical loop behind the beam (motor shaft along Y, body behind the beam;
-# T3.4). Top run cut and clamped under the carriage's rear block.
+# T3.4). The lower run is cut and clamped on top of the carriage's rear block.
 # -----------------------------------------------------------------------------
 
 
@@ -965,7 +975,8 @@ class XBelt:
 
     #: Belt center behind the beam's rear face. Set so the X motor plate fits between
     #: the gantry bracket's rear bolt rows and long motor shafts clear the beam (T3.4)
-    behind_beam_face: float = 13
+    behind_beam_face: float = 16
+    motor_clear: float = 1  #: motor body above the unclamped rear bolt heads
 
     @property
     def y(self) -> float:
@@ -974,13 +985,20 @@ class XBelt:
 
     @property
     def back_z(self) -> float:
-        """Back of the top run (abs z)."""
-        return CARRIAGE.bridge_z  # ... and with the carriage's flat underside
+        """Back of the lower run (abs z): the carriage's rear block top bears on it."""
+        return self.pulley_axis_z - GT2.pitch_line_from_back - PULLEY.pd / 2
 
     @property
     def pulley_axis_z(self) -> float:
-        """X motor shaft / idler axle (abs z)."""
-        return self.back_z - GT2.pitch_line_from_back - PULLEY.pd / 2
+        """X motor shaft / idler axle (abs z). DESIGN: as low as the motor allows: its body
+        clears the rear bolt heads (the foot clamps only the front row) by ``motor_clear``."""
+        return (
+            Y_AXIS.scs_top_z
+            + BRACKET.base_t
+            + metric(5).head_h
+            + self.motor_clear
+            + NEMA17.width / 2
+        )
 
 
 X_BELT = XBelt()
@@ -995,11 +1013,7 @@ X_BELT = XBelt()
 
 @dataclass(frozen=True)
 class XEndstopMount:
-    """X endstop mount: pad on the idler plate, carrying the board flat."""
-
-    pad_t: float = 5  #: pad thickness: the M3 heads sit in counterbores under the board
-    pad_slot: float = 4  #: ±x adjustment of the pad on the idler plate
-    pad_margin: float = 1  #: board edge to pad edge (y)
+    """X endstop: the board lies directly on the idler mount's foot (Creality type)."""
 
     @property
     def head_x_min(self) -> float:
@@ -1030,13 +1044,8 @@ class XEndstopMount:
 
     @property
     def board_bottom_z(self) -> float:
-        """Board underside (abs z): the lever's center line is at the trigger screw's height."""
-        return CARRIAGE.trig_z - ENDSTOP.lever_z
-
-    @property
-    def pad_z(self) -> tuple[float, float]:
-        """Pad extent in z (the board sits on its top)."""
-        return (self.board_bottom_z - self.pad_t, self.board_bottom_z)
+        """Board underside (abs z) = top of the idler mount's foot."""
+        return Y_AXIS.scs_top_z + BRACKET.base_t + X_DRIVE.foot_t
 
     @property
     def hole_x(self) -> float:
@@ -1070,12 +1079,11 @@ class XDrive:
     idler_slot: float = 8  #: axle slot length along x (tension travel; belt ±8 mm)
     idler_plate_t: float = 11.5  #: thick enough to stand alone (fits between the bolt rows)
     idler_plate_x: tuple[float, float] = (-42, -8)
-    endstop_screw_x: tuple[float, float] = (-22, -12)  #: endstop-mount screws into the plate top
 
     @property
     def idler_top_z(self) -> float:
-        """Plate top, abs z: the X endstop pad sits on it."""
-        return X_ENDSTOP.pad_z[0]
+        """Idler plate top, abs z: just enough wall above the axle slot."""
+        return X_BELT.pulley_axis_z + TOL.bolt_hole_d(5) / 2 + TOL.min_wall + 2
 
     @property
     def bolt_rows(self) -> tuple[float, float]:
@@ -1103,6 +1111,11 @@ class XDrive:
     def pulley_hub_y(self) -> float:
         """Pulley's motor-side end."""
         return X_BELT.y + PULLEY.belt_z
+
+    @property
+    def motor_foot_y(self) -> tuple[float, float]:
+        """Y range of the motor mount's foot: under the front bolt row and the plate only."""
+        return (self.foot_y[0], self.motor_face_y)
 
     @property
     def idler_spacer_len(self) -> float:
@@ -1575,7 +1588,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     yield (
         CARRIAGE.bridge_w / 2 + 2 <= CARRIAGE.wheel_pitch_x / 2 - VWHEEL.od / 2,
-        "Bridge hits the top wheels",
+        "Bridge hits the wheels",
     )
     yield X_BELT.y - CLAMP.w / 2 >= BEAM.depth / 2 + 1, "X belt clamp too close to the beam"
     yield (
@@ -1583,8 +1596,13 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Carriage wheels hit the gantry bracket",
     )
     yield (
-        CARRIAGE.top_z - 2 - CARRIAGE.zip_slot[1] >= CARRIAGE.bridge_z + CARRIAGE.bridge_h + 0.5,
-        "Zip-tie slots blocked by the bridge",
+        X_BELT.pulley_axis_z - NEMA17.width / 2
+        >= Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h,
+        "X motor hits the rear bolt heads",
+    )
+    yield (
+        CARRIAGE.bridge_z + CARRIAGE.bridge_h <= BEAM.bottom_z - 1,
+        "Carriage bridge hits the beam",
     )
     yield (
         X_DRIVE.motor_face_y - NEMA17.shaft_len >= BEAM.depth / 2 + 1,
@@ -1599,10 +1617,6 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Idler plate covers the rear bolt row",
     )
     yield X_DRIVE.idler_spacer_len > 0, "Idler spacer length"
-    yield (
-        X_DRIVE.idler_top_z >= X_BELT.pulley_axis_z + IDLER.flange_d / 2 + 0.5,
-        "X idler flange hits the endstop pad",
-    )
     yield (
         X_DRIVE.idler_top_z >= X_BELT.pulley_axis_z + TOL.bolt_hole_d(5) / 2 + TOL.min_wall + 2,
         "X idler plate too low around the axle slot",
@@ -1837,9 +1851,9 @@ def report() -> str:
             f"Carriage: wheels z [{fmt(*CARRIAGE.wheel_z)}], bottom {fmt(CARRIAGE.bottom_z)}, "
             f"top {fmt(CARRIAGE.top_z)}; front face y {fmt(CARRIAGE.plate_front_y)}; "
             f"tool plate z {fmt(TOOL_PLATE.bottom_z)}–{fmt(TOOL_PLATE.top_z)}",
-            f"X belt: center y {fmt(X_BELT.y)} behind beam center, back of top run z "
+            f"X belt: center y {fmt(X_BELT.y)} behind beam center, back of lower run z "
             f"{fmt(X_BELT.back_z)}, motor/idler axis z {fmt(X_BELT.pulley_axis_z)}",
-            f"Y belt: back of top run z {fmt(Y_AXIS.belt_back_z)}, pulley/idler axis z "
+            f"Y belt: back of lower run z {fmt(Y_AXIS.belt_back_z)}, pulley/idler axis z "
             f"{fmt(Y_AXIS.pulley_axis_z)}, belt center {fmt(-Y_AXIS.belt_x)} "
             "outboard of each shaft",
             f"Y drive: idler axle y {fmt(Y_DRIVE.idler_y)} (slot ±{fmt(Y_DRIVE.idler_slot / 2)}), "

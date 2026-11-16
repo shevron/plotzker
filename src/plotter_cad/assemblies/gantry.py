@@ -38,7 +38,6 @@ from plotter_cad.params import (
 from plotter_cad.parts.belt_clamp import belt_clamp
 from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket_local
 from plotter_cad.parts.loom_anchor import loom_anchor_installed
-from plotter_cad.parts.x_endstop_mount import x_endstop_mount_installed
 from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
 from plotter_cad.parts.x_idler_spacer import x_idler_spacer
 from plotter_cad.parts.x_motor_mount import x_motor_mount_left
@@ -50,7 +49,7 @@ if TYPE_CHECKING:
 def x_endstop_keepout() -> Solid:
     """Space that must stay free for the X endstop's plug, in the left bracket-local frame."""
     return place_in_frame(
-        endstop_keepout(), *frame_axes(get_handle(x_endstop_mount_installed(), "board"))
+        endstop_keepout(), *frame_axes(get_handle(x_idler_mount_installed(), "board"))
     )
 
 
@@ -65,14 +64,12 @@ def x_drive_local(side: Side) -> list[Solid]:
         ]
     mount = x_idler_mount_installed()
     axle = get_handle(mount, "axle")
-    endstop = x_endstop_mount_installed()
     return [
         mount.color("DarkOrange"),
-        endstop.color("Orange"),
         gt2_idler().align(shift_handle(axle, [0, X_BELT.y - axle[1][3], 0])),
         x_idler_spacer().align(axle).color("Orange"),
         shcs(5, 40).align(shift_handle(axle, [0, X_BELT.y - IDLER.width / 2 - axle[1][3], 0])),
-        endstop_placed(*frame_axes(get_handle(endstop, "board"))),
+        endstop_placed(*frame_axes(get_handle(mount, "board"))),
     ]
 
 
@@ -88,10 +85,15 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
     ]
     # 8 × M5 into the blocks; the rear block's 4 also clamp the X motor/idler foot (M5×25)
     items += [shcs(5, 20).align(bolt) for bolt in get_handles(bracket, "block_bolts_front")]
-    items += [
-        shcs(5, 25).align(shift_handle(bolt, [0, 0, X_DRIVE.foot_t]))
-        for bolt in get_handles(bracket, "block_bolts_rear")
-    ]
+    for bolt in get_handles(bracket, "block_bolts_rear"):
+        # the idler mount's foot clamps the rear row; the motor mount's the front row
+        rear_row = bolt[1][3] > Y_AXIS.scs_pitch / 2
+        clamped = rear_row if side is Side.LEFT else not rear_row
+        items.append(
+            shcs(5, 25 if clamped else 20).align(
+                shift_handle(bolt, [0, 0, X_DRIVE.foot_t if clamped else 0])
+            )
+        )
     items += x_drive_local(side)
     items += [shcs(5, 20).align(bolt) for bolt in get_handles(bracket, "beam_bolts")]
     for mount in get_handles(bracket, "belt_clamps"):
@@ -122,11 +124,11 @@ def gantry_assembly(gantry_y: float) -> list[Solid]:
             [
                 left_x + X_DRIVE.idler_x,
                 gantry_y + X_BELT.y - GT2.width / 2,
-                X_BELT.pulley_axis_z - PULLEY.pd / 2 - GT2.thickness + GT2.pitch_line_from_back,
+                X_BELT.pulley_axis_z + PULLEY.pd / 2 - GT2.pitch_line_from_back,
             ]
         )
         .color("#111")
-    )  # X belt lower (return) run, idler to pulley
+    )  # X belt upper (return) run, idler to pulley
     return [
         translate(gantry_end_local(Side.LEFT), [left_x, gantry_y, Y_AXIS.scs_top_z]),
         translate(

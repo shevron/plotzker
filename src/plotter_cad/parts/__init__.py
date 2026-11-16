@@ -15,7 +15,6 @@ from plotter_cad.parts import (
     pen_holder_body,
     pen_slide,
     x_carriage,
-    x_endstop_mount,
     x_idler_mount,
     x_idler_spacer,
     x_motor_mount,
@@ -43,7 +42,6 @@ PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
     "x_motor_mount": x_motor_mount.x_motor_mount,
     "x_idler_mount": x_idler_mount.x_idler_mount,
     "x_idler_spacer": x_idler_spacer.x_idler_spacer,
-    "x_endstop_mount": x_endstop_mount.x_endstop_mount,
 }
 for _side in gantry_end_bracket.Side:
     PRINTABLE_PARTS[f"y_motor_mount_{_side.value}"] = partial(y_motor_mount.y_motor_mount, _side)

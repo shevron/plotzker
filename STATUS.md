@@ -107,7 +107,7 @@ any new decisions in §3, and update the status line at the top.
     plate) and the X belt clamp. (STL regenerated in T3.4: belt line 4 mm further back.)
 - [x] **T3.4 X motor mount and X idler** at the beam ends. → `x_motor_mount.py` (right end,
   printed mirrored), `x_idler_mount.py` + `x_idler_spacer.py` (left end, slot tensioner),
-  `x_endstop_mount.py` (X− switch on the idler mount); assembled in
+  the X− switch lies on the idler mount's foot (D34); assembled in
   `assemblies/gantry.py`. The X belt line moved 4 mm back (center 23 mm behind the beam
   center) so the motor plate fits between the bracket's rear bolt rows and 22.6 mm motor
   shafts clear the beam; the carriage regenerates from `params.py` (new STL; trigger now
@@ -347,6 +347,7 @@ update the log once it is agreed (README §7.1).
 | D30 | **Baseboard and bed (T3.7), first decisions:** baseboard **700 × 900 × 18 mm** (the Y drive reaches x 4.5–645.5 and y 18–821 on the old 650 × 850); bed panel on **4 × M5 screw + nut posts** (adjust from above); the **ZRIB goes under the baseboard between the runners**, the **PSU stands off the board on its own base** (its fan inlet is on the bottom face and needs ≥ 25 mm of free air; under the board that would need an 80 mm drop; also keeps mains off the plywood); runners from the extrusions on hand, 2040 on edge with low feet. The **ZRIB is mounted bare** on two printed hangers with a minimal guard strap each (no case: exposed electronics, free airflow; the strap is optional) | 🟡 | README §3.8, T3.7 |
 | D31 | **Baseboard layout (T3.7), detail of D30:** 3 runners (2040 on edge, 520 mm, along X under the board, y 150 / 450 / 750), each fixed with 4 × M5×30 countersunk screws into drop-in T-nuts in the top slot; **bed posts = M5×45 stud from below + spring + nut on top of the panel** (turn the nut to level; the panel is 9 mm, so the nuts stand proud and the **steel sheet stops 24 mm short of the panel edge**, 352 × 432, still larger than A3); posts 15 mm from the panel corners; SK10s on M5×35 bolts with nut and washer under the board, the right rail's holes oversized (Ø7) for alignment; ZRIB mount centered between runners 1 and 2 at x 520. Y mounts stay un-drilled (D26). The layout is generated (`python -m plotter_cad layout`), not drawn by hand | 🟡 | T3.7, §6 |
 | D32 | **Cable management (T3.8):** loose loom on printed support rails, not drag chains, for Y: a round loom (Ø8) folded in a U on the baseboard in the outboard strip beside the right Y belt, guided by an inner rail. X: ribbon festoon in the beam's rear T-slots (D33, trial after a mock-up; the other X options are in T3.8). Rejected: drag chains (more printed length), flat ribbon (custom connectors). Revisit if the loom drags or fatigues | 🟡 | T3.8 |
+| D34 | **X belt attached at the bottom of the carriage (prototype, branch `x-belt-bottom`):** bridge under the beam, rear block behind it with the lower belt run clamped on its flat top (cap above); motor/idler axis lowered from z 93.8 to **70.7** (motor body 1 mm above the unclamped rear bolt heads: the motor mount clamps only the front bolt row, the idler mount only the rear row, so the endstop plug space is free); belt 3 mm further back (y 26) so the clamp nuts stay under a full roof on the block's 45° ramp; X− endstop board lies directly on the idler mount's foot (no pad part, no ±4 mm pad slots; trigger nut slot from the underside). Gantry height and brackets unchanged. Plastic: motor + idler mounts + pad 57.7 → 31.3 cm³, carriage +1.3 → net **−25 cm³** (−17 %) | 🟡 | T3.3, T3.4 |
 | D29 | **No heat-set inserts: pressed-in hex nuts (nut traps) everywhere.** The nut sits in a slot or hex shaft with a wall behind it that takes the load (`TOL.nut_wall`, 2 mm). Y/X idler tension screws: slot from the top; X endstop pad screws: slots from the rear face; belt clamp screws (brackets): hex shafts from the top, nut 4 mm above the underside (`CLAMP.nut_z`), M3×14; X carriage rear block: slot from the back; tool-plate screws: slots from the bottom edge. Endstop boards (X and Y): M3 through the board and the mount into a nut in a hex pocket on the pad's underside (X, M3×6) or the tower's outboard face (Y, M3×12), not self-tapping into printed pilots; **avoid self-tapping into printed plastic wherever possible** (it wears and is a failure point). Exception: the servo's own screws in the pen holder Dropped the `Preload.SLOT` carriage fallback (eccentric spacers are available) | ✅ | README §7 rule 2 |
 
 ---
@@ -404,7 +405,7 @@ hard to get, we adjust.
 | Pen reach (10 mm pen) | x 150–576, y 138–683 (A3 centered: x 201–499, y 240–660) |
 | Shaft spacing | 520 mm |
 | Y belt | 30 mm outboard of each shaft; motor/idler axis ~26.8 mm above the baseboard; idler axle y 31, motor axis y 800 (machine frame); ~1.5 m belt per side |
-| X belt | Vertical loop behind the beam, center 23 mm behind the beam's center plane; motor/idler axis ~93.8 mm above the baseboard; ~1.2 m belt |
+| X belt | Vertical loop behind the beam, center 26 mm behind the beam's center plane; motor/idler axis ~70.7 mm above the baseboard (D34); ~1.2 m belt |
 | Carriage | Wheels 64 mm apart; front face 21.3 mm in front of the beam center; bottom 33.15, top 122.85 mm above the baseboard |
 | Pen holder | Lift 7 mm / float 3 mm; rod Ø6 × 63 mm; slide 45 mm; pen axis 16–22 mm in front of the carriage face; head depth ~39 mm (servo front), up to z ~105 |
 | Tool-plate interface | 50 W × 45 H, bottom edge at 33.15 mm; hook groove at the top; 2 × M3 nuts 36 mm apart |
@@ -423,9 +424,9 @@ README §3; the exact values live in `params.py`.
 one end, idler at the other, ~1.4 m belt each). The top run is cut and both ends clamp
 under the gantry end bracket; the belt line puts the Y motor shaft and idler axle at
 **~26.8 mm** above the baseboard. The **X belt** is a vertical loop behind the beam (belt
-center 23 mm behind the beam's center plane, ~1.2 m of belt); its top run is cut and
-clamped under the carriage's rear block, 2.5 mm above the beam top. X motor shaft and
-idler axle run front-to-back at **~93.8 mm** above the baseboard.
+center 26 mm behind the beam's center plane, ~1.2 m of belt); its lower run is cut and
+clamped on top of the carriage's rear block (cap above the belt, M3 down into nuts in the block).
+X motor shaft and idler axle run front-to-back at **~70.7 mm** above the baseboard (D34).
 **Belt clamps (D27):** one cap design (`belt_clamp.py`) for all six clamps. The gantry
 brackets and the carriage's rear block have **flat undersides** (no printed channel or
 bridge); the cap has the groove (between two 1.08 mm rails) that guides the belt, ridges in
@@ -451,9 +452,9 @@ the aligned SK10s.
 **X drive (T3.4):** the **X motor** sits behind the beam at the right end
 (`x_motor_mount.py`), the **idler + belt tensioner** at the left end (`x_idler_mount.py`:
 the M5 axle slides in an 8 mm slot, an M3 screw pushes it outward, the axle nut locks it),
-with the **X− endstop** on a pad on top of the idler mount (`x_endstop_mount.py`, ±4 mm slots; the board lies flat, the trigger head presses the lever along the board).
+with the **X− endstop** board lying on the idler mount's foot (the trigger head presses the lever along the board).
 Both mounts sit on the gantry bracket over the rear SCS block and are clamped by that
-block's 4 M5 bolts (M5×25 there instead of M5×20), so the brackets need no extra holes.
+block's M5 bolts (M5×25 on the clamped row: the rear row for the idler, the front row for the motor; the other row stays M5×20), so the brackets need no extra holes.
 
 **Height stack-up (from the shaft mounting surface):** shaft center 20 mm → SCS10UU base
 7 mm → SCS10UU top face **33.5 mm** (26.5 mm measured block height) → gantry end brackets
@@ -480,8 +481,8 @@ this sets the shaft spacing to **520 mm**. ~70 g each (PETG).
 
 **X carriage (T3.3, `parts/x_carriage.py`):** an 8 mm front plate with 4 V-wheels
 64 mm apart: top pair on printed 8.3 mm stand-offs, bottom pair on the eccentric spacers
-(D21), all on M5×42 bolts (washer and head in 2 mm counterbores on the front face). A bridge over the middle of the beam (between the top wheels) carries
-a rear block behind the beam that clamps both ends of the X belt (same clamp caps as Y) and
+(D21), all on M5×42 bolts (washer and head in 2 mm counterbores on the front face). A bridge under the middle of the beam (between the bottom wheels) carries
+a rear block behind the beam that clamps both ends of the X belt's lower run (same clamp caps as Y) and
 holds the X endstop trigger (M3 screw head, pointing −X). Printed front face down, ~64 g.
 
 **Baseboard and bed (T3.7, D30, D31):** the plywood (700 × 900 × 18) carries, on top, the SK10s

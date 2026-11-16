@@ -368,13 +368,12 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
         if side is Side.LEFT:
             names = (
                 "x_idler_mount",
-                "x_endstop_mount",
                 "x_idler",
                 "x_idler_spacer",
                 "x_idler_bolt",
                 "x_endstop",
             )
-            colors = (PRINTED, PRINTED, ALU, PRINTED, FASTENER, BOARD)
+            colors = (PRINTED, ALU, PRINTED, FASTENER, BOARD)
         else:
             names = ("x_motor_mount", "x_motor", "x_pulley")
             colors = (PRINTED, MOTOR, SILVER)
@@ -382,7 +381,7 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
             ex.add(name, solid, "gantry", color)
 
     belt = _x_belt_return(gantry_y)
-    ex.add("x_belt_lower", belt, "gantry", DARK)
+    ex.add("x_belt_upper", belt, "gantry", DARK)
     beam = vslot_x(BEAM.length, BEAM.size).translate(
         [left_x + BEAM.end_offset, gantry_y - BEAM.depth / 2, BEAM.bottom_z]
     )
@@ -390,7 +389,7 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
 
 
 def _x_belt_return(gantry_y: float) -> Solid:
-    """The X belt's lower run, as drawn by ``gantry_assembly`` (rebuilt: it unions the beam)."""
+    """The X belt's upper (free) run, as ``gantry_assembly`` draws it."""
     from pythonscad import cube
 
     from plotter_cad.hardware import GT2, PULLEY
@@ -402,7 +401,7 @@ def _x_belt_return(gantry_y: float) -> Solid:
         [
             left_x + X_DRIVE.idler_x,
             gantry_y + X_BELT.y - GT2.width / 2,
-            X_BELT.pulley_axis_z - PULLEY.pd / 2 - GT2.thickness + GT2.pitch_line_from_back,
+            X_BELT.pulley_axis_z + PULLEY.pd / 2 - GT2.pitch_line_from_back,
         ]
     )
 

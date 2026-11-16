@@ -111,8 +111,8 @@ Also considered: *H-bot* (racking torque on the gantry; rejected), *polargraph*
 - **Drive:** GT2 belts on both axes. Typical setup: 20T pulley, 1.8° motor, 1/16
   microstepping → **80 steps/mm**. Each Y side has its own belt outboard of its shaft
   (motor at one end, idler at the other; the top run is cut and both ends clamp under the
-  gantry end bracket). The X belt is a vertical loop behind the beam, its top run cut and
-  clamped under the carriage's rear block. The X motor sits at one beam end and the idler
+  gantry end bracket). The X belt is a vertical loop behind the beam, its lower run cut and
+  clamped on top of the carriage's rear block (D34). The X motor sits at one beam end and the idler
   with its belt tensioner at the other. Lead screws only for an optional pen-Z experiment.
 - **Gantry drive:** a motor on each Y side (second motor on the ZRIB's E0 driver,
   `Y_DUAL_STEPPER_DRIVERS`) and **one endstop per side** (`Y_DUAL_ENDSTOPS`), so the

@@ -324,7 +324,10 @@ the printed carriage, motor mount and idler mount are the test pieces.
   says a Ø5.3 head centered on the axis still overlaps the raised lever by ~2.6 mm): after the
   reprint, if it still misses, measure the printed trigger screw axis height above the foot top
   (design 4.15 mm above the board seat) and the foot thickness (5 mm). The Y endstops are
-  not yet checked for the same solder issue.
+  also affected (the board stands on the tower with its solder side against it, so it sat up to
+  1.8 mm off the tower along x, off the trigger axis): fixed the same way, a 2.2 mm recess in the Y idler
+  mounts' tower face except for Ø6 lands round the screw holes (`YEndstopMount.relief_depth`), both
+  sides tested. Reprint both Y idler mounts.
   Second contributing factor (user): the trigger screw's hole was a loose fit and the screw (M3×16)
   long, so tightening it into the captive nut pulled the shank down and the head rose. Done:
   screw shortened to **M3×12** (`CARRIAGE.trig_screw_len`, still ~5 mm through the nut at the

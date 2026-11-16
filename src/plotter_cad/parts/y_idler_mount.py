@@ -31,7 +31,7 @@ Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, hull
+from pythonscad import cube, cylinder, hull, union
 
 from plotter_cad.geometry import (
     FN_HOLE,
@@ -116,6 +116,23 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
             .rotate([0, 90, 0])
             .translate([e.tower_x[0] - 1, y, z])
         )
+    # solder relief: only a land round each board screw hole touches the board (T3.14)
+    zb0, zb1 = e.board_z(u_z)
+    relief = cube(
+        [e.relief_depth + 1, e.board_y[1] - e.board_y[0] + 0.6, zb1 - zb0 - 0.5]
+    ).translate([e.board_x0 - e.relief_depth, e.board_y[0] - 0.3, zb0 - 0.3])
+    lands = [
+        cylinder(d=e.land_d, h=e.relief_depth + 3, fn=FN_HOLE)
+        .rotate([0, 90, 0])
+        .translate(
+            [
+                e.board_x0 - e.relief_depth - 1,
+                e.board_front_y + ENDSTOP.hole_v,
+                zc + sz * ENDSTOP.hole_pitch / 2,
+            ]
+        )
+        for sz in (-1, 1)
+    ]
     mount = (
         (foot | plate | tower | pocket_frame)
         - pocket_cut
@@ -124,6 +141,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         - screw
         - holes
         - board_holes
+        - (relief - union(*lands))
     )
     board = frame_handle(
         [e.board_x0, e.board_front_y, zc], [0, 0, u_z], [0, 1, 0], [1, 0, 0]

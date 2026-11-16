@@ -277,3 +277,37 @@ def test_x_trigger_screw_reaches_through_its_captive_nut():
     tip = head_underside + CARRIAGE.trig_screw_len
     nut_far_face = -CARRIAGE.rear_w / 2 + 3.5 + metric(3).nut_h / 2
     assert tip - nut_far_face >= 3
+
+
+@pytest.mark.parametrize("side", [Side.LEFT, Side.RIGHT])
+def test_y_endstop_board_seats_flat_over_its_solder(side):
+    """T3.14: same as the X board: only the lands touch the 1.8 mm solder side of the board."""
+    from pythonscad import cube, cylinder
+
+    from plotter_cad.hardware import ENDSTOP
+    from plotter_cad.params import Y_ENDSTOP
+
+    e = Y_ENDSTOP
+
+    mount = y_idler_mount_installed(side)
+    zc = e.board_z_center(-1 if side is Side.LEFT else 1)
+    solder = cube([1.8, ENDSTOP.pcb[0] - 2, ENDSTOP.pcb[1] - 2]).translate(
+        [e.board_x0 - 1.8, e.board_y[0] + 1, zc - ENDSTOP.pcb[1] / 2 + 1]
+    )
+    lands = [
+        cylinder(d=e.land_d + 0.2, h=5, fn=24)
+        .rotate([0, 90, 0])
+        .translate(
+            [e.board_x0 - 3, e.board_front_y + ENDSTOP.hole_v, zc + s * ENDSTOP.hole_pitch / 2]
+        )
+        for s in (-1, 1)
+    ]
+    assert volume((solder - union(*lands)) & mount) < 1e-3
+    pad = (
+        cylinder(d=e.land_d - 1, h=0.4, fn=24)
+        .rotate([0, 90, 0])
+        .translate(
+            [e.board_x0 - 0.2, e.board_front_y + ENDSTOP.hole_v, zc + ENDSTOP.hole_pitch / 2]
+        )
+    )
+    assert volume(pad & mount) > 1

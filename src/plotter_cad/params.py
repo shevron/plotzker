@@ -1263,6 +1263,10 @@ class YEndstopMount:
     frame), u = -z on the left side and +z on the right (the board is chiral)."""
 
     tower_margin: float = 1  #: board edge to tower edge (y)
+    #: DESIGN (T3.14): recess in the tower face under the board for the solder joints and pins
+    #: that protrude up to 1.8 mm (measured), leaving a flat land round each screw hole
+    relief_depth: float = 2.2
+    land_d: float = 6
 
     @property
     def trigger_tip_y(self) -> float:

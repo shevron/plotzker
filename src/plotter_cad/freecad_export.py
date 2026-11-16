@@ -319,7 +319,7 @@ def _y_drive_parts(ex: Exporter, gantry_y: float) -> None:
 
 
 def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
-    """Both gantry ends, the beam, and the X belt's lower run."""
+    """Both gantry ends, the beam, and the X belt's upper run."""
     left_x, right_x = Y_AXIS.shaft_x
     n_front = len(
         get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "block_bolts_front")
@@ -329,7 +329,7 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
     n_clamps = len(get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "belt_clamps"))
 
     for side, label, shaft_x, mirrored, n_drive in (
-        (Side.LEFT, "L", left_x, False, 6),
+        (Side.LEFT, "L", left_x, False, 5),
         (Side.RIGHT, "R", right_x, True, 3),
     ):
         local = gantry_end_local(side)

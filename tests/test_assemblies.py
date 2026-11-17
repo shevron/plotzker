@@ -311,3 +311,18 @@ def test_y_endstop_board_seats_flat_over_its_solder(side):
         )
     )
     assert volume(pad & mount) > 1
+
+
+@pytest.mark.parametrize("shift", [-1, 0, 1])
+def test_x_idler_slider_rides_free_over_its_whole_travel(shift):
+    """T3.16: along the whole tension travel the slider neither touches the mount (a sliding
+    fit) nor reaches into the endstop's plug space, nor the bracket."""
+    from plotter_cad.params import X_TENSIONER
+    from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
+    from plotter_cad.parts.x_idler_slider import x_idler_slider_installed
+
+    moved = x_idler_slider_installed().translate([shift * X_TENSIONER.travel / 2, 0, 0])
+    mount, bracket = x_idler_mount_installed(), gantry_end_bracket_local(Side.LEFT)
+    assert not touching(moved, mount)
+    assert volume(moved & x_endstop_keepout()) < 1e-3
+    assert volume(moved & bracket) < 1e-3

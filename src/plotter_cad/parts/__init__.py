@@ -14,9 +14,10 @@ from plotter_cad.parts import (
     loom_rail,
     pen_holder_body,
     pen_slide,
+    tension_idler,
     x_carriage,
     x_idler_mount,
-    x_idler_spacer,
+    x_idler_slider,
     x_motor_mount,
     y_idler_mount,
     y_motor_mount,
@@ -36,12 +37,14 @@ PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
     "loom_rail": loom_rail.loom_rail,
     "pen_holder_body": pen_holder_body.pen_holder_body,
     "pen_slide": pen_slide.pen_slide,
+    "tension_idler_rail": tension_idler.tension_idler_rail,
+    "tension_idler_slider": tension_idler.tension_idler_slider,
     "x_carriage": x_carriage.x_carriage,
     "zrib_hanger": zrib_hanger.zrib_hanger,
     "zrib_guard": zrib_guard.zrib_guard,
     "x_motor_mount": x_motor_mount.x_motor_mount,
     "x_idler_mount": x_idler_mount.x_idler_mount,
-    "x_idler_spacer": x_idler_spacer.x_idler_spacer,
+    "x_idler_slider": x_idler_slider.x_idler_slider,
 }
 for _side in gantry_end_bracket.Side:
     PRINTABLE_PARTS[f"y_motor_mount_{_side.value}"] = partial(y_motor_mount.y_motor_mount, _side)

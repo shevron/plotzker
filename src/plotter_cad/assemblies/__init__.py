@@ -14,6 +14,7 @@ from plotter_cad.assemblies import (
     machine,
     pen_holder,
     skeleton,
+    tension_idler,
     y_drive,
     zrib_mount,
 )
@@ -31,6 +32,7 @@ ASSEMBLIES: dict[str, Callable[[], list[Solid]]] = {
     "machine": machine.machine,
     "pen_holder": pen_holder.pen_holder_fit_check,
     "skeleton": skeleton.skeleton,
+    "tension_idler_fit": tension_idler.tension_idler_fit_check,
     "y_drive": y_drive.y_drive_fit_check,
     "zrib_mount": zrib_mount.zrib_mount_fit_check,
 }

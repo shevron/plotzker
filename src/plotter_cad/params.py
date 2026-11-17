@@ -15,6 +15,7 @@ Comment markers: ``ASSUMED`` = catalog value awaiting a measurement;
 Units: mm, degrees.
 """
 
+import dataclasses
 import math
 from collections.abc import Iterator
 from dataclasses import dataclass
@@ -1053,6 +1054,17 @@ class XEndstopMount:
         """Board mounting hole line (x)."""
         return self.board_front_x + ENDSTOP.hole_v
 
+    @property
+    def plug_top_z(self) -> float:
+        """Top of the plug keep-out (bracket-local z)."""
+        e = ENDSTOP
+        return self.board_bottom_z - Y_AXIS.scs_top_z + e.pcb[2] + e.connector[2] + e.plug_clearance
+
+    @property
+    def plug_x0(self) -> float:
+        """Outboard end of the plug keep-out (x), bracket-local."""
+        return self.board_front_x + ENDSTOP.plug_keepout_v
+
 
 X_ENDSTOP = XEndstopMount()
 
@@ -1078,16 +1090,13 @@ class XDrive:
     motor_x: float = 1  #: DESIGN: motor shaft x (near the beam end)
     motor_plate_t: float = 5  #: front face = plate_y0
     motor_rib_t: float = 6  #: rib under the motor
-    # Idler (toothed 20T on an M5 axle, cantilevered from the plate) + tensioner
-    idler_x: float = -24  #: DESIGN: idler axle, mid-slot (outboard of the beam end)
-    idler_slot: float = 8  #: axle slot length along x (tension travel; belt ±8 mm)
-    idler_plate_t: float = 11.5  #: thick enough to stand alone (fits between the bolt rows)
-    idler_plate_x: tuple[float, float] = (-42, -8)
-
-    @property
-    def idler_top_z(self) -> float:
-        """Idler plate top, abs z: just enough wall above the axle slot."""
-        return X_BELT.pulley_axis_z + TOL.bolt_hole_d(5) / 2 + TOL.min_wall + 2
+    # Idler: a tensioner slider on a dovetail rail in the foot (X_TENSIONER, T3.16)
+    #: DESIGN (T3.16): idler axle at mid-travel, outboard of the beam end; as far forward as the
+    #: endstop plug space and a usable dovetail length allow (less overhang past the bracket)
+    idler_x: float = -21
+    foot_x0: float = -42  #: DESIGN: foot's outboard end behind the tensioner pad
+    idler_foot_front_y: float = 16  #: DESIGN (T3.16): the foot reaches forward under the rail
+    idler_foot_x1: float = -8  #: ... as far as this x
 
     @property
     def bolt_rows(self) -> tuple[float, float]:
@@ -1120,11 +1129,6 @@ class XDrive:
     def motor_foot_y(self) -> tuple[float, float]:
         """Y range of the motor mount's foot: under the front bolt row and the plate only."""
         return (self.foot_y[0], self.motor_face_y)
-
-    @property
-    def idler_spacer_len(self) -> float:
-        """Printed spacer, plate → idler."""
-        return self.plate_y0 - (X_BELT.y + IDLER.width / 2)
 
 
 X_DRIVE = XDrive()
@@ -1557,6 +1561,164 @@ class DesignError(ValueError):
     """Raised when the parameters violate a design requirement."""
 
 
+@dataclass(frozen=True)
+class TensionIdler:
+    """Generic belt-tensioning idler (prototype): a U-shaped slider on a dovetail rail.
+
+    Assembly frame: rail on the bed (z = 0), x = slide direction (belt leaves toward +x), y = idler
+    axle, z up. x = 0 is the outer face of the rail's end block.
+    """
+
+    axle_m: float = 5  #: idler axle (bolt) size
+    screw_m: float = 3  #: tension screw size
+    side_play: float = 1.0  #: DESIGN: idler end play to each arm (lets it self-align with the belt)
+    slide_gap: float = TOL.slide  #: DESIGN: dovetail clearance, rail to slider (per side)
+    travel: float = 10  #: DESIGN: slider travel (tensioning range)
+    stop_gap: float = 1  #: slider to end block when fully tensioned
+    block_t: float = 6  #: end block thickness along x (carries the screw head)
+    block_w: float = 16  #: end block width (y)
+    rail_t: float = 6  #: rail base plate thickness (room for M3 counterbores)
+    ridge_h: float = 3.5  #: dovetail height (45° flanks)
+    ridge_neck: float = 9  #: dovetail width at its base
+    roof_t: float = 8  #: slider plate above the dovetail cavity (holds the screw and its nut)
+    mount_margin: float = 10  #: rail plate beyond each side of the slider (mounting holes)
+    mount_m: float = 3  #: rail mounting screws
+    arm_clear: float = 1.5  #: web to the idler flange
+    arm_end_r: float = 6.5  #: radius around the axle at the arms' front ends
+    axle_h: float = 10  #: axle above the slider plate's top face
+    head_side: int = -1  #: the arm (-1: -y, 1: +y) that carries the axle bolt's head
+    plate_cut: float = 0  #: slider plate (and rail) shortened at the front by this much
+
+    @property
+    def gap_y(self) -> float:
+        """Clear width between the arms: the idler plus its end play on each side."""
+        return IDLER.width + 2 * self.side_play
+
+    @property
+    def arm_t(self) -> float:
+        """Arm thickness: a pressed-in axle nut pocket plus the wall behind it."""
+        return TOL.nut_trap_h(self.axle_m) + TOL.nut_wall
+
+    @property
+    def width(self) -> float:
+        """Slider width (y)."""
+        return self.gap_y + 2 * self.arm_t
+
+    @property
+    def nut_y(self) -> float:
+        """Start (lowest y) of the axle nut's hex pocket, in the outer face of the nut-side arm."""
+        h = TOL.nut_trap_h(self.axle_m)
+        return self.width / 2 - h if self.head_side < 0 else -self.width / 2 - 1
+
+    @property
+    def nut_seat_y(self) -> float:
+        """Lowest y of the axle nut seated in its pocket (the nut model's bottom face)."""
+        return self.width / 2 - metric(self.axle_m).nut_h if self.head_side < 0 else -self.width / 2
+
+    @property
+    def axle_head_rot(self) -> float:
+        """Rotation about x that points a bolt's shank from its head seat through the arms."""
+        return 90 if self.head_side < 0 else -90
+
+    @property
+    def web_t(self) -> float:
+        """Slider rear wall: thrust wall, screw nut pocket, thin wall behind it."""
+        return TOL.nut_wall + TOL.nut_trap_h(self.screw_m) + TOL.min_wall
+
+    @property
+    def axle_x(self) -> float:
+        """Axle position along the slider, from its rear face."""
+        return self.web_t + IDLER.flange_d / 2 + self.arm_clear
+
+    @property
+    def length(self) -> float:
+        """Slider length (x)."""
+        return self.axle_x + self.arm_end_r
+
+    def arm_chamfer_x(self, nut_side: bool) -> float:
+        """Where an arm's 45° underside meets the plate's top face (x from the slider's rear).
+
+        The line keeps a wall around what is cut into that arm: the axle nut's hex pocket (nut
+        side) or the bolt hole (head side).
+        """
+        r = TOL.nut_trap_ac(self.axle_m) / 2 if nut_side else TOL.bolt_hole_d(self.axle_m) / 2
+        wall = TOL.min_wall
+        return self.axle_x - self.axle_h + (r + wall) * math.sqrt(2)
+
+    @property
+    def plate_len(self) -> float:
+        """Slider plate (and dovetail) length; the arms reach on beyond it."""
+        return self.length - self.plate_cut
+
+    @property
+    def plate_t(self) -> float:
+        """Slider plate thickness: dovetail cavity plus roof."""
+        return self.ridge_h + self.roof_t
+
+    @property
+    def rail_len(self) -> float:
+        """Rail length: end block, slider at full travel."""
+        return self.block_t + self.stop_gap + self.travel + self.plate_len
+
+    @property
+    def rail_w(self) -> float:
+        """Rail plate width."""
+        return self.width + 2 * self.mount_margin
+
+    @property
+    def slider_z0(self) -> float:
+        """Slider underside, assembly frame."""
+        return self.rail_t + self.slide_gap
+
+    @property
+    def screw_z(self) -> float:
+        """Tension screw axis, assembly frame (middle of the roof)."""
+        return self.slider_z0 + self.ridge_h + self.roof_t / 2
+
+    @property
+    def axle_z(self) -> float:
+        """Idler axle, assembly frame."""
+        return self.slider_z0 + self.plate_t + self.axle_h
+
+    @property
+    def screw_len(self) -> float:
+        """Shortest standard screw (5 mm steps): reaches the nut at full slack."""
+        need = (
+            self.block_t
+            + self.stop_gap
+            + self.travel
+            + TOL.nut_wall
+            + TOL.nut_trap_h(self.screw_m)
+            + 1
+        )
+        return float(5 * math.ceil(need / 5))
+
+
+TENSION_IDLER = TensionIdler()
+
+#: The X idler's tensioner (T3.16): the generic one with its rail surface on the idler mount's
+#: foot, 8 mm of travel (as the old slot) and its axle on the X belt line (left bracket-local z)
+X_TENSIONER = dataclasses.replace(
+    TENSION_IDLER,
+    rail_t=X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z,
+    travel=8,
+    block_t=5,
+    stop_gap=0.5,
+    head_side=1,  # the front arm's face is 3 mm from the bracket's beam face: no room for a head
+    #: the plate and ridge stop 1 mm short of the endstop plug's keep-out at full slack
+    plate_cut=(
+        X_DRIVE.idler_x + 4 - TENSION_IDLER.axle_x + TENSION_IDLER.length - (X_ENDSTOP.plug_x0 - 1)
+    ),
+    axle_h=(
+        X_BELT.pulley_axis_z
+        - Y_AXIS.scs_top_z
+        - (X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z)
+        - TENSION_IDLER.slide_gap
+        - TENSION_IDLER.plate_t
+    ),
+)
+
+
 def design_checks() -> Iterator[tuple[bool, str]]:
     """Yield ``(passed, description)`` for every design rule."""
     m5 = metric(5)
@@ -1620,14 +1782,24 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         X_DRIVE.motor_face_y - NEMA17.shaft_len_min <= X_DRIVE.pulley_hub_y - PULLEY.hub_len,
         "Shortest motor shaft doesn't reach the pulley hub",
     )
+    xt = X_TENSIONER
     yield (
-        X_DRIVE.plate_y0 + X_DRIVE.idler_plate_t <= X_DRIVE.bolt_rows[1] - m5.head_d / 2,
-        "Idler plate covers the rear bolt row",
+        abs(xt.axle_z - (X_BELT.pulley_axis_z - Y_AXIS.scs_top_z)) < 1e-6,
+        "X tensioner's axle is off the X belt line",
     )
-    yield X_DRIVE.idler_spacer_len > 0, "Idler spacer length"
+    tip_x = X_DRIVE.idler_x - xt.travel / 2 - xt.axle_x + xt.screw_len - xt.block_t - xt.stop_gap
     yield (
-        X_DRIVE.idler_top_z >= X_BELT.pulley_axis_z + TOL.bolt_hole_d(5) / 2 + TOL.min_wall + 2,
-        "X idler plate too low around the axle slot",
+        xt.slider_z0 + xt.plate_t - (xt.arm_chamfer_x(nut_side=xt.head_side < 0) - xt.plate_len)
+        >= X_ENDSTOP.plug_top_z + 0.3,
+        "X idler slider's rear arm dips into the endstop plug's keep-out",
+    )
+    yield (
+        tip_x <= X_ENDSTOP.plug_x0 - 0.5,
+        "X tension screw tip reaches the endstop plug's keep-out when tight",
+    )
+    yield (
+        xt.axle_h > 0 and xt.axle_z - IDLER.flange_d / 2 >= xt.slider_z0 + xt.plate_t + 1,
+        "X idler hits the tensioner slider's plate",
     )
     yd, ye = Y_DRIVE, Y_ENDSTOP
     shaft_left = Y_AXIS.shaft_x[0]
@@ -1690,6 +1862,19 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield (
         ye.tower_y[1] <= yd.idler_plate_y[1] and ye.tower_y[0] >= 0,
         "Y endstop tower outside the idler plate or the baseboard",
+    )
+    ti = TENSION_IDLER
+    yield (
+        ti.screw_z - metric(ti.screw_m).nut_af / 2 - TOL.nut_slot / 2 > ti.slider_z0 + ti.ridge_h,
+        "Tensioner screw nut pocket cuts into the dovetail cavity",
+    )
+    yield (
+        ti.axle_z - IDLER.flange_d / 2 >= ti.screw_z + TOL.bolt_hole_d(ti.screw_m) / 2,
+        "Tensioner idler flange hits the tension screw",
+    )
+    yield (
+        ti.screw_len - ti.block_t - ti.stop_gap <= ti.length - 1,
+        "Tensioner screw sticks out of the slider at full tension",
     )
     pen_lo, pen_hi = REQ.pen_d_range
     # --- ZRIB mount (T3.7)

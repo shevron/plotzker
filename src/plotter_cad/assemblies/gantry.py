@@ -11,13 +11,13 @@ from pythonscad import cube, mirror, translate
 from plotter_cad.geometry import frame_axes, get_handle, get_handles, shift_handle
 from plotter_cad.hardware import (
     GT2,
-    IDLER,
     PULLEY,
     SCS10UU,
     endstop_keepout,
     endstop_placed,
     gt2_idler,
     gt2_pulley,
+    hex_nut,
     nema17,
     place_in_frame,
     scs10uu,
@@ -31,15 +31,18 @@ from plotter_cad.params import (
     CLAMP,
     FRAME,
     LOOM,
+    TOL,
     X_BELT,
     X_DRIVE,
+    X_TENSIONER,
     Y_AXIS,
 )
 from plotter_cad.parts.belt_clamp import belt_clamp
 from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket_local
 from plotter_cad.parts.loom_anchor import loom_anchor_installed
+from plotter_cad.parts.tension_idler import slider_x0
 from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
-from plotter_cad.parts.x_idler_spacer import x_idler_spacer
+from plotter_cad.parts.x_idler_slider import x_idler_slider_installed
 from plotter_cad.parts.x_motor_mount import x_motor_mount_left
 
 if TYPE_CHECKING:
@@ -65,11 +68,22 @@ def x_drive_local(side: Side) -> list[Solid]:
         ]
     mount = x_idler_mount_installed()
     axle = get_handle(mount, "axle")
+    t = X_TENSIONER
+    slider_rear_x = frame_axes(get_handle(mount, "screw"))[0][0] + slider_x0(t)
     return [
         mount.color("DarkOrange"),
-        gt2_idler().align(shift_handle(axle, [0, X_BELT.y - axle[1][3], 0])),
-        x_idler_spacer().align(axle).color("Orange"),
-        shcs(5, 40).align(shift_handle(axle, [0, X_BELT.y - IDLER.width / 2 - axle[1][3], 0])),
+        x_idler_slider_installed().color("Orange"),
+        gt2_idler().rotate([90, 0, 0]).translate([X_DRIVE.idler_x, X_BELT.y, t.axle_z]),
+        shcs(t.axle_m, 25).align(axle),
+        hex_nut(t.axle_m)
+        .rotate([0, 0, 90])
+        .rotate([-90, 0, 0])
+        .translate([X_DRIVE.idler_x, X_BELT.y + t.nut_seat_y, t.axle_z]),
+        shcs(t.screw_m, t.screw_len).align(get_handle(mount, "screw")),
+        hex_nut(t.screw_m)
+        .rotate([0, 0, 90])
+        .rotate([0, 90, 0])
+        .translate([slider_rear_x + TOL.nut_wall, X_BELT.y, t.screw_z]),
         endstop_placed(*frame_axes(get_handle(mount, "board"))),
     ]
 

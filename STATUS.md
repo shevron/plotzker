@@ -106,7 +106,7 @@ any new decisions in §3, and update the status line at the top.
   - [ ] Follow-up: test-print; check wheel preload range, hook-groove fit (with the T3.6 tool
     plate) and the X belt clamp. (STL regenerated in T3.4: belt line 4 mm further back.)
 - [x] **T3.4 X motor mount and X idler** at the beam ends. → `x_motor_mount.py` (right end,
-  printed mirrored), `x_idler_mount.py` + `x_idler_spacer.py` (left end, slot tensioner),
+  printed mirrored), `x_idler_mount.py` (left end; its slot tensioner and spacer were replaced in T3.16 by a dovetail slider),
   the X− switch lies on the idler mount's foot (D34); assembled in
   `assemblies/gantry.py`. The X belt line moved 4 mm back (center 23 mm behind the beam
   center) so the motor plate fits between the bracket's rear bolt rows and 22.6 mm motor
@@ -333,6 +333,34 @@ the printed carriage, motor mount and idler mount are the test pieces.
   screw shortened to **M3×12** (`CARRIAGE.trig_screw_len`, still ~5 mm through the nut at the
   end of adjustment) and the hole is now a snug Ø3.2 (`TOL.slide_d(3)`, was 3.4). Reprint the carriage.
 
+- [x] **T3.15 Generic tensioning idler (prototype).** The X idler's cantilevered axle tilted
+  under belt tension and the belt felt bumpy. Replacement: the axle is held at both ends by a
+  U-shaped slider (two 6.8 mm arms, rear wall, plate) riding on a dovetail rail, two separate
+  prints (0.2 mm per side); an M3 screw through the rail's end block pulls the slider away from
+  the belt into a captive nut in its rear wall; the idler has 1 mm end play on each side so it
+  self-aligns with the belt. → `parts/tension_idler.py` (`params.TENSION_IDLER`,
+  `assemblies/tension_idler.py` fit check, STLs `tension_idler_rail`, `tension_idler_slider`).
+  - [ ] Follow-up: test-print (slide fit and `slide_gap`, M5×25 axle + nut, M3×25 screw, the
+    bridged cavity roof).
+- [x] **T3.16 Tensioner on the left gantry mount (X idler).** The generic tensioner applied to
+  the X idler, with the rail merged into `x_idler_mount.py` (one part, no extra screws; the old
+  cantilevered plate, slot, tension-nut slot and `x_idler_spacer` are gone) and the slider as
+  `x_idler_slider.py` (`params.X_TENSIONER` = the generic one on the foot, travel 8 mm).
+  Changes needed on the way: the foot grows forward (to y 16) and ~5 mm outboard under the
+  rail (the end block's outer face is at x −47; the bracket ends at −38, so 9 mm overhang); the **axle bolt head
+  is on the rear arm** (`head_side`: the front arm is 3 mm from the bracket's beam face); the
+  slider's **plate and the ridge stop short of the endstop plug's keep-out** (x −22.2), so the
+  plate is 10 mm long instead of 23 and only the arms reach on over the idler (`plate_cut`),
+  their undersides chamfered at 45° (no print overhang; the chamfer keeps a wall round the nut
+  pocket on the front arm and the bolt hole on the rear arm, and the rear arm stays above the
+  plug space); the tension screw is M3×20, tip clear of the keep-out when tight.
+  Idler moved 3 mm toward the motor (x −21 at mid-travel, same belt line; was −24), end block 5
+  mm thick, 0.5 mm stop gap, to cut the overhang from 13 to 9 mm; the screw head stays
+  reachable from outboard. Test: slider free over its
+  whole travel, the plug keep-out stays free.
+  - [ ] Follow-up: test-print; check that the short dovetail (10 mm) doesn't rock under belt
+    tension, and the foot's 9 mm overhang past the bracket (the end block is loaded in x).
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.
@@ -514,8 +542,9 @@ toward the inboard side and the other SK10), so the mounts are fitted last, push
 the aligned SK10s.
 
 **X drive (T3.4):** the **X motor** sits behind the beam at the right end
-(`x_motor_mount.py`), the **idler + belt tensioner** at the left end (`x_idler_mount.py`:
-the M5 axle slides in an 8 mm slot, an M3 screw pushes it outward, the axle nut locks it),
+(`x_motor_mount.py`), the **idler + belt tensioner** at the left end (T3.16: `x_idler_mount.py` is
+the foot with a dovetail rail and screw block built in; `x_idler_slider.py` carries the idler on an
+M5 axle held by both arms and is pulled outboard by an M3 screw, 8 mm of travel),
 with the **X− endstop** board lying on the idler mount's foot (the trigger head presses the lever along the board).
 Both mounts sit on the gantry bracket over the rear SCS block and are clamped by that
 block's M5 bolts (M5×25 on the clamped row: the rear row for the idler, the front row for the motor; the other row stays M5×20), so the brackets need no extra holes.

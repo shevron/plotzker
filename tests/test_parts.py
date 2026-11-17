@@ -6,7 +6,7 @@ import pytest
 
 from plotter_cad import build
 from plotter_cad.parts import PRINTABLE_PARTS
-from solids import bounding_box, shell_count, volume
+from solids import bounding_box, shell_count, touching, volume
 
 
 def assert_printable(solid):
@@ -53,3 +53,10 @@ def test_x_carriage_clamp_nuts_each_have_a_pocket_and_a_roof():
             # just above the pocket, near its far corner (the front one is under the 45° ramp)
             roof = cube([1, 1, 1]).translate([at[0] - 3, at[1] - 3, X_BELT.back_z - 3.9])
             assert volume(roof & carriage) > 0.9, "no roof above the nut"
+
+
+def test_tension_idler_slider_is_free_of_the_rail():
+    """The slider rides on the rail's dovetail without touching it (a sliding fit)."""
+    from plotter_cad.parts.tension_idler import rail, slider
+
+    assert not touching(rail(), slider())

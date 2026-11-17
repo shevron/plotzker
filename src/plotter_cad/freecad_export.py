@@ -329,7 +329,7 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
     n_clamps = len(get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "belt_clamps"))
 
     for side, label, shaft_x, mirrored, n_drive in (
-        (Side.LEFT, "L", left_x, False, 5),
+        (Side.LEFT, "L", left_x, False, 8),
         (Side.RIGHT, "R", right_x, True, 3),
     ):
         local = gantry_end_local(side)
@@ -368,12 +368,15 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
         if side is Side.LEFT:
             names = (
                 "x_idler_mount",
+                "x_idler_slider",
                 "x_idler",
-                "x_idler_spacer",
                 "x_idler_bolt",
+                "x_idler_nut",
+                "x_idler_tension_screw",
+                "x_idler_tension_nut",
                 "x_endstop",
             )
-            colors = (PRINTED, ALU, PRINTED, FASTENER, BOARD)
+            colors = (PRINTED, PRINTED, ALU, FASTENER, FASTENER, FASTENER, FASTENER, BOARD)
         else:
             names = ("x_motor_mount", "x_motor", "x_pulley")
             colors = (PRINTED, MOTOR, SILVER)

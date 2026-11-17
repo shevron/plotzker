@@ -1582,6 +1582,9 @@ class TensionIdler:
     arm_clear: float = 1.5  #: web to the idler flange
     arm_end_r: float = 6.5  #: radius around the axle at the arms' front ends
     axle_h: float = 10  #: axle above the slider plate's top face
+    #: DESIGN: extra thickness of the slider's M3 nut slot: it prints standing (axis up) and a
+    #: long slot came out too tight for the nut (T3.15)
+    nut_slot_extra: float = 0.2
     head_side: int = -1  #: the arm (-1: -y, 1: +y) that carries the axle bolt's head
     plate_cut: float = 0  #: slider plate (and rail) shortened at the front by this much
 
@@ -1619,7 +1622,7 @@ class TensionIdler:
     @property
     def web_t(self) -> float:
         """Slider rear wall: thrust wall, screw nut pocket, thin wall behind it."""
-        return TOL.nut_wall + TOL.nut_trap_h(self.screw_m) + TOL.min_wall
+        return TOL.nut_wall + TOL.nut_trap_h(self.screw_m) + self.nut_slot_extra + TOL.min_wall
 
     @property
     def axle_x(self) -> float:

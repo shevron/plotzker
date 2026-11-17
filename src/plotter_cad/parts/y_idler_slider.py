@@ -12,8 +12,8 @@ image; :func:`y_idler_slider` returns each in print orientation.
 
 Hardware: toothed idler (``IDLER``); 1 × M5×25 ISO 4762 (axle) + 1 × M5 nut (pressed into the
 outboard arm's outside); 1 × M3 nut (pressed in from the top of the rear wall).
-Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; dovetail lips down, arms up; no
-supports, but the cavity roof bridges ~16 mm.
+Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; lying on its back (rear wall on
+the bed, dovetail vertical); no supports, no bridges.
 """
 
 from typing import TYPE_CHECKING
@@ -33,7 +33,7 @@ def y_idler_slider_installed() -> Solid:
 
 
 def y_idler_slider(side: Side = Side.LEFT) -> Solid:
-    """The slider for one side in print orientation: dovetail lips on the bed (the right one is
+    """The slider for one side in print orientation: lying on its back (the right one is
     the mirror image: its axle nut is on the other arm)."""
     part = slider_for_print(Y_TENSIONER)
     return part.mirror([0, 1, 0]) if side is Side.RIGHT else part

@@ -10,8 +10,8 @@ axle at ``X_DRIVE.idler_x``.
 
 Hardware: toothed idler (``IDLER``); 1 × M5×25 ISO 4762 (axle, head on the -y arm) + 1 × M5 nut
 (pressed into the +y arm's outside); 1 × M3 nut (pressed in from the top of the rear wall).
-Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; dovetail lips down, arms up; no
-supports, but the cavity roof bridges ~17 mm.
+Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; lying on its back (rear wall on
+the bed, dovetail vertical); no supports, no bridges.
 """
 
 from typing import TYPE_CHECKING
@@ -30,5 +30,5 @@ def x_idler_slider_installed() -> Solid:
 
 
 def x_idler_slider() -> Solid:
-    """Print orientation: dovetail lips on the bed."""
+    """Print orientation: lying on its back."""
     return slider_for_print(X_TENSIONER)

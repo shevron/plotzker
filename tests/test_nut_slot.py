@@ -33,3 +33,10 @@ def test_nut_fits_flat_first_and_cannot_turn():
     # turned 10° it no longer does: the hex walls hold it
     turned = union(nut.rotate([0, 10, 0]))
     assert volume(turned - slot) > 0.05
+
+
+def test_extra_thickness_widens_only_the_slot_thickness():
+    lo, hi = bounding_box(nut_slot(3, 10, "x", "+z"))
+    lo2, hi2 = bounding_box(nut_slot(3, 10, "x", "+z", extra_t=0.2))
+    assert (hi2[0] - lo2[0]) - (hi[0] - lo[0]) == pytest.approx(0.2, abs=0.01)
+    assert hi2[1] - lo2[1] == pytest.approx(hi[1] - lo[1], abs=0.01)

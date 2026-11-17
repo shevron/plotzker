@@ -33,17 +33,18 @@ _ROTATIONS: dict[tuple[str, str], tuple[float, float, float]] = {
 }
 
 
-def nut_slot(m: float, reach: float, axis: str, entrance: str) -> Solid:
+def nut_slot(m: float, reach: float, axis: str, entrance: str, extra_t: float = 0) -> Solid:
     """Pocket for an M``m`` nut, centered on the nut's center.
 
     ``axis``: the bolt's axis (``"x"``, ``"y"`` or ``"z"``); ``entrance``: the direction the
     nut is pressed in from, as a signed axis (``"+z"``, ``"-x"``...): the pocket's floor lies
     below the nut and the pocket runs out to ``reach`` mm from the nut's center toward the
-    entrance. Combinations not in ``_ROTATIONS`` are added when needed.
+    entrance. Combinations not in ``_ROTATIONS`` are added when needed. ``extra_t`` makes the
+    pocket that much thicker (a long pocket whose print orientation makes it come out tight).
     """
     af = metric(m).nut_af + TOL.nut_slot  # across flats (the print comes out ~0.1 narrow)
     ac = af / cos_deg(30)
-    t = TOL.nut_trap_h(m)
+    t = TOL.nut_trap_h(m) + extra_t
     hexagon = cylinder(d=ac, h=t, fn=6).rotate([90, 0, 0]).translate([0, t / 2, 0])
     walls = cube([ac, t, reach + EPS]).translate([-ac / 2, -t / 2, -EPS])
     return (hexagon | walls).rotate(list(_ROTATIONS[axis, entrance]))

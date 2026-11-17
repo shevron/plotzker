@@ -21,8 +21,9 @@ Hardware: toothed idler (``IDLER``); 1 × M5×25 ISO 4762 (axle, head on the -y 
 nut (pressed into the +y arm's outside); 1 × M3 nut (pressed in from the top of the rear
 wall) + 1 × M3×``screw_len`` ISO 4762 (tension screw, from the block's outside);
 4 × M3 ISO 4762 through the rail plate to mount it.
-Print: PETG; 0.2 mm; 4 perimeters; 40 % infill; rail flat on its plate, slider on its
-dovetail lips (underside down); no supports, but the slider's cavity roof bridges ~17 mm.
+Print: PETG; 0.2 mm; 4 perimeters; 40 % infill; rail flat on its plate; slider lying on its
+back (rear wall on the bed); no supports and no bridges (the dovetail runs vertically; the nut
+slot's ceiling spans only the nut's width).
 Dovetail clearance ``slide_gap`` (0.2 mm per side): tune after a test print.
 """
 
@@ -162,27 +163,40 @@ def slider(t: TensionIdler = T) -> Solid:
     web = cube([t.web_t, w, arm_top - zt + EPS]).translate([0, -w / 2, zt - EPS])
     body = (plate | union(*arms) | web).translate([x0, 0, 0])
 
-    axle_hole = teardrop_y(TOL.bolt_hole_d(t.axle_m), w + 2).translate([x0 + t.axle_x, 0, t.axle_z])
+    # printed on its back (+x up): the axle hole's teardrop and the nut pocket's corner point +x
+    axle_hole = (
+        teardrop_y(TOL.bolt_hole_d(t.axle_m), w + 2)
+        .rotate([0, 90, 0])
+        .translate([x0 + t.axle_x, 0, t.axle_z])
+    )
     axle_nut = (
         cylinder(d=TOL.nut_trap_ac(t.axle_m), h=TOL.nut_trap_h(t.axle_m) + 1, fn=6)
-        .rotate([0, 0, 90])
         .rotate([-90, 0, 0])
         .translate([x0 + t.axle_x, t.nut_y, t.axle_z])
     )
-    nut_t = TOL.nut_trap_h(t.screw_m)
-    screw_nut = nut_slot(t.screw_m, arm_top - t.screw_z + 1, "x", "+z").translate(
+    nut_t = TOL.nut_trap_h(t.screw_m) + t.nut_slot_extra
+    screw_nut = nut_slot(t.screw_m, arm_top - t.screw_z + 1, "x", "+z", t.nut_slot_extra).translate(
         [x0 + TOL.nut_wall + nut_t / 2, 0, t.screw_z]
     )
-    screw_hole = teardrop_x(TOL.bolt_hole_d(t.screw_m), 2 * length).translate(
-        [x0 + length / 2, 0, t.screw_z]
+    screw_hole = (
+        cylinder(d=TOL.bolt_hole_d(t.screw_m), h=2 * length, fn=FN_HOLE)
+        .rotate([0, 90, 0])
+        .translate([x0 - length / 2, 0, t.screw_z])
     )
     cut = _cavity(t, t.plate_len).translate([x0, 0, 0])
     return body - cut - axle_hole - axle_nut - screw_nut - screw_hole
 
 
 def slider_for_print(t: TensionIdler = T) -> Solid:
-    """The slider in print orientation: its dovetail lips on the bed, arms up."""
-    return slider(t).translate([-slider_x0(t), 0, -t.slider_z0])
+    """The slider in print orientation: lying on its back (the rear wall on the bed), so the
+    dovetail runs vertically and its roof is a vertical wall, not a bridge."""
+    top = t.axle_z + t.arm_end_r - t.slider_z0
+    return (
+        slider(t)
+        .translate([-slider_x0(t), 0, -t.slider_z0])
+        .rotate([0, -90, 0])
+        .translate([top, 0, 0])
+    )
 
 
 def tension_idler_installed() -> Solid:
@@ -208,5 +222,5 @@ def tension_idler_rail() -> Solid:
 
 
 def tension_idler_slider() -> Solid:
-    """Print orientation: the slider's dovetail lips on the bed, arms up."""
+    """Print orientation: the slider lying on its back."""
     return slider_for_print()

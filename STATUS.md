@@ -340,8 +340,9 @@ the printed carriage, motor mount and idler mount are the test pieces.
   the belt into a captive nut in its rear wall; the idler has 1 mm end play on each side so it
   self-aligns with the belt. → `parts/tension_idler.py` (`params.TENSION_IDLER`,
   `assemblies/tension_idler.py` fit check, STLs `tension_idler_rail`, `tension_idler_slider`).
-  - [ ] Follow-up: test-print (slide fit and `slide_gap`, M5×25 axle + nut, M3×25 screw, the
-    bridged cavity roof).
+  - [ ] Follow-up: test-print (slide fit and `slide_gap`, M5×25 axle + nut, M3×25 screw; the
+    slider prints lying on its back, no bridges; its M3 nut slot is 0.2 mm thicker than the usual
+    nut trap, `nut_slot_extra`, because the long slot came out too tight).
 - [x] **T3.16 Tensioner on the left gantry mount (X idler).** The generic tensioner applied to
   the X idler, with the rail merged into `x_idler_mount.py` (one part, no extra screws; the old
   cantilevered plate, slot, tension-nut slot and `x_idler_spacer` are gone) and the slider as

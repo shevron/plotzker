@@ -326,3 +326,23 @@ def test_x_idler_slider_rides_free_over_its_whole_travel(shift):
     assert not touching(moved, mount)
     assert volume(moved & x_endstop_keepout()) < 1e-3
     assert volume(moved & bracket) < 1e-3
+
+
+@pytest.mark.parametrize("side", [Side.LEFT, Side.RIGHT])
+@pytest.mark.parametrize("shift", [-1, 0, 1])
+def test_y_idler_slider_rides_free_over_its_whole_travel(side, shift):
+    """T3.17: along the whole tension travel the slider neither touches its mount (a sliding
+    fit) nor reaches into the endstop's plug space or the front SK10."""
+    from plotter_cad.geometry import frame_axes, get_handle
+    from plotter_cad.hardware import endstop_keepout, place_in_frame
+    from plotter_cad.params import Y_TENSIONER
+    from plotter_cad.parts.y_idler_slider import y_idler_slider_installed
+
+    moved = y_idler_slider_installed().translate([0, shift * Y_TENSIONER.travel / 2, 0])
+    assert not touching(moved, y_idler_mount_installed(side))
+    keepout = place_in_frame(
+        endstop_keepout(),
+        *frame_axes(get_handle(y_idler_mount_installed(side), "board")),
+    )
+    assert volume(moved & keepout) < 1e-3
+    assert volume(moved & sk10().translate([0, Y_AXIS.sk10_y[0], 0])) < 1e-3

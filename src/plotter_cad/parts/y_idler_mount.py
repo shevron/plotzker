@@ -1,37 +1,38 @@
-"""Y idler mount + belt tensioner (STATUS.md T3.5). Print ×1 left + ×1 right.
+"""Y idler mount with the belt tensioner's rail (STATUS.md T3.5, T3.17). Print ×1 left + ×1 right.
 
-Purpose: carries the Y belt idler on the baseboard in front of the front SK10, in line
-with the belt (30 mm outboard of the shaft), tensions the belt, and carries the Y endstop
-board. The idler turns on an M5 axle held by a plate outboard of it; the axle slides in a
-slot along y. An M3 screw from the rear edge pushes the axle forward to tension the belt;
-the axle nut then locks it. The foot is screwed to the baseboard. A tower on the plate
-carries the endstop board in the plane of the gantry bracket's trigger screw (see
-``params.YEndstopMount``): the screw tip, moving −y, pushes the lever toward the board
-2 mm before the end of travel; the screw's length sets the exact trip point.
+Purpose: carries the Y belt idler on the baseboard in front of the front SK10, in line with the
+belt (30 mm outboard of the shaft), tensions the belt, and carries the Y endstop board. The
+idler turns on an M5 axle held at both ends by the U-shaped :mod:`y_idler_slider`, which rides on
+a dovetail ridge on this foot (the rail); an M3 screw through the end block at the front pulls
+the slider forward to tension the belt (the head is reachable from the front). The generic design
+is :mod:`tension_idler`. The foot is screwed to the baseboard. A tower carries the endstop board
+in the plane of the gantry bracket's trigger screw (see ``params.YEndstopMount``): the screw tip,
+moving −y, pushes the lever toward the board 2 mm before the end of travel; the screw's length
+sets the exact trip point.
 
-  top view (left side)                          side view (looking along +x)
-  ┌──────┐ ← rear edge, tension screw head      ┌────┐ plate
-  │ slot │ ← M5 axle slides here (±4 mm)    ◯═══╡    │  axle through
-  │      │                                      └────┘  the plate
-  ├──────┘                                    ──foot──   (nut outboard)
-  └ foot (2 × 4×25 countersunk wood screws)
+  top view (left side)
+  ┌───────────────┐ ← tower (endstop board stands on its inboard face)
+  │  ┌──┐ slider  │
+  │  │▓ ═ ridge ═ │ ← rail along y, belt line x = belt_x
+  │ ▓│ end block  │
+  └──┴─M3 screw head, front
 
 Frame: left side frame (``params.YDrive``: x from the shaft, machine y, z = baseboard
 top); the part is printed foot down in the same orientation. The right-hand part is the
 mirror image, except for the endstop tower's height and holes: the board is chiral, so
 the lever hinge sits at the other end (:func:`y_idler_mount`).
 
-Hardware: toothed 20T GT2 idler (Ø5 bore); 1 × M5×30 ISO 4762 + M5 nut (nyloc) + 2 × M5
-washers (one each side of the idler) as the axle, head inboard of the idler; 1 × M3 nut
-(pressed into the top slot) + 1 × M3×20 ISO 4762 (tension screw); 2 × 4×25 countersunk wood
-screws into the baseboard (through 9 mm bosses on the foot);
-the endstop board with 2 × M3×12 into 2 × M3 nuts pressed into the tower's outboard face.
-Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
+Hardware: see :mod:`y_idler_slider` (idler, M5×25 axle + nut, M3 nut) + 1 × M3×25 ISO 4762
+(tension screw, from the end block's front face); 2 × 4×25 countersunk wood screws into the
+baseboard (through 9 mm bosses on the foot); the endstop board with 2 × M3×12 into 2 × M3 nuts
+pressed into the tower's outboard face.
+Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports (the ridge's 45°
+flanks self-support).
 """
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, hull, union
+from pythonscad import cube, cylinder, union
 
 from plotter_cad.geometry import (
     FN_HOLE,
@@ -39,62 +40,48 @@ from plotter_cad.geometry import (
     frame_handle,
     handle,
     set_handles,
-    teardrop_x,
-    teardrop_y,
 )
 from plotter_cad.hardware import ENDSTOP
-from plotter_cad.nut_slot import nut_slot
-from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP
+from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_TENSIONER
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
+from plotter_cad.parts.tension_idler import end_block, ridge, slider_x0
 from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
 
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-AXIS_Z = Y_AXIS.pulley_axis_z  #: idler axle height
-SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the plate ends (y)
+T = Y_TENSIONER
+AXIS_Z = T.axle_z  #: idler axle height
+SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the foot's ends (y)
+#: Idler axle: bolt head seat on the slider's inboard arm, shank toward -x (slider at mid-travel)
+AXLE: Matrix = handle([Y_AXIS.belt_x + T.width / 2, Y_DRIVE.idler_y, AXIS_Z], [0, 90, 0])
+#: Tension screw: head seat on the end block's front face, shank toward +y
+TENSION_SCREW: Matrix = handle([Y_AXIS.belt_x, Y_DRIVE.idler_block_y, T.screw_z], [90, 0, 0])
 
-_PLATE_CX = sum(Y_DRIVE.idler_plate_x) / 2
-#: Idler axle: on the plate's inboard face, along +x, in the middle of the slot
-AXLE: Matrix = handle([Y_DRIVE.idler_plate_x[1], Y_DRIVE.idler_y, AXIS_Z], [0, 90, 0])
-#: Tension screw: head on the plate's rear edge, along +y toward the slot
-TENSION_SCREW: Matrix = handle([_PLATE_CX, Y_DRIVE.idler_plate_y[1], AXIS_Z], [-90, 0, 0])
+
+def to_side_frame(solid: Solid) -> Solid:
+    """A solid in the tensioner's frame (x along the slide, y along the axle) in the left side
+    frame: slide direction +y, axle direction -x, end block's front face at ``idler_block_y``."""
+    return solid.rotate([0, 0, 90]).translate([Y_AXIS.belt_x, Y_DRIVE.idler_block_y, 0])
 
 
 def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     """The mount in the left side frame (``side`` selects the endstop board's orientation)."""
     d = Y_DRIVE
-    x0, x1 = d.idler_plate_x
-    y0, y1 = d.idler_plate_y
-    plate_cx = (x0 + x1) / 2
-    foot = cube([x1 - d.idler_foot_x0, y1 - y0, d.foot_t]).translate([d.idler_foot_x0, y0, 0])
+    e = Y_ENDSTOP
+    x0, x1 = d.idler_foot_x0, d.idler_foot_x1
+    y0, y1 = d.idler_foot_y
+    foot = cube([x1 - x0, y1 - y0, d.foot_t]).translate([x0, y0, 0])
     pocket_frame, pocket_cut = sk10_pocket(PocketEnd.FRONT, x1)
-    plate = cube([x1 - x0, y1 - y0, d.idler_top_z]).translate([x0, y0, 0])
-    slot = hull(
-        *(
-            teardrop_x(TOL.bolt_hole_d(5), d.idler_plate_t + 2).translate(
-                [plate_cx, d.idler_y + dy, AXIS_Z]
-            )
-            for dy in (-d.idler_slot / 2, d.idler_slot / 2)
-        )
-    )
-    # tension screw: M3 clearance hole from the rear edge to the slot; the nut is pressed
-    # into a slot from the top, behind a wall that takes the thrust
-    nut_t = TOL.nut_trap_h(3)
-    nut_y1 = y1 - TOL.nut_wall
-    tension_nut = nut_slot(3, d.idler_top_z - AXIS_Z + 1, "y", "+z").translate(
-        [plate_cx, nut_y1 - nut_t / 2, AXIS_Z]
-    )
-    screw = teardrop_y(TOL.bolt_hole_d(3), y1 + 2 - d.idler_y).translate(
-        [plate_cx, (y1 + 2 + d.idler_y) / 2, AXIS_Z]
-    )
+    rail_len = slider_x0(T) + T.travel / 2 + T.plate_len
+    rail = to_side_frame(ridge(T, 0, rail_len))
+    block = to_side_frame(end_block(T, 0))
     screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
     screw_x = d.idler_foot_x0 + d.idler_foot_out / 2
     holes = [wood_screw_hole(screw_x, y) for y in screw_ys]
     foot = foot | wood_screw_boss(screw_x, screw_ys[0]) | wood_screw_boss(screw_x, screw_ys[1])
     # endstop tower: the board stands against its inboard face
-    e = Y_ENDSTOP
     u_z = -1 if side is Side.LEFT else 1
     z_top = e.board_z(u_z)[1]
     tower = cube([e.tower_x[1] - e.tower_x[0], e.tower_y[1] - e.tower_y[0], z_top]).translate(
@@ -134,14 +121,15 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         for sz in (-1, 1)
     ]
     mount = (
-        (foot | plate | tower | pocket_frame)
-        - pocket_cut
-        - slot
-        - tension_nut
-        - screw
-        - holes
-        - board_holes
-        - (relief - union(*lands))
+        (
+            (foot | tower | pocket_frame)
+            - pocket_cut
+            - holes
+            - board_holes
+            - (relief - union(*lands))
+        )
+        | rail
+        | block
     )
     board = frame_handle(
         [e.board_x0, e.board_front_y, zc], [0, 0, u_z], [0, 1, 0], [1, 0, 0]

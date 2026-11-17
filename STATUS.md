@@ -361,6 +361,22 @@ the printed carriage, motor mount and idler mount are the test pieces.
   - [ ] Follow-up: test-print; check that the short dovetail (10 mm) doesn't rock under belt
     tension, and the foot's 9 mm overhang past the bracket (the end block is loaded in x).
 
+- [x] **T3.17 Tensioner on the Y idler mounts.** The same dovetail tensioner as the X idler (T3.16)
+  on both Y idler mounts: rail and screw block built into the foot (`parts/y_idler_mount.py`),
+  slider as `parts/y_idler_slider.py` (left + right, mirror images; `params.Y_TENSIONER`, travel 8
+  mm). The slide runs along y (belt direction), the screw block is at the **front** (screw head
+  reachable from the front, tensioning no longer needs the gantry moved back), the axle bolt
+  head is on the inboard arm. The idler position is unchanged (y 56.1 at mid-travel, clear of
+  the endstop plug keep-out). Changes: the old outboard plate, axle slot and tension-nut slot
+  are gone; the foot is one plate from the block to the endstop tower (x −60 to −20, y 29 to 108),
+  wood screws at its outboard strip; the tower is 10 mm thick (`tower_t`, was 10.35 with the old
+  plate); the dovetail is 3 mm high with a 7.5 mm roof so the slider's plate stays under the low
+  idler (1 mm clear of its flange). Test: slider free over its whole travel on both sides. The
+  baseboard drilling layout is regenerated (the foot footprint changed; the mounts are still not
+  pre-drilled).
+  - [ ] Follow-up: test-print; check the belt tension range, the plate clearance under the idler
+    and the dovetail fit.
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.
@@ -529,11 +545,11 @@ the brackets, a slot from the back on the carriage).
 **Y drive (T3.5):** per side, the motor sits **behind the rear SK10** with its shaft
 pointing outboard (body inboard, ≥ 3 mm from the SK10; `y_motor_mount.py`: 5 mm plate, foot
 extending outboard so the wood screws stay accessible, two gussets). The idler is **in front
-of the front SK10** on an M5 axle held by an outboard plate (`y_idler_mount.py`): the axle
-slides in an 8 mm slot along y, an M3 screw from the plate's rear edge pushes it forward
-to tension, and the axle nut locks it (tension is set with the gantry moved back, since
-the screw head sits just in front of the gantry's front stop). The **Y endstop**
-board stands on a tower on the idler plate, in the plane of the bracket's trigger screw, front edge toward +y: the screw tip presses
+of the front SK10** (T3.17): `y_idler_mount.py` is the foot with a dovetail rail and screw block
+built in, `y_idler_slider.py` carries the idler on an M5 axle held by both arms and is pulled
+forward by an M3 screw from the block at the front (8 mm travel; the head is reachable from the
+front). The **Y endstop**
+board stands on a tower on the foot, in the plane of the bracket's trigger screw, front edge toward +y: the screw tip presses
 the lever toward the board ~2.2 mm before the end of travel (the screw length sets the trip point). All
 mounts are screwed down with 4 × 25 countersunk wood screws through 9 mm bosses on the feet; the right-hand parts are mirror images, except the tower (the board is chiral).
 Each mount's foot also carries an **SK10 pocket** (`parts/sk10_pocket.py`, D26): a corner cut-out the

@@ -20,6 +20,7 @@ from plotter_cad.parts import (
     x_idler_slider,
     x_motor_mount,
     y_idler_mount,
+    y_idler_slider,
     y_motor_mount,
     zrib_guard,
     zrib_hanger,
@@ -49,3 +50,4 @@ PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
 for _side in gantry_end_bracket.Side:
     PRINTABLE_PARTS[f"y_motor_mount_{_side.value}"] = partial(y_motor_mount.y_motor_mount, _side)
     PRINTABLE_PARTS[f"y_idler_mount_{_side.value}"] = partial(y_idler_mount.y_idler_mount, _side)
+    PRINTABLE_PARTS[f"y_idler_slider_{_side.value}"] = partial(y_idler_slider.y_idler_slider, _side)

@@ -9,32 +9,32 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, mirror, translate
 
 from plotter_cad.assemblies.gantry import gantry_assembly
-from plotter_cad.geometry import Matrix, frame_axes, get_handle, get_handles, handle, shift_handle
+from plotter_cad.geometry import Matrix, frame_axes, get_handle, get_handles, shift_handle
 from plotter_cad.hardware import (
     GT2,
-    IDLER,
     PULLEY,
     endstop_keepout,
     endstop_placed,
     gt2_idler,
     gt2_pulley,
     hex_nut,
+    metric,
     nema17,
     place_in_frame,
     shcs,
     sk10,
-    washer,
     y_shaft,
 )
-from plotter_cad.params import BRACKET, FRAME, Y_AXIS, Y_DRIVE
+from plotter_cad.params import BRACKET, FRAME, TOL, Y_AXIS, Y_DRIVE, Y_TENSIONER
 from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
+from plotter_cad.parts.y_idler_slider import y_idler_slider_installed
 from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
 
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-_AXLE_LEN = 30  #: M5 idler axle
+_AXLE_LEN = 25  #: M5 idler axle
 
 
 def _at_x(mat: Matrix, x: float) -> Matrix:
@@ -43,22 +43,25 @@ def _at_x(mat: Matrix, x: float) -> Matrix:
 
 
 def y_idler_end_local(side: Side = Side.LEFT) -> list[Solid]:
-    """Idler end of the left side: idler mount, idler, axle, tension screw, endstop."""
-    belt_x = Y_AXIS.belt_x
+    """Idler end of the left side: idler mount, slider, idler, axle, tension screw."""
     mount = y_idler_mount_installed(side)
     axle = get_handle(mount, "axle")
-    x_out = Y_DRIVE.idler_plate_x[0]  #: outboard face of the plate
-    outboard = handle([x_out - 1, axle[1][3], axle[2][3]], [0, -90, 0])  #: nut side, facing out
-    inboard = belt_x + IDLER.width / 2 + 1  #: idler flange + one washer
+    t = Y_TENSIONER
+    slider_rear_y = Y_DRIVE.idler_y - t.axle_x
     return [
         mount.color("DarkOrange"),
-        gt2_idler().align(_at_x(axle, belt_x)),
-        washer(5).align(_at_x(axle, belt_x + IDLER.width / 2)),
-        washer(5).align(_at_x(axle, belt_x - IDLER.width / 2 - 1)),
-        shcs(5, _AXLE_LEN).align(_at_x(axle, inboard)),
-        washer(5).align(_at_x(axle, x_out - 1)),
-        hex_nut(5).align(outboard),
-        shcs(3, 20).align(get_handle(mount, "tension_screw")),
+        y_idler_slider_installed().color("Orange"),
+        gt2_idler().align(_at_x(axle, Y_AXIS.belt_x)),
+        shcs(t.axle_m, _AXLE_LEN).align(axle),
+        hex_nut(t.axle_m)
+        .rotate([0, -90, 0])
+        .translate(
+            [Y_AXIS.belt_x - t.width / 2 + metric(t.axle_m).nut_h, Y_DRIVE.idler_y, t.axle_z]
+        ),
+        shcs(t.screw_m, t.screw_len).align(get_handle(mount, "tension_screw")),
+        hex_nut(t.screw_m)
+        .rotate([-90, 0, 0])
+        .translate([Y_AXIS.belt_x, slider_rear_y + TOL.nut_wall, t.screw_z]),
     ]
 
 

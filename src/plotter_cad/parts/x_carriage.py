@@ -34,9 +34,13 @@ Hardware:
       left end through a captive nut; its head touches the switch; lock nut outside
   zip ties for the tool-head cable
 
-Print: PETG (preferred) or PLA; 0.2 mm layers; 4 perimeters; 40 % infill; front face
-down on the bed; no supports (hook groove and side holes are self-supporting:
-45° walls, short bridges, teardrops).
+Print: default profile (``profiles/default.toml``); front face down on the bed (the build
+direction is +y in the carriage frame); no supports (hook groove and side holes are
+self-supporting: 45° walls, short bridges, teardrops).
+
+FEM: the X belt's two ends pull the rear block apart, the tool head's weight and inertia and a
+pen knock act on the tool-plate face, and the wheel axle bolts' head seats hold it; see
+:data:`PART`.
 """
 
 from typing import TYPE_CHECKING
@@ -45,9 +49,29 @@ from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
 from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x
 from plotter_cad.hardware import ECCENTRIC, metric
+from plotter_cad.loads import (
+    ACCELERATION,
+    CARRIAGE_HEAD_KG,
+    PEN_KNOCK,
+    PEN_TIP_Z,
+    X_BELT_LOADS,
+    G,
+    lever_couple,
+)
 from plotter_cad.nut_slot import nut_slot
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
-from plotter_cad.types import Matrix
+from plotter_cad.part import (
+    DisplacementLimit,
+    FemSpec,
+    Force,
+    Load,
+    LoadCase,
+    Moment,
+    Part,
+    Support,
+)
+from plotter_cad.regions import Box, Cylinder
+from plotter_cad.types import Matrix, Vec3
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -252,3 +276,129 @@ def x_carriage_installed() -> Solid:
 def x_carriage() -> Solid:
     """The carriage in print orientation: front face down on the bed."""
     return x_carriage_installed().rotate([90, 0, 0]).translate([0, 0, -CARRIAGE.plate_front_y])
+
+
+# --- FEM definition (carriage-local frame = installed frame) -------------------------
+_FRONT_Y = CARRIAGE.plate_front_y
+#: The tool plate's face on the carriage (the head hangs here): its weight and knocks enter here
+TOOL_FACE = Box(
+    lo=(-TOOL_PLATE.w / 2, _FRONT_Y - 0.3, TOOL_PLATE.bottom_z),
+    hi=(TOOL_PLATE.w / 2, _FRONT_Y + 0.3, TOOL_PLATE.top_z),
+    facing=(0, -1, 0),
+)
+_FACE_CENTRE: Vec3 = (0.0, _FRONT_Y, (TOOL_PLATE.bottom_z + TOOL_PLATE.top_z) / 2)
+#: The tool plate's thickness of carriage behind the face (its displacement tilts the head)
+TOOL_PLATE_NODES = Box(
+    lo=(-TOOL_PLATE.w / 2, _FRONT_Y - 0.1, TOOL_PLATE.bottom_z),
+    hi=(TOOL_PLATE.w / 2, _FRONT_Y + CARRIAGE.plate_t, TOOL_PLATE.top_z),
+)
+#: Where the belt lies on the rear block's flat top, under each clamp (left, right)
+CLAMP_FOOTPRINTS = [
+    Box(
+        lo=(sx * CLAMP_X - CLAMP.length / 2, X_BELT.y - CLAMP.w / 2, X_BELT.back_z - 0.3),
+        hi=(sx * CLAMP_X + CLAMP.length / 2, X_BELT.y + CLAMP.w / 2, X_BELT.back_z + 0.3),
+        facing=(0, 0, 1),
+    )
+    for sx in (-1, 1)
+]
+#: The wheel axle bolts' heads on the counterbore floors of the front face (top, bottom pairs)
+AXLE_SEATS = [
+    Cylinder(
+        center=(sx * WHEEL_X, _FRONT_Y + CARRIAGE.head_recess, z),
+        axis=(0, 1, 0),
+        radius=metric(5).washer_od / 2 - 0.3,
+        inner_radius=TOL.bolt_hole_d(5) / 2,
+        half_length=0.3,
+        facing=(0, -1, 0),
+    )
+    for z in CARRIAGE.wheel_z
+    for sx in (-1, 1)
+]
+#: The pen tip, about 19 mm in front of the carriage face (ASSUMED, middle of 16-22 mm)
+_PEN_TIP: Vec3 = (0.0, _FRONT_Y - 19.0, PEN_TIP_Z)
+
+
+def _arm() -> Vec3:
+    """From the middle of the tool-plate face to the pen tip."""
+    return (
+        _PEN_TIP[0] - _FACE_CENTRE[0],
+        _PEN_TIP[1] - _FACE_CENTRE[1],
+        _PEN_TIP[2] - _FACE_CENTRE[2],
+    )
+
+
+def _belt_case(name: str, run_n: float, sustained: bool) -> LoadCase:
+    """The X belt's two ends pull the rear block apart (and pull on the clamps' footprints)."""
+    return LoadCase(
+        name,
+        f"The belt's two ends, each {run_n:g} N, pull the rear block apart (±x)",
+        (
+            Force(CLAMP_FOOTPRINTS[0], (-run_n, 0.0, 0.0)),
+            Force(CLAMP_FOOTPRINTS[1], (run_n, 0.0, 0.0)),
+        ),
+        "loads.X_BELT_LOADS",
+        sustained=sustained,
+    )
+
+
+def _knock(name: str, direction: Vec3) -> LoadCase:
+    """A pen knock: the force at the pen tip moved to the tool-plate face with its couple."""
+    force = (direction[0] * PEN_KNOCK, direction[1] * PEN_KNOCK, direction[2] * PEN_KNOCK)
+    loads: tuple[Load, ...] = (
+        Force(TOOL_FACE, force),
+        Moment(TOOL_FACE, lever_couple(_arm(), force)),
+    )
+    return LoadCase(
+        name,
+        f"A hand or a curled sheet knocks the pen tip with {PEN_KNOCK:g} N",
+        loads,
+        "loads.PEN_KNOCK",
+    )
+
+
+_WEIGHT_AND_INERTIA = LoadCase(
+    "weight_accel",
+    "The tool head's weight and its inertia at peak acceleration (x)",
+    (
+        Force(
+            TOOL_FACE,
+            (CARRIAGE_HEAD_KG * ACCELERATION / 1000, 0.0, -CARRIAGE_HEAD_KG * G),
+        ),
+    ),
+    "loads.CARRIAGE_HEAD_KG, loads.ACCELERATION",
+)
+_OPERATING = ("belt_preload", "belt_peak", "weight_accel")
+
+
+def _limits(axis_name: str, direction: Vec3) -> DisplacementLimit:
+    """The tool plate's allowed movement along an axis under the operating cases."""
+    return DisplacementLimit(
+        f"tool_plate_{axis_name}", TOOL_PLATE_NODES, 0.05, direction, _OPERATING
+    )
+
+
+PART = Part(
+    name="x_carriage",
+    description="X carriage: wheels on the beam, belt clamps, tool-plate hook",
+    build=x_carriage_installed,
+    frame="installed",
+    build_direction=(0, 1, 0),
+    fem=FemSpec(
+        load_cases=(
+            _belt_case("belt_preload", X_BELT_LOADS.preload_n, True),
+            _belt_case("belt_peak", X_BELT_LOADS.peak_n, False),
+            _WEIGHT_AND_INERTIA,
+            _knock("pen_knock_x", (1, 0, 0)),
+            _knock("pen_knock_y", (0, 1, 0)),
+        ),
+        supports=tuple(
+            Support(f"wheel_axle_{i + 1}", seat, "Wheel axle bolt head seat: fixed")
+            for i, seat in enumerate(AXLE_SEATS)
+        ),
+        displacement_limits=(
+            _limits("x", (1, 0, 0)),
+            _limits("y", (0, 1, 0)),
+            _limits("z", (0, 0, 1)),
+        ),
+    ),
+)

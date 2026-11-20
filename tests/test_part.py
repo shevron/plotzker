@@ -59,20 +59,27 @@ def test_effective_properties_apply_the_knockdowns():
     )
 
 
+SPECIFIED = {name: part for name, part in PARTS.items() if part.fem is not None}
+
+
 @pytest.mark.parametrize("name", PARTS)
 def test_part_is_registered_and_serializes(name):
     part = PARTS[name]
     assert part.name in PRINTABLE_PARTS
     data = json.loads(json.dumps(part_to_dict(part)))
-    assert data["fem_status"] == "specified"
-    assert data["fem"]["load_cases"] and data["fem"]["supports"]
+    if part.mirror_of:
+        assert part.mirror_of in SPECIFIED
+        assert data["fem_status"] == f"mirror of {part.mirror_of}"
+    else:
+        assert data["fem_status"] == "specified"
+        assert data["fem"]["load_cases"] and data["fem"]["supports"]
 
 
 @pytest.mark.parametrize(
     ("name", "label", "region"),
     [
         pytest.param(name, label, region, id=f"{name}-{label}")
-        for name, part in PARTS.items()
+        for name, part in SPECIFIED.items()
         for label, region in regions_of(part)
     ],
 )
@@ -109,10 +116,34 @@ def test_cylinder_ring_excludes_the_hole():
 
 
 def test_moment_load_is_a_plain_dataclass_in_json():
-    data = part_to_dict(next(iter(PARTS.values())))
+    data = part_to_dict(next(iter(SPECIFIED.values())))
     kinds = {
         load["type"]
         for case in data["fem"]["load_cases"]  # type: ignore[index]
         for load in case["loads"]
     }
     assert kinds <= {"force", "moment", "acceleration"}
+
+
+def test_strength_only_parts_state_no_default_displacement_limit():
+    data = part_to_dict(PARTS["pen_holder_body"])
+    assert data["fem"]["default_displacement_limit_mm"] is None  # type: ignore[index]
+
+
+def test_motor_loads_carry_pull_couple_weight_and_at_a_jam_the_stall_torque():
+    from plotter_cad.loads import MOTOR_LOADS, X_BELT_LOADS
+    from plotter_cad.part import Force, Moment
+    from plotter_cad.parts.motor_fem import motor_loads
+
+    region = Box((0, 0, 0), (1, 1, 1))
+    args = (region, X_BELT_LOADS)
+    rest = ((0.0, -20.0, 0.0), (0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (0.0, -1.0, 0.0))
+    preload = motor_loads(*args, False, *rest)
+    jam = motor_loads(*args, True, *rest)
+    assert [type(load) for load in preload] == [Force, Moment, Force]
+    assert len(jam) == 4
+    pull = preload[0].vector[0]
+    assert pull == pytest.approx(2 * X_BELT_LOADS.preload_n)
+    assert jam[0].vector[0] == pytest.approx(2 * X_BELT_LOADS.peak_n)
+    assert preload[1].vector[2] == pytest.approx(-20.0 * -pull)  # lever 20 mm × pull, about z
+    assert jam[3].vector[1] == pytest.approx(-MOTOR_LOADS.stall_torque)

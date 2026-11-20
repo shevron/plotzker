@@ -14,18 +14,20 @@ material, print profile, print orientation. Clearance tweaks and cosmetic change
 
 | Part | Structural? | State |
 |------|-------------|-------|
-| `x_idler_slider`, `x_idler_mount`, `gantry_end_bracket_left` | yes (belt tension) | defined, checked |
-| `gantry_end_bracket_right` | yes (mirror of the left, plus loom anchor holes) | to define |
-| `x_motor_mount`, `y_motor_mount_left/right`, `y_idler_mount_left/right`, `y_idler_slider_left/right` | yes (belt tension) | to define |
-| `x_carriage`, `pen_holder_body`, `pen_slide` | yes (wheel loads, pen pressure, inertia) | to define |
+| `x_idler_slider`, `x_idler_mount`, `y_idler_slider_left`, `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
+| `y_idler_slider_right`, `y_motor_mount_right` | exact mirror images | covered by the left part (`Part.mirror_of`) |
 | `tension_idler_rail`, `tension_idler_slider` | prototype of the tensioner | not used in the machine |
 | `belt_clamp` | carries belt tension through two screws | to decide |
 | `zrib_hanger` | light (board weight) | to decide |
 | `loom_anchor`, `loom_rail`, `zrib_guard` | no | not structural |
 
-This table is a proposal; a part's `structural` flag in its `Part` definition is what counts.
+The `structural` flag in a part's `Part` definition is what counts; `fem-status` shows the state.
 
 ## Defining a part's FEM spec
+
+`python -m plotter_cad fem-status` (or `make fem-status`) lists every printable part with its
+state: no spec yet, never checked, the last verdict, or **STALE** when the part's properties or its
+geometry changed since that verdict.
 
 A part is a `Part` (`src/plotter_cad/part.py`) defined at the end of its module and registered
 in `parts/__init__.py` (`PARTS`). `python -m plotter_cad part NAME [--json]` prints it.
@@ -41,7 +43,8 @@ in `parts/__init__.py` (`PARTS`). `python -m plotter_cad part NAME [--json]` pri
   hole wall in +x use `facing=(-1, 0, 0)`. Displacement limits look at the **mesh nodes** inside
   the region. Keep regions to a real contact area: `tests/test_part.py` checks each one touches
   the part.
-- **Loads** (`LoadCase`): `Force` (total vector, spread over the covered area), `Moment` (a pure
+- **Loads** (`LoadCase`): `Force` (total vector, spread over the covered area; `bearing=True` for
+  an axle in a bore: the share of each face falls off with the cosine of its angle to the force), `Moment` (a pure
   couple as linearly varying forces), `Acceleration` (inertia of the whole part). Give each case a
   `source`; keep `assumed=True` until a number is measured. `sustained=True` for loads that act
   continuously (belt tension): they are judged against the material's creep-reduced strength.
@@ -52,6 +55,9 @@ in `parts/__init__.py` (`PARTS`). `python -m plotter_cad part NAME [--json]` pri
 - **Displacement limits** (`DisplacementLimit`): per region and direction; the default when a part
   states none is 0.1 mm magnitude. Several limits on one region give directional budgets.
 - **Safety factor:** `FemSpec.safety_factor` (default 3), overridable per load case.
+- **Parts that share a design** (the belt tensioner) build their spec from one description
+  (`slider_fem`, `mount_fem` in `parts/tension_idler.py`) placed in the part's frame with a
+  `Placement` (`regions.py`); an exact mirror image is a `Part` with `mirror_of` set.
 
 Materials are in `src/plotter_cad/materials.toml`, print profiles in `src/plotter_cad/profiles/`
 (`default.toml` is PETG, 0.6 mm nozzle, 0.3 mm layers, 3 perimeters, 20 % gyroid). The profile's
@@ -111,8 +117,8 @@ the verdict. The official verdict is always the one from the default settings.
   vary. Expect ±30-50 % on stress and stiffness; hence the large safety factors. Calibrating
   against a loaded printed part is postponed.
 - No contact, friction, bolt preload or nonlinear material; bolted joints are supports.
-- Loads are applied as uniform traction over the covered area (a bearing load would really be
-  concentrated at the center of a contact); this can put a stress step at the patch edge.
+- Loads are uniform traction over the covered area unless `bearing=True` (axle bores); a flat
+  patch can put a stress step at its edge.
 - Thin features loaded on small patches, sharp inside corners and couples applied on thin
   surfaces can give mesh-dependent local stresses. Read the pictures, not only the numbers.
 - Gantry-level effects (shaft sag, extrusion bending) are hand calculations, not meshed.

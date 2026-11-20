@@ -35,7 +35,7 @@ from plotter_cad.fem.mesh import (
 from plotter_cad.fem.solve import Forces, Solved, solve_cases
 from plotter_cad.fem.stl import CleanStl, clean_stl
 from plotter_cad.fem.viz import node_utilization, render, write_case_data
-from plotter_cad.part import DEFAULT_DISPLACEMENT_LIMIT_MM, Part, effective_properties, part_to_dict
+from plotter_cad.part import Part, effective_properties, part_to_dict
 from plotter_cad.regions import Region
 
 #: Facet count for the part's STL: coarse holes keep the mesher fast (docs/fem-subagent-plan.md).
@@ -309,14 +309,14 @@ def _judge(part: Part, solved: Solved, reference: Solved | None) -> list[Criteri
             )
         )
         limits = spec.displacement_limits
-        if not limits:
+        if not limits and spec.default_displacement_limit_mm is not None:
             value, node = displacement_value(run.displacement, list(mesh.nodes), None)
             rows.append(
                 _displacement_row(
                     "default_displacement",
                     case.name,
                     value,
-                    DEFAULT_DISPLACEMENT_LIMIT_MM,
+                    spec.default_displacement_limit_mm,
                     node,
                     mesh,
                 )
@@ -583,11 +583,28 @@ def run_checks(
         raise SystemExit(
             f"Not defined as a Part: {', '.join(unknown)}. Defined: {', '.join(PARTS)}"
         )
-    results = []
+    targets: list[str] = []
     for name in names:
+        base = PARTS[name].mirror_of
+        if base:
+            log(f"{name}: exact mirror image of {base}; its check applies")
+        if (base or name) not in targets:
+            targets.append(base or name)
+    results = []
+    for name in targets:
         log(f"{name}:")
         part = PARTS[name]
-        result = analyze(part, out_dir, options, log)
+        try:
+            result = analyze(part, out_dir, options, log)
+        except (RuntimeError, applied.SpecError) as exc:
+            log(f"  check could not be run: {exc}")
+            result = FemResult(
+                name, Status.INCONCLUSIVE, notes=[f"the check could not be run: {exc}"]
+            )
+            (out_dir / name).mkdir(parents=True, exist_ok=True)
+            (out_dir / name / "report.md").write_text(markdown(result))
+            results.append(result)
+            continue
         (out_dir / name / "report.md").write_text(markdown(result))
         if verdicts is not None and record:
             update_verdicts(verdicts, part, result, file_hash(out_dir / name / "part.stl"))

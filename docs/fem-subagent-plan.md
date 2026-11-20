@@ -427,3 +427,106 @@ is a 0.1 mm vertical limit needed for a constant static offset of the idler?
 - The agent suspects a stale docstring: `x_idler_slider.py` says the axle bolt's head is on the -y
   arm, but `X_TENSIONER.head_side = 1` puts the head on the +y arm (the nut on -y). I did not touch
   it (no CAD changes yet).
+
+## 17. F5, first slice (2026-11-20)
+
+| Item | State |
+|------|-------|
+| `fem-status`: every printable part with its state; verdicts flagged **STALE** when the part's properties or its cleaned STL changed since the check | done |
+| Bearing load (`Force.bearing`): an axle's share on a bore wall falls off with the cosine of the face angle, so there is no pressure step at the patch edge; used on the tensioner sliders | done (the X slider's governing point did not move: 0.605 vs 0.614 × SF 3) |
+| Tensioner spec shared by X and Y (`slider_fem`, `mount_fem`, `Placement`); X slider and mount rebuilt on it | done |
+| `y_idler_slider_left` (right = exact mirror, `Part.mirror_of`), `y_idler_mount_left` | defined and checked: all FAIL under the harsh assumed values (slider: interlayer shear at the nut seat's lower edge, mount: tension across the layers at the end block's base), displacements within limits except the slider's vertical limit at peak (marginal) |
+| `y_idler_mount_right` (chiral endstop tower), `gantry_end_bracket_right`, motor mounts, carriage, pen holder | to define; they need loads we don't have (motor and carriage mass and acceleration, pen pressure, wheel loads) and, for the mounts, a decision on how the motor's pull enters |
+| Assemblies with contact, buckling, modal analysis, calibration | later |
+
+## 18. Assumed loads for the remaining parts (accepted; implemented in §19)
+
+Nothing here is implemented. Every value is `ASSUMED` with its basis, to be replaced by
+measurements. The facts it rests on: gantry ~1.5 kg and speeds of 30-100 mm/s (README §3.1),
+NEMA17 ~0.28 kg (assumed, `docs/hardware.md`), GT2 20T pulley pitch radius 6.37 mm, pen pressure
+20-80 g (STATUS T3.6), servo FT90M 1.9 kg·cm at 4.8 V and a horn arm of 17 mm (`docs/hardware.md`).
+The mass of printed parts at about half the solid volume (infill and walls): carriage ~60 g, pen
+holder body ~13 g, pen slide ~10 g.
+
+### Global values
+
+| Quantity | Proposal | Basis |
+|----------|----------|-------|
+| Peak acceleration | 3000 mm/s² (0.3 g) | Typical firmware cap for a light plotter; also the highest the pen allows. Needs the Marlin value (T2.2) |
+| Drive force | Y belt: gantry 1.5 kg (it includes the X motor) × 3 m/s² / 2 belts = 2.3 N each. X belt: carriage with pen head ~0.3 kg × 3 m/s² = 0.9 N | m × a |
+| Stalled-motor torque | **0.4 N·m** (NEMA17 holding torque) | Common NEMA17 value; **please read the label of the motor on hand** |
+| Peak belt-run tension | **preload 40 N + stall share 31 N = 71 N** | A jammed gantry makes the driven run carry up to torque / pulley radius = 63 N more than the other; each run gets half of it. This replaces the arbitrary "+20 N dynamic" used so far (60 N per run), which is well above the real drive forces (2 N) but below the jam case. It would make the existing peak cases about 18 % heavier |
+| Motor mass | 0.28 kg (2.7 N) | `docs/hardware.md`, assumed |
+| Pen knock | 20 N sideways at the pen tip, short (not sustained) | A hand or a curled sheet hitting the pen; no measurement basis, the number is a judgment |
+| Servo stall | 11 N at the horn tip | 1.9 kg·cm = 0.186 N·m / 17 mm; at 5 V a little more |
+| Weights | Carriage with pen head ~0.25 kg (2.5 N down) | printed parts above + 4 wheels + servo + pen |
+
+### Per part
+
+| Part | Load cases | Supports | Limits |
+|------|-----------|----------|--------|
+| `x_motor_mount`, `y_motor_mount_left/right` | belt radial pull 2 × T (preload sustained, jam peak) along the belt toward the idler, spread on the plate's motor screw seats; motor weight; the stall torque as a couple on the same seats | the mount's foot screws or bracket bolts (as the idler mounts) | 0.1 mm perpendicular to the belt, 0.3 mm along it, at the motor face |
+| `gantry_end_bracket_right` | as the left bracket, with the motor mount's footprint, its radial pull and the stall couple in place of the idler's | the 8 block bolts | beam seat 0.1 mm per axis |
+| `y_idler_mount_right` | as the left mount (belt only) | wood screws and the foot on the baseboard | as the left mount |
+| `x_carriage` | (1) X belt: the two clamps pull the rear block apart, ±T along x (preload, peak 71 N); (2) weight and acceleration of the carriage and head; (3) pen knock through the tool-plate hook and screws. The wheel preload is internal (top and bottom wheels squeeze the beam) and stays a hand check | the wheel axle bores, fixed | tool plate 0.05 mm per axis under cases (1) and (2) (the pen position), strength only under the knock |
+| `pen_slide`, `pen_holder_body` | (1) pen pressure 0.8 N along the pen axis plus drag 0.4 N; (2) servo stall 11 N on the slot ceiling; (3) pen knock 20 N at the pen tip | the rod sleeves, the key rib, then the rod seats in the holder body; the holder body on the tool plate hook and 2 × M3 | pen axis 0.05 mm under (1), strength only under (2) and (3) |
+
+### Decisions I need from you
+
+1. **Motor holding torque** (label of the NEMA17 on hand). 0.4 N·m is a guess.
+2. **Peak belt tension:** keep 60 N per run, or switch to preload + the jam share (71 N with 0.4 N·m)?
+3. **Pen knock 20 N:** keep, change, or drop (it governs the carriage and pen holder, because the lever arm is large)?
+4. **Acceleration:** 3000 mm/s² unless the Marlin configuration says otherwise.
+5. **Strength-only cases:** I propose no displacement limits on the abuse cases (stall, knock), only strength, with the same safety factor. OK?
+
+## 19. F5, second slice: the remaining parts (2026-11-20)
+
+All the parts of §18 are defined with the accepted values; the motor torque is still the guessed
+0.4 N·m (no label read yet) and the peak belt tension is now preload + the jam share = 71.4 N.
+
+**What changed in the tool:** `loads.py` holds the accepted values (acceleration, masses, stall
+torque, jam share, knock, servo stall, pen pressure) and `lever_couple`; `parts/motor_fem.py`
+builds the motor's loads (radial pull moved from the pulley to the seat with its lever couple,
+weight, and at a jam the stall torque) for the motor mounts and for the right bracket; both
+brackets now carry the lever couple of the belt pull that acts above the base (the left bracket's
+earlier loads left it out, which overstated the moment); `FemSpec.default_displacement_limit_mm =
+None` makes a part strength-only; load cases can be named in a displacement limit's
+`load_cases` so that abuse cases (knocks, stall) only get a strength check; a run keeps going when
+one part cannot be checked (reported as INCONCLUSIVE); the STL cleaner now splits a triangle at a
+T-junction where it drops a zero-area triangle (the pen slide could not be meshed without it).
+
+**Results** (harsh assumed values: SF 3, sustained × 0.5, infill × 0.6; utilization 1.0 is the
+allowable; all sanity checks pass):
+
+| Part | Verdict | Worst strength | Worst displacement over its limit |
+|------|---------|----------------|-----------------------------------|
+| `x_idler_slider` | FAIL | 1.82 (belt_preload) | idler_axle_vertical 0.2035 of 0.1 mm (belt_peak) |
+| `x_idler_mount` | FAIL | 9.34 (belt_preload) | idler_seat_vertical 0.2746 of 0.1 mm (belt_peak) |
+| `y_idler_slider_left` | FAIL | 1.91 (belt_preload) | idler_axle_vertical 0.1092 of 0.1 mm (belt_peak) |
+| `y_idler_mount_left` | FAIL | 2.15 (belt_preload) | none over |
+| `y_idler_mount_right` | FAIL | 2.16 (belt_preload) | none over |
+| `x_motor_mount` | FAIL | 4.65 (belt_preload) | motor_face_sideways 2.0727 of 0.1 mm (belt_peak) |
+| `y_motor_mount_left` | FAIL | 4.12 (belt_preload) | motor_face_sideways 0.964 of 0.1 mm (belt_peak) |
+| `gantry_end_bracket_left` | FAIL | 4.41 (belt_preload) | beam_seat_x 0.6958 of 0.1 mm (belt_peak) |
+| `gantry_end_bracket_right` | FAIL | 4.94 (belt_preload) | beam_seat_x 0.7833 of 0.1 mm (belt_peak) |
+| `x_carriage` | PASS | 0.58 (pen_knock_y) | none over |
+| `pen_slide` | PASS | 0.22 (pen_knock_d) | none over |
+| `pen_holder_body` | MARGINAL | 0.95 (pen_knock_x) | none over |
+
+**What stands out**
+
+- The **X idler mount** is by far the weakest (9.3): tension across the layers at the foot of the
+  thin end block, where the screw head pushes with the full idler force.
+- The **motor mounts** twist: the belt pulls 18-25 mm in front of the plate, so the couple bends
+  the 5 mm plate out of plane and the motor face moves **1.2 mm (X, preload) and 0.55 mm (Y)**
+  perpendicular to the plate against a 0.1 mm limit. This is the largest functional concern in
+  the set (motor tilt, pulley and belt alignment).
+- The **brackets** deflect 0.4-0.8 mm along the beam axis at the beam seat (limit 0.1 mm).
+- The **carriage** (belt clamps, weight, knocks) and the **pen slide** pass with margin; the **pen
+  holder body** is marginal under a sideways knock: the lower arm's rod seat carries 1.5 × the
+  knock, and the body prints on its side, so a knock along x pulls across the layers.
+- Strength is dominated by interlayer tension in nearly every part, which is a statement about
+  print orientation as much as about geometry.
+
+Not yet modeled: the wheel preload (internal to the carriage), contact and friction, and the
+foot-to-bracket friction of the idler and motor mounts.

@@ -3,10 +3,13 @@
 import datetime
 import hashlib
 import json
+import tempfile
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 
-from plotter_cad.fem.runner import FemResult
+from plotter_cad.fem.runner import FemResult, export_part_stl
+from plotter_cad.fem.stl import clean_stl
 from plotter_cad.part import Part, part_to_dict
 
 
@@ -73,3 +76,52 @@ def update_verdicts(path: Path, part: Part, result: FemResult, geometry_hash: st
         lines += [f'{k} = "{v}"' for k, v in entries[name].items()]
         lines.append("")
     path.write_text("\n".join(lines))
+
+
+def current_geometry_hash(part: Part) -> str:
+    """Hash of the part's cleaned FEM STL as it is now (what a check would hash)."""
+    with tempfile.TemporaryDirectory() as folder:
+        raw = Path(folder) / "raw.stl"
+        export_part_stl(part, raw)
+        return file_hash(clean_stl(raw, Path(folder) / "clean.stl").path)
+
+
+def status_lines(
+    names: list[str],
+    parts: Mapping[str, Part],
+    verdicts: Path,
+    check_geometry: bool = True,
+) -> list[str]:
+    """One line per printable part: its FEM state, and whether the last verdict is stale."""
+    recorded: dict[str, dict[str, str]] = {}
+    if verdicts.is_file():
+        with verdicts.open("rb") as f:
+            recorded = tomllib.load(f)
+    lines = []
+    for name in names:
+        part = parts.get(name)
+        if part is None:
+            state = "not yet defined as a Part"
+        elif not part.structural:
+            state = "not structural"
+        elif part.mirror_of:
+            state = f"covered by {part.mirror_of}"
+        elif part.fem is None:
+            state = "NEEDS A SPEC"
+        elif name not in recorded:
+            state = "never checked"
+        else:
+            entry = recorded[name]
+            stale = []
+            if entry.get("spec") != spec_hash(part):
+                stale.append("spec")
+            if check_geometry and entry.get("geometry") != current_geometry_hash(part):
+                stale.append("geometry")
+            changed = " and ".join(stale)
+            state = (
+                f"STALE ({changed} changed since {entry['date']}; was {entry['verdict']})"
+                if stale
+                else f"{entry['verdict']} ({entry['date']})"
+            )
+        lines.append(f"{name:<28} {state}")
+    return lines

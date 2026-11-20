@@ -4,7 +4,7 @@ import math
 from collections.abc import Sequence
 
 from plotter_cad.fem.ccx import Supports
-from plotter_cad.fem.mesh import Cover, Mesh, cover_region, covered_nodes, covered_weights
+from plotter_cad.fem.mesh import Cover, Mesh, TriFace, cover_region, covered_nodes, covered_weights
 from plotter_cad.part import Acceleration, Force, Load, LoadCase, Moment, Support
 from plotter_cad.regions import Region
 from plotter_cad.types import Vec3
@@ -22,10 +22,23 @@ def _cover(mesh: Mesh, region: Region, what: str) -> list[Cover]:
     return covers
 
 
-def force_on_region(mesh: Mesh, region: Region, vector: Vec3, what: str) -> dict[int, Vec3]:
+def force_on_region(
+    mesh: Mesh, region: Region, vector: Vec3, what: str, bearing: bool = False
+) -> dict[int, Vec3]:
     """A total force spread over the covered area (consistent nodal forces)."""
-    weights = covered_weights(_cover(mesh, region, what))
+    face_weight = None
+    if bearing:
+        length = math.sqrt(sum(c * c for c in vector))
+        unit = (vector[0] / length, vector[1] / length, vector[2] / length)
+
+        def face_weight(face: TriFace) -> float:
+            """Cosine of the angle between the force and the direction into the surface."""
+            return max(0.0, -sum(face.normal[i] * unit[i] for i in range(3)))
+
+    weights = covered_weights(_cover(mesh, region, what), face_weight)
     total = sum(weights.values())
+    if total <= 0:
+        raise SpecError(f"{what}: no covered face takes the load")
     return {
         n: (vector[0] * w / total, vector[1] * w / total, vector[2] * w / total)
         for n, w in weights.items()
@@ -75,7 +88,7 @@ def case_loads(mesh: Mesh, case: LoadCase) -> tuple[dict[int, Vec3], Vec3 | None
 def _one_load(mesh: Mesh, load: Load, what: str) -> dict[int, Vec3] | Vec3:
     """Nodal forces of one load, or the acceleration vector for a body load."""
     if isinstance(load, Force):
-        return force_on_region(mesh, load.region, load.vector, what)
+        return force_on_region(mesh, load.region, load.vector, what, load.bearing)
     if isinstance(load, Moment):
         return moment_on_region(mesh, load.region, load.vector, what)
     assert isinstance(load, Acceleration)

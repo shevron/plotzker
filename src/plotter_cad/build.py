@@ -9,6 +9,7 @@ Usage (from the repository root, with the package installed or ``src`` on the pa
     python -m plotter_cad render --inspect # all views → renders/inspect/<name>_<view>.png
     python -m plotter_cad part --list      # parts with profile, material and FEM state
     python -m plotter_cad part NAME [--json]  # a part's print/FEM properties (--json: sub-agent)
+    python -m plotter_cad fem-status       # FEM state of every part, stale verdicts flagged
     python -m plotter_cad fem NAME...      # FEM check of parts → fem/results/, fem/verdicts.toml
     python -m plotter_cad layout           # baseboard drilling layout → docs/
     python -m plotter_cad freecad          # machine components for the FreeCAD assembly → freecad/
@@ -187,6 +188,15 @@ def _select(names: Iterable[str] | None, available: Collection[str]) -> list[str
     return list(names)
 
 
+def _fem_status(check_geometry: bool) -> None:
+    """Print the FEM state of every printable part."""
+    from plotter_cad.fem.report import status_lines
+    from plotter_cad.parts import PARTS, PRINTABLE_PARTS
+
+    verdicts = FEM_DIR / "verdicts.toml"
+    print("\n".join(status_lines(list(PRINTABLE_PARTS), PARTS, verdicts, check_geometry)))
+
+
 def _run_fem(names: Iterable[str], out: Path, args: argparse.Namespace) -> int:
     """Run the FEM checks; the exit code is 1 if any is not a PASS or MARGINAL."""
     from plotter_cad.fem.runner import RunOptions, run_checks
@@ -252,6 +262,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="diagnostic run: leave fem/verdicts.toml alone (use --out to keep results apart)",
     )
     fem.add_argument("--out", type=Path, default=FEM_DIR / "results")
+    status = sub.add_parser("fem-status", help="FEM state of every part; stale verdicts flagged")
+    status.add_argument(
+        "--no-geometry", action="store_true", help="skip the geometry hash (spec changes only)"
+    )
     sub.add_parser("freecad", help="export the machine components for the FreeCAD assembly")
     layout = sub.add_parser("layout", help="write the baseboard drilling layout (SVG + table)")
     layout.add_argument("--out", type=Path, default=DOCS_DIR)
@@ -266,6 +280,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             export_stls(args.names, args.out)
         elif args.command == "render":
             render_pngs(args.names, args.out, args.pythonscad, args.inspect)
+        elif args.command == "fem-status":
+            _fem_status(not args.no_geometry)
         elif args.command == "fem":
             return _run_fem(args.names, args.out, args)
         elif args.command == "part":

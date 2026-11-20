@@ -28,14 +28,19 @@ Dovetail clearance ``slide_gap`` (0.2 mm per side): tune after a test print.
 """
 
 import math
+from collections.abc import Callable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon, union
 
 from plotter_cad.geometry import EPS, FN, FN_HOLE, handle, set_handles, teardrop_x, teardrop_y
 from plotter_cad.hardware import metric
+from plotter_cad.loads import BeltLoads
 from plotter_cad.nut_slot import nut_slot
 from plotter_cad.params import TENSION_IDLER, TOL, TensionIdler
+from plotter_cad.part import DisplacementLimit, FemSpec, Force, LoadCase, Moment, Support
+from plotter_cad.regions import Box, Cylinder, Placement
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -224,3 +229,175 @@ def tension_idler_rail() -> Solid:
 def tension_idler_slider() -> Solid:
     """Print orientation: the slider lying on its back."""
     return slider_for_print()
+
+
+# --- FEM description shared by every part that uses the tensioner -----------------------
+
+
+@dataclass(frozen=True)
+class TensionerRegions:
+    """Load, support and limit regions of a tensioner, in its own frame (end block's outer face at
+    x = 0, idler axle along y through y = 0, z as in the part's frame, slider at mid-travel)."""
+
+    axle_bore_load: Cylinder  #: the axle bore's wall pushed by the axle
+    axle_bore: Cylinder  #: the whole axle bore (the idler's position)
+    nut_seat: Box  #: where the tension screw's nut bears on the slider's rear wall
+    dovetail: Box  #: the slider's dovetail channel (flanks and roof)
+    head_seat: Cylinder  #: the screw head's seat on the end block
+    ridge_contact: Box  #: where the slider's plate presses on the ridge
+    idler_seat: Box  #: end block and ridge (their displacement moves the idler)
+
+
+def tensioner_regions(t: TensionIdler = T) -> TensionerRegions:
+    """The regions of tensioner ``t``."""
+    x0 = slider_x0(t)
+    bore_r = TOL.bolt_hole_d(t.axle_m) / 2 + 0.3
+    centre = (x0 + t.axle_x, 0.0, t.axle_z)
+    channel_half = t.ridge_neck / 2 + t.ridge_h + t.slide_gap * math.sqrt(2) + 0.5
+    ridge_half = t.ridge_neck / 2 + t.ridge_h
+    head_r = metric(t.screw_m).head_d / 2
+    rail_len = x0 + t.travel / 2 + t.plate_len
+    return TensionerRegions(
+        axle_bore_load=Cylinder(
+            centre, (0, 1, 0), bore_r, t.width / 2, facing=(-1, 0, 0), facing_tol_deg=60
+        ),
+        axle_bore=Cylinder(centre, (0, 1, 0), bore_r, t.width / 2),
+        nut_seat=Box(
+            (x0 + TOL.nut_wall - 0.3, -3, t.screw_z - 3),
+            (x0 + TOL.nut_wall + 0.3, 3, t.screw_z + 3),
+            facing=(1, 0, 0),
+        ),
+        dovetail=Box(
+            (x0, -channel_half, t.slider_z0 + 0.3),
+            (x0 + t.plate_len, channel_half, t.slider_z0 + t.ridge_h + t.slide_gap + 0.1),
+        ),
+        head_seat=Cylinder(
+            (0, 0, t.screw_z),
+            (1, 0, 0),
+            head_r,
+            0.3,
+            inner_radius=TOL.bolt_hole_d(t.screw_m) / 2,
+            facing=(-1, 0, 0),
+        ),
+        ridge_contact=Box(
+            (x0, -ridge_half, t.rail_t + 0.3),
+            (x0 + t.plate_len, ridge_half, t.rail_t + t.ridge_h + 0.1),
+        ),
+        idler_seat=Box(
+            (0, -ridge_half, t.rail_t),
+            (rail_len, ridge_half, t.screw_z + head_r + TOL.min_wall + 0.1),
+        ),
+    )
+
+
+def _belt_cases(
+    belt: BeltLoads, loads: Callable[[float], tuple[str, tuple[Force | Moment, ...]]], source: str
+) -> tuple[LoadCase, LoadCase]:
+    """Preload (sustained) and peak load cases from a function of the force on the idler."""
+    cases = []
+    for name, run_n, sustained in (
+        ("belt_preload", belt.preload_n, True),
+        ("belt_peak", belt.peak_n, False),
+    ):
+        text, parts = loads(2 * run_n)
+        cases.append(
+            LoadCase(
+                name,
+                f"Two belt runs of {run_n:g} N pull the idler along the belt{text}",
+                parts,
+                source,
+                sustained=sustained,
+            )
+        )
+    return cases[0], cases[1]
+
+
+def _limits(
+    prefix: str, region: Box | Cylinder, place: Placement, along_belt: float, other: float
+) -> tuple[DisplacementLimit, ...]:
+    """Directional displacement limits: along the belt, sideways (axle) and vertical."""
+    placed = place.region(region)
+    return (
+        DisplacementLimit(f"{prefix}_along_belt", placed, along_belt, place.vector((1, 0, 0))),
+        DisplacementLimit(f"{prefix}_sideways", placed, other, place.vector((0, 1, 0))),
+        DisplacementLimit(f"{prefix}_vertical", placed, other, place.vector((0, 0, 1))),
+    )
+
+
+def slider_fem(
+    t: TensionIdler,
+    place: Placement,
+    belt: BeltLoads,
+    source: str,
+    along_belt_limit: float = 0.3,
+    other_limit: float = 0.1,
+) -> FemSpec:
+    """FEM spec of a tensioner slider: the belt pulls the axle bore (bearing load), the screw
+    nut's seat holds it in x and the dovetail in y and z."""
+    r = tensioner_regions(t)
+    bore = place.region(r.axle_bore_load)
+
+    def loads(pull: float) -> tuple[str, tuple[Force | Moment, ...]]:
+        return "", (Force(bore, place.vector((pull, 0, 0)), bearing=True),)
+
+    return FemSpec(
+        load_cases=_belt_cases(belt, loads, source),
+        supports=(
+            Support(
+                "screw_nut_seat",
+                place.region(r.nut_seat),
+                "Tension screw's nut seat: holds the slider along the belt",
+                constrain=_axes(place, (True, False, False)),
+            ),
+            Support(
+                "dovetail",
+                place.region(r.dovetail),
+                "Dovetail channel on the ridge: holds sideways and vertical, free to slide",
+                constrain=_axes(place, (False, True, True)),
+            ),
+        ),
+        displacement_limits=_limits(
+            "idler_axle", r.axle_bore, place, along_belt_limit, other_limit
+        ),
+    )
+
+
+def _axes(place: Placement, flags: tuple[bool, bool, bool]) -> tuple[bool, bool, bool]:
+    """Constraint flags (x, y, z of the tensioner frame) in the part's frame."""
+    mapped = place.vector(tuple(1.0 if f else 0.0 for f in flags))
+    return (abs(mapped[0]) > 0.5, abs(mapped[1]) > 0.5, abs(mapped[2]) > 0.5)
+
+
+def mount_fem(
+    t: TensionIdler,
+    place: Placement,
+    belt: BeltLoads,
+    source: str,
+    supports: tuple[Support, ...],
+    along_belt_limit: float = 0.3,
+    other_limit: float = 0.1,
+) -> FemSpec:
+    """FEM spec of a tensioner's mount (end block, ridge and foot): the screw head pushes the
+    block with the idler force, and the slider's tilt adds a couple on the ridge because the
+    axle sits above the screw. ``supports`` say how the foot is held."""
+    r = tensioner_regions(t)
+    head, ridge = place.region(r.head_seat), place.region(r.ridge_contact)
+
+    def loads(pull: float) -> tuple[str, tuple[Force | Moment, ...]]:
+        couple = pull * (t.axle_z - t.screw_z)
+        return (
+            "; the screw head pushes the end block with the same force and the slider's dovetail "
+            "adds a couple on the ridge because the axle sits above the screw",
+            (
+                Force(head, place.vector((pull, 0, 0))),
+                Moment(ridge, place.vector((0, couple, 0))),
+            ),
+        )
+
+    return FemSpec(
+        load_cases=_belt_cases(belt, loads, source),
+        supports=supports,
+        displacement_limits=_limits(
+            "idler_seat", r.idler_seat, place, along_belt_limit, other_limit
+        ),
+    )

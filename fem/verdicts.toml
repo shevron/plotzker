@@ -4,16 +4,70 @@
 verdict = "FAIL"
 date = "2026-11-20"
 geometry = "4c5d6010d722d5c7"
-spec = "7c27ce4a71a4c034"
+spec = "bc5a7e292ec68861"
+
+[gantry_end_bracket_right]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "e6acb19b51c07348"
+spec = "11c983a96d196524"
+
+[pen_holder_body]
+verdict = "MARGINAL"
+date = "2026-11-20"
+geometry = "f1f3f720eb4388ae"
+spec = "27759548425c9971"
+
+[pen_slide]
+verdict = "PASS"
+date = "2026-11-20"
+geometry = "71e3e974667f5031"
+spec = "379a728b4ead2147"
+
+[x_carriage]
+verdict = "PASS"
+date = "2026-11-20"
+geometry = "ce6a445bd93b7f8b"
+spec = "b8c4a6a801ca6919"
 
 [x_idler_mount]
 verdict = "FAIL"
 date = "2026-11-20"
 geometry = "2da358cc9175e010"
-spec = "c7028a990c3210ab"
+spec = "3ef6a250dae5d846"
 
 [x_idler_slider]
 verdict = "FAIL"
 date = "2026-11-20"
 geometry = "a234465970a14793"
-spec = "5dfc74d6b1570845"
+spec = "8726f76631ea3379"
+
+[x_motor_mount]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "64e42f3713936bcd"
+spec = "fb20c9d9f69f7148"
+
+[y_idler_mount_left]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "275a152a1c588942"
+spec = "a2096e8f9d44f3b7"
+
+[y_idler_mount_right]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "d876f39e44d2db01"
+spec = "e09dd19f74797c89"
+
+[y_idler_slider_left]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "4c4fcf2715a8b144"
+spec = "1ce25ad073038558"
+
+[y_motor_mount_left]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "95825638bafde21c"
+spec = "dd072468866fb0e1"

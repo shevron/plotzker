@@ -21,9 +21,12 @@ Hardware:
   2 × M3×10 ISO 4762 — through the plate into the carriage's captive nuts
   2 × the servo's own screws (self-tapping, into the Ø1.6 pilot holes in the wall)
 
-Print: PETG; 0.2 mm layers; 4 perimeters; 40 % infill; on its left side (x = −25 face
-down). The hook lip, ribs and webs are then plain extrusions; the holes along d and z are
-teardrops pointing up (+x). No supports.
+Print: default profile (``profiles/default.toml``); on its left side (x = −25 face
+down; the build direction is +x in the head frame). The hook lip, ribs and webs are then
+plain extrusions; the holes along d and z are teardrops pointing up (+x). No supports.
+
+FEM: pen knocks reach the arms through the rod, the servo's stall pushes the upper arm and
+twists the servo wall; the plate's back face is held; see :data:`PART`.
 """
 
 from typing import TYPE_CHECKING
@@ -32,8 +35,11 @@ from pythonscad import cube, cylinder, linear_extrude, polygon
 
 from plotter_cad.geometry import FN_HOLE, handle, set_handles, teardrop
 from plotter_cad.hardware import FT90M
-from plotter_cad.params import PEN, TOL, TOOL_PLATE
-from plotter_cad.types import Matrix
+from plotter_cad.loads import PEN_KNOCK, SERVO_STALL
+from plotter_cad.params import FRAME, PEN, TOL, TOOL_PLATE
+from plotter_cad.part import FemSpec, Force, LoadCase, Moment, Part, Support
+from plotter_cad.regions import Box, Cylinder
+from plotter_cad.types import Matrix, Vec3
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -203,3 +209,95 @@ def pen_holder_body() -> Solid:
     """The body in print orientation: on its left side (x = −25), lip toward the bed edge."""
     body = pen_holder_body_head().rotate([0, -90, 0])
     return body.translate([0, 0, TOOL_PLATE.w / 2])
+
+
+# --- FEM definition (head frame = installed frame; build direction +x) -----------------
+_ROD_BORE_R = TOL.press_d(PEN.rod_d) / 2 + 0.3
+_UPPER_Z = (PEN.upper_arm_bottom, PEN.upper_arm_top)
+#: The upper arm's rod hole (the rod bears on its wall) and the lower arm's blind rod seat
+UPPER_BORE = Cylinder(
+    (PEN.rod_x, PEN.rod_d_pos, sum(_UPPER_Z) / 2),
+    (0, 0, 1),
+    _ROD_BORE_R,
+    (_UPPER_Z[1] - _UPPER_Z[0]) / 2,
+)
+LOWER_SEAT = Cylinder(
+    (PEN.rod_x, PEN.rod_d_pos, PEN.lower_arm_top - PEN.rod_seat_depth / 2),
+    (0, 0, 1),
+    _ROD_BORE_R,
+    PEN.rod_seat_depth / 2,
+)
+#: The upper arm's underside, which the slide meets at the top of its travel
+UPPER_STOP = Box(
+    (PEN.rod_x - PEN.arm_w / 2, PEN.rod_d_pos - PEN.arm_w / 2, PEN.upper_arm_bottom - 0.3),
+    (PEN.rod_x + PEN.arm_w / 2, PEN.rod_d_pos + PEN.arm_w / 2, PEN.upper_arm_bottom + 0.3),
+    facing=(0, 0, -1),
+)
+_SERVO_ZC = PEN.servo_center_z
+#: Where the servo's tabs bear on the wall (its screws pull them on), either side of the window
+SERVO_SEAT = Box(
+    (PEN.servo_x - FT90M.body[1] / 2 - 2, PEN.wall_d - 0.3, _SERVO_ZC - FT90M.hole_pitch / 2 - 4),
+    (PEN.servo_x + FT90M.body[1] / 2 + 2, PEN.wall_d + 0.3, _SERVO_ZC + FT90M.hole_pitch / 2 + 4),
+    facing=(0, 1, 0),
+)
+#: The plate's back face against the carriage (held there by the hook lip and the clamp screws)
+PLATE_BACK = Box(
+    (-TOOL_PLATE.w / 2, PEN.plate_d[0] - 0.3, TOOL_PLATE.bottom_z),
+    (TOOL_PLATE.w / 2, PEN.plate_d[0] + 0.3, TOOL_PLATE.top_z),
+    facing=(0, -1, 0),
+)
+_TIP_Z = FRAME.bed_top_z
+_Z_LOW = PEN.lower_arm_top - PEN.rod_seat_depth / 2
+_Z_HIGH = sum(_UPPER_Z) / 2
+#: A force at the pen tip, below the lower arm, loads the two arms through the rod: the lower
+#: one with (1 + a) times the force and the upper one against it with a times, a = overhang ratio
+_OVERHANG = (_Z_LOW - _TIP_Z) / (_Z_HIGH - _Z_LOW)
+
+
+def _knock(name: str, direction: Vec3) -> LoadCase:
+    """A pen knock as the rod's reactions on the two arms."""
+    f = PEN_KNOCK
+    lower = tuple(c * f * (1 + _OVERHANG) for c in direction)
+    upper = tuple(-c * f * _OVERHANG for c in direction)
+    return LoadCase(
+        name,
+        f"The pen tip is knocked with {f:g} N; the rod passes it to the arms "
+        f"({1 + _OVERHANG:.1f} × on the lower seat, {_OVERHANG:.1f} × opposite on the upper hole)",
+        (
+            Force(LOWER_SEAT, (lower[0], lower[1], lower[2]), bearing=True),
+            Force(UPPER_BORE, (upper[0], upper[1], upper[2]), bearing=True),
+        ),
+        "loads.PEN_KNOCK",
+    )
+
+
+_STALL = LoadCase(
+    "servo_stall",
+    "The servo stalls with the slide against the upper stop: the stop pushes up on the arm; the "
+    "servo's reaction pulls the wall down and twists it",
+    (
+        Force(UPPER_STOP, (0.0, 0.0, SERVO_STALL)),
+        Force(SERVO_SEAT, (0.0, 0.0, -SERVO_STALL)),
+        Moment(SERVO_SEAT, (0.0, SERVO_STALL * 17.0, 0.0)),
+    ),
+    "loads.SERVO_STALL",
+)
+
+PART = Part(
+    name="pen_holder_body",
+    description="Pen holder body: plate on the carriage, rod arms and the servo wall",
+    build=pen_holder_body_head,
+    frame="installed",
+    build_direction=(1, 0, 0),
+    fem=FemSpec(
+        load_cases=(_knock("pen_knock_x", (1, 0, 0)), _knock("pen_knock_d", (0, 1, 0)), _STALL),
+        supports=(
+            Support(
+                "plate_back",
+                PLATE_BACK,
+                "Plate pressed on the carriage face (hook lip and 2 x M3): held fully",
+            ),
+        ),
+        default_displacement_limit_mm=None,
+    ),
+)

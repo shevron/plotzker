@@ -26,8 +26,12 @@ Hardware: see :mod:`y_idler_slider` (idler, M5×25 axle + nut, M3 nut) + 1 × M3
 (tension screw, from the end block's front face); 2 × 4×25 countersunk wood screws into the
 baseboard (through 9 mm bosses on the foot); the endstop board with 2 × M3×12 into 2 × M3 nuts
 pressed into the tower's outboard face.
-Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports (the ridge's 45°
+Print: default profile (``profiles/default.toml``); foot down; no supports (the ridge's 45°
 flanks self-support).
+
+FEM (left): see :func:`plotter_cad.parts.tension_idler.mount_fem`; held by the two wood screws
+(their countersinks) and the baseboard under the foot. The right mount differs (endstop tower)
+has its own part, with the same load path.
 """
 
 from typing import TYPE_CHECKING
@@ -36,10 +40,13 @@ from pythonscad import cube, cylinder, union
 
 from plotter_cad.geometry import FN_HOLE, frame_handle, handle, set_handles
 from plotter_cad.hardware import ENDSTOP
+from plotter_cad.loads import Y_BELT_LOADS
 from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_TENSIONER
+from plotter_cad.part import Part, Support
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
-from plotter_cad.parts.tension_idler import end_block, ridge, slider_x0
+from plotter_cad.parts.tension_idler import end_block, mount_fem, ridge, slider_x0
 from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
+from plotter_cad.regions import Box, Cylinder, Placement
 from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
@@ -135,3 +142,63 @@ def y_idler_mount(side: Side = Side.LEFT) -> Solid:
     """The mount for one side, in print orientation (the right one is mirrored)."""
     mount = y_idler_mount_installed(side)
     return mount.mirror([1, 0, 0]) if side is Side.RIGHT else mount
+
+
+# --- FEM definition (left mount, left side frame = print frame) -----------------------
+PLACEMENT = Placement(1, (Y_AXIS.belt_x, Y_DRIVE.idler_block_y, 0.0))
+_FOOT_X = (Y_DRIVE.idler_foot_x0, Y_DRIVE.idler_foot_x1)
+_FOOT_Y = Y_DRIVE.idler_foot_y
+_SCREW_X = Y_DRIVE.idler_foot_x0 + Y_DRIVE.idler_foot_out / 2
+_SCREW_YS = (_FOOT_Y[0] + SCREW_INSET, _FOOT_Y[1] - SCREW_INSET)
+#: The wood screws' heads seat on the countersink cones and the boss top around them
+SCREW_SEATS = [
+    Cylinder(
+        center=(_SCREW_X, y, WOOD_SCREW.boss_t - WOOD_SCREW.sink_h / 2),
+        axis=(0, 0, 1),
+        radius=WOOD_SCREW.sink_d / 2,
+        inner_radius=WOOD_SCREW.hole_d / 2,
+        half_length=WOOD_SCREW.sink_h / 2 + 0.3,
+        facing=(0, 0, 1),
+        facing_tol_deg=60,
+    )
+    for y in _SCREW_YS
+]
+#: The foot's underside resting on the baseboard
+FOOT_BEARING = Box(
+    lo=(_FOOT_X[0], _FOOT_Y[0], -0.3), hi=(_FOOT_X[1], _FOOT_Y[1], 0.3), facing=(0, 0, -1)
+)
+
+PART_LEFT = Part(
+    name="y_idler_mount_left",
+    description="Y idler mount (left): foot on the baseboard with the tensioner's dovetail rail",
+    build=y_idler_mount_installed,
+    frame="installed",
+    build_direction=(0, 0, 1),
+    fem=mount_fem(
+        Y_TENSIONER,
+        PLACEMENT,
+        Y_BELT_LOADS,
+        "loads.Y_BELT_LOADS",
+        supports=(
+            Support(
+                "wood_screw_front", SCREW_SEATS[0], "Front wood screw: countersink seat, fixed"
+            ),
+            Support("wood_screw_rear", SCREW_SEATS[1], "Rear wood screw: countersink seat, fixed"),
+            Support(
+                "foot_bearing",
+                FOOT_BEARING,
+                "Foot resting on the baseboard: held vertically",
+                constrain=(False, False, True),
+            ),
+        ),
+    ),
+)
+
+PART_RIGHT = Part(
+    name="y_idler_mount_right",
+    description="Y idler mount (right): foot on the baseboard (other-hand endstop tower)",
+    build=lambda: y_idler_mount_installed(Side.RIGHT),
+    frame="installed",
+    build_direction=(0, 0, 1),
+    fem=PART_LEFT.fem,
+)

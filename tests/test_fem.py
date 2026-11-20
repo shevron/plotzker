@@ -15,6 +15,7 @@ from plotter_cad.fem.evaluate import (
     worst,
 )
 from plotter_cad.fem.mesh import Mesh, TriFace, cover_region, covered_weights
+from plotter_cad.fem.report import spec_hash, status_lines
 from plotter_cad.fem.runner import RunOptions, analyze
 from plotter_cad.fem.solve import proportional
 from plotter_cad.fem.stl import clean_stl
@@ -31,7 +32,7 @@ from plotter_cad.part import (
 )
 from plotter_cad.parts import PARTS
 from plotter_cad.print_profile import load_profile
-from plotter_cad.regions import Box
+from plotter_cad.regions import Box, Cylinder, Placement
 
 needs_solvers = pytest.mark.skipif(not tools_available(), reason="gmsh and CalculiX not installed")
 
@@ -225,3 +226,42 @@ def test_viz_writes_pictures_and_a_vtu_for_every_load_case(tmp_path):
     names = {p.split("/")[-1] for p in result.pictures}
     assert {"tip_utilization.png", "tip_displacement.png", "tip_hotspot.png", "tip.vtu"} <= names
     assert all((tmp_path / "beam" / p).stat().st_size > 1000 for p in result.pictures)
+
+
+def test_placement_turns_vectors_boxes_and_cylinders():
+    place = Placement(1, (10.0, 0.0, 0.0))
+    assert place.vector((1, 0, 0)) == (0, 1, 0)
+    assert place.vector((0, 1, 0)) == (-1, 0, 0)
+    assert place.point((1, 2, 3)) == (8, 1, 3)
+    box = place.region(Box((0, 0, 0), (2, 1, 1), facing=(1, 0, 0)))
+    assert (box.lo, box.hi, box.facing) == ((9, 0, 0), (10, 2, 1), (0, 1, 0))
+    cyl = place.region(Cylinder((1, 0, 0), (0, 1, 0), 1, 2))
+    assert (cyl.center, cyl.axis) == ((10, 1, 0), (1, 0, 0))
+
+
+def test_bearing_load_weights_faces_by_the_cosine_of_their_angle():
+    nodes = {i: (float(i), 0.0, 0.0) for i in range(1, 13)}
+    head_on = TriFace((1, 2, 3, 4, 5, 6), (1.0, 0.0, 0.0), (-1.0, 0.0, 0.0), 2.0)
+    oblique = TriFace((7, 8, 9, 10, 11, 12), (2.0, 0.0, 0.0), (-0.5, 0.866025, 0.0), 2.0)
+    mesh = Mesh(nodes, [], [head_on, oblique], 1.0)
+    region = Box((0, -1, -1), (20, 1, 1))
+    forces = force_on_region(mesh, region, (4.0, 0.0, 0.0), "test", bearing=True)
+    on_head_on = sum(forces[n][0] for n in (1, 2, 3, 4, 5, 6))
+    on_oblique = sum(forces[n][0] for n in (7, 8, 9, 10, 11, 12))
+    assert on_head_on + on_oblique == pytest.approx(4.0)
+    assert on_oblique / on_head_on == pytest.approx(0.5, rel=0.02)
+
+
+def test_status_lines_flag_stale_and_missing_checks(tmp_path):
+    part = beam_part((0, 0, 1))
+    verdicts = tmp_path / "verdicts.toml"
+    assert "never checked" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
+    entry = (
+        '[beam]\nverdict = "PASS"\ndate = "2026-01-01"\ngeometry = "x"\n'
+        f'spec = "{spec_hash(part)}"\n'
+    )
+    verdicts.write_text(entry)
+    assert "PASS (2026-01-01)" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
+    verdicts.write_text(entry.replace(spec_hash(part), "old"))
+    assert "STALE (spec changed" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
+    assert "not yet defined" in status_lines(["other"], {}, verdicts, False)[0]

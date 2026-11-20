@@ -42,12 +42,24 @@ from pythonscad import cube, cylinder, hull
 
 from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x, teardrop_y
 from plotter_cad.hardware import SCS10UU, VSLOT, metric
-from plotter_cad.loads import X_BELT_LOADS, Y_BELT_LOADS
+from plotter_cad.loads import X_BELT_LOADS, Y_BELT_LOADS, lever_couple
 from plotter_cad.nut_slot import nut_slot
-from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_DRIVE, Y_AXIS
-from plotter_cad.part import DisplacementLimit, FemSpec, Force, LoadCase, Part, Support
+from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_BELT, X_DRIVE, X_TENSIONER, Y_AXIS
+from plotter_cad.part import (
+    DisplacementLimit,
+    FemSpec,
+    Force,
+    Load,
+    LoadCase,
+    Moment,
+    Part,
+    Support,
+)
+from plotter_cad.parts.motor_fem import motor_loads
+from plotter_cad.parts.x_motor_mount import FOOT_X
+from plotter_cad.parts.x_motor_mount import PULLEY_POINT as MOTOR_PULLEY
 from plotter_cad.regions import Box, Cylinder
-from plotter_cad.types import Matrix, Side
+from plotter_cad.types import Matrix, Side, Vec3
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -252,39 +264,82 @@ def _clamp_footprint(clamp: Matrix) -> Box:
     )
 
 
-def _belt_case(name: str, x_run_n: float, y_run_n: float, sustained: bool) -> LoadCase:
+#: Where the X motor mount's foot rests on the base (right bracket): the motor's pull enters here
+MOTOR_FOOTPRINT = Box(
+    lo=(max(BRACKET.x_out, FOOT_X[0]), X_DRIVE.motor_foot_y[0], BRACKET.base_t - 0.3),
+    hi=(min(BRACKET.x_in, FOOT_X[1]), X_DRIVE.motor_foot_y[1], BRACKET.base_t + 0.3),
+    facing=(0, 0, 1),
+)
+
+
+def _centre(box: Box) -> Vec3:
+    """Middle of a flat footprint."""
+    return (
+        (box.lo[0] + box.hi[0]) / 2,
+        (box.lo[1] + box.hi[1]) / 2,
+        (box.lo[2] + box.hi[2]) / 2,
+    )
+
+
+def _x_belt_loads(side: Side, run_n: float, jam: bool) -> list[Load]:
+    """Where the X belt's pull enters the bracket: the idler mount (left) or the motor mount
+    (right), moved down to the base top, and the beam's reaction on the face plate."""
+    if side is Side.LEFT:
+        footprint = MOUNT_FOOTPRINT
+        pulley = (X_DRIVE.idler_x, X_BELT.y, X_TENSIONER.axle_z)
+        force = (2 * run_n, 0.0, 0.0)
+        loads: list[Load] = [
+            Force(footprint, force),
+            Moment(footprint, lever_couple(_arm(pulley, footprint), force)),
+        ]
+    else:
+        footprint = MOTOR_FOOTPRINT
+        loads = motor_loads(
+            footprint,
+            X_BELT_LOADS,
+            jam,
+            MOTOR_PULLEY,
+            _centre(footprint),
+            (1, 0, 0),
+            (0, -1, 0),
+        )
+    loads.append(Force(BEAM_SEAT_FACES, (-2 * run_n, 0.0, 0.0)))
+    return loads
+
+
+def _arm(point: Vec3, footprint: Box) -> Vec3:
+    """Vector from the middle of a footprint to ``point``."""
+    c = _centre(footprint)
+    return (point[0] - c[0], point[1] - c[1], point[2] - c[2])
+
+
+def _belt_case(side: Side, name: str, x_run_n: float, y_run_n: float, jam: bool) -> LoadCase:
     """The X belt's reaction through the bracket plus the Y belt's two ends."""
     front, rear = BELT_CLAMPS
     return LoadCase(
         name=name,
         description=(
-            f"X belt (2 runs of {x_run_n:g} N): the idler mount pulls the base inboard and the "
-            f"beam pushes back on the face plate. Y belt ({y_run_n:g} N): front end pulls "
-            "forward, rear end pulls back"
+            f"X belt (2 runs of {x_run_n:g} N): the "
+            f"{'idler' if side is Side.LEFT else 'motor'} mount pulls the base inboard (moved "
+            "down from the belt line, so with its lever couple) and the beam pushes back on the "
+            f"face plate. Y belt ({y_run_n:g} N): front end pulls forward, rear end pulls back"
         ),
         loads=(
-            Force(MOUNT_FOOTPRINT, (2 * x_run_n, 0, 0)),
-            Force(BEAM_SEAT_FACES, (-2 * x_run_n, 0, 0)),
+            *_x_belt_loads(side, x_run_n, jam),
             Force(_clamp_footprint(front), (0, -y_run_n, 0)),
             Force(_clamp_footprint(rear), (0, y_run_n, 0)),
         ),
-        source="loads.X_BELT_LOADS, loads.Y_BELT_LOADS",
-        sustained=sustained,
+        source="loads.X_BELT_LOADS, loads.Y_BELT_LOADS, loads.MOTOR_LOADS",
+        sustained=not jam,
     )
 
 
-PART = Part(
-    name="gantry_end_bracket_left",
-    description="Gantry end bracket, left: SCS blocks, beam face plate, Y belt clamps",
-    build=gantry_end_bracket_local,
-    frame="installed",
-    build_direction=(0, 0, 1),
-    fem=FemSpec(
+def _spec(side: Side) -> FemSpec:
+    """FEM spec of one bracket."""
+    return FemSpec(
         load_cases=(
-            _belt_case(
-                "belt_preload", X_BELT_LOADS.preload_n, Y_BELT_LOADS.preload_n, sustained=True
-            ),
-            _belt_case("belt_peak", X_BELT_LOADS.peak_n, Y_BELT_LOADS.peak_n, sustained=False),
+            _belt_case(side, "belt_preload", X_BELT_LOADS.preload_n, Y_BELT_LOADS.preload_n, False),
+            _belt_case(side, "belt_peak", X_BELT_LOADS.peak_n, Y_BELT_LOADS.peak_n, True),
         ),
         supports=tuple(
             Support(f"block_bolt_{i + 1}", ring, "M5 bolt into an SCS block: washer ring, fixed")
@@ -295,5 +350,22 @@ PART = Part(
             DisplacementLimit("beam_seat_y", BEAM_SEAT, 0.1, (0, 1, 0)),
             DisplacementLimit("beam_seat_z", BEAM_SEAT, 0.1, (0, 0, 1)),
         ),
-    ),
+    )
+
+
+PART_LEFT = Part(
+    name="gantry_end_bracket_left",
+    description="Gantry end bracket, left: SCS blocks, beam face plate, Y belt clamps",
+    build=gantry_end_bracket_local,
+    frame="installed",
+    build_direction=(0, 0, 1),
+    fem=_spec(Side.LEFT),
+)
+PART_RIGHT = Part(
+    name="gantry_end_bracket_right",
+    description="Gantry end bracket, right (shown in the left frame): carries the X motor mount",
+    build=lambda: gantry_end_bracket_local(Side.RIGHT),
+    frame="installed",
+    build_direction=(0, 0, 1),
+    fem=_spec(Side.RIGHT),
 )

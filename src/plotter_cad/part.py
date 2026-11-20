@@ -37,6 +37,9 @@ class Force:
 
     region: Region
     vector: Vec3
+    #: Bearing load (an axle in a bore): the share of each face falls off with the cosine of the
+    #: angle between its normal and the force, so it is zero at the edges of the contact.
+    bearing: bool = False
 
 
 @dataclass(frozen=True)
@@ -104,6 +107,9 @@ class FemSpec:
     supports: tuple[Support, ...]
     displacement_limits: tuple[DisplacementLimit, ...] = ()
     safety_factor: float = DEFAULT_SAFETY_FACTOR
+    #: Allowed displacement (mm) of the whole part when no limits are given; ``None``: strength
+    #: only (parts that carry only abuse loads, where deflection doesn't matter)
+    default_displacement_limit_mm: float | None = DEFAULT_DISPLACEMENT_LIMIT_MM
 
     def __post_init__(self) -> None:
         """Check names, supports and references between the pieces."""
@@ -131,6 +137,7 @@ class Part:
     material: str | None = None  #: overrides the profile's
     structural: bool = True  #: carries load, so it needs an FEM check
     fem: FemSpec | None = None
+    mirror_of: str | None = None  #: exact mirror image of this part: its check applies
 
     def __post_init__(self) -> None:
         """Check the build direction and the FEM state."""
@@ -154,6 +161,8 @@ class Part:
         """``specified``, ``missing`` (structural, no spec yet) or ``not structural``."""
         if not self.structural:
             return "not structural"
+        if self.mirror_of:
+            return f"mirror of {self.mirror_of}"
         return "specified" if self.fem else "missing"
 
 
@@ -198,6 +207,7 @@ def part_to_dict(part: Part) -> dict[str, object]:
         "build_direction": list(part.build_direction),
         "structural": part.structural,
         "fem_status": part.fem_status,
+        "mirror_of": part.mirror_of,
         "profile": _plain(profile),
         "material": _plain(material),
         "effective_properties": effective_properties(material, profile),
@@ -210,6 +220,6 @@ def part_to_dict(part: Part) -> dict[str, object]:
             "load_cases": _plain(spec.load_cases),
             "supports": _plain(spec.supports),
             "displacement_limits": _plain(limits),
-            "default_displacement_limit_mm": None if limits else DEFAULT_DISPLACEMENT_LIMIT_MM,
+            "default_displacement_limit_mm": None if limits else spec.default_displacement_limit_mm,
         }
     return data

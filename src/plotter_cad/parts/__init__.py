@@ -55,8 +55,19 @@ for _side in Side:
 PARTS: dict[str, Part] = {
     part.name: part
     for part in (
-        gantry_end_bracket.PART,
+        gantry_end_bracket.PART_LEFT,
+        gantry_end_bracket.PART_RIGHT,
         x_idler_mount.PART,
         x_idler_slider.PART,
+        x_carriage.PART,
+        pen_slide.PART,
+        pen_holder_body.PART,
+        x_motor_mount.PART,
+        y_idler_mount.PART_LEFT,
+        y_idler_mount.PART_RIGHT,
+        y_motor_mount.PART_LEFT,
+        y_motor_mount.PART_RIGHT,
+        y_idler_slider.PART_LEFT,
+        y_idler_slider.PART_RIGHT,
     )
 }

@@ -18,7 +18,10 @@ mirror image (:func:`y_motor_mount`).
 Hardware: 4 × M3×10 ISO 4762 (motor, from the pulley side); 20T GT2 pulley on the motor
 (hub toward the motor, belt center on the belt line); 2 × 4×25 countersunk wood screws
 into the baseboard (through 9 mm bosses on the foot).
-Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
+Print: default profile (``profiles/default.toml``); foot down; no supports.
+
+FEM (left; the right is the mirror image): the motor's belt pull, weight and stall torque act on
+the plate's motor face; held by the two wood screws and the baseboard; see :data:`PART_LEFT`.
 """
 
 from typing import TYPE_CHECKING
@@ -27,9 +30,13 @@ from pythonscad import cube, hull
 
 from plotter_cad.geometry import EPS, handle, set_handles, teardrop_x
 from plotter_cad.hardware import NEMA17
+from plotter_cad.loads import Y_BELT_LOADS
 from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE
+from plotter_cad.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
+from plotter_cad.parts.motor_fem import motor_loads
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
+from plotter_cad.regions import Box, Cylinder
 from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
@@ -95,3 +102,82 @@ def y_motor_mount(side: Side = Side.LEFT) -> Solid:
     """The mount for one side, in print orientation (the right one is mirrored)."""
     mount = y_motor_mount_installed()
     return mount.mirror([1, 0, 0]) if side is Side.RIGHT else mount
+
+
+# --- FEM definition (left side frame = installed frame) ---------------------------------
+_X0, _X1 = Y_DRIVE.motor_plate_x
+_Y0, _Y1 = Y_DRIVE.motor_plate_y
+#: Pulley belt center, and the motor's seat on the plate (the motor presses on the inboard face)
+PULLEY_POINT = (Y_AXIS.belt_x, Y_DRIVE.motor_y, AXIS_Z)
+FACE_POINT = (_X1, Y_DRIVE.motor_y, AXIS_Z)
+MOTOR_FACE = Box(
+    lo=(_X1 - 0.3, Y_DRIVE.motor_y - NEMA17.width / 2, AXIS_Z - NEMA17.width / 2),
+    hi=(_X1 + 0.3, Y_DRIVE.motor_y + NEMA17.width / 2, AXIS_Z + NEMA17.width / 2),
+    facing=(1, 0, 0),
+)
+_FOOT_X = Y_DRIVE.motor_foot_x0 + WOOD_SCREW.boss_d / 2
+_SCREW_YS = (_Y0 + SCREW_INSET, _Y1 - SCREW_INSET)
+SCREW_SEATS = [
+    Cylinder(
+        center=(_FOOT_X, y, WOOD_SCREW.boss_t - WOOD_SCREW.sink_h / 2),
+        axis=(0, 0, 1),
+        radius=WOOD_SCREW.sink_d / 2,
+        inner_radius=WOOD_SCREW.hole_d / 2,
+        half_length=WOOD_SCREW.sink_h / 2 + 0.3,
+        facing=(0, 0, 1),
+        facing_tol_deg=60,
+    )
+    for y in _SCREW_YS
+]
+FOOT_BEARING = Box(lo=(Y_DRIVE.motor_foot_x0, _Y0, -0.3), hi=(_X1, _Y1, 0.3), facing=(0, 0, -1))
+
+
+def _case(name: str, jam: bool) -> LoadCase:
+    """Belt pull (toward the idler: -y), weight and, at a jam, the stall torque."""
+    return LoadCase(
+        name,
+        "Two belt runs pull the pulley forward (-y); the motor's weight; "
+        + ("a jam adds the stall torque and the peak run tension" if jam else "preload tension"),
+        tuple(
+            motor_loads(
+                MOTOR_FACE, Y_BELT_LOADS, jam, PULLEY_POINT, FACE_POINT, (0, -1, 0), (-1, 0, 0)
+            )
+        ),
+        "loads.Y_BELT_LOADS, loads.MOTOR_LOADS",
+        sustained=not jam,
+    )
+
+
+PART_LEFT = Part(
+    name="y_motor_mount_left",
+    description="Y motor mount (left): plate for the NEMA17 behind the rear SK10",
+    build=y_motor_mount_installed,
+    frame="installed",
+    build_direction=(0, 0, 1),
+    fem=FemSpec(
+        load_cases=(_case("belt_preload", False), _case("belt_peak", True)),
+        supports=(
+            Support("wood_screw_front", SCREW_SEATS[0], "Front wood screw: countersink, fixed"),
+            Support("wood_screw_rear", SCREW_SEATS[1], "Rear wood screw: countersink, fixed"),
+            Support(
+                "foot_bearing",
+                FOOT_BEARING,
+                "Foot resting on the baseboard: held in z",
+                constrain=(False, False, True),
+            ),
+        ),
+        displacement_limits=(
+            DisplacementLimit("motor_face_along_belt", MOTOR_FACE, 0.3, (0, 1, 0)),
+            DisplacementLimit("motor_face_sideways", MOTOR_FACE, 0.1, (1, 0, 0)),
+            DisplacementLimit("motor_face_vertical", MOTOR_FACE, 0.1, (0, 0, 1)),
+        ),
+    ),
+)
+PART_RIGHT = Part(
+    name="y_motor_mount_right",
+    description="Y motor mount (right): mirror image of the left one",
+    build=lambda: y_motor_mount_installed().mirror([1, 0, 0]),
+    frame="installed",
+    build_direction=(0, 0, 1),
+    mirror_of="y_motor_mount_left",
+)

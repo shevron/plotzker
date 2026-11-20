@@ -150,3 +150,45 @@ def _newell(corners: Sequence[Sequence[float]]) -> list[float] | None:
         n[1] += (z1 - z2) * (x1 + x2)
         n[2] += (x1 - x2) * (y1 + y2)
     return n if any(n) else None
+
+
+@dataclass(frozen=True)
+class Placement:
+    """Where a part-local frame sits in the part's frame: quarter turns about z, then a shift.
+
+    Lets one description (the tensioner's) serve parts that mount it in different directions.
+    """
+
+    quarter_turns: int = 0
+    offset: Vec3 = (0.0, 0.0, 0.0)
+
+    def vector(self, v: Sequence[float]) -> Vec3:
+        """A direction or free vector (no shift)."""
+        x, y, z = v
+        for _ in range(self.quarter_turns % 4):
+            x, y = -y, x
+        return (x, y, z)
+
+    def point(self, p: Sequence[float]) -> Vec3:
+        """A position."""
+        x, y, z = self.vector(p)
+        return (x + self.offset[0], y + self.offset[1], z + self.offset[2])
+
+    def region(self, region: Region) -> Region:
+        """The region in the part's frame."""
+        facing = None if region.facing is None else self.vector(region.facing)
+        if isinstance(region, Box):
+            a, b = self.point(region.lo), self.point(region.hi)
+            lo = (min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2]))
+            hi = (max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2]))
+            return Box(lo, hi, facing, region.facing_tol_deg)
+        axis = self.vector(region.axis)
+        return Cylinder(
+            self.point(region.center),
+            (abs(round(axis[0])) * 1.0, abs(round(axis[1])) * 1.0, abs(round(axis[2])) * 1.0),
+            region.radius,
+            region.half_length,
+            region.inner_radius,
+            facing,
+            region.facing_tol_deg,
+        )

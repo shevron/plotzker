@@ -20,7 +20,10 @@ on the right end): :func:`x_motor_mount`.
 Hardware: 4 × M3×10 ISO 4762 (motor); 2 × M5×25 ISO 4762 replacing the rear SCS bolts
 of the right bracket's front row; 20T GT2 pulley on the motor (hub toward the motor, belt center
 at the X belt line — slide it on the shaft to align with the idler).
-Print: PETG or PLA; 0.2 mm; 4 perimeters; 40 % infill; foot down; no supports.
+Print: default profile (``profiles/default.toml``); foot down; no supports.
+
+FEM: the motor's belt pull, weight and stall torque act on the plate's motor face; the foot is
+held by the front M5 heads and rests on the bracket's base; see :data:`PART`.
 """
 
 from typing import TYPE_CHECKING
@@ -29,7 +32,11 @@ from pythonscad import cube, cylinder
 
 from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_y
 from plotter_cad.hardware import NEMA17, SCS10UU, metric
+from plotter_cad.loads import X_BELT_LOADS
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
+from plotter_cad.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
+from plotter_cad.parts.motor_fem import motor_loads
+from plotter_cad.regions import Box, Cylinder
 from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
@@ -39,6 +46,8 @@ AXIS_Z = X_BELT.pulley_axis_z - Y_AXIS.scs_top_z  #: motor axis, local z
 FOOT_Z0 = BRACKET.base_t  #: the foot sits on the bracket base
 PLATE_X = (X_DRIVE.motor_x - NEMA17.width / 2, X_DRIVE.motor_x + NEMA17.width / 2)
 PLATE_TOP = AXIS_Z + NEMA17.width / 2
+#: The foot's x extent (under the SCS block and the plate)
+FOOT_X = (min(-SCS10UU.width / 2 - 1, PLATE_X[0]), max(SCS10UU.width / 2, PLATE_X[1]))
 MOTOR_BOTTOM = AXIS_Z - NEMA17.width / 2
 #: Motor: its face on the plate's front face, shaft axis along -y toward the beam
 MOTOR: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.motor_face_y, AXIS_Z], [90, 0, 0])
@@ -62,8 +71,7 @@ MOTOR_SCREWS: list[Matrix] = [
 def x_motor_mount_left() -> Solid:
     """The mount as designed, in the left bracket-local frame (not printed like this)."""
     d = X_DRIVE
-    foot_x0 = min(-SCS10UU.width / 2 - 1, PLATE_X[0])
-    foot_x1 = max(SCS10UU.width / 2, PLATE_X[1])
+    foot_x0, foot_x1 = FOOT_X
     foot = cube([foot_x1 - foot_x0, d.motor_foot_y[1] - d.motor_foot_y[0], d.foot_t]).translate(
         [foot_x0, d.motor_foot_y[0], FOOT_Z0]
     )
@@ -109,3 +117,78 @@ def x_motor_mount_left() -> Solid:
 def x_motor_mount() -> Solid:
     """The printed part (right end) = mirror image, foot on the bed."""
     return x_motor_mount_left().mirror([1, 0, 0]).translate([0, 0, -FOOT_Z0])
+
+
+# --- FEM definition (left bracket-local frame = installed frame) --------------------
+#: Pulley belt center, and the motor's seat on the plate (the motor presses on the plate's back)
+PULLEY_POINT = (X_DRIVE.motor_x, X_BELT.y, AXIS_Z)
+FACE_POINT = (X_DRIVE.motor_x, X_DRIVE.motor_face_y, AXIS_Z)
+MOTOR_FACE = Box(
+    lo=(X_DRIVE.motor_x - NEMA17.width / 2, X_DRIVE.motor_face_y - 0.3, AXIS_Z - NEMA17.width / 2),
+    hi=(X_DRIVE.motor_x + NEMA17.width / 2, X_DRIVE.motor_face_y + 0.3, AXIS_Z + NEMA17.width / 2),
+    facing=(0, 1, 0),
+)
+#: The front row's M5 heads in their recesses (the rear row's bolts don't pass the foot)
+BOLT_SEATS = [
+    Cylinder(
+        center=(
+            hx * SCS10UU.hole_pitch_x / 2,
+            X_DRIVE.bolt_rows[0],
+            FOOT_Z0 + X_DRIVE.foot_t - X_DRIVE.foot_head_recess,
+        ),
+        axis=(0, 0, 1),
+        radius=metric(5).head_d / 2,
+        inner_radius=TOL.bolt_hole_d(5) / 2,
+        half_length=0.3,
+        facing=(0, 0, 1),
+    )
+    for hx in (-1, 1)
+]
+FOOT_BEARING = Box(
+    lo=(FOOT_X[0], X_DRIVE.motor_foot_y[0], FOOT_Z0 - 0.3),
+    hi=(FOOT_X[1], X_DRIVE.motor_foot_y[1], FOOT_Z0 + 0.3),
+    facing=(0, 0, -1),
+)
+
+
+def _case(name: str, jam: bool) -> LoadCase:
+    """Belt pull (toward the idler: +x in this frame), weight and, at a jam, the stall torque."""
+    return LoadCase(
+        name,
+        "Two belt runs pull the pulley inboard (+x); the motor's weight; "
+        + ("a jam adds the stall torque and the peak run tension" if jam else "preload tension"),
+        tuple(
+            motor_loads(
+                MOTOR_FACE, X_BELT_LOADS, jam, PULLEY_POINT, FACE_POINT, (1, 0, 0), (0, -1, 0)
+            )
+        ),
+        "loads.X_BELT_LOADS, loads.MOTOR_LOADS",
+        sustained=not jam,
+    )
+
+
+PART = Part(
+    name="x_motor_mount",
+    description="X motor mount: plate for the NEMA17 (designed in the left bracket frame)",
+    build=x_motor_mount_left,
+    frame="installed",
+    build_direction=(0, 0, 1),
+    fem=FemSpec(
+        load_cases=(_case("belt_preload", False), _case("belt_peak", True)),
+        supports=(
+            Support("front_bolt_a", BOLT_SEATS[0], "Front M5 head, -x side: recess floor, fixed"),
+            Support("front_bolt_b", BOLT_SEATS[1], "Front M5 head, +x side: recess floor, fixed"),
+            Support(
+                "foot_bearing",
+                FOOT_BEARING,
+                "Foot resting on the bracket's base: held in z",
+                constrain=(False, False, True),
+            ),
+        ),
+        displacement_limits=(
+            DisplacementLimit("motor_face_along_belt", MOTOR_FACE, 0.3, (1, 0, 0)),
+            DisplacementLimit("motor_face_sideways", MOTOR_FACE, 0.1, (0, 1, 0)),
+            DisplacementLimit("motor_face_vertical", MOTOR_FACE, 0.1, (0, 0, 1)),
+        ),
+    ),
+)

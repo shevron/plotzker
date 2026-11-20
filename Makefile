@@ -1,7 +1,7 @@
 # Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad fem
+.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad fem fem-status
 
 PYTHON_VERSION := $(shell cat .python-version)
 UV_RUN := uv run --extra dev
@@ -51,3 +51,6 @@ freecad:  ## Build the FreeCAD Assembly (freecad/PenPlotter.FCStd; needs FreeCAD
 
 fem:  ## FEM check of parts into fem/results/ (needs FreeCAD's gmsh and CalculiX); NAMES="x_idler_slider ..."
 	$(UV_RUN) python -m plotter_cad fem $(NAMES)
+
+fem-status:  ## FEM state of every printable part; flags verdicts that are stale (spec or geometry changed)
+	$(UV_RUN) python -m plotter_cad fem-status

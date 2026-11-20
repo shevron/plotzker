@@ -38,17 +38,9 @@ from plotter_cad.geometry import EPS, FN_HOLE, frame_handle, handle, set_handles
 from plotter_cad.hardware import ENDSTOP, SCS10UU, metric
 from plotter_cad.loads import X_BELT_LOADS
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, X_ENDSTOP, X_TENSIONER, Y_AXIS
-from plotter_cad.part import (
-    DisplacementLimit,
-    FemSpec,
-    Force,
-    LoadCase,
-    Moment,
-    Part,
-    Support,
-)
-from plotter_cad.parts.tension_idler import end_block, ridge, slider_x0
-from plotter_cad.regions import Box, Cylinder
+from plotter_cad.part import Part, Support
+from plotter_cad.parts.tension_idler import end_block, mount_fem, ridge, slider_x0
+from plotter_cad.regions import Box, Cylinder, Placement
 from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
@@ -152,37 +144,8 @@ def x_idler_mount() -> Solid:
 
 
 # --- FEM definition -------------------------------------------------------------
-#: Rail length from the end block's outer face (slider at mid-travel plus its plate)
-_RAIL_LEN = slider_x0(T) + T.travel / 2 + T.plate_len
-_RIDGE_HALF_W = T.ridge_neck / 2 + T.ridge_h
-_SCREW_HEAD_R = metric(T.screw_m).head_d / 2
-#: Tension screw's head seat on the end block: the force the screw puts on the mount
-HEAD_SEAT = Cylinder(
-    center=(BLOCK_X0, X_BELT.y, T.screw_z),
-    axis=(1, 0, 0),
-    radius=_SCREW_HEAD_R,
-    inner_radius=TOL.bolt_hole_d(T.screw_m) / 2,
-    half_length=0.3,
-    facing=(-1, 0, 0),
-)
-#: Where the slider's plate (at mid-travel) presses on the ridge's flanks and top
-RIDGE_CONTACT = Box(
-    lo=(BLOCK_X0 + slider_x0(T), X_BELT.y - _RIDGE_HALF_W, T.rail_t + 0.3),
-    hi=(
-        BLOCK_X0 + slider_x0(T) + T.plate_len,
-        X_BELT.y + _RIDGE_HALF_W,
-        T.rail_t + T.ridge_h + 0.1,
-    ),
-)
-#: The belt's attachment: end block and ridge (displacement of these moves the idler)
-IDLER_SEAT = Box(
-    lo=(BLOCK_X0, X_BELT.y - _RIDGE_HALF_W, T.rail_t),
-    hi=(
-        BLOCK_X0 + _RAIL_LEN,
-        X_BELT.y + _RIDGE_HALF_W,
-        T.screw_z + _SCREW_HEAD_R + TOL.min_wall + 0.1,
-    ),
-)
+#: The tensioner's frame in the left bracket-local frame (block outer face, belt line)
+PLACEMENT = Placement(0, (BLOCK_X0, X_BELT.y, 0.0))
 #: The rear M5 bolts' washer rings on the foot (the front row's heads sit flush, in clearance holes)
 BOLT_RINGS = [
     Cylinder(
@@ -202,35 +165,17 @@ FOOT_BEARING = Box(
     facing=(0, 0, -1),
 )
 
-
-def _belt_case(name: str, run_n: float, sustained: bool) -> LoadCase:
-    """The belt's pull on the idler (two runs) as it reaches the mount."""
-    pull = 2 * run_n
-    couple = pull * (T.axle_z - T.screw_z)
-    return LoadCase(
-        name=name,
-        description=(
-            f"Two belt runs of {run_n:g} N pull the idler inboard (+x); the screw head pushes the "
-            "end block with the same force, and the slider's dovetail adds a couple on the ridge "
-            "because the axle sits above the screw"
-        ),
-        loads=(Force(HEAD_SEAT, (pull, 0, 0)), Moment(RIDGE_CONTACT, (0, couple, 0))),
-        source="loads.X_BELT_LOADS",
-        sustained=sustained,
-    )
-
-
 PART = Part(
     name="x_idler_mount",
     description="X idler mount: foot on the left bracket with the tensioner's dovetail rail",
     build=x_idler_mount_installed,
     frame="installed",
     build_direction=(0, 0, 1),
-    fem=FemSpec(
-        load_cases=(
-            _belt_case("belt_preload", X_BELT_LOADS.preload_n, sustained=True),
-            _belt_case("belt_peak", X_BELT_LOADS.peak_n, sustained=False),
-        ),
+    fem=mount_fem(
+        T,
+        PLACEMENT,
+        X_BELT_LOADS,
+        "loads.X_BELT_LOADS",
         supports=(
             Support("rear_bolts", BOLT_RINGS[0], "Rear M5 bolt, -x side: washer ring, fixed"),
             Support("rear_bolts_2", BOLT_RINGS[1], "Rear M5 bolt, +x side: washer ring, fixed"),
@@ -240,11 +185,6 @@ PART = Part(
                 "Foot resting on the bracket's base: held in z",
                 constrain=(False, False, True),
             ),
-        ),
-        displacement_limits=(
-            DisplacementLimit("idler_seat_along_belt", IDLER_SEAT, 0.3, (1, 0, 0)),
-            DisplacementLimit("idler_seat_sideways", IDLER_SEAT, 0.1, (0, 1, 0)),
-            DisplacementLimit("idler_seat_vertical", IDLER_SEAT, 0.1, (0, 0, 1)),
         ),
     ),
 )

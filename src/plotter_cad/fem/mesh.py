@@ -2,7 +2,7 @@
 
 import math
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -334,13 +334,20 @@ def shape_functions(bary: Vec3) -> tuple[float, ...]:
     )
 
 
-def covered_weights(covers: Sequence[Cover]) -> dict[int, float]:
-    """Consistent nodal share of the covered area (sums to the covered area)."""
+def covered_weights(
+    covers: Sequence[Cover], face_weight: Callable[[TriFace], float] | None = None
+) -> dict[int, float]:
+    """Consistent nodal share of the covered area (sums to the covered area).
+
+    ``face_weight`` scales each face's share (a bearing load is heaviest where the surface
+    faces the load head-on).
+    """
     weights: dict[int, float] = {}
     for cover in covers:
+        scale = face_weight(cover.face) if face_weight else 1.0
         for bary, area in cover.samples:
             for node, shape in zip(cover.face.nodes, shape_functions(bary), strict=True):
-                weights[node] = weights.get(node, 0.0) + shape * area
+                weights[node] = weights.get(node, 0.0) + shape * area * scale
     return weights
 
 

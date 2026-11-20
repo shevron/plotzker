@@ -447,6 +447,7 @@ For renders and interactive preview, also install the PythonSCAD app
 | `python -m plotter_cad render [names]` | PNGs of parts and assemblies to `renders/` (needs the app; `--pythonscad PATH` or `$PYTHONSCAD`); `--inspect` renders iso, rear iso, front, rear, left, right and top views into `renders/inspect/<name>_<view>.png` |
 | `python -m plotter_cad part [--list] [NAME] [--json]` | Print profile, material and FEM properties of parts defined as `Part` (`--json` is what the FEM sub-agent reads; `--stl PATH` writes the part in its analysis frame) |
 | `python -m plotter_cad fem NAMES...` (`make fem NAMES="..."`) | FEM check of parts (needs FreeCAD's gmsh and CalculiX): verdict, `fem/results/<name>/report.md`, `fem/verdicts.toml`; `--size MM` sets the element size near loads, `--refine auto|always|never` controls the second (finer) mesh, `--uniform` turns off grading, `--viz` also writes pictures and `.vtu` files into `fem/results/<name>/viz/` |
+| `python -m plotter_cad fem-status` (`make fem-status`) | FEM state of every printable part; flags verdicts that are stale (properties or geometry changed since the check) |
 | `python -m plotter_cad layout` | Baseboard drilling layout: `docs/baseboard-layout.svg` (1:1) and `docs/baseboard-holes.md` |
 | `python -m plotter_cad all` | All of the above |
 | `python -m pytest` | Tests: design rules hold, every part is a sane printable solid, assembly parts connect (philosophy: §7.6) |

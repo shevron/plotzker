@@ -1,0 +1,16 @@
+# Default print profile: every printed part uses it unless it names another one.
+# A part overrides it by naming a different file in this folder (Part.profile).
+
+description = "PETG, 0.6 mm nozzle, 0.3 mm layers, 3 perimeters, 20 % gyroid infill"
+material = "petg"
+nozzle_mm = 0.6
+layer_height_mm = 0.3
+perimeters = 3
+infill_percent = 20
+infill_pattern = "gyroid"
+
+# How the FEM turns a part with infill into a solid model: the stiffness and strength of the
+# real part relative to a solid print. ASSUMED; tighten after measuring a printed part.
+[fem]
+stiffness_factor = 0.6
+strength_factor = 0.6

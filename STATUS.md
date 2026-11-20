@@ -378,6 +378,19 @@ the printed carriage, motor mount and idler mount are the test pieces.
   - [ ] Follow-up: test-print; check the belt tension range, the plate clearance under the idler
     and the dovetail fit.
 
+- [ ] **T3.18 FEM check sub-agent.** An independent `fem-analyst` sub-agent checks new or
+  significantly changed parts against their planned loads and allowed deflections (PASS/FAIL
+  plus optional pictures of the failure). Parts become Python classes holding all their
+  properties (print profile, material, build direction, loads, criteria); a CLI prints them for
+  the sub-agent. Plan, decisions and open points: [`docs/fem-subagent-plan.md`](docs/fem-subagent-plan.md).
+  Subtasks (F0–F5 in the plan): **F0 toolchain spike ✅** (gmsh + CalculiX from FreeCAD: benchmark
+  within 1 %, X idler slider and mount mesh and solve in ~2 s, offscreen pictures work; the gantry
+  end bracket also meshes once the STL is cleaned and its holes exported coarser, no CAD change
+  needed; results in plan §11); **F1 part class, print profiles and materials TOML, first three parts (X idler
+  slider, X idler mount, gantry end bracket) ✅** (`python -m plotter_cad part NAME --json`; assumed
+  loads and limits listed in plan §12 await the user's review); **F2 runner and verdicts ✅** (`python -m plotter_cad fem NAMES`; cantilever benchmark within 1.2 %; first verdicts in `fem/verdicts.toml`, plan §13; speed and stability round in §14: mesh-independent regions, one mesh unless near a limit, scaled proportional cases, threads, graded mesh); **F3 visualization ✅** (`--viz`: utilization, displacement and hot-spot pictures plus a `.vtu` per load case, plan §15); **F4 agent definition and process edits ✅** (`.claude/agents/fem-analyst.md`, `docs/fem.md`, README §7.8, CLAUDE.md; dry run accepted, plan §16); F5 later (all parts, assemblies,
+  calibration). *Done when:* a dry run on a real part gives a report the user accepts.
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.

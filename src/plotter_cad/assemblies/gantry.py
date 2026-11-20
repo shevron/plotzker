@@ -38,12 +38,13 @@ from plotter_cad.params import (
     Y_AXIS,
 )
 from plotter_cad.parts.belt_clamp import belt_clamp
-from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket_local
+from plotter_cad.parts.gantry_end_bracket import gantry_end_bracket_local
 from plotter_cad.parts.loom_anchor import loom_anchor_installed
 from plotter_cad.parts.tension_idler import slider_x0
 from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
 from plotter_cad.parts.x_idler_slider import x_idler_slider_installed
 from plotter_cad.parts.x_motor_mount import x_motor_mount_left
+from plotter_cad.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

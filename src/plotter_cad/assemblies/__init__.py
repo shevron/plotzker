@@ -18,7 +18,7 @@ from plotter_cad.assemblies import (
     y_drive,
     zrib_mount,
 )
-from plotter_cad.parts.gantry_end_bracket import Side
+from plotter_cad.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

@@ -5,9 +5,10 @@ __pycache__/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
-# Generated: make stl, make render
+# Generated: make stl, make render, make fem
 stl/
 renders/
+fem/results/
 freecad/stl/
 freecad/components.json
 freecad/*.FCStd

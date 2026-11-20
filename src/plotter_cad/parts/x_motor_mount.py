@@ -27,9 +27,10 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
 
-from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_y
+from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_y
 from plotter_cad.hardware import NEMA17, SCS10UU, metric
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
+from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

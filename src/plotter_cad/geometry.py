@@ -4,24 +4,25 @@ Units: millimeters and degrees throughout.
 """
 
 import math
+import os
 from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from pythonscad import circle, cube, linear_extrude, osimport, square
 
+from plotter_cad.types import Matrix
+
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-#: Facets for round features (OpenSCAD ``$fn``) in rendered output.
-FN = 64
+#: Facets for round features (OpenSCAD ``$fn``) in rendered output. ``PLOTTER_FN`` lowers it
+#: for the FEM meshes (64-facet holes make the mesher choke; see docs/fem-subagent-plan.md).
+FN = int(os.environ.get("PLOTTER_FN", "64"))
 #: Facets for holes. Kept separate so holes can be tuned independently.
-FN_HOLE = 64
+FN_HOLE = FN
 #: Overlap used to keep boolean operations clean (no coplanar faces).
 EPS = 0.01
-
-Vec2 = tuple[float, float]
-Vec3 = tuple[float, float, float]
 
 
 def cos_deg(angle: float) -> float:
@@ -32,10 +33,6 @@ def cos_deg(angle: float) -> float:
 def vadd(a: Sequence[float], b: Sequence[float]) -> tuple[float, ...]:
     """Element-wise sum of two vectors."""
     return tuple(x + y for x, y in zip(a, b, strict=True))
-
-
-#: A handle: a 4×4 transformation matrix marking a position and orientation on a part.
-Matrix = list[list[float]]
 
 
 def handle(position: Sequence[float], rotation: Sequence[float] = (0, 0, 0)) -> Matrix:

@@ -19,9 +19,9 @@ the bed, dovetail vertical); no supports, no bridges.
 from typing import TYPE_CHECKING
 
 from plotter_cad.params import Y_TENSIONER
-from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.tension_idler import slider, slider_for_print
 from plotter_cad.parts.y_idler_mount import to_side_frame
+from plotter_cad.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

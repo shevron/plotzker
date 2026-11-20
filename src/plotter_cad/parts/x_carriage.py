@@ -43,10 +43,11 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
-from plotter_cad.geometry import EPS, FN_HOLE, Matrix, handle, set_handles, teardrop_x
+from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x
 from plotter_cad.hardware import ECCENTRIC, metric
 from plotter_cad.nut_slot import nut_slot
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
+from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from pythonscad import cube, mirror, translate
 
 from plotter_cad.assemblies.gantry import gantry_assembly
-from plotter_cad.geometry import Matrix, frame_axes, get_handle, get_handles, shift_handle
+from plotter_cad.geometry import frame_axes, get_handle, get_handles, shift_handle
 from plotter_cad.hardware import (
     GT2,
     PULLEY,
@@ -26,10 +26,10 @@ from plotter_cad.hardware import (
     y_shaft,
 )
 from plotter_cad.params import BRACKET, FRAME, TOL, Y_AXIS, Y_DRIVE, Y_TENSIONER
-from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
 from plotter_cad.parts.y_idler_slider import y_idler_slider_installed
 from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
+from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

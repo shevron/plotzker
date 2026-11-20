@@ -34,7 +34,7 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["plotter_cad"]
-known-third-party = ["pythonscad"]
+known-third-party = ["pythonscad", "vtk"]
 
 [tool.mypy]
 python_version = "3.14"
@@ -42,6 +42,11 @@ mypy_path = ["src", "stubs"]
 packages = ["plotter_cad"]
 strict = true
 cache_dir = ".mypy_cache"
+
+[[tool.mypy.overrides]]
+module = "plotter_cad.fem.viz_render"  # runs in FreeCAD's Python (vtk), not in this environment
+ignore_errors = true
+ignore_missing_imports = true
 
 [tool.uv]
 python-preference = "only-system"  # use the pyenv interpreter (.python-version), no uv-managed download

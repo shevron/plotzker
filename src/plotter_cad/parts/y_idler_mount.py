@@ -34,19 +34,13 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, union
 
-from plotter_cad.geometry import (
-    FN_HOLE,
-    Matrix,
-    frame_handle,
-    handle,
-    set_handles,
-)
+from plotter_cad.geometry import FN_HOLE, frame_handle, handle, set_handles
 from plotter_cad.hardware import ENDSTOP
 from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_TENSIONER
-from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotter_cad.parts.tension_idler import end_block, ridge, slider_x0
 from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
+from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

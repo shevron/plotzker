@@ -28,37 +28,29 @@ Hardware per bracket:
   Right bracket only: 2 × M3 nuts (pressed into slots from the outboard edge) for the loom
                        anchor (``loom_anchor.py``); the left bracket has no such holes
 
-Print: PETG (preferred, less creep) or PLA; 0.2 mm layers; 4 perimeters; 40 % infill;
-base face down; no supports (horizontal holes are teardrops; the underside is flat).
+Print: default profile (``profiles/default.toml``); base face down; no supports (horizontal
+holes are teardrops; the underside is flat).
+
+FEM (left bracket): the X belt's reaction (idler mount pulls the base +x, the beam pushes back on
+the face plate) and the Y belt ends pulling the clamps apart; held by the 8 block bolts; see
+:data:`PART`.
 """
 
-from enum import Enum
 from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull
 
-from plotter_cad.geometry import (
-    EPS,
-    FN_HOLE,
-    Matrix,
-    handle,
-    set_handles,
-    teardrop_x,
-    teardrop_y,
-)
-from plotter_cad.hardware import SCS10UU, VSLOT
+from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x, teardrop_y
+from plotter_cad.hardware import SCS10UU, VSLOT, metric
+from plotter_cad.loads import X_BELT_LOADS, Y_BELT_LOADS
 from plotter_cad.nut_slot import nut_slot
-from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, Y_AXIS
+from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_DRIVE, Y_AXIS
+from plotter_cad.part import DisplacementLimit, FemSpec, Force, LoadCase, Part, Support
+from plotter_cad.regions import Box, Cylinder
+from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid
-
-
-class Side(Enum):
-    """Which end of the gantry a part belongs to."""
-
-    LEFT = "left"
-    RIGHT = "right"
 
 
 # --- derived local geometry ----------------------------------------------------
@@ -216,3 +208,92 @@ def gantry_end_bracket(side: Side = Side.LEFT) -> Solid:
     """The bracket for one gantry end, in print orientation (the right one is mirrored)."""
     bracket = gantry_end_bracket_local(side)
     return bracket.mirror([1, 0, 0]) if side is Side.RIGHT else bracket
+
+
+# --- FEM definition (left bracket, bracket-local frame = print frame) ----------------
+_BOLT_RINGS = [
+    Cylinder(
+        center=(bolt[0][3], bolt[1][3], bolt[2][3]),
+        axis=(0, 0, 1),
+        radius=metric(5).head_d / 2,
+        inner_radius=TOL.bolt_hole_d(5) / 2,
+        half_length=0.3,
+        facing=(0, 0, 1),
+    )
+    for bolt in (*BLOCK_BOLTS_FRONT, *BLOCK_BOLTS_REAR)
+]
+_SEAT_X = FACE_IN_X - BRACKET.recess  #: the beam end's seat in the face plate
+#: Where the X idler mount's foot rests on the base: the mount's pull enters here
+MOUNT_FOOTPRINT = Box(
+    lo=(BRACKET.x_out, X_DRIVE.idler_foot_front_y, BRACKET.base_t - 0.3),
+    hi=(BRACKET.x_in, X_DRIVE.foot_y[1], BRACKET.base_t + 0.3),
+    facing=(0, 0, 1),
+)
+#: The face plate's pocket floor: the beam end pushes back here
+BEAM_SEAT_FACES = Box(
+    lo=(_SEAT_X - 0.3, -BEAM.depth / 2, BEAM_BOTTOM),
+    hi=(_SEAT_X + 0.3, BEAM.depth / 2, BEAM_BOTTOM + BEAM.height),
+    facing=(1, 0, 0),
+)
+#: The face plate behind the pocket floor (displacement of this tilts the beam)
+BEAM_SEAT = Box(
+    lo=(FACE_OUT_X, -BEAM.depth / 2, BEAM_BOTTOM),
+    hi=(_SEAT_X + 0.3, BEAM.depth / 2, BEAM_BOTTOM + BEAM.height),
+)
+
+
+def _clamp_footprint(clamp: Matrix) -> Box:
+    """A belt clamp's footprint on the bracket's flat underside."""
+    x, y = clamp[0][3], clamp[1][3]
+    return Box(
+        lo=(x - CLAMP.w / 2, y, -0.3),
+        hi=(x + CLAMP.w / 2, y + CLAMP.length, 0.3),
+        facing=(0, 0, -1),
+    )
+
+
+def _belt_case(name: str, x_run_n: float, y_run_n: float, sustained: bool) -> LoadCase:
+    """The X belt's reaction through the bracket plus the Y belt's two ends."""
+    front, rear = BELT_CLAMPS
+    return LoadCase(
+        name=name,
+        description=(
+            f"X belt (2 runs of {x_run_n:g} N): the idler mount pulls the base inboard and the "
+            f"beam pushes back on the face plate. Y belt ({y_run_n:g} N): front end pulls "
+            "forward, rear end pulls back"
+        ),
+        loads=(
+            Force(MOUNT_FOOTPRINT, (2 * x_run_n, 0, 0)),
+            Force(BEAM_SEAT_FACES, (-2 * x_run_n, 0, 0)),
+            Force(_clamp_footprint(front), (0, -y_run_n, 0)),
+            Force(_clamp_footprint(rear), (0, y_run_n, 0)),
+        ),
+        source="loads.X_BELT_LOADS, loads.Y_BELT_LOADS",
+        sustained=sustained,
+    )
+
+
+PART = Part(
+    name="gantry_end_bracket_left",
+    description="Gantry end bracket, left: SCS blocks, beam face plate, Y belt clamps",
+    build=gantry_end_bracket_local,
+    frame="installed",
+    build_direction=(0, 0, 1),
+    fem=FemSpec(
+        load_cases=(
+            _belt_case(
+                "belt_preload", X_BELT_LOADS.preload_n, Y_BELT_LOADS.preload_n, sustained=True
+            ),
+            _belt_case("belt_peak", X_BELT_LOADS.peak_n, Y_BELT_LOADS.peak_n, sustained=False),
+        ),
+        supports=tuple(
+            Support(f"block_bolt_{i + 1}", ring, "M5 bolt into an SCS block: washer ring, fixed")
+            for i, ring in enumerate(_BOLT_RINGS)
+        ),
+        displacement_limits=(
+            DisplacementLimit("beam_seat_x", BEAM_SEAT, 0.1, (1, 0, 0)),
+            DisplacementLimit("beam_seat_y", BEAM_SEAT, 0.1, (0, 1, 0)),
+            DisplacementLimit("beam_seat_z", BEAM_SEAT, 0.1, (0, 0, 1)),
+        ),
+    ),
+)

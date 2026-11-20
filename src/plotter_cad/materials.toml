@@ -1,0 +1,24 @@
+# Materials for the FEM checks (docs/fem-subagent-plan.md).
+#
+# Units: MPa, g/cm³. Printed materials are transversely isotropic about the build direction:
+# "in_plane" is within a layer (x/y of the print frame), "build" is across the layers (z).
+# Strengths are short-term values for a solid print; the print profile applies its infill
+# knockdown on top, and "sustained_factor" scales the allowable for loads that act
+# continuously (belt tension), because PETG creeps.
+#
+# Every value below is ASSUMED (generic PETG datasheet ranges, rounded down) until we measure
+# our own prints.
+
+[petg]
+description = "3D-printed PETG (FDM)"
+density_g_cm3 = 1.27
+e_in_plane_mpa = 2000
+e_build_mpa = 1600
+nu_in_plane = 0.38
+nu_build = 0.38
+g_build_mpa = 600
+strength_in_plane_mpa = 40
+strength_build_mpa = 20
+sustained_factor = 0.5
+assumed = true
+source = "Generic PETG datasheet ranges, rounded down; ASSUMED until measured"

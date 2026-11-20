@@ -27,8 +27,9 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, linear_extrude, polygon
 
-from plotter_cad.geometry import FN_HOLE, Matrix, handle, set_handles, teardrop
+from plotter_cad.geometry import FN_HOLE, handle, set_handles, teardrop
 from plotter_cad.params import PEN, TOL
+from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

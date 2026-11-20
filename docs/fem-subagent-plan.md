@@ -1,0 +1,429 @@
+# Plan: FEM check sub-agent
+
+**Status:** agreed in review; tracked as T3.18 in [`STATUS.md`](../STATUS.md). Nothing is implemented yet.
+
+Goal: after a part or assembly is designed or significantly changed, an independent
+`fem-analyst` sub-agent checks that it withstands the planned loads within the allowed
+deflection, and reports pass/fail plus, optionally, pictures of how it fails.
+
+## 1. Decisions taken in review
+
+| # | Decision |
+|---|----------|
+| 1 | Everything a part needs (geometry function, material, print profile, build direction, loads, supports, FEM criteria) is defined **in Python, in one place per part** (a part class). A CLI prints a part's properties so the sub-agent never has to read CAD code. The same CLI later grows other commands (export an STL, ...). |
+| 2 | All printed parts are PETG. A **default print profile** (PETG, 0.6 mm nozzle, 0.3 mm layers, 3 perimeters, 20 % gyroid infill) lives in a TOML file; a part may name another profile, which is another TOML file. |
+| 3 | First parts to check: **X idler slider, X idler mount, gantry end bracket** (the most belt-loaded). |
+| 4 | Allowed deflection is defined per part, with a default of **0.1 mm**, tighter for the pen. It is **directional**: e.g. the X idler may move more along the belt axis (toward the X motor) than down or sideways. |
+| 5 | Loads (belt preload, carriage mass and acceleration) are unknown: start with documented `ASSUMED` values, refine after bench tests. |
+| 6 | The sub-agent runs on the strongest model. |
+| 7 | No calibration coupon for now. Compensate with **large safety factors**, narrow them as experience accumulates. |
+
+## 2. Architecture
+
+```
+src/plotter_cad/
+├── part.py              ← Part base class + FEM/print dataclasses (typed, validated)
+├── profiles/            ← print profiles: default.toml, others as needed
+├── materials.toml       ← PETG (printed, anisotropic), 6063 aluminum, steel, plywood, POM
+├── parts/<part>.py      ← geometry (as today) + a `PART = ...` definition with its properties
+├── fem/                 ← mesh, solve, evaluate, visualize (glue around gmsh + CalculiX)
+└── build.py             ← CLI gains: `part`, `fem`
+fem/results/             ← generated (git-ignored): reports, JSON, PNGs, .vtu
+fem/verdicts.toml        ← committed: last verdict per part + hash of geometry and properties
+.claude/agents/fem-analyst.md   ← the sub-agent definition
+docs/fem.md              ← modeling conventions, material sources, how to read a report
+```
+
+`PRINTABLE_PARTS` becomes derived from the part registry, so there is one list of parts.
+
+### 2.1 The part class
+
+One definition per printable part, next to its geometry. It holds:
+
+- **Identity and geometry:** name, the function that builds the part, and the frame
+  (`print` or `installed`).
+- **Print:** profile name (default `default`), material name, build direction as a vector
+  in the chosen frame (+Z for the print frame, which is what the STL uses today).
+- **FEM requirement:** `required` or `not_structural`, with a reason.
+- **Supports:** where the part is held (e.g. the screw-washer footprints).
+- **Load cases:** each with a name, force/moment/gravity/acceleration terms applied to a
+  region, a `source` string, and an `assumed` flag.
+- **Criteria:** per load case, see §4.
+
+Regions are geometric selectors (box, sphere, cylinder, plane, or a named handle from D28
+plus a radius). Because the definition is Python, loads can be computed from `params.py`
+(belt geometry, tension, pulley positions) rather than copied as numbers, so they stay in
+sync with the design.
+
+### 2.2 The CLI
+
+| Command | Output |
+|---------|--------|
+| `python -m plotter_cad part --list` | All parts with profile, material, FEM-required flag, last verdict (and whether it is stale) |
+| `python -m plotter_cad part <name>` | Human-readable properties |
+| `python -m plotter_cad part <name> --json` | Same as JSON, with regions and handles resolved to numeric coordinates: this is what the sub-agent reads |
+| `python -m plotter_cad fem <name> [--viz]` | Run the check, write `fem/results/<name>/`, update the verdict |
+| `make fem NAMES="..."` | Same, via the Makefile |
+
+### 2.3 Print profiles and materials
+
+`profiles/default.toml` holds: material, nozzle, layer height, perimeters, infill % and
+pattern, plus the derived knockdown factors the FEM needs (printed solid vs. a real part
+with 20 % infill). A part may name another profile (e.g. `stiff.toml`: more perimeters).
+
+`materials.toml` holds, per material: density, in-plane and out-of-plane modulus, shear
+modulus and Poisson ratio (printed materials are transversely isotropic about the build
+direction), in-plane and interlayer strength, a long-term (creep) factor for constant
+loads (belt tension is constant), and a `source`/`assumed` note per value. PETG values start as
+conservative generic numbers marked *assumed*.
+
+## 3. The sub-agent
+
+**Role.** Independent verifier. The main agent writes or updates the part definition and
+asks for a check; the sub-agent only evaluates it. This avoids the author grading their
+own design.
+
+**Rules (written into `.claude/agents/fem-analyst.md`).**
+
+1. Get inputs only from `part <name> --json`; if something is missing or an `assumed` value
+   dominates the result, return **needs input** with specific questions.
+2. Never change loads, criteria or safety factors to make a part pass.
+3. Read-only on `src/` and `docs/`; write only under `fem/results/` (and the verdict file).
+4. Always run the sanity checks (below) before trusting a result.
+5. Return: a per-criterion verdict table, the paths to images and reports, an
+   interpretation of any failure (where, what mode, which loads), and **suggested** design
+   changes (not applied).
+
+**Tools:** Bash, Read, Write/Edit, Glob, Grep. **Model:** strongest available.
+A new agent definition loads at session start, so a session restart is needed once it
+exists.
+
+## 4. Criteria and results
+
+Per load case:
+
+- **Strength:** failure index × safety factor ≤ 1. The index is the larger of two modes: the
+  largest in-plane principal stress (tension or compression) over the in-plane strength, and tension
+  across the layers combined quadratically with shear between the layers over the interlayer
+  strength (shear strength assumed equal to it). A max-of-modes rule replaces Tsai-Hill, which is
+  not convex when the interlayer strength is below 1/√2 of the in-plane one. Von Mises alone would
+  miss delamination.
+- **Displacement:** limit on a named region, as a total magnitude (default 0.1 mm) and/or
+  per direction in a named frame (e.g. along the belt axis, down, sideways). The X idler
+  example: generous along the belt axis, 0.1 mm down and sideways.
+- **Relative displacement** between two regions, **twist or tilt** of a region (fit to the
+  region's nodes), **stiffness** (N/mm).
+- Optional: linear **buckling** factor, first **natural frequency**.
+
+**Safety factors (initial, deliberately large):** 3 on strength for every load case. Loads that
+act continuously (belt tension) are additionally checked against the material's *sustained
+factor* (0.5, for creep), so they effectively carry a factor of 6 on short-term strength.
+The print profile's infill knockdown (strength × 0.6) comes on top of both.
+
+**Verdicts:** PASS, FAIL, MARGINAL (less than 15 % margin), INCONCLUSIVE (mesh not
+converged, or sanity checks failed).
+
+**Sanity checks, every run:** consistent units (mm, N, MPa, tonne/mm³ for CalculiX);
+reactions equal applied loads; one mesh refinement, displacement must agree within 5 %;
+stress peaks at point loads and sharp re-entrant corners are reported both raw and with
+the singular spots excluded.
+
+**Visual output (`--viz`):** PNG contours of failure index and displacement on the
+deformed shape (scale printed on the image, undeformed ghost, peak marked, failing
+criterion in the title), an overview view plus one aimed at the hot spot; `.vtu` for
+ParaView or FreeCAD. The sub-agent also looks at the images and writes a short "how it
+failed" note. Offscreen VTK rendering on macOS is verified in the spike; the fallback is matplotlib.
+
+## 5. Tooling
+
+Already installed with FreeCAD 1.1.3: `ccx` (CalculiX), `gmsh`, VTK. No new installs.
+Chosen approach: our own typed glue runs gmsh and ccx directly (STL → 10-node
+tetrahedra; transversely isotropic material with the orientation from the build
+direction) and reads the `.frd` result. Rejected: FreeCAD's FEM Python API (GUI-shaped,
+fragile headless), pip FEM libraries (Python 3.14 wheels uncertain). The F0 spike confirms
+or overturns this.
+
+## 6. Scope
+
+- **v1: one part at a time.** Neighbors are replaced by supports or reaction loads.
+  Bolted joints are modeled as a fixed washer-footprint, nut traps as part of the solid.
+- **Shaft and extrusion deflection** (the 0.2–0.4 mm sag) is a closed-form hand check the
+  sub-agent does as a cross-check, not a mesh.
+- **Later:** assemblies with bonded contacts, calibration against a printed and loaded
+  part, tighter safety factors.
+
+## 7. Process changes (applied only once this plan is agreed)
+
+- **README §7.1 and §7.4:** a new or significantly changed part gets a part definition and
+  an FEM check before handover. "Significant" = anything affecting the load path
+  (thickness, ribs, holes, fillets, material, profile, orientation); clearance tweaks do
+  not count.
+- **README §5 layout and §7.2/§7.4 text:** new files; the per-part "Print:" docstring line
+  is replaced by the part's profile reference (see §8, item 1).
+- **CLAUDE.md "Finishing a session":** one line pointing to the FEM check.
+- **STATUS.md:** add the tasks below, and an "FEM" verdict note per part.
+- **`docs/fem.md`:** modeling conventions and a table of which parts are FEM-required.
+
+## 8. Things this change touches that need your decision
+
+1. **Existing print settings in the part docstrings** (e.g. `x_idler_slider`: "0.2 mm; 4
+   perimeters; 40 % infill") **disagree with the new default profile.** Proposal: the
+   profile becomes the single source; docstrings point to it, and parts that need
+   something else name a profile.
+2. **Minimum wall (README §7.4: 1.6 mm = 4 perimeters at 0.4 mm).** With a 0.6 mm nozzle
+   and 3 perimeters the wall is 1.8 mm (3 × 0.6), so the rule should be restated per profile.
+3. **Tolerances in `params.TOL`** (nut slots, holes): confirmed measured with the default
+   profile (PETG, 0.6 mm nozzle, 0.3 mm layers, 3 perimeters, 20 % infill), so they stay valid.
+   Other profiles may need their own tolerance values.
+4. **Initial assumed loads (proposal, confirmed in review):** belt preload 40 N per belt run (so
+   ~80 N on the idler axle and on its tension screw), plus 20 N dynamic; carriage mass and
+   acceleration only matter for the pen holder and carriage (assume 0.3 kg at 3000 mm/s²).
+   **Initial directional limits (proposal):** X idler 0.3 mm along the belt axis, 0.1 mm
+   other directions; pen holder 0.05 mm.
+
+## 9. Tasks
+
+| # | Task | Done when |
+|---|------|-----------|
+| F0 ✅ | Spike | The gmsh + ccx pipeline reproduces a cantilever closed-form result within 2 %, runs on the X idler slider, and offscreen rendering works; tooling choice confirmed |
+| F1 ✅ | Part class, profiles, materials | `part.py`, `default.toml`, `materials.toml` exist with validation and tests; the three first parts are migrated and the `part` CLI prints them as JSON; you have reviewed the assumed loads and limits |
+| F2 ✅ | Runner | `python -m plotter_cad fem <name>` produces verdicts, JSON and a Markdown report; solver benchmarks in the tests (skipped if `ccx` is missing) |
+| F3 ✅ | Visualization | `--viz` produces the PNGs and `.vtu` |
+| F4 ✅ | Agent and process | `.claude/agents/fem-analyst.md`, `docs/fem.md`, README/CLAUDE.md/STATUS.md edits done; a dry run on a real part gives a report you accept |
+| F5 | Later | Migrate all remaining parts to part classes; assemblies with contacts; buckling/modal; calibration; `make fem-status` stale check |
+
+## 10. Honest limits
+
+FEM of FDM parts is typically ±30–50 % off (infill, layer adhesion, underextrusion). With
+no calibration for now, the large safety factors carry that uncertainty, and the results are
+best used to catch gross failures and to compare design variants.
+
+## 11. F0 spike results (2026-11-20: done)
+
+The chosen tooling (gmsh + CalculiX run directly from our own glue, VTK for pictures) works.
+The spike scripts were scratch work; F1/F2 implement the real thing.
+
+| Check | Result |
+|-------|--------|
+| Cantilever benchmark (100 × 10 × 5 mm, E 2000 MPa, tip load 1 N), tet10 from an STL | tip deflection 1.587 mm vs 1.603 mm closed form (Euler + shear): **−1.0 %**, stable over 3 mesh sizes (−1.3 / −1.1 / −1.0 %); the 1 % is the 3D clamp stiffening a beam model ignores |
+| `x_idler_slider` | meshes and solves: 7.6k tets, **~2.5 s** total |
+| `x_idler_mount` | meshes and solves: 9.4k tets, ~2 s |
+| `gantry_end_bracket_left` | meshes and solves once the STL is cleaned and exported with 20-facet holes (27k tets, ~8 s); the raw 64-facet STL hangs the mesher |
+| Offscreen picture | VTK (bundled with FreeCAD, Python 3.11) renders a displacement contour on the deformed shape to a PNG in ~2 s; no GUI needed. matplotlib fallback not needed |
+
+**What we learned, and what F1/F2 must do about it**
+
+1. **STL needs cleaning before meshing:** weld vertices (1e-3 mm) and drop degenerate
+   triangles, both the ones with merged vertices (`x_idler_slider` had 8) and the **zero-area
+   collinear ones** PythonSCAD leaves along edges where a face outline gains extra vertices
+   (the gantry end bracket has 8 of them along its outboard top edge). Without it gmsh reports
+   overlapping facets or "could not recover boundary mesh", and CalculiX finds non-positive
+   Jacobians. **The bracket's CAD geometry is fine** (an earlier note here blamed
+   non-manifold edges; those were these slivers), so no CAD change was needed.
+2. **Mesh settings that worked:** keep the STL triangles as the boundary (no surface
+   reparametrization; the reparametrizing route failed or hung on two of three parts) and
+   use **straight-sided** 10-node tets (curved mid-nodes on the facets produce inverted
+   elements). Node order is swapped for CalculiX (the last two nodes of gmsh's tet10).
+3. **The 64-facet holes are too fine for FEM:** the bracket's mesher hangs on them even after
+   cleaning (many tiny boundary triangles next to 3 mm elements). Exporting with a coarser facet
+   count (20 for holes: 1 648 triangles instead of 4 238) fixes it: the bracket then meshes in
+   1 s (27k tets) and solves in 6.6 s. F1 adds a "FEM resolution" override of `geometry.FN` /
+   `FN_HOLE` to the part build.
+4. **Validation in the runner:** a sealed-surface check on the STL is not reliable (slivers come
+   in pairs and fool edge counting), so the runner instead trusts gmsh and CalculiX (a failed
+   boundary recovery or a non-positive Jacobian aborts the run with a clear message) and compares
+   the mesh volume with the part's volume.
+5. **Forces:** nodal forces lumped from the surface triangles inside a load region
+   (corner 0, mid-edge 1/3 of the area) reproduce the closed-form load correctly; no
+   special CalculiX load cards needed.
+6. **Environment:** `ccx` 2.23 and `gmsh` 4.15 are binaries (no gmsh Python module);
+   mesh scripts are `.geo` files. The glue is stdlib Python in the project environment (3.14);
+   only the pictures need FreeCAD's bundled Python (VTK, numpy, matplotlib), run as a subprocess.
+
+## 12. F1 results (2026-11-20: done, awaiting your review of the assumed values)
+
+**What exists now**
+
+| Item | Where |
+|------|-------|
+| Part class: geometry function, frame, build direction, profile, material, FEM spec (load cases, supports, displacement limits, safety factor) | `src/plotter_cad/part.py` |
+| Regions (box, cylinder/ring; selected by face centroid and outward normal, or by node for limits) | `src/plotter_cad/regions.py` |
+| Print profile loader and `profiles/default.toml` (PETG, 0.6 mm, 0.3 mm, 3 perimeters, 20 % gyroid; stiffness and strength factors 0.6, assumed) | `print_profile.py`, `profiles/` |
+| Materials loader and `materials.toml` (PETG, all values assumed) | `materials.py`, `materials.toml` |
+| Assumed belt loads in one place | `loads.py` |
+| CLI: `python -m plotter_cad part --list`, `part NAME`, `part NAME --json` | `build.py`, `part_report.py` |
+| `PLOTTER_FN=20` environment variable lowers the facet count for FEM meshes (default 64 unchanged) | `geometry.py` |
+| Registry of parts defined as `Part`; the other 18 printable parts are listed as "not yet defined" | `parts/__init__.py` (`PARTS`) |
+| Definitions: `x_idler_slider`, `x_idler_mount`, `gantry_end_bracket_left` (the right bracket is a mirror, done in F5) | `PART` at the end of each module |
+| Tests: profile/material loading, knockdowns, JSON output, spec validation, and that **every load, support and limit region touches the actual part** | `tests/test_part.py` |
+
+The three parts' docstrings now point to the default profile instead of the old per-part print
+settings (the other parts keep theirs until they are migrated).
+
+**Modeling choices to review**
+
+- **X idler slider:** the belt pulls the axle bore inboard (+x). Held by the M3 nut's seat in the
+  rear wall (x only) and by the dovetail channel (y and z only), so it is statically determinate.
+- **X idler mount:** the screw head pushes the end block with the same force (+x), and the slider's
+  tilt adds a **couple on the ridge** (belt force × the height of the axle above the screw, ~1.2 N·m
+  at preload). Held by the two rear M5 washer rings (fixed) and the foot's underside on the bracket
+  (z only).
+- **Gantry end bracket (left):** the X belt's reaction (mount pulls the base +x, the beam pushes
+  back −x on the face plate pocket floor) plus the Y belt's two ends pulling the clamps apart
+  (±y). Held by the 8 block bolts' washer rings.
+- Each part has two load cases: `belt_preload` (sustained) and `belt_peak`.
+- Not modeled yet: contact (supports are fixed instead of unilateral), bolt preload, weight of the
+  gantry on the bracket, handling loads. The bracket's x load enters as traction on the base top.
+
+**Assumed values to confirm (all in code, one place each)**
+
+| Value | Now | Where |
+|-------|-----|-------|
+| Belt tension per run, preload / extra at peak | 40 N / +20 N | `loads.py` |
+| Allowed displacement, X idler seat and slider axle | 0.3 mm along the belt, 0.1 mm sideways and vertical (each part; the two add up in the assembly) | `PART` of each module |
+| Allowed displacement, bracket beam seat | 0.1 mm in x, y and z | `gantry_end_bracket.py` |
+| Safety factor | 3 (plus the material's sustained factor 0.5 for belt preload) | `part.py`, `materials.toml` |
+| PETG: E in plane / across layers | 2000 / 1600 MPa | `materials.toml` |
+| PETG: strength in plane / across layers | 40 / 20 MPa | `materials.toml` |
+| Infill knockdown on stiffness / strength | 0.6 / 0.6 | `profiles/default.toml` |
+
+With these, the effective short-term strength of a real part is 24 MPa in plane and 12 MPa
+across layers, and 12 / 6 MPa under continuous load, before the safety factor of 3.
+That is very conservative on purpose; the first F2 results will show whether it is useful.
+
+## 13. F2 results (2026-11-20: done; the first real verdicts are in `fem/verdicts.toml`)
+
+**What exists**
+
+| Item | Where |
+|------|-------|
+| `python -m plotter_cad fem NAMES...` (also `make fem NAMES="..."`; `--size MM`): runs the whole pipeline, writes `fem/results/<name>/{report.md,result.json,part.json,...}`, updates `fem/verdicts.toml` (verdict, date, geometry hash, spec hash), exits 1 on FAIL or INCONCLUSIVE | `src/plotter_cad/fem/`, `build.py` |
+| `python -m plotter_cad part NAME --stl PATH`: the part in its analysis frame (the runner calls it in a subprocess with `PLOTTER_FN=20`) | `part_report.py` |
+| STL cleaning, gmsh meshing with fallbacks, CalculiX deck (transversely isotropic material, material axis 3 = build direction), `.frd` reader | `fem/stl.py`, `mesh.py`, `ccx.py` |
+| Loads as nodal forces (force, exact couple, body acceleration), supports as constrained nodes | `fem/applied.py` |
+| Failure index (in-plane and interlayer modes), displacement criteria, status thresholds (PASS up to 85 % of a limit, MARGINAL up to 100 %, FAIL beyond) | `fem/evaluate.py` |
+| Runner, sanity checks, report, verdicts | `fem/runner.py`, `report.py` |
+| Tests: cantilever benchmark in two layer orientations, failure index, couple distribution, cleaning, status logic, and an end-to-end run of the slider (skipped if gmsh or CalculiX are missing) | `tests/test_fem.py` |
+
+**Validation:** the cantilever benchmark (100 × 10 × 5 mm, PETG effective values) matches the
+Timoshenko closed form within **1.2 %** with the layers flat (bending uses the in-plane modulus)
+and **1.0 %** with the layers along the beam (bending uses the across-layer modulus), so the
+material orientation is applied correctly.
+
+**Sanity checks on every run:** reactions balance the loads (loads that land on constrained
+directions are carried by the support directly and excluded from the sum); the largest
+displacement changes by at most 5 % between the two meshes (else INCONCLUSIVE); mesh volume within
+2 % of the STL.
+
+**Strength is judged away from singular spots:** nodes within 1.5 element sizes of the edge of a
+loaded or supported patch are excluded. The report also states the raw peak, and how much the
+peak stress changed between the two meshes (a large change suggests a sharp-corner singularity,
+where a fillet would lower the real stress).
+
+**Mesh robustness (found while running real parts):** gmsh sometimes crashes, or produces
+zero-length edges that CalculiX rejects as non-positive Jacobians. The runner merges coincident
+nodes and retries other gmsh settings automatically (five in turn).
+
+**Cost:** slider ~25 s, mount ~40 s, bracket ~10 min (element size 2.2 mm; 120k-190k elements).
+`fem/results/` is large (hundreds of MB for the bracket) and git-ignored; `make clean` removes it.
+
+**Not done yet (F3):** pictures. The fine mesh and `.frd` results are kept for it.
+
+## 14. Speed and stability round (2026-11-20)
+
+Measured first: dropping the boundary-driven interior sizing saves only 15-20 % of the elements,
+doubling the element size saves 5-6×, and CalculiX was running on one of the 8 performance cores.
+Changes:
+
+| Change | What it does |
+|--------|--------------|
+| **C: mesh-independent regions** (`fem/mesh.py`: `cover_region`) | Each boundary face is sampled (6 × 6 points) and a region covers the samples inside it, so the loaded or supported area no longer depends on which triangles happen to have their centroid in the region. Loads are consistent nodal forces (quadratic shape functions); supports constrain the nodes next to covered samples. This was the cause of the mount's failed convergence checks. |
+| **A: cheaper runs** (`fem/solve.py`, `runner.py`) | One mesh first; a finer second mesh only if some criterion's utilization is within 0.6-1.6 (`--refine auto`; `always` and `never` exist). Load cases that are multiples of each other (peak = 1.5 × preload) are scaled, not solved again. Distinct cases run in parallel as separate CalculiX processes. (CalculiX is also given the cores through `OMP_NUM_THREADS` and `CCX_NPROC_*`, but the F test below shows this build ignores them.) |
+| **B: graded mesh** (`fem/mesh.py`: `SizeField`) | gmsh box size fields around every load and support region: element size `near` (2.0-2.2 mm) inside and in a transition zone, 2.5 × that elsewhere (at most 6 mm). `--uniform` turns it off. |
+| **Mesh robustness** | Coincident nodes are merged with a neighbor-cell search (the earlier rounding missed pairs split by a cell boundary) and any element with a repeated node is dropped; this removed the "nonpositive jacobian" retries. |
+
+**Results** (same three parts, default settings, 8-core laptop):
+
+| Part | Before | After |
+|------|--------|-------|
+| `x_idler_slider` | 24 s, 21k tets | 7 s |
+| `x_idler_mount` | 38 s; convergence check failed (14 %) | 20 s; converged (4.3 %) |
+| `gantry_end_bracket_left` | 561 s, 192k tets, 473 MB of files | **62 s, 83k tets, 68 MB**; converged (2.7 %) |
+
+Displacements agree with the earlier runs within 2 % (bracket beam seat 0.430 mm vs 0.437 mm);
+strength utilizations moved (bracket 6.4 → 4.9) because loaded and supported areas are now the
+real region and not whatever triangles fell inside it.
+
+**F: CalculiX solver test** on the bracket's 83k-element input (one load case):
+
+| Solver | Time | Result |
+|--------|------|--------|
+| SPOOLES (default) | 39.6 s | reference |
+| ITERATIVE CHOLESKY | 103 s | same to 5 digits |
+| ITERATIVE SCALING | 327 s | same to 5 digits |
+| PARDISO, PASTIX | n/a | not linked in the FreeCAD build |
+
+The default stays. Thread count made no difference either (1 thread 41 s, 4 threads 39 s, 8
+threads 40 s): the speed-up came from the smaller meshes, not from parallelism. `--solver`
+remains available for experiments.
+
+## 15. F3 results (2026-11-20: done)
+
+`python -m plotter_cad fem NAMES --viz` (or `make fem NAMES="..." ` with `--viz` added to the
+command) writes, for every load case, into `fem/results/<name>/viz/`:
+
+| File | Shows |
+|------|-------|
+| `<case>_utilization.png`, `_utilization_rear.png` | The part deformed (scale printed on the image) over a faint ghost of the original, colored by **utilization** = failure index × safety factor: blue is fine, yellow starts at 85 %, orange is the allowable (1.0), red and purple are over it. A magenta ball marks the governing strength point; the top-left text lists every criterion of the case with its verdict. |
+| `<case>_displacement.png` | The same shape colored by displacement magnitude in mm. |
+| `<case>_hotspot.png`, `_hotspot_rear.png` | The same views zoomed on the governing strength point. |
+| `<case>.vtu` | The undeformed volume mesh with displacement and utilization fields, for ParaView or FreeCAD. |
+
+Rendering runs in FreeCAD's bundled Python (VTK, offscreen, no window), about 2-3 s per case.
+`report.md` lists the pictures. A failed render is reported as a note and does not fail the check.
+
+**What the first pictures showed:** the slider fails where the arm meets the plate next to the axle
+bore, and its axle tilts upward (the couple from the belt pull above the screw). The mount's
+dovetail ridge, where the slider's couple is applied, is the red area, and its surface ripples
+under the linearly varying load: that is partly an artifact of how the couple is modeled (forces on
+a thin ridge surface), so a ridge-top result should be read with care. The sub-agent should flag
+this kind of finding instead of treating it as a design failure.
+
+## 16. F4 results (2026-11-20: done, dry run accepted)
+
+**What exists:** `.claude/agents/fem-analyst.md` (the sub-agent: strongest model, tools Bash,
+Read, Glob, Grep, so it cannot edit anything), `docs/fem.md` (conventions, thresholds, how to
+read a result), README §7.8 and the FEM bullet in §7.4, the finishing step in `CLAUDE.md`, and
+the task line in `STATUS.md`. The agent type loads at session start; for the dry run a
+general-purpose agent was given the definition as its instructions.
+
+**Dry run: `x_idler_slider`.** The agent ran the check, looked at the pictures and reported:
+FAIL; weak at the axle bores across the layers (delamination of the +y arm at the bore, the layers
+being y-z planes because the slider prints on its back); the rear wall around the M3 hole is a
+second zone; the whole slider tips about its low supports. It judged the peak partly a mesh
+singularity (+9 % on the default mesh, +36 % at 1 mm), gave a sensitivity (belt preload of about
+22 N per run or less would pass; interlayer strength 30 MPa gives about 1.2; both together about
+0.75) and ranked suggestions (more material and fillets around the bore, thicker rear wall,
+orientation with the arms along the layers). Its questions: is 40 N per run the real preload, and
+is a 0.1 mm vertical limit needed for a constant static offset of the idler?
+
+**Changes made from the agent's feedback:**
+
+| Feedback | Change |
+|----------|--------|
+| `docs/fem.md` was missing (a failed command skipped writing it) | written |
+| Diagnostic reruns overwrote the official result and verdict | `--no-record` (leave `fem/verdicts.toml` alone) with `--out DIR`; the definition says diagnostics use them and the official verdict is the default run's |
+| Which load case to look at | the governing one is the case with the highest utilization (a sustained case can govern); stated in the definition and in `docs/fem.md` |
+| Report lacked the stress and where | the strength detail line now gives the stress components in MPa with their allowables (in-plane, across the layers, interlayer shear) and the distance to the nearest load or support patch outline |
+| Thresholds undocumented | listed in `docs/fem.md` (marginal 85 %, refinement band 0.6-1.6, singularity flag 25 %, sanity tolerances) |
+| No rule when the peak grows with refinement | report the official verdict and the finer run as a diagnostic, and say the peak is probably a singularity |
+
+**Not changed, for your decision:**
+
+- The agent noted that the uniform traction over the axle bore's 60° facing region puts a stress
+  step at the patch edge, which can create the hot spot it reports. A cosine-weighted bearing
+  load would be more realistic. This is a change to how loads are applied (tool, F5), not to the
+  spec.
+- The agent suspects a stale docstring: `x_idler_slider.py` says the axle bolt's head is on the -y
+  arm, but `X_TENSIONER.head_side = 1` puts the head on the +y arm (the nut on -y). I did not touch
+  it (no CAD changes yet).

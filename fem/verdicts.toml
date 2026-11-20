@@ -1,0 +1,19 @@
+# Last FEM verdict per part (written by `python -m plotter_cad fem`).
+
+[gantry_end_bracket_left]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "4c5d6010d722d5c7"
+spec = "7c27ce4a71a4c034"
+
+[x_idler_mount]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "2da358cc9175e010"
+spec = "c7028a990c3210ab"
+
+[x_idler_slider]
+verdict = "FAIL"
+date = "2026-11-20"
+geometry = "a234465970a14793"
+spec = "5dfc74d6b1570845"

@@ -7,6 +7,9 @@ Usage (from the repository root, with the package installed or ``src`` on the pa
     python -m plotter_cad stl x_carriage   # one part
     python -m plotter_cad render           # parts + assemblies → renders/*.png
     python -m plotter_cad render --inspect # all views → renders/inspect/<name>_<view>.png
+    python -m plotter_cad part --list      # parts with profile, material and FEM state
+    python -m plotter_cad part NAME [--json]  # a part's print/FEM properties (--json: sub-agent)
+    python -m plotter_cad fem NAME...      # FEM check of parts → fem/results/, fem/verdicts.toml
     python -m plotter_cad layout           # baseboard drilling layout → docs/
     python -m plotter_cad freecad          # machine components for the FreeCAD assembly → freecad/
     python -m plotter_cad all              # check, stl, render, layout
@@ -33,6 +36,7 @@ SRC_DIR = Path(__file__).resolve().parents[1]
 STL_DIR = REPO_ROOT / "stl"
 RENDER_DIR = REPO_ROOT / "renders"
 DOCS_DIR = REPO_ROOT / "docs"
+FEM_DIR = REPO_ROOT / "fem"
 
 #: Image size and camera options passed to PythonSCAD for every render.
 RENDER_OPTIONS = (
@@ -183,6 +187,29 @@ def _select(names: Iterable[str] | None, available: Collection[str]) -> list[str
     return list(names)
 
 
+def _run_fem(names: Iterable[str], out: Path, args: argparse.Namespace) -> int:
+    """Run the FEM checks; the exit code is 1 if any is not a PASS or MARGINAL."""
+    from plotter_cad.fem.runner import RunOptions, run_checks
+
+    options = RunOptions(args.size, args.refine, not args.uniform, args.solver, args.viz)
+    results = run_checks(
+        list(names), out, FEM_DIR / "verdicts.toml", options, record=not args.no_record
+    )
+    return 0 if all(r.status.value in ("PASS", "MARGINAL") for r in results) else 1
+
+
+def _show_part(name: str | None, list_all: bool, as_json: bool, stl: Path | None) -> None:
+    """Print the ``part`` command's output."""
+    from plotter_cad import part_report
+
+    if stl is not None and name:
+        part_report.export_part_stl(name, stl)
+    elif list_all or not name:
+        print(part_report.list_parts())
+    else:
+        print(part_report.part_json(name) if as_json else part_report.part_text(name))
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Command-line entry point; returns the process exit code."""
     parser = argparse.ArgumentParser(
@@ -202,6 +229,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="render all views (iso, rear iso, front, rear, left, right, top) to renders/inspect/",
     )
     render.add_argument("--pythonscad", help="path to the PythonSCAD binary")
+    part = sub.add_parser("part", help="show a part's print profile, material and FEM properties")
+    part.add_argument("name", nargs="?", help="part name")
+    part.add_argument("--list", action="store_true", help="list all parts")
+    part.add_argument("--json", action="store_true", help="print as JSON")
+    part.add_argument("--stl", type=Path, help="write the part (analysis frame) to this STL file")
+    fem = sub.add_parser("fem", help="FEM check of parts (needs FreeCAD's gmsh and CalculiX)")
+    fem.add_argument("names", nargs="+", help="part names")
+    fem.add_argument("--size", type=float, help="element size near loads in mm (default by size)")
+    fem.add_argument(
+        "--refine",
+        choices=["auto", "always", "never"],
+        default="auto",
+        help="solve a finer second mesh: only near a limit (auto), always, or never",
+    )
+    fem.add_argument("--uniform", action="store_true", help="same element size everywhere")
+    fem.add_argument("--solver", default="", help="CalculiX solver (default: SPOOLES)")
+    fem.add_argument("--viz", action="store_true", help="also write pictures and .vtu files")
+    fem.add_argument(
+        "--no-record",
+        action="store_true",
+        help="diagnostic run: leave fem/verdicts.toml alone (use --out to keep results apart)",
+    )
+    fem.add_argument("--out", type=Path, default=FEM_DIR / "results")
     sub.add_parser("freecad", help="export the machine components for the FreeCAD assembly")
     layout = sub.add_parser("layout", help="write the baseboard drilling layout (SVG + table)")
     layout.add_argument("--out", type=Path, default=DOCS_DIR)
@@ -216,6 +266,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             export_stls(args.names, args.out)
         elif args.command == "render":
             render_pngs(args.names, args.out, args.pythonscad, args.inspect)
+        elif args.command == "fem":
+            return _run_fem(args.names, args.out, args)
+        elif args.command == "part":
+            _show_part(args.name, args.list, args.json, args.stl)
         elif args.command == "freecad":
             from plotter_cad.freecad_export import export_freecad
 
@@ -227,7 +281,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             export_stls()
             export_layout()
             render_pngs(binary=args.pythonscad)
-    except (params.DesignError, FileNotFoundError, RuntimeError) as exc:
+    except (params.DesignError, FileNotFoundError, RuntimeError, ValueError) as exc:
         print(exc, file=sys.stderr)
         return 1
     return 0

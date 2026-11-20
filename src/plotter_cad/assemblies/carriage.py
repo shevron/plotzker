@@ -7,11 +7,12 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube
 
-from plotter_cad.geometry import Matrix, get_handle, get_handles, handle, shift_handle
+from plotter_cad.geometry import get_handle, get_handles, handle, shift_handle
 from plotter_cad.hardware import GT2, eccentric_spacer, hex_nut, metric, shcs, vslot_x, vwheel
 from plotter_cad.params import BEAM, CARRIAGE, CLAMP
 from plotter_cad.parts.belt_clamp import belt_clamp
 from plotter_cad.parts.x_carriage import x_carriage_installed
+from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

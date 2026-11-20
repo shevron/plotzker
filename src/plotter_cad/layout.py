@@ -104,9 +104,9 @@ def _bbox(solid: Solid) -> tuple[float, float, float, float]:
 
 def mount_zones() -> dict[str, tuple[float, float, float, float]]:
     """Footprints of the four Y mounts (x0, y0, x1, y1), which are not pre-drilled."""
-    from plotter_cad.parts.gantry_end_bracket import Side
     from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
     from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
+    from plotter_cad.types import Side
 
     zones = {}
     for side, shaft_x, sign in (

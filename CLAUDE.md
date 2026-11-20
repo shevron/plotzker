@@ -26,6 +26,10 @@ duplicate their content here.
   update `STATUS.md` and `docs/`).
 - Before handing over a CAD change, follow `README.md` §7.4 (`make check`, `make test`,
   regenerate STLs and renders).
+- After designing a structural printed part, or significantly changing one (anything on its load
+  path), update its `Part` FEM spec and ask the **`fem-analyst`** sub-agent to check it
+  (`README.md` §7.8, `docs/fem.md`). Report its verdict; never change loads, limits or safety
+  factors to make a part pass without the user's agreement.
 - Keep files on the user's computer in sync: after writing a file there, check it
   actually updated (size/timestamp). Re-send it if not.
 

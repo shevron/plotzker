@@ -25,12 +25,12 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, hull
 
-from plotter_cad.geometry import EPS, Matrix, handle, set_handles, teardrop_x
+from plotter_cad.geometry import EPS, handle, set_handles, teardrop_x
 from plotter_cad.hardware import NEMA17
 from plotter_cad.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE
-from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
+from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

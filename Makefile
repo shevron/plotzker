@@ -1,7 +1,7 @@
 # Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad
+.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad fem
 
 PYTHON_VERSION := $(shell cat .python-version)
 UV_RUN := uv run --extra dev
@@ -15,7 +15,7 @@ develop:  ## Set up the development environment (.venv on pyenv's Python, all de
 	uv sync --extra dev
 
 clean:  ## Remove all generated files (STLs, renders, FreeCAD assembly, caches, build output); keeps .venv
-	rm -rf stl renders freecad/stl freecad/components.json freecad/*.FCStd freecad/*.FCBak build dist .pytest_cache .ruff_cache .mypy_cache
+	rm -rf stl renders fem/results freecad/stl freecad/components.json freecad/*.FCStd freecad/*.FCBak build dist .pytest_cache .ruff_cache .mypy_cache
 	find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +
 
 check: typecheck  ## Run the static code checks (ruff lint + formatting, mypy)
@@ -48,3 +48,6 @@ FREECAD_BIN ?= /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd
 freecad:  ## Build the FreeCAD Assembly (freecad/PenPlotter.FCStd; needs FreeCAD 1.x, see freecad/README.md)
 	$(UV_RUN) python -m plotter_cad freecad
 	$(FREECAD_BIN) freecad/build_assembly.py
+
+fem:  ## FEM check of parts into fem/results/ (needs FreeCAD's gmsh and CalculiX); NAMES="x_idler_slider ..."
+	$(UV_RUN) python -m plotter_cad fem $(NAMES)

@@ -46,8 +46,8 @@ from plotter_cad.params import (
     Y_DRIVE,
 )
 from plotter_cad.parts import gantry_end_bracket
-from plotter_cad.parts.gantry_end_bracket import Side
 from plotter_cad.parts.x_carriage import WHEEL_X
+from plotter_cad.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

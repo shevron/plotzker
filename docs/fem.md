@@ -51,7 +51,11 @@ in `parts/__init__.py` (`PARTS`). `python -m plotter_cad part NAME [--json]` pri
   Magnitudes shared between parts live in `src/plotter_cad/loads.py`.
 - **Supports:** a region held fixed in the directions marked in `constrain`. Make the set
   statically determinate (no rigid-body motion) and say in the description what it stands for.
-  Supports are fixed constraints: no contact, no friction, no bolt preload.
+  Supports are fixed constraints: no contact, no bolt preload. Friction of a foot clamped by a
+  screw is modeled as a bonded zone of radius `BOND_RADIUS` (8 mm) round the screw
+  (`regions.bond_zone`) on top of a z-only support for the rest of the foot. Where a stiff part
+  holds a seat (the beam on a bracket's face plate) the seat is a support in that direction, not
+  a load.
 - **Displacement limits** (`DisplacementLimit`): per region and direction; the default when a part
   states none is 0.1 mm magnitude. Several limits on one region give directional budgets.
 - **Safety factor:** `FemSpec.safety_factor` (default 3), overridable per load case.

@@ -147,3 +147,5 @@ def test_motor_loads_carry_pull_couple_weight_and_at_a_jam_the_stall_torque():
     assert jam[0].vector[0] == pytest.approx(2 * X_BELT_LOADS.peak_n)
     assert preload[1].vector[2] == pytest.approx(-20.0 * -pull)  # lever 20 mm × pull, about z
     assert jam[3].vector[1] == pytest.approx(-MOTOR_LOADS.stall_torque)
+    forces_only = motor_loads(*args, True, *rest, couples=False)
+    assert [type(load) for load in forces_only] == [Force, Force]

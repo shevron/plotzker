@@ -936,11 +936,19 @@ class GantryBracket:
     trig_x: float = -30  #: screw axis, bracket-local x
     trig_boss: tuple[float, float, float] = (12, 9, 10)  #: boss x × y × z, on the base
     trig_screw_len: float = 16  #: M3 trigger screw length (tip 7 mm in front of the boss)
+    #: DESIGN (T3.19): left bracket only: the base reaches out to this x under the X idler
+    #: mount's overhang (FEM: the unsupported overhang bent the foot and cut the margin to a third)
+    shelf_x: float = -48
 
     @property
     def x_in(self) -> float:
         """Inboard edge over the blocks."""
         return SCS10UU.width / 2
+
+    @property
+    def shelf_y(self) -> tuple[float, float]:
+        """Y range of the shelf: the X idler mount's footprint on the base."""
+        return (X_DRIVE.idler_foot_front_y, X_DRIVE.foot_y[1])
 
     @property
     def len_y(self) -> float:
@@ -1763,6 +1771,14 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield -Y_AXIS.belt_x - GT2.width / 2 >= SK10.width / 2 + 3, "Y belt too close to the SK10"
     yield -Y_AXIS.belt_x - CLAMP.w / 2 >= SCS10UU.width / 2 + 1, "Y belt clamp hits the SCS block"
     yield -Y_AXIS.belt_x + CLAMP.w / 2 <= -BRACKET.x_out, "Y belt clamp outside the bracket"
+    yield (
+        BRACKET.shelf_x
+        <= X_DRIVE.idler_x
+        - TENSION_IDLER.axle_x
+        - (X_TENSIONER.block_t + X_TENSIONER.stop_gap + X_TENSIONER.travel / 2)
+        and BRACKET.shelf_x <= BRACKET.x_out,
+        "Bracket shelf doesn't reach the X idler mount's outboard end",
+    )
     yield PULLEY.length + 1 <= NEMA17.shaft_len_min, "Pulley longer than the shortest motor shaft"
     yield (
         Y_AXIS.shaft_x[0] + Y_AXIS.belt_x - CLAMP.w / 2 > 0,

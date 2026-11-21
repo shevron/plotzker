@@ -36,7 +36,7 @@ from plotter_cad.loads import X_BELT_LOADS
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
 from plotter_cad.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
 from plotter_cad.parts.motor_fem import motor_loads
-from plotter_cad.regions import Box, Cylinder
+from plotter_cad.regions import Box, Cylinder, bond_zone
 from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
@@ -151,6 +151,12 @@ FOOT_BEARING = Box(
 )
 
 
+#: Friction around each front bolt: the foot's underside is bonded to the bracket within BOND_RADIUS
+BOND_ZONES = [
+    bond_zone((hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0)) for hx in (-1, 1)
+]
+
+
 def _case(name: str, jam: bool) -> LoadCase:
     """Belt pull (toward the idler: +x in this frame), weight and, at a jam, the stall torque."""
     return LoadCase(
@@ -184,6 +190,8 @@ PART = Part(
                 "Foot resting on the bracket's base: held in z",
                 constrain=(False, False, True),
             ),
+            Support("front_bolt_zone_a", BOND_ZONES[0], "Friction round the -x front bolt: bonded"),
+            Support("front_bolt_zone_b", BOND_ZONES[1], "Friction round the +x front bolt: bonded"),
         ),
         displacement_limits=(
             DisplacementLimit("motor_face_along_belt", MOTOR_FACE, 0.3, (1, 0, 0)),

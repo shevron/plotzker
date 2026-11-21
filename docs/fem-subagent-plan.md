@@ -530,3 +530,112 @@ allowable; all sanity checks pass):
 
 Not yet modeled: the wheel preload (internal to the carriage), contact and friction, and the
 foot-to-bracket friction of the idler and motor mounts.
+
+## 20. Remodeled bracket seat and mount feet (2026-11-20)
+
+Two modeling changes agreed after the walk-through of the X idler mount findings:
+
+1. **Brackets: the beam holds the face plate's seat.** The beam's push-back used to be a load on
+   the pocket floor, so the face plate leaned like a free cantilever (0.4-0.8 mm). The beam is stiff
+   (and both ends are pulled equally), so the pocket floor is now a support in x and the mount's
+   pull is the only belt load on the bracket. The limit that matters moved with it: how far the
+   **mount's foot moves** (relative to the held seat) slackens the belt, so the limits are now on
+   the foot's footprint (0.1 mm per axis) and on the seat in y and z (the beam end's height and
+   alignment).
+2. **Mount feet: friction zones.** The underside of each mount's foot within 8 mm of a clamping
+   screw (`regions.bond_zone`, `BOND_RADIUS`, about twice the head diameter) is bonded to what it
+   is clamped on (all four mounts: rear bolts, front bolts, wood screws); the rest of the foot still
+   rests there and holds z only.
+
+**Effect** (preload, before to after; utilization / displacement in mm):
+
+| Part | Strength | Notable displacement |
+|------|----------|----------------------|
+| `gantry_end_bracket_left` | 4.41 to 0.37 (marginal only because a raw peak at a support edge exceeds the limit) | foot x 0.011, z 0.058 (0.103 at peak: over its limit); seat y 0.006, z 0.003; verdict FAIL only for that peak |
+| `gantry_end_bracket_right` | 4.94 to 0.22 | foot 0.004 / 0.002 / 0.006; **PASS** |
+| `x_idler_mount` | 9.34 to 9.32 | along belt 0.362 to 0.329, sideways 0.138 to 0.095 (marginal), vertical 0.154 |
+| `x_motor_mount` | 4.65 to 4.65 | sideways (plate bending) 1.169 unchanged |
+| `y_idler_mount_left/right` | 2.15 to 2.16 | unchanged, within limits |
+| `y_motor_mount_left` | 4.12 to 4.12 | sideways 0.553 unchanged |
+
+So the brackets are not a problem once the beam is modeled as stiff; the friction zones help only the
+mount's sideways and along-belt displacement; the strength failures of the mounts (the thin X end
+block, the motor plates) are untouched, which confirms they are real features of those parts and not
+of how they are held.
+
+## 21. X idler mount: options for the end block (2026-11-20, FEM only; no CAD changed)
+
+Variants were built as scratch geometry (the real mount plus added solids) and run on one coarse
+mesh each (preload, utilization; baseline 9.24 on the same mesh; treat differences under about
+25 % as noise).
+
+| Option | Utilization | Along belt (mm) | What governs |
+|--------|-------------|-----------------|--------------|
+| Baseline | 9.24 | 0.32 | block base corner, 16.6 MPa across the layers; the foot's underside at the bracket's base edge, 29-37 MPa in plane |
+| Block 3 mm thicker (outboard, 8 mm) | 8.89 | 0.26 | the foot overhang, 35.6 MPa in plane |
+| Block 5 mm thicker (10 mm) | 8.35 | 0.26 | the same |
+| Two gussets, 8 mm long, 3 mm thick | 8.50 | 0.30 | the same |
+| Printed on its side (layers normal to y) | 7.19 | 0.30 | mixed |
+| **Support under the overhang** (bracket base 10 mm longer outboard; the mount unchanged) | **3.36** | **0.21** | the ridge flank under the slider, 3.0 MPa across the layers, partly an artifact of the couple model |
+| Support under the overhang + gussets | 4.31 | 0.18 | the ridge flank |
+| Support under the overhang + 8 mm block | 5.76 | 0.13 | the block base corner (not understood: a thicker block should not be worse; treat thickening as inconclusive) |
+| Support under the overhang + printed on its side | 4.71 | 0.20 | mixed |
+
+**Reading.** The mount hangs 4-9 mm past the outboard edge of the bracket's base with nothing under
+it, and the force that the screw head puts on the block bends that overhang. Making the block
+thicker or adding gussets does little while the overhang governs; carrying the overhang on the
+bracket cuts the worst value to about a third and the along-belt displacement by a third, with no
+change to the mount. The earlier hand estimate of 9.2 MPa across the layers at the block base
+assumed the foot top as its base; the dovetail ridge stiffens the lower part, so the block's own
+bending stress is closer to 5 MPa, and the FEM no longer shows it as the weak point once the
+overhang is supported.
+
+**Proposal (needs the CAD owner's check):** lengthen the left bracket's base outboard by about 10 mm
+under the mount (`BRACKET.x_out` -38 to about -48 over the mount's y range only, or whole), after
+checking the Y belt clamp (belt line x = -30), the endstop trigger boss and the loom anchor on
+the right bracket; then re-run the mount, the bracket and the slider. The mount's block can then be
+revisited if the check still shows it.
+
+## 22. Shelf under the X idler mount: built and re-checked (2026-11-21)
+
+`BRACKET.shelf_x` = −48 (left bracket only, over the mount's footprint y 16…62.5, same thickness,
+flat underside): bracket 68 × 125 mm, +4.7 cm³; STLs and inspect renders regenerated; `make check`
+and `make test` pass (334 tests; one design check added). Clearances in the whole-machine assembly
+at the front, middle and back of the gantry's travel: no overlap, nearest part the Y belt at about
+5 mm, endstop keep-outs clear.
+
+**FEM, before to after (preload, utilization / mm):**
+
+| Part | Strength | Along belt | Sideways | Vertical |
+|------|----------|------------|----------|----------|
+| `x_idler_mount` | 9.32 to **4.34** (peak 8.32 to 3.87) | 0.329 to **0.221 (PASS)** | 0.095 to 0.096 (marginal) | 0.154 to 0.151 |
+| `x_idler_slider` | 1.82, unchanged | unchanged | unchanged | 0.114, unchanged |
+| `gantry_end_bracket_left` | 0.37 to 0.51 | foot x 0.011 to 0.017 | foot y 0.005 to 0.008 | foot z 0.058 to **0.120 (FAIL)** (peak 0.214) |
+
+The mount's worst value halves (the earlier scratch variant predicted a third; the real geometry
+also changes the mesh) and its along-belt movement now passes. It still fails: the block base and the
+ridge flank under the slider are at about 4.3 against the harsh allowable, and the vertical movement
+is 0.15 mm.
+
+**Bracket foot z is a modeling question, not a design one.** The mount's couple (belt pull above the
+base) is applied on the bracket's footprint as linearly varying vertical forces, which pull up on
+the shelf's outboard end; a contact can only push, and in the real joint the couple is carried by
+the bolt clamp. A diagnostic run without the couple (not recorded) gives: strength 0.23 (peak 0.20),
+foot z 0.021 (0.037 at peak), foot x 0.007, **everything PASS**. The recorded verdict keeps the
+couple and so reads FAIL until this is decided.
+
+## 23. Bracket footprint without the mount's couples (2026-11-21)
+
+The couples of the mount's pull (the belt pull acts above the base; for the motor mount also the
+stall torque) are no longer applied on the brackets' footprints: the clamped joint carries them
+through its bolt preload, and a linear distribution would pull up on a surface that can only be
+pushed. The footprint carries the force and the motor's weight (`motor_loads(..., couples=False)`).
+The mounts' own checks still include the couples (they are the part loaded by them).
+
+| Part | Before (with couple) | After |
+|------|----------------------|-------|
+| `gantry_end_bracket_left` | FAIL: foot z 0.120 (preload), 0.214 (peak); strength 0.51 | **PASS**: strength 0.23 (peak 0.20), foot x 0.007, z 0.021 (0.037 at peak) |
+| `gantry_end_bracket_right` | PASS, strength 0.22 | **PASS**, strength 0.22 (peak 0.20), foot z 0.002 |
+
+So with the shelf the left bracket passes, as the right one does. What remains open in this area is
+the X idler mount itself (strength 4.3, vertical movement 0.15 mm) and the slider (1.8).

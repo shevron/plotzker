@@ -192,3 +192,14 @@ class Placement:
             facing,
             region.facing_tol_deg,
         )
+
+
+#: DESIGN: radius of the friction zone around a clamping screw (about twice the head diameter):
+#: the foot's underside there is taken as bonded to what it is clamped on.
+BOND_RADIUS = 8.0
+
+
+def bond_zone(centre: Vec3, radius: float = BOND_RADIUS) -> Cylinder:
+    """The underside of a foot (facing down) within ``radius`` of a clamping screw at ``centre``
+    (x, y and the z of the underside)."""
+    return Cylinder(centre, (0, 0, 1), radius, 0.3, facing=(0, 0, -1))

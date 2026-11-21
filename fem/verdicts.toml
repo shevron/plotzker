@@ -1,16 +1,16 @@
 # Last FEM verdict per part (written by `python -m plotter_cad fem`).
 
 [gantry_end_bracket_left]
-verdict = "FAIL"
-date = "2026-11-20"
-geometry = "4c5d6010d722d5c7"
-spec = "bc5a7e292ec68861"
+verdict = "PASS"
+date = "2026-11-21"
+geometry = "ef1bb4bd2345bb49"
+spec = "58040cada7f1472e"
 
 [gantry_end_bracket_right]
-verdict = "FAIL"
-date = "2026-11-20"
+verdict = "PASS"
+date = "2026-11-21"
 geometry = "e6acb19b51c07348"
-spec = "11c983a96d196524"
+spec = "16cc5f2a6ba76b00"
 
 [pen_holder_body]
 verdict = "MARGINAL"
@@ -32,13 +32,13 @@ spec = "b8c4a6a801ca6919"
 
 [x_idler_mount]
 verdict = "FAIL"
-date = "2026-11-20"
+date = "2026-11-21"
 geometry = "2da358cc9175e010"
-spec = "3ef6a250dae5d846"
+spec = "409ac26d4473f103"
 
 [x_idler_slider]
 verdict = "FAIL"
-date = "2026-11-20"
+date = "2026-11-21"
 geometry = "a234465970a14793"
 spec = "8726f76631ea3379"
 
@@ -46,19 +46,19 @@ spec = "8726f76631ea3379"
 verdict = "FAIL"
 date = "2026-11-20"
 geometry = "64e42f3713936bcd"
-spec = "fb20c9d9f69f7148"
+spec = "a4108eede4c1c67a"
 
 [y_idler_mount_left]
 verdict = "FAIL"
 date = "2026-11-20"
 geometry = "275a152a1c588942"
-spec = "a2096e8f9d44f3b7"
+spec = "b5881157cae322ee"
 
 [y_idler_mount_right]
 verdict = "FAIL"
 date = "2026-11-20"
 geometry = "d876f39e44d2db01"
-spec = "e09dd19f74797c89"
+spec = "c2ab256a1a90168d"
 
 [y_idler_slider_left]
 verdict = "FAIL"
@@ -70,4 +70,4 @@ spec = "1ce25ad073038558"
 verdict = "FAIL"
 date = "2026-11-20"
 geometry = "95825638bafde21c"
-spec = "dd072468866fb0e1"
+spec = "7f15c2d3bda111ac"

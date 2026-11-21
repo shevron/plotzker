@@ -27,6 +27,7 @@ Hardware per bracket:
   1 × M3×16 ISO 4762 + 2 × M3 nuts — Y endstop trigger (adjust, then lock)
   Right bracket only: 2 × M3 nuts (pressed into slots from the outboard edge) for the loom
                        anchor (``loom_anchor.py``); the left bracket has no such holes
+Left bracket only: a 10 mm shelf (``BRACKET.shelf_x``) under the X idler mount's overhang
 
 Print: default profile (``profiles/default.toml``); base face down; no supports (horizontal
 holes are teardrops; the underside is flat).
@@ -42,16 +43,15 @@ from pythonscad import cube, cylinder, hull
 
 from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x, teardrop_y
 from plotter_cad.hardware import SCS10UU, VSLOT, metric
-from plotter_cad.loads import X_BELT_LOADS, Y_BELT_LOADS, lever_couple
+from plotter_cad.loads import X_BELT_LOADS, Y_BELT_LOADS
 from plotter_cad.nut_slot import nut_slot
-from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_BELT, X_DRIVE, X_TENSIONER, Y_AXIS
+from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_DRIVE, Y_AXIS
 from plotter_cad.part import (
     DisplacementLimit,
     FemSpec,
     Force,
     Load,
     LoadCase,
-    Moment,
     Part,
     Support,
 )
@@ -106,10 +106,16 @@ TRIGGER_SCREW = handle(
 )
 
 
-def _body() -> Solid:
+def _body(side: Side) -> Solid:
     """Bracket solid before the holes and cutouts."""
     b = BRACKET
     base = cube([b.x_in - b.x_out, b.len_y, b.base_t]).translate([b.x_out, -b.len_y / 2, 0])
+    if side is Side.LEFT:
+        # shelf under the X idler mount's overhang (T3.19)
+        y0, y1 = b.shelf_y
+        base = base | cube([b.x_out - b.shelf_x + EPS, y1 - y0, b.base_t]).translate(
+            [b.shelf_x, y0, 0]
+        )
     face = cube([b.face_t, b.face_y[1] - b.face_y[0], FACE_TOP]).translate(
         [FACE_OUT_X, b.face_y[0], 0]
     )
@@ -213,7 +219,7 @@ def gantry_end_bracket_local(side: Side = Side.LEFT) -> Solid:
     if side is Side.RIGHT:
         handles["loom_anchor"] = LOOM_ANCHOR
         cuts += _loom_cutouts()
-    return set_handles(_body() - cuts, **handles)
+    return set_handles(_body(side) - cuts, **handles)
 
 
 def gantry_end_bracket(side: Side = Side.LEFT) -> Solid:
@@ -237,7 +243,7 @@ _BOLT_RINGS = [
 _SEAT_X = FACE_IN_X - BRACKET.recess  #: the beam end's seat in the face plate
 #: Where the X idler mount's foot rests on the base: the mount's pull enters here
 MOUNT_FOOTPRINT = Box(
-    lo=(BRACKET.x_out, X_DRIVE.idler_foot_front_y, BRACKET.base_t - 0.3),
+    lo=(BRACKET.shelf_x, X_DRIVE.idler_foot_front_y, BRACKET.base_t - 0.3),
     hi=(BRACKET.x_in, X_DRIVE.foot_y[1], BRACKET.base_t + 0.3),
     facing=(0, 0, 1),
 )
@@ -283,15 +289,14 @@ def _centre(box: Box) -> Vec3:
 
 def _x_belt_loads(side: Side, run_n: float, jam: bool) -> list[Load]:
     """Where the X belt's pull enters the bracket: the idler mount (left) or the motor mount
-    (right), moved down to the base top, and the beam's reaction on the face plate."""
+    (right), as forces on the base top. The couples of that pull (it acts above the base) are
+    carried by the clamped joint (bolt preload), not by the contact, so they are not applied: a
+    linear distribution would pull up on a surface that can only be pushed. The beam holds the
+    face plate's seat (a support)."""
     if side is Side.LEFT:
         footprint = MOUNT_FOOTPRINT
-        pulley = (X_DRIVE.idler_x, X_BELT.y, X_TENSIONER.axle_z)
         force = (2 * run_n, 0.0, 0.0)
-        loads: list[Load] = [
-            Force(footprint, force),
-            Moment(footprint, lever_couple(_arm(pulley, footprint), force)),
-        ]
+        loads: list[Load] = [Force(footprint, force)]
     else:
         footprint = MOTOR_FOOTPRINT
         loads = motor_loads(
@@ -302,15 +307,9 @@ def _x_belt_loads(side: Side, run_n: float, jam: bool) -> list[Load]:
             _centre(footprint),
             (1, 0, 0),
             (0, -1, 0),
+            couples=False,
         )
-    loads.append(Force(BEAM_SEAT_FACES, (-2 * run_n, 0.0, 0.0)))
     return loads
-
-
-def _arm(point: Vec3, footprint: Box) -> Vec3:
-    """Vector from the middle of a footprint to ``point``."""
-    c = _centre(footprint)
-    return (point[0] - c[0], point[1] - c[1], point[2] - c[2])
 
 
 def _belt_case(side: Side, name: str, x_run_n: float, y_run_n: float, jam: bool) -> LoadCase:
@@ -320,9 +319,10 @@ def _belt_case(side: Side, name: str, x_run_n: float, y_run_n: float, jam: bool)
         name=name,
         description=(
             f"X belt (2 runs of {x_run_n:g} N): the "
-            f"{'idler' if side is Side.LEFT else 'motor'} mount pulls the base inboard (moved "
-            "down from the belt line, so with its lever couple) and the beam pushes back on the "
-            f"face plate. Y belt ({y_run_n:g} N): front end pulls forward, rear end pulls back"
+            f"{'idler' if side is Side.LEFT else 'motor'} mount pulls the base inboard (a force "
+            "on the base; its couples are carried by the bolt clamp); the stiff beam holds the "
+            f"face plate's seat. Y belt ({y_run_n:g} N): front end pulls forward, rear end "
+            "pulls back"
         ),
         loads=(
             *_x_belt_loads(side, x_run_n, jam),
@@ -336,17 +336,31 @@ def _belt_case(side: Side, name: str, x_run_n: float, y_run_n: float, jam: bool)
 
 def _spec(side: Side) -> FemSpec:
     """FEM spec of one bracket."""
+    # how far the mount's foot moves relative to the (held) beam seat slackens the X belt
+    foot = MOUNT_FOOTPRINT if side is Side.LEFT else MOTOR_FOOTPRINT
     return FemSpec(
         load_cases=(
             _belt_case(side, "belt_preload", X_BELT_LOADS.preload_n, Y_BELT_LOADS.preload_n, False),
             _belt_case(side, "belt_peak", X_BELT_LOADS.peak_n, Y_BELT_LOADS.peak_n, True),
         ),
-        supports=tuple(
-            Support(f"block_bolt_{i + 1}", ring, "M5 bolt into an SCS block: washer ring, fixed")
-            for i, ring in enumerate(_BOLT_RINGS)
+        supports=(
+            *(
+                Support(
+                    f"block_bolt_{i + 1}", ring, "M5 bolt into an SCS block: washer ring, fixed"
+                )
+                for i, ring in enumerate(_BOLT_RINGS)
+            ),
+            Support(
+                "beam_seat",
+                BEAM_SEAT_FACES,
+                "Beam end on the pocket floor: the stiff beam holds the seat along x",
+                constrain=(True, False, False),
+            ),
         ),
         displacement_limits=(
-            DisplacementLimit("beam_seat_x", BEAM_SEAT, 0.1, (1, 0, 0)),
+            DisplacementLimit("mount_foot_x", foot, 0.1, (1, 0, 0)),
+            DisplacementLimit("mount_foot_y", foot, 0.1, (0, 1, 0)),
+            DisplacementLimit("mount_foot_z", foot, 0.1, (0, 0, 1)),
             DisplacementLimit("beam_seat_y", BEAM_SEAT, 0.1, (0, 1, 0)),
             DisplacementLimit("beam_seat_z", BEAM_SEAT, 0.1, (0, 0, 1)),
         ),

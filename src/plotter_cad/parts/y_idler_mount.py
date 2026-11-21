@@ -46,7 +46,7 @@ from plotter_cad.part import Part, Support
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotter_cad.parts.tension_idler import end_block, mount_fem, ridge, slider_x0
 from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
-from plotter_cad.regions import Box, Cylinder, Placement
+from plotter_cad.regions import Box, Cylinder, Placement, bond_zone
 from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
@@ -168,6 +168,9 @@ FOOT_BEARING = Box(
     lo=(_FOOT_X[0], _FOOT_Y[0], -0.3), hi=(_FOOT_X[1], _FOOT_Y[1], 0.3), facing=(0, 0, -1)
 )
 
+#: Friction around each wood screw: the foot's underside is bonded to the baseboard
+BOND_ZONES = [bond_zone((_SCREW_X, y, 0.0)) for y in _SCREW_YS]
+
 PART_LEFT = Part(
     name="y_idler_mount_left",
     description="Y idler mount (left): foot on the baseboard with the tensioner's dovetail rail",
@@ -190,6 +193,8 @@ PART_LEFT = Part(
                 "Foot resting on the baseboard: held vertically",
                 constrain=(False, False, True),
             ),
+            Support("screw_zone_front", BOND_ZONES[0], "Friction round the front screw: bonded"),
+            Support("screw_zone_rear", BOND_ZONES[1], "Friction round the rear screw: bonded"),
         ),
     ),
 )

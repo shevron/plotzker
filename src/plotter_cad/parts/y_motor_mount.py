@@ -36,7 +36,7 @@ from plotter_cad.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
 from plotter_cad.parts.motor_fem import motor_loads
 from plotter_cad.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotter_cad.parts.wood_screw import wood_screw_boss, wood_screw_hole
-from plotter_cad.regions import Box, Cylinder
+from plotter_cad.regions import Box, Cylinder, bond_zone
 from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
@@ -132,6 +132,10 @@ SCREW_SEATS = [
 FOOT_BEARING = Box(lo=(Y_DRIVE.motor_foot_x0, _Y0, -0.3), hi=(_X1, _Y1, 0.3), facing=(0, 0, -1))
 
 
+#: Friction around each wood screw: the foot's underside is bonded to the baseboard
+BOND_ZONES = [bond_zone((_FOOT_X, y, 0.0)) for y in _SCREW_YS]
+
+
 def _case(name: str, jam: bool) -> LoadCase:
     """Belt pull (toward the idler: -y), weight and, at a jam, the stall torque."""
     return LoadCase(
@@ -165,6 +169,8 @@ PART_LEFT = Part(
                 "Foot resting on the baseboard: held in z",
                 constrain=(False, False, True),
             ),
+            Support("screw_zone_front", BOND_ZONES[0], "Friction round the front screw: bonded"),
+            Support("screw_zone_rear", BOND_ZONES[1], "Friction round the rear screw: bonded"),
         ),
         displacement_limits=(
             DisplacementLimit("motor_face_along_belt", MOTOR_FACE, 0.3, (0, 1, 0)),

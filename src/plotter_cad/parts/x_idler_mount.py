@@ -40,7 +40,7 @@ from plotter_cad.loads import X_BELT_LOADS
 from plotter_cad.params import BRACKET, TOL, X_BELT, X_DRIVE, X_ENDSTOP, X_TENSIONER, Y_AXIS
 from plotter_cad.part import Part, Support
 from plotter_cad.parts.tension_idler import end_block, mount_fem, ridge, slider_x0
-from plotter_cad.regions import Box, Cylinder, Placement
+from plotter_cad.regions import Box, Cylinder, Placement, bond_zone
 from plotter_cad.types import Matrix
 
 if TYPE_CHECKING:
@@ -158,12 +158,17 @@ BOLT_RINGS = [
     )
     for hx in (-1, 1)
 ]
-#: The foot's underside where it rests on the bracket's base (x ≥ the base's outboard edge)
+#: The foot's underside where it rests on the bracket's base and shelf
 FOOT_BEARING = Box(
-    lo=(BRACKET.x_out, X_DRIVE.idler_foot_front_y, FOOT_Z0 - 0.3),
+    lo=(BRACKET.shelf_x, X_DRIVE.idler_foot_front_y, FOOT_Z0 - 0.3),
     hi=(SCS10UU.width / 2, X_DRIVE.foot_y[1], FOOT_Z0 + 0.3),
     facing=(0, 0, -1),
 )
+
+#: Friction around each rear bolt: the foot's underside is bonded to the bracket within BOND_RADIUS
+BOND_ZONES = [
+    bond_zone((hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[1], FOOT_Z0)) for hx in (-1, 1)
+]
 
 PART = Part(
     name="x_idler_mount",
@@ -185,6 +190,8 @@ PART = Part(
                 "Foot resting on the bracket's base: held in z",
                 constrain=(False, False, True),
             ),
+            Support("rear_bolt_zone_a", BOND_ZONES[0], "Friction round the -x rear bolt: bonded"),
+            Support("rear_bolt_zone_b", BOND_ZONES[1], "Friction round the +x rear bolt: bonded"),
         ),
     ),
 )

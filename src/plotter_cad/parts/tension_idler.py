@@ -290,6 +290,36 @@ def tensioner_regions(t: TensionIdler = T) -> TensionerRegions:
     )
 
 
+@dataclass(frozen=True)
+class DovetailPlay:
+    """Rigid tilt of the slider allowed by the dovetail clearance, and its effect on the axle."""
+
+    play_mm: float  #: vertical freedom between the plate's two ends
+    tilt_rad: float  #: ``play_mm`` over the plate's length
+    axle_vertical_mm: float  #: axle's vertical shift when the slider tilts about the plate's front
+    axle_along_belt_mm: float  #: axle's shift along the belt
+
+
+def dovetail_play(t: TensionIdler = T) -> DovetailPlay:
+    """Worst-case tilt of the slider on its ridge.
+
+    The belt pulls the axle, which is above the tension screw, so the slider is twisted by a
+    couple. Its plate bears with its front end on the rail surface (clearance ``slide_gap``) and
+    its rear end on the ridge's flanks (a flank's perpendicular clearance ``slide_gap`` is
+    ``slide_gap``·√2 of vertical play), so it tilts by the total play over the plate's length,
+    pivoting about the front end. The tilt is rigid: no stiffness, so the FEM cannot find it
+    (STATUS.md T3.21).
+    """
+    play = t.slide_gap * (1 + math.sqrt(2))
+    tilt = play / t.plate_len
+    return DovetailPlay(
+        play,
+        tilt,
+        tilt * abs(t.axle_x - t.plate_len),
+        tilt * (t.axle_z - t.slider_z0),
+    )
+
+
 def _belt_cases(
     belt: BeltLoads, loads: Callable[[float], tuple[str, tuple[Force | Moment, ...]]], source: str
 ) -> tuple[LoadCase, LoadCase]:

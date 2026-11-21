@@ -106,7 +106,7 @@ any new decisions in §3, and update the status line at the top.
   - [ ] Follow-up: test-print; check wheel preload range, hook-groove fit (with the T3.6 tool
     plate) and the X belt clamp. (STL regenerated in T3.4: belt line 4 mm further back.)
 - [x] **T3.4 X motor mount and X idler** at the beam ends. → `x_motor_mount.py` (right end,
-  printed mirrored), `x_idler_mount.py` (left end; its slot tensioner and spacer were replaced in T3.16 by a dovetail slider),
+  printed mirrored), `x_idler_slider.py` + the tower in `gantry_end_bracket.py` (left end, T3.22; `x_endstop_mount.py` is the endstop's foot),
   the X− switch lies on the idler mount's foot (D34); assembled in
   `assemblies/gantry.py`. The X belt line moved 4 mm back (center 23 mm behind the beam
   center) so the motor plate fits between the bracket's rear bolt rows and 22.6 mm motor
@@ -402,6 +402,33 @@ the printed carriage, motor mount and idler mount are the test pieces.
   68 × 125 mm (+4.7 cm³). *Done when:* checks and tests pass, STL and renders regenerated, FEM
   re-run (plan §22): the mount's worst value halves (9.3 to 4.3) and the left bracket passes (plan §23).
   - [ ] Follow-up: test-print the bracket (print bed fit; the shelf's underside is flat, no supports).
+
+- [ ] **T3.21 Tensioner tilt under belt load (found on a printed X idler).** The belt pulls the
+  idler axle 14.5 mm above the tension screw, so a couple twisted the slider in its dovetail; the
+  X slider's plate was only 10.4 mm long (shortened for the endstop plug), so the 0.2 mm clearance
+  allowed a 2.7° rigid tilt. The part checks could not see it (rigid dovetail, no stiffness for
+  play, deflections never added). **Done:** the `Assembly` check (plan §24, `docs/fem.md`): it
+  failed the X tensioner (vertical 0.55 mm vs 0.2, along belt 1.25 vs 0.6) and the Y tensioners
+  (vertical 0.24-0.32 vs 0.2). **X fixed by T3.22 (below).** **Open:** the Y tensioners (same
+  dovetail design; vertical 0.21 / 0.29 mm at preload / peak vs 0.2): same fix or a tighter fit.
+- [ ] **T3.22 Floating X idler on a tower in the left bracket.** A screw at the axle's height,
+  along the belt line, holds a rail-less slider: no couple, no dovetail, no play. The M3 screw's
+  head is on the tower's outer face (hex key from outside, M3 DIN 9021 washer under it); a
+  captive nut at the rear of the slider's wall pulls it toward the tower, and a blind tunnel in
+  the wall takes the screw's tip as it moves (so the wall is 17 mm thick). The tower (12 mm plate,
+  two 8 mm side walls to x = −23) is part of the left bracket (`gantry_end_bracket.py`, shelf under
+  it from `BRACKET.shelf_x`); the walls are gussets and loose guides (they stop the slider rolling
+  while the screw is turned). The idler mount is gone: its foot is now `x_endstop_mount.py` (not
+  structural: foot under the endstop board, clamped by the rear bolts). The slider prints on its
+  side (layers along the arms that carry the pull). New params `X_IDLER` (`params.XIdler`),
+  replacing `X_TENSIONER`. **FEM (belt preload / peak):** slider MARGINAL (strength 0.46 / 0.41,
+  axle moves 0.04 mm); bracket FAIL by its own 0.1 mm vertical budget at peak (tower seat
+  0.09 / 0.16 mm; strength 0.69 / 0.62); X assembly check **MARGINAL** (vertical 0.11 / 0.19 mm
+  of 0.2; was FAIL at 0.55 / 0.76). The tower reaches 20 mm further out than the old block
+  (outer face x = −68 vs −48). **Open:** print and test (ring-and-wall fit, 0.5 mm wall gap; the
+  round 3.4 mm hole in the plate prints lying on its side); decide the Y tensioners' fix.
+  - [ ] Follow-up: X idler position (`X_DRIVE.idler_x`, now −21): moving it inboard shortens the
+    overhang by the same amount, at the cost of X travel (16 mm spare).
 
 - [x] **T3.20 Design diff tool.** `python -m plotter_cad diff [REV_A [REV_B]]` (`make diff`)
   compares the printable parts of two git revisions or the working tree (default `HEAD` →

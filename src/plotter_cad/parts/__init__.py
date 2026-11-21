@@ -19,7 +19,7 @@ from plotter_cad.parts import (
     pen_slide,
     tension_idler,
     x_carriage,
-    x_idler_mount,
+    x_endstop_mount,
     x_idler_slider,
     x_motor_mount,
     y_idler_mount,
@@ -44,7 +44,7 @@ PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
     "zrib_hanger": zrib_hanger.zrib_hanger,
     "zrib_guard": zrib_guard.zrib_guard,
     "x_motor_mount": x_motor_mount.x_motor_mount,
-    "x_idler_mount": x_idler_mount.x_idler_mount,
+    "x_endstop_mount": x_endstop_mount.x_endstop_mount,
     "x_idler_slider": x_idler_slider.x_idler_slider,
 }
 for _side in Side:
@@ -57,7 +57,7 @@ PARTS: dict[str, Part] = {
     for part in (
         gantry_end_bracket.PART_LEFT,
         gantry_end_bracket.PART_RIGHT,
-        x_idler_mount.PART,
+        x_endstop_mount.PART,
         x_idler_slider.PART,
         x_carriage.PART,
         pen_slide.PART,

@@ -224,7 +224,7 @@ def main():
         )  # fmt: skip
     make_joint(
         "Revolute",
-        parts["x_idler_mount"],
+        parts["x_idler_slider"],  # the idler turns on the (floating) slider, T3.22
         parts["x_idler"],
         frame(AXES["x_idler"]),
         "X idler turns",

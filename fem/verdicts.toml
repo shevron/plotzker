@@ -1,10 +1,10 @@
 # Last FEM verdict per part (written by `python -m plotter_cad fem`).
 
 [gantry_end_bracket_left]
-verdict = "PASS"
+verdict = "FAIL"
 date = "2026-11-21"
-geometry = "ef1bb4bd2345bb49"
-spec = "58040cada7f1472e"
+geometry = "5fc65b12975cdcc1"
+spec = "3271d2d9a602222e"
 
 [gantry_end_bracket_right]
 verdict = "PASS"
@@ -30,17 +30,16 @@ date = "2026-11-20"
 geometry = "ce6a445bd93b7f8b"
 spec = "b8c4a6a801ca6919"
 
-[x_idler_mount]
-verdict = "FAIL"
-date = "2026-11-21"
-geometry = "2da358cc9175e010"
-spec = "409ac26d4473f103"
-
 [x_idler_slider]
-verdict = "FAIL"
+verdict = "MARGINAL"
 date = "2026-11-21"
-geometry = "a234465970a14793"
-spec = "8726f76631ea3379"
+geometry = "98e41b9deaaf3e59"
+spec = "5964e30b35eb1218"
+
+[x_idler_tensioner]
+verdict = "MARGINAL"
+date = "2026-11-21"
+spec = "df03f2f6a94922b9"
 
 [x_motor_mount]
 verdict = "FAIL"
@@ -50,21 +49,31 @@ spec = "a4108eede4c1c67a"
 
 [y_idler_mount_left]
 verdict = "FAIL"
-date = "2026-11-20"
+date = "2026-11-21"
 geometry = "275a152a1c588942"
 spec = "b5881157cae322ee"
 
 [y_idler_mount_right]
 verdict = "FAIL"
-date = "2026-11-20"
+date = "2026-11-21"
 geometry = "d876f39e44d2db01"
 spec = "c2ab256a1a90168d"
 
 [y_idler_slider_left]
 verdict = "FAIL"
-date = "2026-11-20"
+date = "2026-11-21"
 geometry = "4c4fcf2715a8b144"
 spec = "1ce25ad073038558"
+
+[y_idler_tensioner_left]
+verdict = "FAIL"
+date = "2026-11-21"
+spec = "a5e545b87fd13d4e"
+
+[y_idler_tensioner_right]
+verdict = "FAIL"
+date = "2026-11-21"
+spec = "4c2cc0bce77c1004"
 
 [y_motor_mount_left]
 verdict = "FAIL"

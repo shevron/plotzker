@@ -70,6 +70,8 @@ def test_part_is_registered_and_serializes(name):
     if part.mirror_of:
         assert part.mirror_of in SPECIFIED
         assert data["fem_status"] == f"mirror of {part.mirror_of}"
+    elif not part.structural:
+        assert data["fem_status"] == "not structural"
     else:
         assert data["fem_status"] == "specified"
         assert data["fem"]["load_cases"] and data["fem"]["supports"]

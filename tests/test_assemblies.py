@@ -245,9 +245,9 @@ def test_x_endstop_board_seats_flat_over_its_solder():
     from plotter_cad.geometry import get_handle
     from plotter_cad.hardware import ENDSTOP
     from plotter_cad.params import X_ENDSTOP
-    from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
+    from plotter_cad.parts.x_endstop_mount import x_endstop_mount_installed
 
-    mount = x_idler_mount_installed()
+    mount = x_endstop_mount_installed()
     board_bottom = X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z
     yc = sum(X_ENDSTOP.board_y) / 2
     solder = cube([ENDSTOP.pcb[0] - 2, ENDSTOP.pcb[1] - 2, 1.8]).translate(
@@ -315,17 +315,42 @@ def test_y_endstop_board_seats_flat_over_its_solder(side):
 
 @pytest.mark.parametrize("shift", [-1, 0, 1])
 def test_x_idler_slider_rides_free_over_its_whole_travel(shift):
-    """T3.16: along the whole tension travel the slider neither touches the mount (a sliding
-    fit) nor reaches into the endstop's plug space, nor the bracket."""
-    from plotter_cad.params import X_TENSIONER
-    from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
+    """T3.22: along the whole tension travel the floating slider neither touches the bracket's
+    tower (plate and walls, a loose fit) nor the endstop mount, nor reaches into the endstop's
+    plug space."""
+    from plotter_cad.params import X_IDLER
+    from plotter_cad.parts.x_endstop_mount import x_endstop_mount_installed
     from plotter_cad.parts.x_idler_slider import x_idler_slider_installed
 
-    moved = x_idler_slider_installed().translate([shift * X_TENSIONER.travel / 2, 0, 0])
-    mount, bracket = x_idler_mount_installed(), gantry_end_bracket_local(Side.LEFT)
-    assert not touching(moved, mount)
-    assert volume(moved & x_endstop_keepout()) < 1e-3
+    moved = x_idler_slider_installed().translate([shift * X_IDLER.travel / 2, 0, 0])
+    bracket = gantry_end_bracket_local(Side.LEFT)
+    assert not touching(moved, bracket)
     assert volume(moved & bracket) < 1e-3
+    assert not touching(moved, x_endstop_mount_installed())
+    assert volume(moved & x_endstop_keepout()) < 1e-3
+
+
+@pytest.mark.parametrize("shift", [-1, 0, 1])
+def test_x_idler_axle_bolt_and_nut_clear_the_tower_walls(shift):
+    """T3.22: the axle bolt's head, its shank's tip and the nut stick out of the slider's arms; over
+    the whole travel they touch neither the tower's walls nor anything else of the bracket."""
+    from plotter_cad.geometry import get_handle, shift_handle
+    from plotter_cad.hardware import hex_nut, shcs
+    from plotter_cad.params import X_BELT, X_DRIVE, X_IDLER
+    from plotter_cad.parts.x_idler_slider import x_idler_slider_installed
+
+    t = X_IDLER
+    dx = shift * t.travel / 2
+    axle = shift_handle(get_handle(x_idler_slider_installed(), "axle"), [dx, 0, 0])
+    nut = (
+        hex_nut(t.axle_m)
+        .rotate([0, 0, 90])
+        .rotate([-90, 0, 0])
+        .translate([X_DRIVE.idler_x + dx, X_BELT.y + t.nut_seat_y, t.axle_z])
+    )
+    bracket = gantry_end_bracket_local(Side.LEFT)
+    for part in (shcs(t.axle_m, 25).align(axle), nut):
+        assert volume(part & bracket) < 1e-3
 
 
 @pytest.mark.parametrize("side", [Side.LEFT, Side.RIGHT])

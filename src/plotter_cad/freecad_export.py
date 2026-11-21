@@ -368,7 +368,7 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
         colors: tuple[tuple[int, int, int], ...]
         if side is Side.LEFT:
             names = (
-                "x_idler_mount",
+                "x_endstop_mount",
                 "x_idler_slider",
                 "x_idler",
                 "x_idler_bolt",

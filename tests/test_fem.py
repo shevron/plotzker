@@ -265,3 +265,92 @@ def test_status_lines_flag_stale_and_missing_checks(tmp_path):
     verdicts.write_text(entry.replace(spec_hash(part), "old"))
     assert "STALE (spec changed" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
     assert "not yet defined" in status_lines(["other"], {}, verdicts, False)[0]
+
+
+def test_dovetail_play_tilt_follows_the_clearance_and_plate_length():
+    import dataclasses
+
+    from plotter_cad.params import Y_TENSIONER
+    from plotter_cad.parts.tension_idler import dovetail_play
+
+    base = dovetail_play(Y_TENSIONER)
+    assert base.tilt_rad == pytest.approx(base.play_mm / Y_TENSIONER.plate_len)
+    tight = dovetail_play(dataclasses.replace(Y_TENSIONER, slide_gap=Y_TENSIONER.slide_gap / 2))
+    assert tight.tilt_rad == pytest.approx(base.tilt_rad / 2)
+    assert tight.axle_vertical_mm == pytest.approx(base.axle_vertical_mm / 2)
+
+
+def _write_result(folder, criteria):
+    import json
+
+    folder.mkdir(parents=True)
+    rows = [{"name": n, "case": c, "value": v} for n, c, v in criteria]
+    (folder / "result.json").write_text(json.dumps({"criteria": rows}))
+
+
+def test_assembly_sums_member_deflections_and_play(tmp_path):
+    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+    from plotter_cad.fem.assembly import check_assembly
+
+    assembly = ASSEMBLY_CHECKS["y_idler_tensioner_left"]
+    # each part alone is within its own 0.1 mm (the slider's and mount's limit names differ)
+    cases = ("belt_preload",)
+    _write_result(
+        tmp_path / "y_idler_slider_left",
+        [
+            (f"idler_axle_{d}", c, 0.09)
+            for d in ("along_belt", "sideways", "vertical")
+            for c in cases
+        ],
+    )
+    _write_result(
+        tmp_path / "y_idler_mount_left",
+        [
+            (f"idler_seat_{d}", c, 0.09)
+            for d in ("along_belt", "sideways", "vertical")
+            for c in cases
+        ],
+    )
+    result = check_assembly(assembly, PARTS, tmp_path)
+    by_name = {r.name: r for r in result.rows}
+    from plotter_cad.params import Y_TENSIONER
+    from plotter_cad.parts.tension_idler import dovetail_play
+
+    play = dovetail_play(Y_TENSIONER)
+    # the play adds to the two deflections: each part is within its own 0.1, the pair is not
+    assert by_name["idler_axle_vertical"].total == pytest.approx(0.18 + play.axle_vertical_mm)
+    assert by_name["idler_axle_vertical"].status is Status.FAIL
+    assert by_name["idler_axle_sideways"].total == pytest.approx(0.18)  # no play along the axle
+    assert result.status is Status.FAIL
+
+
+def test_floating_x_idler_has_no_dovetail_play_term():
+    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+
+    for limit in ASSEMBLY_CHECKS["x_idler_tensioner"].limits:
+        assert all(term.part is not None for term in limit.terms)
+
+
+def test_assembly_is_inconclusive_without_member_results(tmp_path):
+    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+    from plotter_cad.fem.assembly import check_assembly
+
+    result = check_assembly(ASSEMBLY_CHECKS["y_idler_tensioner_left"], PARTS, tmp_path)
+    assert result.status is Status.INCONCLUSIVE
+    assert result.notes
+
+
+def test_assembly_members_and_criteria_exist():
+    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+
+    for assembly in ASSEMBLY_CHECKS.values():
+        for member in assembly.members:
+            assert member in PARTS, member
+        for limit in assembly.limits:
+            for term in limit.terms:
+                if term.part is None:
+                    continue
+                base = PARTS[term.part].mirror_of or term.part
+                spec = PARTS[base].fem
+                assert spec is not None
+                assert term.criterion in {lim.name for lim in spec.displacement_limits}

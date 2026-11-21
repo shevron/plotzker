@@ -27,14 +27,15 @@ Hardware per bracket:
   1 × M3×16 ISO 4762 + 2 × M3 nuts — Y endstop trigger (adjust, then lock)
   Right bracket only: 2 × M3 nuts (pressed into slots from the outboard edge) for the loom
                        anchor (``loom_anchor.py``); the left bracket has no such holes
-Left bracket only: a 10 mm shelf (``BRACKET.shelf_x``) under the X idler mount's overhang
+Left bracket only: the X idler's tower (``X_IDLER``): a plate with two side walls on a shelf that
+reaches out under it; the idler slider is tied to the tower by its tension screw (T3.22)
 
 Print: default profile (``profiles/default.toml``); base face down; no supports (horizontal
 holes are teardrops; the underside is flat).
 
-FEM (left bracket): the X belt's reaction (idler mount pulls the base +x, the beam pushes back on
-the face plate) and the Y belt ends pulling the clamps apart; held by the 8 block bolts; see
-:data:`PART`.
+FEM (left bracket): the X belt's reaction (the tension screw's head pushes the tower +x at the
+axle's height, the beam pushes back on the face plate) and the Y belt ends pulling the clamps
+apart; held by the 8 block bolts; see :data:`PART`.
 """
 
 from typing import TYPE_CHECKING
@@ -45,7 +46,7 @@ from plotter_cad.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x, 
 from plotter_cad.hardware import SCS10UU, VSLOT, metric
 from plotter_cad.loads import X_BELT_LOADS, Y_BELT_LOADS
 from plotter_cad.nut_slot import nut_slot
-from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_DRIVE, Y_AXIS
+from plotter_cad.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_BELT, X_DRIVE, X_IDLER, Y_AXIS
 from plotter_cad.part import (
     DisplacementLimit,
     FemSpec,
@@ -106,16 +107,54 @@ TRIGGER_SCREW = handle(
 )
 
 
+def _tower() -> Solid:
+    """The X idler's tower: a plate with the tension screw's head seat on its outer face and two
+    walls along the slider's sides (they carry the plate's load into the base and keep the slider
+    from rolling)."""
+    t = X_IDLER
+    y0, y1 = t.tower_y
+    z0 = BRACKET.base_t - 1  # sunk into the base: no sliver where the outer faces are flush
+    h = t.tower_top - z0
+    plate = cube([t.plate_t, y1 - y0, h]).translate([t.tower_x0, y0, z0])
+    inner = t.width / 2 + t.wall_gap
+    walls = []
+    # both walls run along the slider to ``wall_end_x``; the front one merges into the face
+    # plate's rib there
+    for lo, hi in ((X_BELT.y + inner, y1), (y0, X_BELT.y - inner)):
+        walls.append(cube([t.wall_end_x - t.tower_x0, hi - lo, h]).translate([t.tower_x0, lo, z0]))
+    # round, not a teardrop: its apex was the highest stress in the plate (a 3.4 mm hole prints
+    # flat enough lying on its side)
+    hole = (
+        cylinder(d=TOL.bolt_hole_d(t.screw_m), h=t.plate_t + 2, fn=FN_HOLE)
+        .rotate([0, 90, 0])
+        .translate([t.tower_x0 - 1, X_BELT.y, t.screw_z])
+    )
+    # the axle bolt's head (one wall) and its tip (the other) stick out of the slider's arms into
+    # the walls' space: pockets in the walls, the whole travel long, from the walls' inner faces
+    pockets = []
+    for sign, (radius, depth) in ((t.head_side, t.head_pocket), (-t.head_side, t.tip_pocket)):
+        x_lo, x_hi = t.sweep_x(radius)
+        face = X_BELT.y + sign * inner
+        y_lo, y_hi = (face - 1, face + depth) if sign > 0 else (face - depth, face + 1)
+        pockets.append(
+            cube([x_hi - x_lo, y_hi - y_lo, 2 * radius + 4]).translate(
+                [x_lo, y_lo, t.axle_z - radius]
+            )
+        )
+    return (plate | walls[0] | walls[1]) - hole - pockets[0] - pockets[1]
+
+
 def _body(side: Side) -> Solid:
     """Bracket solid before the holes and cutouts."""
     b = BRACKET
     base = cube([b.x_in - b.x_out, b.len_y, b.base_t]).translate([b.x_out, -b.len_y / 2, 0])
     if side is Side.LEFT:
-        # shelf under the X idler mount's overhang (T3.19)
+        # shelf under the X idler's tower (T3.19, T3.22)
         y0, y1 = b.shelf_y
         base = base | cube([b.x_out - b.shelf_x + EPS, y1 - y0, b.base_t]).translate(
             [b.shelf_x, y0, 0]
         )
+        base = base | _tower()
     face = cube([b.face_t, b.face_y[1] - b.face_y[0], FACE_TOP]).translate(
         [FACE_OUT_X, b.face_y[0], 0]
     )
@@ -241,11 +280,23 @@ _BOLT_RINGS = [
     for bolt in (*BLOCK_BOLTS_FRONT, *BLOCK_BOLTS_REAR)
 ]
 _SEAT_X = FACE_IN_X - BRACKET.recess  #: the beam end's seat in the face plate
-#: Where the X idler mount's foot rests on the base: the mount's pull enters here
-MOUNT_FOOTPRINT = Box(
-    lo=(BRACKET.shelf_x, X_DRIVE.idler_foot_front_y, BRACKET.base_t - 0.3),
-    hi=(BRACKET.x_in, X_DRIVE.foot_y[1], BRACKET.base_t + 0.3),
-    facing=(0, 0, 1),
+#: The screw head's seat on the tower's outer face: the belt's pull on the idler enters here,
+#: spread by a washer under the head
+HEAD_SEAT = Cylinder(
+    (X_IDLER.tower_x0, X_BELT.y, X_IDLER.screw_z),
+    (1, 0, 0),
+    X_IDLER.washer_od / 2,
+    0.3,
+    inner_radius=TOL.bolt_hole_d(X_IDLER.screw_m) / 2,
+    facing=(-1, 0, 0),
+)
+#: The screw's hole through the tower plate (its wall, the plate's whole thickness): the screw's
+#: position, so its displacement is the idler's (the plate's corners would count its rotation twice)
+TOWER_SEAT = Cylinder(
+    (X_IDLER.tower_x0 + X_IDLER.plate_t / 2, X_BELT.y, X_IDLER.screw_z),
+    (1, 0, 0),
+    2.6,
+    X_IDLER.plate_t / 2 + 0.5,
 )
 #: The face plate's pocket floor: the beam end pushes back here
 BEAM_SEAT_FACES = Box(
@@ -288,15 +339,14 @@ def _centre(box: Box) -> Vec3:
 
 
 def _x_belt_loads(side: Side, run_n: float, jam: bool) -> list[Load]:
-    """Where the X belt's pull enters the bracket: the idler mount (left) or the motor mount
-    (right), as forces on the base top. The couples of that pull (it acts above the base) are
-    carried by the clamped joint (bolt preload), not by the contact, so they are not applied: a
-    linear distribution would pull up on a surface that can only be pushed. The beam holds the
-    face plate's seat (a support)."""
+    """Where the X belt's pull enters the bracket: the idler tower's screw-head seat (left; the
+    tower is part of the bracket, so the pull acts at the axle's height) or the motor mount
+    (right), as forces on the base top. The motor mount's couples are carried by the clamped joint
+    (bolt preload), not by the contact, so they are not applied: a linear distribution would pull
+    up on a surface that can only be pushed. The beam holds the face plate's seat (a support)."""
     if side is Side.LEFT:
-        footprint = MOUNT_FOOTPRINT
-        force = (2 * run_n, 0.0, 0.0)
-        loads: list[Load] = [Force(footprint, force)]
+        # the tension screw is in line with the belt: its head pushes the tower with the whole pull
+        loads: list[Load] = [Force(HEAD_SEAT, (2 * run_n, 0.0, 0.0))]
     else:
         footprint = MOTOR_FOOTPRINT
         loads = motor_loads(
@@ -319,10 +369,14 @@ def _belt_case(side: Side, name: str, x_run_n: float, y_run_n: float, jam: bool)
         name=name,
         description=(
             f"X belt (2 runs of {x_run_n:g} N): the "
-            f"{'idler' if side is Side.LEFT else 'motor'} mount pulls the base inboard (a force "
-            "on the base; its couples are carried by the bolt clamp); the stiff beam holds the "
-            f"face plate's seat. Y belt ({y_run_n:g} N): front end pulls forward, rear end "
-            "pulls back"
+            + (
+                "tension screw's head pushes the tower inboard at the axle's height"
+                if side is Side.LEFT
+                else "motor mount pulls the base inboard (a force on the base; its couples are "
+                "carried by the bolt clamp)"
+            )
+            + f"; the stiff beam holds the face plate's seat. Y belt ({y_run_n:g} N): front end "
+            "pulls forward, rear end pulls back"
         ),
         loads=(
             *_x_belt_loads(side, x_run_n, jam),
@@ -336,8 +390,20 @@ def _belt_case(side: Side, name: str, x_run_n: float, y_run_n: float, jam: bool)
 
 def _spec(side: Side) -> FemSpec:
     """FEM spec of one bracket."""
-    # how far the mount's foot moves relative to the (held) beam seat slackens the X belt
-    foot = MOUNT_FOOTPRINT if side is Side.LEFT else MOTOR_FOOTPRINT
+    # how far the idler tower (left) or the motor mount's foot (right) moves relative to the (held)
+    # beam seat slackens the X belt
+    if side is Side.LEFT:
+        mount_limits = (
+            DisplacementLimit("tower_seat_along_belt", TOWER_SEAT, 0.3, (1, 0, 0)),
+            DisplacementLimit("tower_seat_sideways", TOWER_SEAT, 0.1, (0, 1, 0)),
+            DisplacementLimit("tower_seat_vertical", TOWER_SEAT, 0.1, (0, 0, 1)),
+        )
+    else:
+        mount_limits = (
+            DisplacementLimit("mount_foot_x", MOTOR_FOOTPRINT, 0.1, (1, 0, 0)),
+            DisplacementLimit("mount_foot_y", MOTOR_FOOTPRINT, 0.1, (0, 1, 0)),
+            DisplacementLimit("mount_foot_z", MOTOR_FOOTPRINT, 0.1, (0, 0, 1)),
+        )
     return FemSpec(
         load_cases=(
             _belt_case(side, "belt_preload", X_BELT_LOADS.preload_n, Y_BELT_LOADS.preload_n, False),
@@ -358,9 +424,7 @@ def _spec(side: Side) -> FemSpec:
             ),
         ),
         displacement_limits=(
-            DisplacementLimit("mount_foot_x", foot, 0.1, (1, 0, 0)),
-            DisplacementLimit("mount_foot_y", foot, 0.1, (0, 1, 0)),
-            DisplacementLimit("mount_foot_z", foot, 0.1, (0, 0, 1)),
+            *mount_limits,
             DisplacementLimit("beam_seat_y", BEAM_SEAT, 0.1, (0, 1, 0)),
             DisplacementLimit("beam_seat_z", BEAM_SEAT, 0.1, (0, 0, 1)),
         ),

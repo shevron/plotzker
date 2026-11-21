@@ -8,6 +8,9 @@ from plotter_cad.types import Vec3
 
 #: Vertices closer than this (mm) are welded together.
 WELD_TOL = 1e-3
+#: Coarser tolerances tried, in order, when the surface is still open after a clean (features of
+#: a few micrometres: the 0.01 mm overlaps the geometry code leaves where solids are joined)
+RETRY_WELD_TOLS = (3e-3, 6e-3, 1.2e-2)
 #: Triangles with twice the area below this (mm²) are dropped.
 MIN_DOUBLE_AREA = 1e-4
 
@@ -76,16 +79,13 @@ def _split_t_junctions(triangles: list[tuple[Vec3, Vec3, Vec3]]) -> list[tuple[V
     return triangles
 
 
-def clean_stl(source: Path, dest: Path) -> CleanStl:
-    """Weld vertices, drop degenerate and zero-area triangles (splitting the neighbors of the
-    latter so the surface stays conforming), make the normals point outward."""
-    text = source.read_text()
-    raw = [(float(x), float(y), float(z)) for x, y, z in _VERTEX.findall(text)]
+def _weld_and_filter(raw: list[Vec3], tol: float) -> tuple[list[tuple[Vec3, Vec3, Vec3]], int]:
+    """Welded triangles without degenerate or zero-area ones, made conforming."""
     welded: dict[tuple[int, int, int], Vec3] = {}
 
     def weld(p: Vec3) -> Vec3:
-        key = (round(p[0] / WELD_TOL), round(p[1] / WELD_TOL), round(p[2] / WELD_TOL))
-        return welded.setdefault(key, (key[0] * WELD_TOL, key[1] * WELD_TOL, key[2] * WELD_TOL))
+        key = (round(p[0] / tol), round(p[1] / tol), round(p[2] / tol))
+        return welded.setdefault(key, (key[0] * tol, key[1] * tol, key[2] * tol))
 
     triangles: list[tuple[Vec3, Vec3, Vec3]] = []
     dropped = 0
@@ -96,7 +96,30 @@ def clean_stl(source: Path, dest: Path) -> CleanStl:
             triangles.append((a, b, c))
         else:
             dropped += 1
-    triangles = _split_t_junctions(triangles)
+    return _split_t_junctions(triangles), dropped
+
+
+def _is_closed(triangles: list[tuple[Vec3, Vec3, Vec3]]) -> bool:
+    """Whether every edge has an opposite edge (the printed three decimals are what counts)."""
+
+    def rounded(p: Vec3) -> tuple[float, float, float]:
+        return (round(p[0], 4), round(p[1], 4), round(p[2], 4))
+
+    edges = {(rounded(t[i]), rounded(t[(i + 1) % 3])) for t in triangles for i in range(3)}
+    return all((b, a) in edges for a, b in edges)
+
+
+def clean_stl(source: Path, dest: Path) -> CleanStl:
+    """Weld vertices, drop degenerate and zero-area triangles (splitting the neighbors of the
+    latter so the surface stays conforming), make the normals point outward. If the surface is
+    still open, weld more coarsely (up to ~0.01 mm) until it closes."""
+    text = source.read_text()
+    raw = [(float(x), float(y), float(z)) for x, y, z in _VERTEX.findall(text)]
+    triangles, dropped = _weld_and_filter(raw, WELD_TOL)
+    for tol in RETRY_WELD_TOLS:
+        if _is_closed(triangles):
+            break
+        triangles, dropped = _weld_and_filter(raw, tol)
     volume = (
         sum(
             a[0] * (b[1] * c[2] - b[2] * c[1])

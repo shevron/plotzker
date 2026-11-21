@@ -639,3 +639,62 @@ The mounts' own checks still include the couples (they are the part loaded by th
 
 So with the shelf the left bracket passes, as the right one does. What remains open in this area is
 the X idler mount itself (strength 4.3, vertical movement 0.15 mm) and the slider (1.8).
+
+## 24. Assembly check: the tensioner's tilt (2026-11-21)
+
+**Observation (user, on a printed X idler):** with the belt tight the idler leans: the belt pulls
+the axle, which sits above the tension screw, and the mount "allows the flexibility".
+
+**What the part checks saw:** nothing of it. The slider is checked with its dovetail held
+rigid and the mount with the slider's couple on the ridge, each against 0.1 mm; the clearance has
+no stiffness, and the deflections were never added.
+
+**New:** `Assembly` (part.py), `ASSEMBLY_CHECKS` (assembly_checks.py), `fem/assembly.py`. Terms for
+the idler axle: slider's own flex + mount's own flex + rigid tilt of the slider in its dovetail
+(`tension_idler.dovetail_play`: roof clearance + flank clearance × √2 over the plate length,
+pivoting about the plate's front end). Limit: the members' limits added (0.2 mm vertical and
+sideways, 0.6 mm along the belt); nothing new is decided.
+
+**Result on the current design (belt_preload / belt_peak):**
+
+| Tensioner | Vertical | Along belt | Verdict |
+|---|---|---|---|
+| X (plate 10.4 mm long, axle 14.5 mm above the screw) | 0.55 / 0.76 mm, 2.8× / 3.8× the 0.2 limit; play alone 0.29 | 1.25 / 1.55 mm (0.86 from play) | FAIL |
+| Y left and right (plate 23 mm) | 0.24 / 0.32 mm | 0.58 / 0.75 mm | FAIL (vertical), along belt MARGINAL / FAIL |
+
+The shelf (T3.19) does not touch the dovetail, so it does not address this: the clearance term
+is 0.29 mm vertical on the X tensioner whatever the foot does. Fix options are in STATUS.md.
+
+## 25. Floating X idler: tower in the bracket (2026-11-21)
+
+Decision (user): the screw in line with the axle (no couple, so no rail), the idler mount merged
+into the left bracket (STATUS.md T3.22). The screw's tip needs a tunnel in the slider's wall
+(option A: head-driven, hex key from outside), which makes the slider 10 mm longer and the tower
+20 mm further out than the old block.
+
+**Spike (scratch bracket with a tower, preload):** 8 mm tower plate, no gusset: strength 5.8, seat
+x 1.5 mm; 16 mm plate with a 10 mm gusset: strength 1.1. The weak spot is the tower root in
+tension across the layers, so thickness helps more than gussets.
+
+**Built and iterated (left bracket, belt preload):**
+
+| Variant | Strength (limit 1) | Tower seat vertical (limit 0.1) |
+|---|---|---|
+| 6 mm plate, walls only to the bracket's edge | 6.7 | 0.40 mm |
+| 6 mm plate, walls 6 mm to x = −22 | 2.75 | 0.099 |
+| 10 mm plate, 7 mm washer | 1.58 | 0.094 |
+| 12 mm plate, 9 mm washer, 6 mm walls | 0.88 | 0.100 |
+| + 8 mm walls | 1.07 (hole's teardrop apex) | 0.088 |
+| + round hole (final) | 0.69 | 0.085 |
+
+Final: peak seat vertical 0.152 mm (own limit 0.1: the bracket check fails on it), everything else
+passes. The slider (printed on its side, so the pull runs along the layers): strength 0.46, axle
+moves 0.04 / 0.02 / 0.02 mm (along / sideways / vertical). **X assembly check: MARGINAL**
+(vertical 0.108 mm at preload, 0.192 at peak, limit 0.2).
+
+Modeling notes: the slider is held by the screw in its hole and tunnel (y, z), the nut seat (x) and
+one outer face standing for a wall (roll); the bracket's tower seat is the screw hole's wall (the
+plate's corners would count its rotation twice). A lesson for the mesher: the tower's coplanar
+faces with the shelf left a 0.01 mm sliver unless the tower is sunk 1 mm into the base, and a
+horizontal hole needs a teardrop or round hole with a clean surface (gmsh failed on a slivered
+tower).

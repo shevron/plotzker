@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, mirror, translate
 
-from plotter_cad.geometry import frame_axes, get_handle, get_handles, shift_handle
+from plotter_cad.geometry import frame_axes, get_handle, get_handles, handle, shift_handle
 from plotter_cad.hardware import (
     GT2,
     PULLEY,
@@ -34,14 +34,13 @@ from plotter_cad.params import (
     TOL,
     X_BELT,
     X_DRIVE,
-    X_TENSIONER,
+    X_IDLER,
     Y_AXIS,
 )
 from plotter_cad.parts.belt_clamp import belt_clamp
 from plotter_cad.parts.gantry_end_bracket import gantry_end_bracket_local
 from plotter_cad.parts.loom_anchor import loom_anchor_installed
-from plotter_cad.parts.tension_idler import slider_x0
-from plotter_cad.parts.x_idler_mount import x_idler_mount_installed
+from plotter_cad.parts.x_endstop_mount import x_endstop_mount_installed
 from plotter_cad.parts.x_idler_slider import x_idler_slider_installed
 from plotter_cad.parts.x_motor_mount import x_motor_mount_left
 from plotter_cad.types import Side
@@ -53,7 +52,7 @@ if TYPE_CHECKING:
 def x_endstop_keepout() -> Solid:
     """Space that must stay free for the X endstop's plug, in the left bracket-local frame."""
     return place_in_frame(
-        endstop_keepout(), *frame_axes(get_handle(x_idler_mount_installed(), "board"))
+        endstop_keepout(), *frame_axes(get_handle(x_endstop_mount_installed(), "board"))
     )
 
 
@@ -67,24 +66,25 @@ def x_drive_local(side: Side) -> list[Solid]:
             gt2_pulley().align(get_handle(mount, "pulley")),
             *[shcs(3, 10).align(h) for h in get_handles(mount, "motor_screws")],
         ]
-    mount = x_idler_mount_installed()
-    axle = get_handle(mount, "axle")
-    t = X_TENSIONER
-    slider_rear_x = frame_axes(get_handle(mount, "screw"))[0][0] + slider_x0(t)
+    mount = x_endstop_mount_installed()
+    slider = x_idler_slider_installed()
+    axle = get_handle(slider, "axle")
+    t = X_IDLER
+    screw_seat = handle([t.tower_x0, X_BELT.y, t.screw_z], [0, -90, 0])  # head on the tower's face
     return [
         mount.color("DarkOrange"),
-        x_idler_slider_installed().color("Orange"),
+        slider.color("Orange"),
         gt2_idler().rotate([90, 0, 0]).translate([X_DRIVE.idler_x, X_BELT.y, t.axle_z]),
-        shcs(t.axle_m, 25).align(axle),
+        shcs(t.axle_m, t.axle_len).align(axle),
         hex_nut(t.axle_m)
         .rotate([0, 0, 90])
         .rotate([-90, 0, 0])
         .translate([X_DRIVE.idler_x, X_BELT.y + t.nut_seat_y, t.axle_z]),
-        shcs(t.screw_m, t.screw_len).align(get_handle(mount, "screw")),
+        shcs(t.screw_m, t.screw_len).align(screw_seat),
         hex_nut(t.screw_m)
         .rotate([0, 0, 90])
         .rotate([0, 90, 0])
-        .translate([slider_rear_x + TOL.nut_wall, X_BELT.y, t.screw_z]),
+        .translate([t.slider_x0 + TOL.nut_wall, X_BELT.y, t.screw_z]),
         endstop_placed(*frame_axes(get_handle(mount, "board"))),
     ]
 

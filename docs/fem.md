@@ -14,7 +14,7 @@ material, print profile, print orientation. Clearance tweaks and cosmetic change
 
 | Part | Structural? | State |
 |------|-------------|-------|
-| `x_idler_slider`, `x_idler_mount`, `y_idler_slider_left`, `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
+| `x_idler_slider`, `y_idler_slider_left`, `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
 | `y_idler_slider_right`, `y_motor_mount_right` | exact mirror images | covered by the left part (`Part.mirror_of`) |
 | `tension_idler_rail`, `tension_idler_slider` | prototype of the tensioner | not used in the machine |
 | `belt_clamp` | carries belt tension through two screws | to decide |
@@ -114,6 +114,28 @@ the verdict. The official verdict is always the one from the default settings.
   exceeds the limit, and how much the peak changed between meshes.
 - **Pictures** (`viz/`): deformed shape over a ghost, colored by utilization (blue fine, orange at
   the allowable, red over) or displacement; a magenta ball marks the governing point.
+
+## Assemblies: deflections and play that add up
+
+A part's check holds its neighbours rigid, so each part can pass while the pair does not. The
+belt tensioner showed it (STATUS.md T3.19): the belt pulls the idler axle ~14 mm above the tension
+screw, so a couple twists the slider in its dovetail. The slider tilts by the clearance (no
+stiffness, so the FEM cannot find it) while the mount's ridge and block bend; the idler leans.
+
+`ASSEMBLY_CHECKS` (`src/plotter_cad/assembly_checks.py`) lists assemblies: member parts and, per
+limit, the terms that add up (a member's displacement limit from its recorded result, or a rigid
+term from geometry: `tension_idler.dovetail_play`). The total is judged against the sum of the
+members' own limits, with the same PASS/MARGINAL/FAIL bands. Run it after its members:
+
+```
+python -m plotter_cad fem y_idler_slider_left y_idler_mount_left   # also runs y_idler_tensioner_left
+python -m plotter_cad fem x_idler_tensioner               # from the recorded member results (bracket + slider)
+```
+
+It writes `fem/results/<assembly>/report.md` and `result.json` and records the verdict in
+`fem/verdicts.toml`; `fem-status` flags it stale when a member's recorded verdict changed. The
+play model is worst case and rigid (slider pivoting about its plate's front end, clearance
+`slide_gap`, flanks at 45°); it ignores friction and does not shrink with load.
 
 ## Limits of the method
 

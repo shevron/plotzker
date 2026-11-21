@@ -192,22 +192,41 @@ def _select(names: Iterable[str] | None, available: Collection[str]) -> list[str
 
 def _fem_status(check_geometry: bool) -> None:
     """Print the FEM state of every printable part."""
+    from plotter_cad.fem.assembly import assembly_status_lines
     from plotter_cad.fem.report import status_lines
     from plotter_cad.parts import PARTS, PRINTABLE_PARTS
 
     verdicts = FEM_DIR / "verdicts.toml"
-    print("\n".join(status_lines(list(PRINTABLE_PARTS), PARTS, verdicts, check_geometry)))
+    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+
+    lines = status_lines(list(PRINTABLE_PARTS), PARTS, verdicts, check_geometry)
+    print("\n".join(lines + assembly_status_lines(ASSEMBLY_CHECKS, PARTS, verdicts)))
 
 
 def _run_fem(names: Iterable[str], out: Path, args: argparse.Namespace) -> int:
     """Run the FEM checks; the exit code is 1 if any is not a PASS or MARGINAL."""
+    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+    from plotter_cad.fem.assembly import run_assemblies
     from plotter_cad.fem.runner import RunOptions, run_checks
+    from plotter_cad.parts import PARTS
 
     options = RunOptions(args.size, args.refine, not args.uniform, args.solver, args.viz)
-    results = run_checks(
-        list(names), out, FEM_DIR / "verdicts.toml", options, record=not args.no_record
-    )
-    return 0 if all(r.status.value in ("PASS", "MARGINAL") for r in results) else 1
+    part_names = [n for n in names if n not in ASSEMBLY_CHECKS]
+    verdicts = FEM_DIR / "verdicts.toml"
+    results = run_checks(part_names, out, verdicts, options, record=not args.no_record)
+    statuses = [r.status.value for r in results]
+    # an assembly is judged from its members' results, so after them
+    wanted = [n for n in names if n in ASSEMBLY_CHECKS]
+    wanted += [
+        a.name
+        for a in ASSEMBLY_CHECKS.values()
+        if a.name not in wanted and part_names and set(a.members) <= set(part_names)
+    ]
+    statuses += [
+        r.status.value
+        for r in run_assemblies(wanted, PARTS, out, verdicts, record=not args.no_record)
+    ]
+    return 0 if all(s in ("PASS", "MARGINAL") for s in statuses) else 1
 
 
 def _diff(args: argparse.Namespace) -> int:
@@ -300,7 +319,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     part.add_argument("--json", action="store_true", help="print as JSON")
     part.add_argument("--stl", type=Path, help="write the part (analysis frame) to this STL file")
     fem = sub.add_parser("fem", help="FEM check of parts (needs FreeCAD's gmsh and CalculiX)")
-    fem.add_argument("names", nargs="+", help="part names")
+    fem.add_argument(
+        "names",
+        nargs="+",
+        help="part names, or assembly names (judged from the members' recorded results; "
+        "assemblies whose members were all just checked are included)",
+    )
     fem.add_argument("--size", type=float, help="element size near loads in mm (default by size)")
     fem.add_argument(
         "--refine",

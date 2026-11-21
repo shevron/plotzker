@@ -166,6 +166,49 @@ class Part:
         return "specified" if self.fem else "missing"
 
 
+@dataclass(frozen=True)
+class AssemblyTerm:
+    """One contribution to an assembly's budget: a member part's FEM displacement (the named
+    displacement limit of its check) or a rigid offset that the FEM cannot see (clearance)."""
+
+    description: str
+    part: str | None = None  #: member part whose check supplies the value
+    criterion: str | None = None  #: its displacement limit's name
+    rigid_mm: float = 0.0  #: a fixed offset, from geometry
+
+
+@dataclass(frozen=True)
+class AssemblyLimit:
+    """Allowed total displacement along one direction: the sum of the terms (worst case: the
+    parts' deflections and the play add up)."""
+
+    name: str
+    limit_mm: float
+    terms: tuple[AssemblyTerm, ...]
+
+
+@dataclass(frozen=True)
+class Assembly:
+    """Parts that work together, checked on the sum of their deflections and play.
+
+    Each part is checked on its own with the others held rigid (``Part.fem``); the sum is what
+    the machine sees, so it is judged here from the members' recorded results
+    (``python -m plotter_cad fem-assembly``). Play between the parts (clearances) has no
+    stiffness for the FEM to find, so it enters as rigid terms computed from the geometry.
+    """
+
+    name: str
+    description: str
+    members: tuple[str, ...]  #: part names (a mirror image's check is its base part's)
+    limits: tuple[AssemblyLimit, ...]
+    source: str = ""  #: where the limits and the play model come from
+
+
+def assembly_to_dict(assembly: Assembly) -> dict[str, object]:
+    """The assembly as plain JSON-ready data."""
+    return _plain(assembly)  # type: ignore[return-value]
+
+
 def effective_properties(material: Material, profile: PrintProfile) -> dict[str, float]:
     """Material values of a real part: the solid values scaled by the profile's knockdowns."""
     k_e, k_s = profile.stiffness_factor, profile.strength_factor

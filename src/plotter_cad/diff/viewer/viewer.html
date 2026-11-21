@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design diff</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1c2330; --muted: #5d6778; --line: #d9dde5;
+    --canvas: #eef0f4; --accent: #2557d6;
+    --added: #1b8a4b; --removed: #c4372c; --changed: #b36a00; --unchanged: #7a8394;
+    --before: #d9483b; --after: #2f6fe0; --plus: #1b9a55; --minus: #d9483b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161d; --panel: #1a202a; --ink: #e6e9ef; --muted: #98a2b3; --line: #2b3342;
+      --canvas: #0e1218; --accent: #6b95ff;
+      --added: #4cc784; --removed: #ff7a6e; --changed: #f0a93a; --unchanged: #8b95a7;
+      --before: #ff6a5c; --after: #6b9bff; --plus: #3fd27f; --minus: #ff6a5c;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161d; --panel: #1a202a; --ink: #e6e9ef; --muted: #98a2b3; --line: #2b3342;
+    --canvas: #0e1218; --accent: #6b95ff;
+    --added: #4cc784; --removed: #ff7a6e; --changed: #f0a93a; --unchanged: #8b95a7;
+    --before: #ff6a5c; --after: #6b9bff; --plus: #3fd27f; --minus: #ff6a5c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; height: 100vh;
+         display: flex; flex-direction: column; }
+  header { padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel);
+           display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; }
+  header h1 { font-size: 16px; margin: 0; }
+  header .revs code { background: var(--bg); padding: 1px 6px; border-radius: 4px; }
+  header .counts span { margin-right: 10px; }
+  main { flex: 1; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+  aside { background: var(--panel); border-right: 1px solid var(--line); overflow: auto;
+          display: flex; flex-direction: column; }
+  aside .filter { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--muted); }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { padding: 7px 12px; border-bottom: 1px solid var(--line); cursor: pointer;
+       display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  li:hover { background: var(--bg); }
+  li.head { cursor: default; background: var(--bg); color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+  li.head:hover { background: var(--bg); }
+  tr.inst { cursor: pointer; } tr.inst:hover, tr.inst.sel { background: var(--bg); }
+  li.sel { background: var(--bg); box-shadow: inset 3px 0 var(--accent); }
+  li .name { overflow-wrap: anywhere; }
+  .badge { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; font-weight: 600; }
+  .added { color: var(--added); } .removed { color: var(--removed); }
+  .changed { color: var(--changed); } .unchanged, .error { color: var(--unchanged); }
+  .error { color: var(--removed); }
+  section { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .toolbar { padding: 8px 12px; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+             background: var(--panel); border-bottom: 1px solid var(--line); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; background: var(--panel); color: var(--ink); padding: 5px 10px;
+                cursor: pointer; font: inherit; border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .seg button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 6px;
+         padding: 5px 10px; cursor: pointer; font: inherit; }
+  .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  label { color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  .stage { position: relative; flex: 1; min-height: 240px; background: var(--canvas); }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .divider { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--accent);
+             cursor: ew-resize; display: none; }
+  .divider::after { content: "⇔"; position: absolute; top: 50%; left: -11px; width: 24px; height: 24px;
+                    margin-top: -12px; border-radius: 12px; background: var(--accent); color: #fff;
+                    text-align: center; line-height: 24px; }
+  .legend { position: absolute; left: 12px; top: 10px; display: flex; gap: 12px; color: var(--ink);
+            background: color-mix(in srgb, var(--panel) 80%, transparent); padding: 4px 10px; border-radius: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; }
+  .empty { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+           color: var(--muted); text-align: center; padding: 20px; }
+  .details { background: var(--panel); border-top: 1px solid var(--line); padding: 8px 12px;
+             overflow: auto; max-height: 34%; }
+  table { border-collapse: collapse; width: 100%; max-width: 760px; }
+  th, td { text-align: left; padding: 3px 12px 3px 0; font-variant-numeric: tabular-nums; }
+  th { color: var(--muted); font-weight: 500; }
+  td.num { text-align: right; }
+  .thumb { width: 60px; height: 45px; border-radius: 4px; background: var(--canvas); flex: none; }
+  li .left { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  pre.diff { margin: 6px 0; padding: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+             overflow: auto; max-height: 240px; font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre.diff .add { color: var(--added); } pre.diff .del { color: var(--removed); } pre.diff .hunk { color: var(--muted); }
+  details.src > summary { cursor: pointer; color: var(--accent); margin-top: 6px; }
+  #summary { padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  #summary summary { cursor: pointer; font-weight: 600; }
+  #summary ul li { cursor: default; padding: 2px 0; border: 0; display: block; font: 12px ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+  .fem { color: var(--changed); }
+  .hint { color: var(--muted); font-size: 12px; }
+  @media (max-width: 760px) {
+    main { grid-template-columns: 1fr; grid-template-rows: 180px 1fr; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); }
+    header, .toolbar { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Design diff</h1>
+  <span class="revs"><code id="revA"></code> → <code id="revB"></code></span>
+  <span class="counts" id="counts"></span>
+</header>
+<main>
+  <aside>
+    <details id="summary"><summary>Commits and source changes</summary><div id="summaryBody"></div></details>
+    <div class="filter"><label><input type="checkbox" id="showUnchanged"> show unchanged</label>
+      <label id="hwLabel" style="display:none"><input type="checkbox" id="showHw"> hardware as context</label></div>
+    <ul id="list"></ul>
+  </aside>
+  <section>
+    <div class="toolbar">
+      <div class="seg" id="modes" role="group" aria-label="Display mode">
+        <button data-mode="diff" class="on">Changes</button>
+        <button data-mode="overlay">Overlay</button>
+        <button data-mode="swipe">Swipe</button>
+        <button data-mode="before">Before</button>
+        <button data-mode="after">After</button>
+      </div>
+      <div class="seg" id="views" role="group" aria-label="View">
+        <button data-view="iso">Iso</button><button data-view="front">Front</button>
+        <button data-view="back">Back</button><button data-view="left">Left</button>
+        <button data-view="right">Right</button><button data-view="top">Top</button>
+        <button data-view="bottom">Bottom</button>
+      </div>
+      <label>Opacity <input type="range" id="alpha" min="15" max="100" value="60"></label>
+      <button class="btn" id="zoomChange" title="Frame the added and removed material">Zoom to change</button>
+      <div class="seg" id="section" role="group" aria-label="Section plane">
+        <button data-axis="off" class="on">No cut</button><button data-axis="0">X cut</button>
+        <button data-axis="1">Y cut</button><button data-axis="2">Z cut</button>
+      </div>
+      <label id="cutLabel" style="display:none"><input type="range" id="cutPos" min="0" max="1000" value="500"></label>
+      <button class="btn" id="cutFlip" style="display:none" title="Cut away the other side">Flip</button>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="gl"></canvas>
+      <div class="divider" id="divider"></div>
+      <div class="legend" id="legend"></div>
+      <div class="empty" id="empty"></div>
+    </div>
+    <div class="details" id="details"></div>
+  </section>
+</main>
+<script>
+"use strict";
+const DATA = /*__DIFF_DATA__*/null;
+
+// ---------- small helpers ----------
+const $ = (id) => document.getElementById(id);
+const fmt = (x, d = 2) => (x === null || x === undefined) ? "–" : x.toFixed(d);
+const sgn = (x, d = 2) => (x === null || x === undefined) ? "–" : (x >= 0 ? "+" : "") + x.toFixed(d);
+const short = (r) => r.commit === r.label || r.commit === "WORKTREE" ? r.label : `${r.label} (${r.commit.slice(0, 8)})`;
+
+const meshCache = new Map();
+// Meshes are stored once in DATA.meshes (deflated base64 float32); decoded on first use.
+async function getMesh(id) {
+  if (!id) return null;
+  if (!meshCache.has(id)) meshCache.set(id, (async () => {
+    const bin = atob(DATA.meshes[id]), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate"));
+    return new Float32Array(await new Response(stream).arrayBuffer());
+  })());
+  return meshCache.get(id);
+}
+
+// ---------- 4x4 matrices (column-major) ----------
+const M = {
+  mul(a, b) { const o = new Float32Array(16);
+    for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+      let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; }
+    return o; },
+  perspective(fovy, aspect, n, f) { const t = 1 / Math.tan(fovy / 2), o = new Float32Array(16);
+    o[0] = t / aspect; o[5] = t; o[10] = (f + n) / (n - f); o[11] = -1; o[14] = 2 * f * n / (n - f); return o; },
+  lookAt(e, c, up) {
+    const sub = (a, b) => [a[0]-b[0], a[1]-b[1], a[2]-b[2]];
+    const cross = (a, b) => [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]];
+    const norm = (a) => { const l = Math.hypot(...a) || 1; return a.map(x => x / l); };
+    const dot = (a, b) => a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+    const z = norm(sub(e, c)), x = norm(cross(up, z)), y = cross(z, x);
+    return new Float32Array([x[0], y[0], z[0], 0, x[1], y[1], z[1], 0, x[2], y[2], z[2], 0,
+                             -dot(x, e), -dot(y, e), -dot(z, e), 1]); },
+};
+
+// ---------- WebGL ----------
+const canvas = $("gl");
+const gl = canvas.getContext("webgl2", { antialias: true });
+let prog = null;
+const U = {};
+if (gl) {
+  const vs = `#version 300 es
+  in vec3 p; uniform mat4 mvp, mv; out vec3 vpos, wpos;
+  void main() { wpos = p; vpos = (mv * vec4(p, 1.0)).xyz; gl_Position = mvp * vec4(p, 1.0); }`;
+  const fs = `#version 300 es
+  precision highp float;
+  in vec3 vpos, wpos; uniform vec3 color, cap, secN; uniform float alpha, clipx, secD; uniform int side, secOn;
+  out vec4 outc;
+  void main() {
+    if (secOn == 1 && dot(wpos, secN) > secD) discard;
+    if (side == 1 && gl_FragCoord.x > clipx) discard;
+    if (side == 2 && gl_FragCoord.x <= clipx) discard;
+    vec3 n = normalize(cross(dFdx(vpos), dFdy(vpos)));
+    float l = 0.38 + 0.62 * abs(n.z) + 0.12 * n.y;
+    if (secOn == 1 && !gl_FrontFacing) { outc = vec4(cap, alpha); return; }  // inside of a cut solid
+    outc = vec4(color * clamp(l, 0.0, 1.1), alpha);
+  }`;
+  const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
+  prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+  gl.bindAttribLocation(prog, 0, "p"); gl.linkProgram(prog);
+  for (const n of ["mvp", "mv", "color", "cap", "alpha", "clipx", "side", "secOn", "secN", "secD"]) U[n] = gl.getUniformLocation(prog, n);
+}
+
+function upload(arr) {
+  if (!arr || !gl) return null;
+  const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+  return { vao, buf, count: arr.length / 3, raw: arr };
+}
+function free(mesh) { if (mesh && gl) { gl.deleteVertexArray(mesh.vao); gl.deleteBuffer(mesh.buf); } }
+function freeScene() {
+  const m = state.meshes;
+  if (m) for (const k of ["A", "B", "Add", "Rem"]) free(m[k]);
+  if (state.asm) for (const it of state.asm.items) for (const k of ["A", "B", "Add", "Rem"]) free(it[k]);
+  state.meshes = null; state.asm = null;
+}
+
+// ---------- state ----------
+const state = { mode: "diff", axis: -1, cut: 0.5, flip: false, alpha: 0.6, split: 0.5, sel: null, meshes: null, asm: null, focus: null, ctxAlpha: 0.25, showHw: false, token: 0,
+                yaw: -0.9, pitch: 0.6, dist: 300, target: [0, 0, 0], radius: 100 };
+const cssColor = (name) => { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const c = document.createElement("canvas").getContext("2d"); c.fillStyle = v; c.fillRect(0, 0, 1, 1);
+  const d = c.getImageData(0, 0, 1, 1).data; return [d[0] / 255, d[1] / 255, d[2] / 255]; };
+
+const VIEWS = { iso: [-0.9, 0.6], front: [-Math.PI / 2, 0], back: [Math.PI / 2, 0],
+  left: [Math.PI, 0], right: [0, 0], top: [-Math.PI / 2, Math.PI / 2 - 0.001],
+  bottom: [-Math.PI / 2, -Math.PI / 2 + 0.001] };
+
+function bounds(parts) {
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const a of parts) if (a) for (let i = 0; i < a.length; i += 3) for (let k = 0; k < 3; k++) {
+    lo[k] = Math.min(lo[k], a[i + k]); hi[k] = Math.max(hi[k], a[i + k]); }
+  return [lo, hi];
+}
+
+function fitTo(lo, hi, factor) {
+  state.target = lo.map((v, k) => (v + hi[k]) / 2);
+  state.radius = Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) / 2 || 1;
+  state.dist = state.radius * factor;
+}
+
+function frame(changeOnly = false) {
+  if (state.asm) {
+    const items = state.asm.items.filter(it => state.focus !== null ? it.id === state.focus
+                                                : changeOnly && it.status !== "unchanged");
+    const pick = items.length ? items : state.asm.items;
+    const [lo, hi] = bounds(pick.flatMap(it => [it.A && it.A.raw, it.B && it.B.raw]));
+    fitTo(lo, hi, items.length ? 3.2 : 2.6);
+    return;
+  }
+  const m = state.meshes;
+  const change = changeOnly && (m.Add || m.Rem);
+  const [lo, hi] = bounds(change ? [m.Add && m.Add.raw, m.Rem && m.Rem.raw] : [m.A && m.A.raw, m.B && m.B.raw]);
+  fitTo(lo, hi, change ? 3.2 : 2.6);
+}
+
+function sectionRange() {
+  const raws = state.asm ? state.asm.items.flatMap(it => [it.A && it.A.raw, it.B && it.B.raw])
+                         : [state.meshes.A && state.meshes.A.raw, state.meshes.B && state.meshes.B.raw];
+  const [lo, hi] = bounds(raws);
+  return [lo[state.axis], hi[state.axis]];
+}
+
+function draw(fixedW, fixedH) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = fixedW || Math.max(1, Math.round(canvas.clientWidth * dpr)), h = fixedH || Math.max(1, Math.round(canvas.clientHeight * dpr));
+  if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+  if (!gl) return;
+  const bg = cssColor("--canvas");
+  gl.viewport(0, 0, w, h); gl.clearColor(bg[0], bg[1], bg[2], 1); gl.clearDepth(1);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  if (!state.meshes && !state.asm) return;
+  const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+  const eye = [state.target[0] + state.dist * cp * Math.cos(state.yaw),
+               state.target[1] + state.dist * cp * Math.sin(state.yaw),
+               state.target[2] + state.dist * sp];
+  const mv = M.lookAt(eye, state.target, [0, 0, 1]);
+  const proj = M.perspective(0.7, w / h, state.dist * 0.02, state.dist * 6);
+  gl.useProgram(prog);
+  gl.uniformMatrix4fv(U.mv, false, mv); gl.uniformMatrix4fv(U.mvp, false, M.mul(proj, mv));
+  gl.enable(gl.DEPTH_TEST); gl.enable(gl.BLEND); gl.cullFace(gl.BACK);
+  const cutting = state.axis >= 0;
+  if (cutting) gl.disable(gl.CULL_FACE); else gl.enable(gl.CULL_FACE);
+  gl.uniform1i(U.secOn, cutting ? 1 : 0);
+  if (cutting) {
+    const [lo, hi] = sectionRange(), n = [0, 0, 0], sign = state.flip ? -1 : 1;
+    n[state.axis] = sign;
+    gl.uniform3fv(U.secN, n); gl.uniform1f(U.secD, sign * (lo + (hi - lo) * state.cut));
+  }
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  const before = cssColor("--before"), after = cssColor("--after"), grey = [0.62, 0.66, 0.72];
+  const clipx = state.split * w;
+  gl.uniform1f(U.clipx, clipx);
+  // Each mesh gets a depth pre-pass so only its nearest surface shows through the translucency.
+  const pass = (mesh, color, alpha, side, keepDepth = false) => {
+    if (!mesh) return;
+    gl.bindVertexArray(mesh.vao);
+    gl.uniform3fv(U.color, color); gl.uniform1i(U.side, side);
+    gl.uniform3fv(U.cap, color.map(c => c * 0.55));
+    if (!keepDepth) gl.clear(gl.DEPTH_BUFFER_BIT);
+    gl.colorMask(false, false, false, false); gl.depthFunc(gl.LESS); gl.uniform1f(U.alpha, 1);
+    gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
+    gl.colorMask(true, true, true, true); gl.depthFunc(gl.LEQUAL); gl.uniform1f(U.alpha, alpha);
+    gl.drawArrays(gl.TRIANGLES, 0, mesh.count);
+  };
+  const m = state.meshes;
+  if (state.asm) { drawAssembly(pass, grey); return; }
+  if (state.mode === "diff") {
+    // Unchanged context as a faint ghost of the new shape, the changed material solid on top.
+    pass(m.B || m.A, grey, 0.22, 0);
+    gl.clear(gl.DEPTH_BUFFER_BIT);
+    pass(m.Rem, cssColor("--minus"), 1, 0, true);
+    pass(m.Add, cssColor("--plus"), 1, 0, true);
+  } else if (state.mode === "overlay") { pass(m.A, before, state.alpha, 0); pass(m.B, after, state.alpha, 0); }
+  else if (state.mode === "before") pass(m.A, grey, 1, 0);
+  else if (state.mode === "after") pass(m.B, grey, 1, 0);
+  else { pass(m.A, grey, 1, 1); pass(m.B, grey, 1, 2); }
+}
+function drawAssembly(pass, grey) {
+  const items = state.asm.items, red = cssColor("--minus"), green = cssColor("--plus"), blue = cssColor("--after");
+  const focus = state.focus;
+  const isChange = (it) => it.status !== "unchanged" && (focus === null || it.id === focus);
+  // Context (unchanged, and changed items that are not in focus): one translucent layer, nearest surface only.
+  const ctx = items.filter(it => !isChange(it) && (it.printed || state.showHw || it.status !== "unchanged") && (it.B || it.A));
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  gl.colorMask(false, false, false, false); gl.depthFunc(gl.LESS); gl.uniform1f(U.alpha, 1);
+  for (const it of ctx) { const mesh = it.B || it.A; gl.bindVertexArray(mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, mesh.count); }
+  gl.colorMask(true, true, true, true); gl.depthFunc(gl.LEQUAL); gl.uniform1f(U.alpha, state.ctxAlpha);
+  gl.uniform1i(U.side, 0); gl.uniform3fv(U.color, grey); gl.uniform3fv(U.cap, grey.map(c => c * 0.55));
+  for (const it of ctx) { const mesh = it.B || it.A; gl.bindVertexArray(mesh.vao); gl.drawArrays(gl.TRIANGLES, 0, mesh.count); }
+  // Changes on top, whatever is in front of them.
+  gl.clear(gl.DEPTH_BUFFER_BIT);
+  for (const it of items.filter(isChange)) {
+    if (it.status === "removed") pass(it.A, red, 1, 0);
+    else if (it.status === "added") pass(it.B, green, 1, 0);
+    else if (it.status === "moved") { pass(it.A, red, 0.35, 0); pass(it.B, blue, 0.95, 0, true); }
+    else {  // modified: new shape in blue with the added/removed material marked
+      pass(it.B, blue, 0.9, 0);
+      pass(it.Rem, red, 1, 0, true);
+      pass(it.Add, green, 1, 0, true);
+    }
+  }
+}
+
+let queued = false;
+const redraw = () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; draw(); }); } };
+
+// ---------- UI ----------
+function markSelected(key) {
+  for (const li of document.querySelectorAll("#list li")) li.classList.toggle("sel", li.dataset.key === key);
+}
+
+async function select(name) {
+  const token = ++state.token;
+  const p = DATA.parts.find(x => x.name === name);
+  const [a, b, add, rem] = await Promise.all([getMesh(p.meshA), getMesh(p.meshB), getMesh(p.meshAdded), getMesh(p.meshRemoved)]);
+  if (token !== state.token) return;
+  freeScene();
+  state.sel = name; state.focus = null; markSelected("part:" + name);
+  state.meshes = (a || b) ? { A: upload(a), B: upload(b), Add: upload(add), Rem: upload(rem) } : null;
+  $("alpha").value = state.alpha * 100;
+  for (const btn of document.querySelectorAll("#modes button")) btn.disabled = false;
+  $("hwLabel").style.display = "none";
+  if (state.meshes) frame(state.mode === "diff");
+  const empty = $("empty");
+  empty.style.display = state.meshes ? "none" : "flex";
+  empty.textContent = p.status === "unchanged" ? "Unchanged: identical geometry in both revisions."
+                    : p.status === "error" ? "Could not be built: " + p.note : "No geometry.";
+  const modes = { added: "after", removed: "before" };
+  const hasDiff = !!(add || rem);
+  $("modes").querySelector('[data-mode="diff"]').disabled = !hasDiff;
+  if (modes[p.status]) setMode(modes[p.status]);
+  else if (hasDiff && !state.userMode) setMode("diff");
+  else if (!hasDiff && (state.mode === "diff" || state.mode === "before" || state.mode === "after")) setMode("overlay");
+  else setMode(state.mode);
+  details(p); redraw();
+}
+
+async function selectAsm(name) {
+  const token = ++state.token;
+  const asm = DATA.assemblies.find(x => x.name === name);
+  const items = await Promise.all(asm.instances.map(async (i, id) => {
+    const [A, B, Add, Rem] = await Promise.all([getMesh(i.meshA), getMesh(i.meshB), getMesh(i.meshAdded), getMesh(i.meshRemoved)]);
+    return { ...i, id, A, B, Add, Rem };
+  }));
+  if (token !== state.token) return;
+  freeScene();
+  for (const it of items) for (const k of ["A", "B", "Add", "Rem"]) it[k] = upload(it[k]);
+  state.sel = "asm:" + name; state.focus = null; markSelected("asm:" + name);
+  state.asm = { name, items, asm };
+  state.mode = "diff";
+  for (const btn of document.querySelectorAll("#modes button")) { btn.classList.toggle("on", btn.dataset.mode === "diff"); btn.disabled = btn.dataset.mode !== "diff"; }
+  $("divider").style.display = "none"; $("alpha").disabled = false; $("alpha").value = state.ctxAlpha * 100;
+  $("hwLabel").style.display = "";
+  $("empty").style.display = items.length ? "none" : "flex";
+  $("empty").textContent = asm.status === "error" ? "Could not be built: " + asm.note : "No geometry.";
+  frame(true); updateAsmLegend(); asmDetails(); redraw();
+}
+
+function updateAsmLegend() {
+  $("legend").innerHTML = `<span><i style="background:var(--plus)"></i>added</span>` +
+    `<span><i style="background:var(--minus)"></i>removed / old position</span>` +
+    `<span><i style="background:var(--after)"></i>moved / modified</span>` +
+    `<span><i style="background:#9aa3b2"></i>unchanged</span>`;
+}
+
+function asmDetails() {
+  const { asm, items } = state.asm;
+  const c = asm.counts, order = { modified: 0, moved: 1, added: 2, removed: 3 };
+  let h = `<strong>${asm.name}</strong> <span class="badge ${asm.status}">${asm.status}</span> ` +
+          `<span class="hint">${["modified", "moved", "added", "removed"].filter(k => c[k]).map(k => `${c[k]} ${k}`).join(", ") || asm.note}</span>`;
+  const changed = items.filter(it => it.status !== "unchanged")
+                       .sort((a, b) => order[a.status] - order[b.status] || (b.printed - a.printed) || a.label.localeCompare(b.label));
+  h += `<table id="inst"><tr><th>Status</th><th>Instance</th><th>Change</th></tr>`;
+  for (const it of changed) {
+    let what = "";
+    if (it.shift) what += "moved " + it.shift.map(x => sgn(x)).join(" ") + " mm" + (it.rotated ? " (turned)" : "");
+    if (it.addedVolume !== null) what += (what ? "; " : "") + `+${fmt(it.addedVolume, 1)} / −${fmt(it.removedVolume, 1)} mm³`;
+    h += `<tr class="inst${it.id === state.focus ? " sel" : ""}" data-id="${it.id}"><td><span class="badge ${it.status === "moved" || it.status === "modified" ? "changed" : it.status}">${it.status}</span></td>` +
+         `<td></td><td>${what}</td></tr>`;
+  }
+  h += `</table><div class="hint">Click an instance to isolate it; click again to show all changes.</div>`;
+  $("details").innerHTML = h;
+  const rows = $("details").querySelectorAll("tr.inst");
+  rows.forEach((tr, k) => { tr.cells[1].textContent = changed[k].label + (changed[k].printed ? "" : " (hardware)"); });
+  rows.forEach((tr) => tr.onclick = () => {
+    const id = +tr.dataset.id; state.focus = state.focus === id ? null : id;
+    frame(true); asmDetails(); redraw(); });
+}
+
+function updateLegend(p) {
+  const v = (x) => x === null || x === undefined ? "" : ` ${fmt(x, 1)} mm³`;
+  $("legend").innerHTML = state.mode === "diff"
+    ? `<span><i style="background:var(--plus)"></i>added${v(p.addedVolume)}</span>` +
+      `<span><i style="background:var(--minus)"></i>removed${v(p.removedVolume)}</span>`
+    : state.mode === "overlay"
+    ? `<span><i style="background:var(--before)"></i>before (${short(DATA.a)})</span>` +
+      `<span><i style="background:var(--after)"></i>after (${short(DATA.b)})</span>`
+    : `<span>${state.mode === "before" ? "before" : state.mode === "after" ? "after" : "before | after"}</span>`;
+}
+
+function details(p) {
+  const A = p.before, B = p.after;
+  const row = (label, a, b, d, u) => `<tr><th>${label}</th><td class="num">${a}</td><td class="num">${b}</td><td class="num">${d}</td><td>${u}</td></tr>`;
+  let h = `<strong>${p.name}</strong> <span class="badge ${p.status}">${p.status}</span>`;
+  if (p.note) h += ` <span class="hint">${p.note}</span>`;
+  h += `<table><tr><th></th><th class="num">before</th><th class="num">after</th><th class="num">Δ</th><th></th></tr>`;
+  h += row("Volume", A ? fmt(A.volume, 1) : "–", B ? fmt(B.volume, 1) : "–", sgn(p.volume_delta, 1), "mm³");
+  const ax = ["X", "Y", "Z"];
+  for (let k = 0; k < 3; k++)
+    h += row(`Size ${ax[k]}`, A ? fmt(A.bbox_max[k] - A.bbox_min[k]) : "–", B ? fmt(B.bbox_max[k] - B.bbox_min[k]) : "–",
+             p.size_delta ? sgn(p.size_delta[k]) : "–", "mm");
+  if (p.addedVolume !== null) {
+    h += row("Added material", "", "", sgn(p.addedVolume, 1), "mm³");
+    h += row("Removed material", "", "", sgn(-p.removedVolume, 1), "mm³");
+  }
+  if (p.shift) h += row("Origin shift", "", "", p.shift.map(x => sgn(x)).join("  "), "mm (x y z)");
+  h += `<tr><th>Triangles</th><td class="num">${A ? A.triangles : "–"}</td><td class="num">${B ? B.triangles : "–"}</td><td></td><td></td></tr></table>`;
+  $("details").innerHTML = h;
+  const src = DATA.source.parts[p.name];
+  if (src) {
+    if (src.fem) { const d = document.createElement("div"); d.className = "fem"; d.textContent = "FEM: " + src.fem; $("details").appendChild(d); }
+    $("details").appendChild(diffBlock(src.path || "source", src.diff));
+  }
+}
+
+function diffBlock(title, text) {
+  const box = document.createElement("details"); box.className = "src";
+  const sum = document.createElement("summary");
+  sum.textContent = text ? `Source diff: ${title}` : `Source: ${title} (no textual change: the cause is elsewhere, e.g. params.py)`;
+  box.appendChild(sum);
+  if (!text) return box;
+  const pre = document.createElement("pre"); pre.className = "diff";
+  for (const line of text.split("\n")) {
+    const span = document.createElement("span");
+    span.className = line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : line.startsWith("@@") ? "hunk" : "";
+    span.textContent = line + "\n"; pre.appendChild(span);
+  }
+  box.appendChild(pre); return box;
+}
+
+function buildSummary() {
+  const S = DATA.source, body = $("summaryBody");
+  body.innerHTML = "";
+  const add = (title, lines) => { if (!lines.length) return;
+    const h = document.createElement("div"); h.className = "hint"; h.textContent = title; body.appendChild(h);
+    const ul = document.createElement("ul");
+    for (const t of lines) { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); }
+    body.appendChild(ul); };
+  add(`${S.log.length} commit(s)`, S.log);
+  add(`${S.files.length} source file(s) changed`, S.files.map(f => `+${f.added} -${f.deleted}  ${f.path}`));
+  if (S.params) body.appendChild(diffBlock("params.py", S.params));
+  if (!body.children.length) body.textContent = "No source changes between these revisions.";
+  $("summary").querySelector("summary").textContent = `Commits and source changes (${S.log.length} commits, ${S.files.length} files)`;
+}
+
+// Thumbnails: each changed part drawn small with the main canvas, before the first selection.
+async function makeThumbs() {
+  if (!gl) return;
+  const saved = { ...state, target: [...state.target] };
+  for (const p of DATA.parts) {
+    if (p.status === "unchanged" || !(p.meshA || p.meshB)) continue;
+    const [a, b, add, rem] = await Promise.all([getMesh(p.meshA), getMesh(p.meshB), getMesh(p.meshAdded), getMesh(p.meshRemoved)]);
+    freeScene();
+    state.meshes = { A: upload(a), B: upload(b), Add: upload(add), Rem: upload(rem) };
+    state.mode = (add || rem) ? "diff" : p.status === "removed" ? "before" : "after";
+    state.axis = -1; state.yaw = -0.9; state.pitch = 0.6; frame(false);
+    draw(120, 90); p.thumb = canvas.toDataURL("image/png");
+  }
+  freeScene();
+  Object.assign(state, saved);
+}
+
+function setMode(m) {
+  state.mode = m;
+  for (const b of document.querySelectorAll("#modes button")) b.classList.toggle("on", b.dataset.mode === m);
+  $("divider").style.display = m === "swipe" ? "block" : "none";
+  $("alpha").disabled = m !== "overlay";
+  const p = DATA.parts.find(x => x.name === state.sel);
+  if (p) updateLegend(p);
+  positionDivider(); redraw();
+}
+function positionDivider() { $("divider").style.left = (state.split * 100) + "%"; }
+
+function buildList() {
+  const show = $("showUnchanged").checked, ul = $("list"); ul.innerHTML = "";
+  const order = { changed: 0, added: 1, removed: 2, error: 3, unchanged: 4 };
+  const sorter = (a, b) => order[a.status] - order[b.status] || a.name.localeCompare(b.name);
+  const heading = (text) => { const li = document.createElement("li"); li.className = "head"; li.textContent = text; ul.appendChild(li); };
+  const add = (kind, p, open) => {
+    const li = document.createElement("li"); li.dataset.key = kind + ":" + p.name; li.tabIndex = 0;
+    li.innerHTML = `<span class="left">${p.thumb ? `<img class="thumb" alt="">` : ""}<span class="name"></span></span><span class="badge ${p.status}">${p.status}</span>`;
+    if (p.thumb) li.querySelector("img").src = p.thumb;
+    li.querySelector(".name").textContent = p.name;
+    li.onclick = () => open(p.name);
+    li.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(p.name); } };
+    ul.appendChild(li);
+  };
+  const parts = DATA.parts.filter(p => show || p.status !== "unchanged").sort(sorter);
+  const asms = DATA.assemblies.filter(p => show || p.status !== "unchanged").sort(sorter);
+  heading("Parts");
+  parts.forEach(p => add("part", p, select));
+  if (!parts.length) ul.insertAdjacentHTML("beforeend", `<li class="hint">No parts differ.</li>`);
+  heading("Assemblies");
+  asms.forEach(p => add("asm", p, selectAsm));
+  if (!asms.length) ul.insertAdjacentHTML("beforeend", `<li class="hint">No assemblies differ.</li>`);
+  markSelected(state.sel);
+}
+
+// ---------- input ----------
+let drag = null;
+canvas.addEventListener("pointerdown", (e) => { canvas.setPointerCapture(e.pointerId);
+  drag = { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button !== 0 }; });
+canvas.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  if (drag.pan) {
+    // Drag the scene with the cursor: move the target along the camera's right and up axes.
+    const k = state.dist * 0.0016, cy = Math.cos(state.yaw), sy = Math.sin(state.yaw);
+    const cp = Math.cos(state.pitch), sp = Math.sin(state.pitch);
+    const right = [-sy, cy, 0], up = [-sp * cy, -sp * sy, cp];
+    for (let i = 0; i < 3; i++) state.target[i] += (-dx * right[i] + dy * up[i]) * k;
+  } else {
+    state.yaw -= dx * 0.008;
+    state.pitch = Math.max(-1.55, Math.min(1.55, state.pitch + dy * 0.008));
+  }
+  redraw(); });
+canvas.addEventListener("pointerup", () => { drag = null; });
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+canvas.addEventListener("wheel", (e) => { e.preventDefault();
+  state.dist = Math.max(state.radius * 0.3, Math.min(state.radius * 12, state.dist * Math.exp(e.deltaY * 0.001))); redraw(); },
+  { passive: false });
+canvas.addEventListener("dblclick", () => { if (state.meshes || state.asm) { const f = state.focus; state.focus = null; frame(); state.focus = f; redraw(); } });
+
+const divider = $("divider");
+divider.addEventListener("pointerdown", (e) => { divider.setPointerCapture(e.pointerId); divider.dragging = true; });
+divider.addEventListener("pointermove", (e) => { if (!divider.dragging) return;
+  const r = $("stage").getBoundingClientRect();
+  state.split = Math.max(0.02, Math.min(0.98, (e.clientX - r.left) / r.width)); positionDivider(); redraw(); });
+divider.addEventListener("pointerup", () => { divider.dragging = false; });
+
+$("modes").onclick = (e) => { if (e.target.dataset.mode && !e.target.disabled) {
+  state.userMode = true; setMode(e.target.dataset.mode); } };
+$("zoomChange").onclick = () => { if (state.meshes || state.asm) { frame(true); redraw(); } };
+$("section").onclick = (e) => {
+  const a = e.target.dataset.axis; if (a === undefined) return;
+  state.axis = a === "off" ? -1 : +a;
+  for (const b of document.querySelectorAll("#section button")) b.classList.toggle("on", b.dataset.axis === a);
+  for (const id of ["cutLabel", "cutFlip"]) $(id).style.display = state.axis >= 0 ? "" : "none";
+  redraw(); };
+$("cutPos").oninput = (e) => { state.cut = e.target.value / 1000; redraw(); };
+$("cutFlip").onclick = () => { state.flip = !state.flip; redraw(); };
+$("views").onclick = (e) => { const v = VIEWS[e.target.dataset.view];
+  if (v) { [state.yaw, state.pitch] = v; redraw(); } };
+$("alpha").oninput = (e) => { if (state.asm) state.ctxAlpha = e.target.value / 100; else state.alpha = e.target.value / 100; redraw(); };
+$("showUnchanged").onchange = buildList;
+$("showHw").onchange = (e) => { state.showHw = e.target.checked; redraw(); };
+window.addEventListener("resize", redraw);
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", redraw);
+
+// ---------- start ----------
+$("revA").textContent = short(DATA.a); $("revB").textContent = short(DATA.b);
+const counts = {}; for (const p of DATA.parts) counts[p.status] = (counts[p.status] || 0) + 1;
+const acounts = {}; for (const p of DATA.assemblies) acounts[p.status] = (acounts[p.status] || 0) + 1;
+const chip = (o, what) => Object.entries(o).map(([s, n]) => `<span class="${s}">${n} ${what} ${s}</span>`).join("");
+$("counts").innerHTML = chip(counts, "part") + chip(acounts, "assembly");
+if (!gl) $("empty").style.display = "flex", $("empty").textContent = "WebGL2 is not available in this browser.";
+buildSummary();
+(async () => {
+await makeThumbs();
+buildList();
+const firstPart = DATA.parts.find(p => p.status !== "unchanged");
+const firstAsm = DATA.assemblies.find(p => p.status !== "unchanged");
+if (firstPart) select(firstPart.name);
+else if (firstAsm) selectAsm(firstAsm.name);
+else details({ name: "No changes", status: "unchanged", note: "", before: null, after: null });
+})();
+</script>
+</body>
+</html>

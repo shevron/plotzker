@@ -391,6 +391,21 @@ the printed carriage, motor mount and idler mount are the test pieces.
   loads and limits listed in plan §12 await the user's review); **F2 runner and verdicts ✅** (`python -m plotter_cad fem NAMES`; cantilever benchmark within 1.2 %; first verdicts in `fem/verdicts.toml`, plan §13; speed and stability round in §14: mesh-independent regions, one mesh unless near a limit, scaled proportional cases, threads, graded mesh); **F3 visualization ✅** (`--viz`: utilization, displacement and hot-spot pictures plus a `.vtu` per load case, plan §15); **F4 agent definition and process edits ✅** (`.claude/agents/fem-analyst.md`, `docs/fem.md`, README §7.8, CLAUDE.md; dry run accepted, plan §16); F5 later (two slices done, plan §17 and §19: `fem-status`, bearing load, all structural parts defined and checked; still open: remaining parts, assemblies,
   calibration). *Done when:* a dry run on a real part gives a report the user accepts.
 
+- [x] **T3.20 Design diff tool.** `python -m plotter_cad diff [REV_A [REV_B]]` (`make diff`)
+  compares the printable parts of two git revisions or the working tree (default `HEAD` →
+  working tree) and, in the end, shows the changes visually in a static HTML report. Phases:
+  **1 snapshot + part comparison ✅** (each revision built in a temporary `git worktree`,
+  cached by commit in `build/diff/`; parts added/removed/changed with volume, size and origin
+  deltas; `--json`, `--all`; `src/plotter_cad/diff/`, `tests/test_diff.py`); **2 HTML report ✅** (one self-contained
+  `index.html`, plain WebGL2 viewer with no libraries: ghost overlay, swipe, before/after, views, opacity; `diff/report.py`, `diff/viewer/viewer.html`; `--open`, `--no-html`); **3 added/removed material ✅** (manifold3d booleans `B−A` green / `A−B` red, slivers < 0.01 mm³
+  dropped; section plane with cap colour; zoom to change; `diff/boolean.py`; swipe was in phase 2); **4 assembly diff ✅** (instances matched by geometry, so it works on old revisions without
+  names: unchanged, moved, modified, added, removed; labelled by the printable part of the same
+  volume; `diff/assembly.py`; viewer lists them and isolates one; sub-assembly roll-up and named
+  instances remain open: assemblies are flat lists of solids today); **5 polish ✅** (per-part source diff, `params.py` diff,
+  commit and changed-file list, FEM verdict hints from `fem/verdicts.toml`, thumbnails, `--serve`;
+  `diff/source.py`). *Done when:* a change to a part and to an
+  assembly can be seen in the browser as an overlay with the change highlighted.
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.

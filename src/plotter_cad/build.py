@@ -11,6 +11,7 @@ Usage (from the repository root, with the package installed or ``src`` on the pa
     python -m plotter_cad part NAME [--json]  # a part's print/FEM properties (--json: sub-agent)
     python -m plotter_cad fem-status       # FEM state of every part, stale verdicts flagged
     python -m plotter_cad fem NAME...      # FEM check of parts → fem/results/, fem/verdicts.toml
+    python -m plotter_cad diff [A [B]]     # parts changed between git revisions
     python -m plotter_cad layout           # baseboard drilling layout → docs/
     python -m plotter_cad freecad          # machine components for the FreeCAD assembly → freecad/
     python -m plotter_cad all              # check, stl, render, layout
@@ -38,6 +39,7 @@ STL_DIR = REPO_ROOT / "stl"
 RENDER_DIR = REPO_ROOT / "renders"
 DOCS_DIR = REPO_ROOT / "docs"
 FEM_DIR = REPO_ROOT / "fem"
+BUILD_DIR = REPO_ROOT / "build"
 
 #: Image size and camera options passed to PythonSCAD for every render.
 RENDER_OPTIONS = (
@@ -208,6 +210,59 @@ def _run_fem(names: Iterable[str], out: Path, args: argparse.Namespace) -> int:
     return 0 if all(r.status.value in ("PASS", "MARGINAL") for r in results) else 1
 
 
+def _diff(args: argparse.Namespace) -> int:
+    """Compare the printable parts of two revisions; the exit code is 0 either way."""
+    from plotter_cad.diff.assembly import compare_assemblies, format_assemblies
+    from plotter_cad.diff.compare import compare_snapshots, format_report, to_json
+    from plotter_cad.diff.report import write_report
+    from plotter_cad.diff.snapshot import take_snapshot
+    from plotter_cad.diff.source import collect, format_source
+
+    a = take_snapshot(REPO_ROOT, args.rev_a, args.out / "snapshots")
+    b = take_snapshot(REPO_ROOT, args.rev_b, args.out / "snapshots")
+    changes = compare_snapshots(a, b)
+    volumes = {c.name: (c.after or c.before).volume for c in changes if c.after or c.before}  # type: ignore[union-attr]
+    assemblies = compare_assemblies(a, b, volumes)
+    changed = [c.name for c in changes if c.status.value not in ("unchanged", "error")]
+    info = collect(REPO_ROOT, a, b, changed)
+    if args.json:
+        print(to_json(a, b, changes, assemblies))
+    else:
+        print(format_report(a, b, changes, args.all))
+        print()
+        print(format_assemblies(assemblies, args.all))
+        if text := format_source(info):
+            print()
+            print(text)
+    if not args.no_html:
+        report = write_report(a, b, changes, args.out / "reports", assemblies, info)
+        print(f"\nreport: {report}", file=sys.stderr if args.json else sys.stdout)
+        if args.serve:
+            _serve(report.parent, args.port)
+        elif args.open:
+            import webbrowser
+
+            webbrowser.open(report.as_uri())
+    return 0
+
+
+def _serve(folder: Path, port: int) -> None:
+    """Serve a report folder on localhost until interrupted, and open it in the browser."""
+    import functools
+    import http.server
+    import webbrowser
+
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(folder))
+    with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as server:
+        url = f"http://127.0.0.1:{server.server_address[1]}/"
+        print(f"serving {folder.name} at {url} (Ctrl-C to stop)")
+        webbrowser.open(url)
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print()
+
+
 def _show_part(name: str | None, list_all: bool, as_json: bool, stl: Path | None) -> None:
     """Print the ``part`` command's output."""
     from plotter_cad import part_report
@@ -266,6 +321,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     status.add_argument(
         "--no-geometry", action="store_true", help="skip the geometry hash (spec changes only)"
     )
+    diff = sub.add_parser("diff", help="parts added/removed/changed between two git revisions")
+    diff.add_argument("rev_a", nargs="?", default="HEAD", help="base revision (default HEAD)")
+    diff.add_argument(
+        "rev_b", nargs="?", default="WORKTREE", help="revision to compare (default: working tree)"
+    )
+    diff.add_argument("--all", action="store_true", help="also list unchanged parts")
+    diff.add_argument("--json", action="store_true", help="print the comparison as JSON")
+    diff.add_argument("--open", action="store_true", help="open the HTML report in the browser")
+    diff.add_argument("--serve", action="store_true", help="serve the report on localhost")
+    diff.add_argument("--port", type=int, default=8765, help="port for --serve (default 8765)")
+    diff.add_argument("--no-html", action="store_true", help="skip the HTML report")
+    diff.add_argument("--out", type=Path, default=BUILD_DIR / "diff")
     sub.add_parser("freecad", help="export the machine components for the FreeCAD assembly")
     layout = sub.add_parser("layout", help="write the baseboard drilling layout (SVG + table)")
     layout.add_argument("--out", type=Path, default=DOCS_DIR)
@@ -290,6 +357,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             from plotter_cad.freecad_export import export_freecad
 
             export_freecad()
+        elif args.command == "diff":
+            return _diff(args)
         elif args.command == "layout":
             export_layout(args.out)
         else:

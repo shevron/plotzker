@@ -1,10 +1,10 @@
 # Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad fem fem-status
+.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad fem fem-status diff
 
 PYTHON_VERSION := $(shell cat .python-version)
-UV_RUN := uv run --extra dev
+UV_RUN := uv run --extra dev --extra diff
 
 help:  ## List the available commands
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-9s %s\n", $$1, $$2}'
@@ -12,7 +12,7 @@ help:  ## List the available commands
 develop:  ## Set up the development environment (.venv on pyenv's Python, all dependencies)
 	pyenv install --skip-existing $(PYTHON_VERSION)
 	test -d .venv || uv venv --python "$$(pyenv which python)"
-	uv sync --extra dev
+	uv sync --extra dev --extra diff
 
 clean:  ## Remove all generated files (STLs, renders, FreeCAD assembly, caches, build output); keeps .venv
 	rm -rf stl renders fem/results freecad/stl freecad/components.json freecad/*.FCStd freecad/*.FCBak build dist .pytest_cache .ruff_cache .mypy_cache
@@ -54,3 +54,6 @@ fem:  ## FEM check of parts into fem/results/ (needs FreeCAD's gmsh and CalculiX
 
 fem-status:  ## FEM state of every printable part; flags verdicts that are stale (spec or geometry changed)
 	$(UV_RUN) python -m plotter_cad fem-status
+
+diff:  ## Parts changed between revisions: REV_A=HEAD REV_B=WORKTREE (defaults); add ARGS=--all
+	$(UV_RUN) python -m plotter_cad diff $(REV_A) $(REV_B) $(ARGS)

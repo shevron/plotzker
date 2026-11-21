@@ -13,3 +13,4 @@ freecad/stl/
 freecad/components.json
 freecad/*.FCStd
 freecad/*.FCBak
+build/

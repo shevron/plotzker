@@ -11,6 +11,7 @@ requires-python = ">=3.14"
 dependencies = ["pythonscad>=1.1"]
 
 [project.optional-dependencies]
+diff = ["numpy>=2", "manifold3d>=3.0"]
 dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
@@ -50,3 +51,7 @@ ignore_missing_imports = true
 
 [tool.uv]
 python-preference = "only-system"  # use the pyenv interpreter (.python-version), no uv-managed download
+
+[[tool.mypy.overrides]]
+module = "manifold3d"  # no type stubs
+ignore_missing_imports = true

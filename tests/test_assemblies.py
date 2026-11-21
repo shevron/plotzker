@@ -356,14 +356,15 @@ def test_x_idler_axle_bolt_and_nut_clear_the_tower_walls(shift):
 @pytest.mark.parametrize("side", [Side.LEFT, Side.RIGHT])
 @pytest.mark.parametrize("shift", [-1, 0, 1])
 def test_y_idler_slider_rides_free_over_its_whole_travel(side, shift):
-    """T3.17: along the whole tension travel the slider neither touches its mount (a sliding
-    fit) nor reaches into the endstop's plug space or the front SK10."""
+    """T3.23: along the whole tension travel the floating slider neither touches its mount (the
+    tower's plate and walls, a loose fit) nor reaches into the endstop's plug space or the front
+    SK10."""
     from plotter_cad.geometry import frame_axes, get_handle
     from plotter_cad.hardware import endstop_keepout, place_in_frame
-    from plotter_cad.params import Y_TENSIONER
+    from plotter_cad.params import Y_IDLER
     from plotter_cad.parts.y_idler_slider import y_idler_slider_installed
 
-    moved = y_idler_slider_installed().translate([0, shift * Y_TENSIONER.travel / 2, 0])
+    moved = y_idler_slider_installed().translate([0, shift * Y_IDLER.travel / 2, 0])
     assert not touching(moved, y_idler_mount_installed(side))
     keepout = place_in_frame(
         endstop_keepout(),
@@ -371,3 +372,27 @@ def test_y_idler_slider_rides_free_over_its_whole_travel(side, shift):
     )
     assert volume(moved & keepout) < 1e-3
     assert volume(moved & sk10().translate([0, Y_AXIS.sk10_y[0], 0])) < 1e-3
+
+
+@pytest.mark.parametrize("side", [Side.LEFT, Side.RIGHT])
+@pytest.mark.parametrize("shift", [-1, 0, 1])
+def test_y_idler_axle_bolt_and_nut_clear_the_tower_walls(side, shift):
+    """T3.23: the axle bolt's head, its tip and the nut stick out of the slider's arms; over the
+    whole travel they touch nothing of the mount."""
+    from plotter_cad.geometry import get_handle, shift_handle
+    from plotter_cad.hardware import hex_nut, metric, shcs
+    from plotter_cad.params import Y_DRIVE, Y_IDLER
+
+    t = Y_IDLER
+    dy = shift * t.travel / 2
+    mount = y_idler_mount_installed(side)
+    axle = shift_handle(get_handle(mount, "axle"), [0, dy, 0])
+    nut = (
+        hex_nut(t.axle_m)
+        .rotate([0, -90, 0])
+        .translate(
+            [Y_AXIS.belt_x - t.width / 2 + metric(t.axle_m).nut_h, Y_DRIVE.idler_y + dy, t.axle_z]
+        )
+    )
+    for part in (shcs(t.axle_m, t.axle_len).align(axle), nut):
+        assert volume(part & mount) < 1e-3

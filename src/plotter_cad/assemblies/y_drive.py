@@ -25,7 +25,7 @@ from plotter_cad.hardware import (
     sk10,
     y_shaft,
 )
-from plotter_cad.params import BRACKET, FRAME, TOL, Y_AXIS, Y_DRIVE, Y_TENSIONER
+from plotter_cad.params import BRACKET, FRAME, TOL, Y_AXIS, Y_DRIVE, Y_IDLER
 from plotter_cad.parts.y_idler_mount import y_idler_mount_installed
 from plotter_cad.parts.y_idler_slider import y_idler_slider_installed
 from plotter_cad.parts.y_motor_mount import y_motor_mount_installed
@@ -33,8 +33,6 @@ from plotter_cad.types import Matrix, Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid
-
-_AXLE_LEN = 25  #: M5 idler axle
 
 
 def _at_x(mat: Matrix, x: float) -> Matrix:
@@ -46,13 +44,13 @@ def y_idler_end_local(side: Side = Side.LEFT) -> list[Solid]:
     """Idler end of the left side: idler mount, slider, idler, axle, tension screw."""
     mount = y_idler_mount_installed(side)
     axle = get_handle(mount, "axle")
-    t = Y_TENSIONER
-    slider_rear_y = Y_DRIVE.idler_y - t.axle_x
+    t = Y_IDLER
+    slider_rear_y = t.slider_s0
     return [
         mount.color("DarkOrange"),
         y_idler_slider_installed().color("Orange"),
         gt2_idler().align(_at_x(axle, Y_AXIS.belt_x)),
-        shcs(t.axle_m, _AXLE_LEN).align(axle),
+        shcs(t.axle_m, t.axle_len).align(axle),
         hex_nut(t.axle_m)
         .rotate([0, -90, 0])
         .translate(

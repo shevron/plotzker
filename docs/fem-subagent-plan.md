@@ -698,3 +698,23 @@ plate's corners would count its rotation twice). A lesson for the mesher: the to
 faces with the shelf left a 0.01 mm sliver unless the tower is sunk 1 mm into the base, and a
 horizontal hole needs a teardrop or round hole with a clean surface (gmsh failed on a slivered
 tower).
+
+## 26. Floating Y idlers (2026-11-21)
+
+The Y idler mounts get the same floating idler (STATUS.md T3.23) since the Y dovetail
+tensioners failed the assembly check (vertical 0.21 / 0.29 mm against 0.2 at preload / peak).
+One generic implementation (`parts/floating_idler.py`: slider, tower, FEM regions and specs) serves
+both ends; `params.FloatingIdler` holds the dimensions, `X_IDLER` and `Y_IDLER` place it.
+
+**Result (preload / peak):**
+
+| Part | Strength (limit 1) | Tower seat (mm: along / across / vertical) | Verdict |
+|---|---|---|---|
+| Y idler mount (left = right) | 0.45 / 0.40 | 0.06 / 0.01 / 0.02 | PASS |
+| Y idler slider | 0.50 / 0.44 | axle 0.04 / 0.01 / 0.02 | MARGINAL |
+| Y assemblies (left, right) | | vertical total 0.03 mm of 0.2 | PASS |
+| X bracket (11.4 mm plate) | 0.67 / 0.60 | 0.09 / 0.02 / 0.08 (0.147 at peak) | FAIL (own vertical limit at peak) |
+
+The Y mount's tower stands on the foot, which is screwed to the baseboard right beside it, so the
+load path is short and stiff (the X tower hangs 20 mm off the bracket's edge). The tower plate of
+both is 11.4 mm: the screw's length quantizes to M3×25 up to that thickness and to M3×30 above it.

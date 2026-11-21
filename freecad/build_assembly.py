@@ -215,7 +215,7 @@ def main():
     # Revolute joints: (moving part, host part, axis).
     for side in "LR":
         make_joint(
-            "Revolute", parts[f"y_idler_mount_{side}"], parts[f"y_idler_{side}"],
+            "Revolute", parts[f"y_idler_slider_{side}"], parts[f"y_idler_{side}"],
             frame(AXES[f"y_idler_{side}"]), f"Y idler {side} turns",
         )  # fmt: skip
         make_joint(

@@ -3,8 +3,8 @@
 [gantry_end_bracket_left]
 verdict = "FAIL"
 date = "2026-11-21"
-geometry = "5fc65b12975cdcc1"
-spec = "3271d2d9a602222e"
+geometry = "714a062a6993a332"
+spec = "ea8cc51f3534028d"
 
 [gantry_end_bracket_right]
 verdict = "PASS"
@@ -33,13 +33,13 @@ spec = "b8c4a6a801ca6919"
 [x_idler_slider]
 verdict = "MARGINAL"
 date = "2026-11-21"
-geometry = "98e41b9deaaf3e59"
-spec = "5964e30b35eb1218"
+geometry = "8825815394e906fc"
+spec = "c35cb1622e0a438a"
 
 [x_idler_tensioner]
 verdict = "MARGINAL"
 date = "2026-11-21"
-spec = "df03f2f6a94922b9"
+spec = "955600ccf7a634b0"
 
 [x_motor_mount]
 verdict = "FAIL"
@@ -48,32 +48,32 @@ geometry = "64e42f3713936bcd"
 spec = "a4108eede4c1c67a"
 
 [y_idler_mount_left]
-verdict = "FAIL"
+verdict = "PASS"
 date = "2026-11-21"
-geometry = "275a152a1c588942"
-spec = "b5881157cae322ee"
+geometry = "5322bd1f01408033"
+spec = "785f5fee747f2666"
 
 [y_idler_mount_right]
-verdict = "FAIL"
+verdict = "PASS"
 date = "2026-11-21"
-geometry = "d876f39e44d2db01"
-spec = "c2ab256a1a90168d"
+geometry = "02c21901ca557b3d"
+spec = "2c8717f70652aa81"
 
 [y_idler_slider_left]
-verdict = "FAIL"
+verdict = "MARGINAL"
 date = "2026-11-21"
-geometry = "4c4fcf2715a8b144"
-spec = "1ce25ad073038558"
+geometry = "e7bc41f39ab419e2"
+spec = "c4829e87da33e7b4"
 
 [y_idler_tensioner_left]
-verdict = "FAIL"
+verdict = "PASS"
 date = "2026-11-21"
-spec = "a5e545b87fd13d4e"
+spec = "ba515d7903bc44e4"
 
 [y_idler_tensioner_right]
-verdict = "FAIL"
+verdict = "PASS"
 date = "2026-11-21"
-spec = "4c2cc0bce77c1004"
+spec = "44a91443412e5931"
 
 [y_motor_mount_left]
 verdict = "FAIL"

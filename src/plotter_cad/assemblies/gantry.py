@@ -70,7 +70,7 @@ def x_drive_local(side: Side) -> list[Solid]:
     slider = x_idler_slider_installed()
     axle = get_handle(slider, "axle")
     t = X_IDLER
-    screw_seat = handle([t.tower_x0, X_BELT.y, t.screw_z], [0, -90, 0])  # head on the tower's face
+    screw_seat = handle([t.tower_s0, X_BELT.y, t.screw_z], [0, -90, 0])  # head on the tower's face
     return [
         mount.color("DarkOrange"),
         slider.color("Orange"),
@@ -84,7 +84,7 @@ def x_drive_local(side: Side) -> list[Solid]:
         hex_nut(t.screw_m)
         .rotate([0, 0, 90])
         .rotate([0, 90, 0])
-        .translate([t.slider_x0 + TOL.nut_wall, X_BELT.y, t.screw_z]),
+        .translate([t.slider_s0 + TOL.nut_wall, X_BELT.y, t.screw_z]),
         endstop_placed(*frame_axes(get_handle(mount, "board"))),
     ]
 

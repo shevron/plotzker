@@ -10,7 +10,7 @@ Limits are the sum of the members' own limits (nothing new is decided): both par
 their budget at most, and play is an extra that must fit in it.
 """
 
-from plotter_cad.params import Y_TENSIONER, TensionIdler
+from plotter_cad.params import TensionIdler
 from plotter_cad.part import Assembly, AssemblyLimit, AssemblyTerm
 from plotter_cad.parts.tension_idler import dovetail_play
 
@@ -83,19 +83,17 @@ ASSEMBLY_CHECKS: dict[str, Assembly] = {
         ),
         tensioner_assembly(
             "y_idler_tensioner_left",
-            "Y idler, left: mount with its slider",
+            "Y idler, left: the mount's tower with the floating slider",
             "y_idler_mount_left",
             "y_idler_slider_left",
-            "idler_seat",
-            Y_TENSIONER,
+            "tower_seat",
         ),
         tensioner_assembly(
             "y_idler_tensioner_right",
-            "Y idler, right: mount with its slider (the left slider's mirror image)",
+            "Y idler, right: the mount's tower with the floating slider (mirrored slider)",
             "y_idler_mount_right",
             "y_idler_slider_right",
-            "idler_seat",
-            Y_TENSIONER,
+            "tower_seat",
         ),
     )
 }

@@ -409,8 +409,7 @@ the printed carriage, motor mount and idler mount are the test pieces.
   allowed a 2.7° rigid tilt. The part checks could not see it (rigid dovetail, no stiffness for
   play, deflections never added). **Done:** the `Assembly` check (plan §24, `docs/fem.md`): it
   failed the X tensioner (vertical 0.55 mm vs 0.2, along belt 1.25 vs 0.6) and the Y tensioners
-  (vertical 0.24-0.32 vs 0.2). **X fixed by T3.22 (below).** **Open:** the Y tensioners (same
-  dovetail design; vertical 0.21 / 0.29 mm at preload / peak vs 0.2): same fix or a tighter fit.
+  (vertical 0.24-0.32 vs 0.2). **X fixed by T3.22, Y by T3.23 (below).**
 - [ ] **T3.22 Floating X idler on a tower in the left bracket.** A screw at the axle's height,
   along the belt line, holds a rail-less slider: no couple, no dovetail, no play. The M3 screw's
   head is on the tower's outer face (hex key from outside, M3 DIN 9021 washer under it); a
@@ -429,6 +428,20 @@ the printed carriage, motor mount and idler mount are the test pieces.
   round 3.4 mm hole in the plate prints lying on its side); decide the Y tensioners' fix.
   - [ ] Follow-up: X idler position (`X_DRIVE.idler_x`, now −21): moving it inboard shortens the
     overhang by the same amount, at the cost of X travel (16 mm spare).
+
+- [x] **T3.23 Floating Y idlers.** The same floating idler as the X one (T3.22) on both Y idler
+  mounts: no rail, the M3 screw along the belt line at the axle's height through a tower at the
+  front of the mount's foot (plate 11.4 mm, two 8 mm walls, `Y_IDLER`); the slider is the same
+  part as the X one (`parts/floating_idler.py` builds both: `params.FloatingIdler`, `X_IDLER`,
+  `Y_IDLER`), head on the inboard arm, printed on its side. The tower's walls stand on a pad on
+  the foot, the foot's wood screws moved outboard of the walls (bosses beyond the outboard wall),
+  and the foot reaches 19 mm further to the front (tower's outer face at machine y 14). The
+  dovetail (`Y_TENSIONER`) is gone from the machine; `tension_idler.py` stays as the generic
+  prototype. Both screws are M3×25 with a large M3 washer (the X tower plate was cut from 12 to
+  11.4 mm for it; the M3×30 it needed before made the slider's wall 4 mm thicker). **FEM:** mount
+  PASS (strength 0.45 / 0.40; tower seat 0.06 / 0.01 / 0.02 mm), slider MARGINAL (0.50 / 0.44),
+  Y assemblies PASS; X (11.4 mm plate): bracket tower seat vertical 0.082 / 0.147 mm (peak over its
+  own 0.1), X assembly MARGINAL. **Open:** print and test both ends.
 
 - [x] **T3.20 Design diff tool.** `python -m plotter_cad diff [REV_A [REV_B]]` (`make diff`)
   compares the printable parts of two git revisions or the working tree (default `HEAD` →

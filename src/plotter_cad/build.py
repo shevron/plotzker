@@ -16,20 +16,25 @@ Usage (from the repository root, with the package installed or ``src`` on the pa
     python -m plotter_cad freecad          # machine components for the FreeCAD assembly → freecad/
     python -m plotter_cad all              # check, stl, render, layout
 
+The CLI is a Typer app (the project standard for command-line tools).
+
 STL export uses the ``pythonscad`` Python module. PNG rendering needs the PythonSCAD
 application (``pythonscad`` on the PATH, or ``--pythonscad PATH`` / ``$PYTHONSCAD``):
 the pip module has no image export.
 """
 
-import argparse
+import functools
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import textwrap
-from collections.abc import Collection, Iterable, Sequence
+from collections.abc import Callable, Collection, Iterable
+from enum import StrEnum
 from pathlib import Path
+from typing import Annotated
+
+import typer
 
 from plotter_cad import params
 
@@ -68,9 +73,9 @@ def check() -> None:
     from plotter_cad.assemblies.skeleton import clearance_report
 
     params.check_design()
-    print(params.report())
-    print(clearance_report())
-    print("Design checks passed.")
+    typer.echo(params.report())
+    typer.echo(clearance_report())
+    typer.secho("Design checks passed.", fg=typer.colors.GREEN)
 
 
 def export_stls(names: Iterable[str] | None = None, out_dir: Path = STL_DIR) -> list[Path]:
@@ -85,7 +90,9 @@ def export_stls(names: Iterable[str] | None = None, out_dir: Path = STL_DIR) -> 
     for name in _select(names, PRINTABLE_PARTS):
         path = out_dir / f"{name}.stl"
         export(PRINTABLE_PARTS[name](), str(path))
-        print(f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}")
+        typer.echo(
+            f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}"
+        )
         written.append(path)
     return written
 
@@ -97,7 +104,9 @@ def export_layout(out_dir: Path = DOCS_DIR) -> list[Path]:
     params.check_design()
     written = write_layout(out_dir)
     for path in written:
-        print(f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}")
+        typer.echo(
+            f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}"
+        )
     return written
 
 
@@ -173,7 +182,7 @@ def render_pngs(
                         f"Render of {name} {view} failed:\n{result.stdout}\n{result.stderr}"
                     )
                 shown = path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path
-                print(f"wrote {shown}")
+                typer.echo(f"wrote {shown}")
                 written.append(path)
     return written
 
@@ -203,17 +212,34 @@ def _fem_status(check_geometry: bool) -> None:
     print("\n".join(lines + assembly_status_lines(ASSEMBLY_CHECKS, PARTS, verdicts)))
 
 
-def _run_fem(names: Iterable[str], out: Path, args: argparse.Namespace) -> int:
-    """Run the FEM checks; the exit code is 1 if any is not a PASS or MARGINAL."""
+class Refine(StrEnum):
+    """When ``fem`` solves a finer second mesh."""
+
+    AUTO = "auto"
+    ALWAYS = "always"
+    NEVER = "never"
+
+
+def _run_fem(
+    names: Iterable[str],
+    out: Path,
+    size: float | None,
+    refine: Refine,
+    uniform: bool,
+    solver: str,
+    viz: bool,
+    record: bool,
+) -> bool:
+    """Run the FEM checks; True if every one is a PASS or MARGINAL."""
     from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
     from plotter_cad.fem.assembly import run_assemblies
     from plotter_cad.fem.runner import RunOptions, run_checks
     from plotter_cad.parts import PARTS
 
-    options = RunOptions(args.size, args.refine, not args.uniform, args.solver, args.viz)
+    options = RunOptions(size, refine.value, not uniform, solver, viz)
     part_names = [n for n in names if n not in ASSEMBLY_CHECKS]
     verdicts = FEM_DIR / "verdicts.toml"
-    results = run_checks(part_names, out, verdicts, options, record=not args.no_record)
+    results = run_checks(part_names, out, verdicts, options, record=record)
     statuses = [r.status.value for r in results]
     # an assembly is judged from its members' results, so after them
     wanted = [n for n in names if n in ASSEMBLY_CHECKS]
@@ -223,174 +249,234 @@ def _run_fem(names: Iterable[str], out: Path, args: argparse.Namespace) -> int:
         if a.name not in wanted and part_names and set(a.members) <= set(part_names)
     ]
     statuses += [
-        r.status.value
-        for r in run_assemblies(wanted, PARTS, out, verdicts, record=not args.no_record)
+        r.status.value for r in run_assemblies(wanted, PARTS, out, verdicts, record=record)
     ]
-    return 0 if all(s in ("PASS", "MARGINAL") for s in statuses) else 1
-
-
-def _diff(args: argparse.Namespace) -> int:
-    """Compare the printable parts of two revisions; the exit code is 0 either way."""
-    from plotter_cad.diff.assembly import compare_assemblies, format_assemblies
-    from plotter_cad.diff.compare import compare_snapshots, format_report, to_json
-    from plotter_cad.diff.report import write_report
-    from plotter_cad.diff.snapshot import take_snapshot
-    from plotter_cad.diff.source import collect, format_source
-
-    a = take_snapshot(REPO_ROOT, args.rev_a, args.out / "snapshots")
-    b = take_snapshot(REPO_ROOT, args.rev_b, args.out / "snapshots")
-    changes = compare_snapshots(a, b)
-    volumes = {c.name: (c.after or c.before).volume for c in changes if c.after or c.before}  # type: ignore[union-attr]
-    assemblies = compare_assemblies(a, b, volumes)
-    changed = [c.name for c in changes if c.status.value not in ("unchanged", "error")]
-    info = collect(REPO_ROOT, a, b, changed)
-    if args.json:
-        print(to_json(a, b, changes, assemblies))
-    else:
-        print(format_report(a, b, changes, args.all))
-        print()
-        print(format_assemblies(assemblies, args.all))
-        if text := format_source(info):
-            print()
-            print(text)
-    if not args.no_html:
-        report = write_report(a, b, changes, args.out / "reports", assemblies, info)
-        print(f"\nreport: {report}", file=sys.stderr if args.json else sys.stdout)
-        if args.serve:
-            _serve(report.parent, args.port)
-        elif args.open:
-            import webbrowser
-
-            webbrowser.open(report.as_uri())
-    return 0
+    return all(s in ("PASS", "MARGINAL") for s in statuses)
 
 
 def _serve(folder: Path, port: int) -> None:
     """Serve a report folder on localhost until interrupted, and open it in the browser."""
-    import functools
     import http.server
     import webbrowser
 
     handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(folder))
     with http.server.ThreadingHTTPServer(("127.0.0.1", port), handler) as server:
         url = f"http://127.0.0.1:{server.server_address[1]}/"
-        print(f"serving {folder.name} at {url} (Ctrl-C to stop)")
+        typer.echo(f"serving {folder.name} at {url} (Ctrl-C to stop)")
         webbrowser.open(url)
         try:
             server.serve_forever()
         except KeyboardInterrupt:
-            print()
+            typer.echo()
 
 
-def _show_part(name: str | None, list_all: bool, as_json: bool, stl: Path | None) -> None:
-    """Print the ``part`` command's output."""
+app = typer.Typer(
+    name="plotter_cad",
+    help=(__doc__ or "").split("\n\n")[0],
+    no_args_is_help=True,
+    add_completion=False,
+)
+
+OutDir = Annotated[Path, typer.Option(help="Output folder.")]
+PythonscadBinary = Annotated[
+    str | None, typer.Option("--pythonscad", help="Path to the PythonSCAD binary.")
+]
+
+
+def _reports_errors[**P](command: Callable[P, None]) -> Callable[P, None]:
+    """Print a build error (bad design, missing tool, failed step) and exit with code 1."""
+
+    @functools.wraps(command)
+    def run(*args: P.args, **kwargs: P.kwargs) -> None:
+        try:
+            command(*args, **kwargs)
+        except (params.DesignError, FileNotFoundError, RuntimeError, ValueError) as exc:
+            typer.secho(str(exc), fg=typer.colors.RED, err=True)
+            raise typer.Exit(1) from exc
+
+    return run
+
+
+@app.command("check")
+@_reports_errors
+def check_command() -> None:
+    """Run the design checks and print the key numbers."""
+    check()
+
+
+@app.command("stl")
+@_reports_errors
+def stl_command(
+    names: Annotated[list[str] | None, typer.Argument(help="Part names (default: all).")] = None,
+    out: OutDir = STL_DIR,
+) -> None:
+    """Export printable parts to STL."""
+    export_stls(names, out)
+
+
+@app.command("render")
+@_reports_errors
+def render_command(
+    names: Annotated[
+        list[str] | None, typer.Argument(help="Part or assembly names (default: all).")
+    ] = None,
+    out: OutDir = RENDER_DIR,
+    inspect: Annotated[
+        bool,
+        typer.Option(
+            help="Render all views (iso, rear iso, front, rear, left, right, top) "
+            "to renders/inspect/."
+        ),
+    ] = False,
+    pythonscad: PythonscadBinary = None,
+) -> None:
+    """Render parts and assemblies to PNG (needs PythonSCAD)."""
+    render_pngs(names, out, pythonscad, inspect)
+
+
+@app.command("part")
+@_reports_errors
+def part_command(
+    name: Annotated[str | None, typer.Argument(help="Part name.")] = None,
+    list_all: Annotated[bool, typer.Option("--list", help="List all parts.")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print as JSON.")] = False,
+    stl: Annotated[
+        Path | None, typer.Option(help="Write the part (analysis frame) to this STL file.")
+    ] = None,
+) -> None:
+    """Show a part's print profile, material and FEM properties."""
     from plotter_cad import part_report
 
     if stl is not None and name:
         part_report.export_part_stl(name, stl)
     elif list_all or not name:
-        print(part_report.list_parts())
+        typer.echo(part_report.list_parts())
     else:
-        print(part_report.part_json(name) if as_json else part_report.part_text(name))
+        typer.echo(part_report.part_json(name) if as_json else part_report.part_text(name))
 
 
-def main(argv: Sequence[str] | None = None) -> int:
-    """Command-line entry point; returns the process exit code."""
-    parser = argparse.ArgumentParser(
-        prog="python -m plotter_cad", description=__doc__.split("\n\n")[0]
-    )
-    sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("check", help="run the design checks and print the key numbers")
-    stl = sub.add_parser("stl", help="export printable parts to STL")
-    stl.add_argument("names", nargs="*", help="part names (default: all)")
-    stl.add_argument("--out", type=Path, default=STL_DIR)
-    render = sub.add_parser("render", help="render parts and assemblies to PNG (needs PythonSCAD)")
-    render.add_argument("names", nargs="*", help="part/assembly names (default: all)")
-    render.add_argument("--out", type=Path, default=RENDER_DIR)
-    render.add_argument(
-        "--inspect",
-        action="store_true",
-        help="render all views (iso, rear iso, front, rear, left, right, top) to renders/inspect/",
-    )
-    render.add_argument("--pythonscad", help="path to the PythonSCAD binary")
-    part = sub.add_parser("part", help="show a part's print profile, material and FEM properties")
-    part.add_argument("name", nargs="?", help="part name")
-    part.add_argument("--list", action="store_true", help="list all parts")
-    part.add_argument("--json", action="store_true", help="print as JSON")
-    part.add_argument("--stl", type=Path, help="write the part (analysis frame) to this STL file")
-    fem = sub.add_parser("fem", help="FEM check of parts (needs FreeCAD's gmsh and CalculiX)")
-    fem.add_argument(
-        "names",
-        nargs="+",
-        help="part names, or assembly names (judged from the members' recorded results; "
-        "assemblies whose members were all just checked are included)",
-    )
-    fem.add_argument("--size", type=float, help="element size near loads in mm (default by size)")
-    fem.add_argument(
-        "--refine",
-        choices=["auto", "always", "never"],
-        default="auto",
-        help="solve a finer second mesh: only near a limit (auto), always, or never",
-    )
-    fem.add_argument("--uniform", action="store_true", help="same element size everywhere")
-    fem.add_argument("--solver", default="", help="CalculiX solver (default: SPOOLES)")
-    fem.add_argument("--viz", action="store_true", help="also write pictures and .vtu files")
-    fem.add_argument(
-        "--no-record",
-        action="store_true",
-        help="diagnostic run: leave fem/verdicts.toml alone (use --out to keep results apart)",
-    )
-    fem.add_argument("--out", type=Path, default=FEM_DIR / "results")
-    status = sub.add_parser("fem-status", help="FEM state of every part; stale verdicts flagged")
-    status.add_argument(
-        "--no-geometry", action="store_true", help="skip the geometry hash (spec changes only)"
-    )
-    diff = sub.add_parser("diff", help="parts added/removed/changed between two git revisions")
-    diff.add_argument("rev_a", nargs="?", default="HEAD", help="base revision (default HEAD)")
-    diff.add_argument(
-        "rev_b", nargs="?", default="WORKTREE", help="revision to compare (default: working tree)"
-    )
-    diff.add_argument("--all", action="store_true", help="also list unchanged parts")
-    diff.add_argument("--json", action="store_true", help="print the comparison as JSON")
-    diff.add_argument("--open", action="store_true", help="open the HTML report in the browser")
-    diff.add_argument("--serve", action="store_true", help="serve the report on localhost")
-    diff.add_argument("--port", type=int, default=8765, help="port for --serve (default 8765)")
-    diff.add_argument("--no-html", action="store_true", help="skip the HTML report")
-    diff.add_argument("--out", type=Path, default=BUILD_DIR / "diff")
-    sub.add_parser("freecad", help="export the machine components for the FreeCAD assembly")
-    layout = sub.add_parser("layout", help="write the baseboard drilling layout (SVG + table)")
-    layout.add_argument("--out", type=Path, default=DOCS_DIR)
-    everything = sub.add_parser("all", help="check, stl, render and layout")
-    everything.add_argument("--pythonscad", help="path to the PythonSCAD binary")
-    args = parser.parse_args(argv)
+@app.command("fem")
+@_reports_errors
+def fem_command(
+    names: Annotated[
+        list[str],
+        typer.Argument(
+            help="Part names, or assembly names (judged from the members' recorded results; "
+            "assemblies whose members were all just checked are included)."
+        ),
+    ],
+    size: Annotated[
+        float | None, typer.Option(help="Element size near loads in mm (default by size).")
+    ] = None,
+    refine: Annotated[
+        Refine,
+        typer.Option(help="Solve a finer second mesh: only near a limit, always, or never."),
+    ] = Refine.AUTO,
+    uniform: Annotated[bool, typer.Option(help="Same element size everywhere.")] = False,
+    solver: Annotated[str, typer.Option(help="CalculiX solver (default: SPOOLES).")] = "",
+    viz: Annotated[bool, typer.Option(help="Also write pictures and .vtu files.")] = False,
+    no_record: Annotated[
+        bool,
+        typer.Option(
+            "--no-record",
+            help="Diagnostic run: leave fem/verdicts.toml alone (use --out to keep results apart).",
+        ),
+    ] = False,
+    out: OutDir = FEM_DIR / "results",
+) -> None:
+    """FEM check of parts (needs FreeCAD's gmsh and CalculiX); exit code 1 unless all pass."""
+    if not _run_fem(names, out, size, refine, uniform, solver, viz, record=not no_record):
+        raise typer.Exit(1)
 
-    try:
-        if args.command == "check":
-            check()
-        elif args.command == "stl":
-            export_stls(args.names, args.out)
-        elif args.command == "render":
-            render_pngs(args.names, args.out, args.pythonscad, args.inspect)
-        elif args.command == "fem-status":
-            _fem_status(not args.no_geometry)
-        elif args.command == "fem":
-            return _run_fem(args.names, args.out, args)
-        elif args.command == "part":
-            _show_part(args.name, args.list, args.json, args.stl)
-        elif args.command == "freecad":
-            from plotter_cad.freecad_export import export_freecad
 
-            export_freecad()
-        elif args.command == "diff":
-            return _diff(args)
-        elif args.command == "layout":
-            export_layout(args.out)
-        else:
-            check()
-            export_stls()
-            export_layout()
-            render_pngs(binary=args.pythonscad)
-    except (params.DesignError, FileNotFoundError, RuntimeError, ValueError) as exc:
-        print(exc, file=sys.stderr)
-        return 1
-    return 0
+@app.command("fem-status")
+@_reports_errors
+def fem_status_command(
+    no_geometry: Annotated[
+        bool, typer.Option("--no-geometry", help="Skip the geometry hash (spec changes only).")
+    ] = False,
+) -> None:
+    """Show the FEM state of every part; stale verdicts are flagged."""
+    _fem_status(not no_geometry)
+
+
+@app.command("diff")
+@_reports_errors
+def diff_command(
+    rev_a: Annotated[str, typer.Argument(help="Base revision.")] = "HEAD",
+    rev_b: Annotated[str, typer.Argument(help="Revision to compare (default: working tree).")] = (
+        "WORKTREE"
+    ),
+    all_parts: Annotated[bool, typer.Option("--all", help="Also list unchanged parts.")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the comparison as JSON.")] = False,
+    open_report: Annotated[
+        bool, typer.Option("--open", help="Open the HTML report in the browser.")
+    ] = False,
+    serve: Annotated[bool, typer.Option(help="Serve the report on localhost.")] = False,
+    port: Annotated[int, typer.Option(help="Port for --serve.")] = 8765,
+    no_html: Annotated[bool, typer.Option("--no-html", help="Skip the HTML report.")] = False,
+    out: OutDir = BUILD_DIR / "diff",
+) -> None:
+    """Show the parts added, removed or changed between two git revisions."""
+    from plotter_cad.diff.assembly import compare_assemblies, format_assemblies
+    from plotter_cad.diff.compare import compare_snapshots, format_report, to_json
+    from plotter_cad.diff.report import write_report
+    from plotter_cad.diff.snapshot import take_snapshot
+    from plotter_cad.diff.source import collect, format_source
+
+    a = take_snapshot(REPO_ROOT, rev_a, out / "snapshots")
+    b = take_snapshot(REPO_ROOT, rev_b, out / "snapshots")
+    changes = compare_snapshots(a, b)
+    volumes = {c.name: (c.after or c.before).volume for c in changes if c.after or c.before}  # type: ignore[union-attr]
+    assemblies = compare_assemblies(a, b, volumes)
+    changed = [c.name for c in changes if c.status.value not in ("unchanged", "error")]
+    info = collect(REPO_ROOT, a, b, changed)
+    if as_json:
+        typer.echo(to_json(a, b, changes, assemblies))
+    else:
+        typer.echo(format_report(a, b, changes, all_parts))
+        typer.echo()
+        typer.echo(format_assemblies(assemblies, all_parts))
+        if text := format_source(info):
+            typer.echo()
+            typer.echo(text)
+    if not no_html:
+        report = write_report(a, b, changes, out / "reports", assemblies, info)
+        typer.echo(f"\nreport: {report}", err=as_json)
+        if serve:
+            _serve(report.parent, port)
+        elif open_report:
+            import webbrowser
+
+            webbrowser.open(report.as_uri())
+
+
+@app.command("freecad")
+@_reports_errors
+def freecad_command() -> None:
+    """Export the machine components for the FreeCAD assembly."""
+    from plotter_cad.freecad_export import export_freecad
+
+    export_freecad()
+
+
+@app.command("layout")
+@_reports_errors
+def layout_command(out: OutDir = DOCS_DIR) -> None:
+    """Write the baseboard drilling layout (SVG + table)."""
+    export_layout(out)
+
+
+@app.command("all")
+@_reports_errors
+def all_command(pythonscad: PythonscadBinary = None) -> None:
+    """Run check, stl, render and layout."""
+    check()
+    export_stls()
+    export_layout()
+    render_pngs(binary=pythonscad)
+
+
+def main() -> None:
+    """Command-line entry point (``plotter-cad`` and ``python -m plotter_cad``)."""
+    app(prog_name="python -m plotter_cad")

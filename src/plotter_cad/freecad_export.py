@@ -18,6 +18,7 @@ from functools import reduce
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import typer
 from pythonscad import export, translate
 
 from plotter_cad import params
@@ -122,7 +123,7 @@ class Exporter:
                     entry["center"] = list(shapes[name].center)
                     entry["rotation"] = [v for row in rotation for v in row]
                 shared = f" (x{len(members)}: {', '.join(n for n, _ in members)})"
-                print(f"wrote {stl_name}.stl" + (shared if len(members) > 1 else ""))
+                typer.echo(f"wrote {stl_name}.stl" + (shared if len(members) > 1 else ""))
 
 
 #: The 24 proper rotations that map the axes onto themselves (as integer matrices).
@@ -533,5 +534,5 @@ def export_freecad(out_dir: Path = FREECAD_DIR) -> Path:
     }
     path = out_dir / "components.json"
     path.write_text(json.dumps(manifest, indent=1) + "\n")
-    print(f"wrote {path}")
+    typer.echo(f"wrote {path}")
     return path

@@ -629,6 +629,12 @@ with a native Python API). Setup and commands are in §6.
 - Don't give a function the same name as its module inside a package `__init__`
   (`from .x_carriage import x_carriage` shadows the submodule); import modules there.
 - Mark assumed values with an `ASSUMED` comment, design choices with `DESIGN (Tn.m)`.
+- **Command-line tools use [Typer](https://typer.tiangolo.com)** (a project dependency): arguments
+  and options from type-annotated function parameters, output with `typer.echo` / `typer.secho`
+  (errors to stderr with `err=True`, failures as `raise typer.Exit(code)`), not `argparse`, `click`
+  or bare `print` / `sys.exit`. Exception: scripts that run in a limited environment without our
+  dependencies (the FreeCAD Python, code embedded in a PythonSCAD subprocess): there keep to the
+  standard library.
 
 #### Type annotations
 

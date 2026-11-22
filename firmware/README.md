@@ -9,7 +9,7 @@ compiles (flash 18.8 %, RAM 27.6 %). Not yet flashed to the board (T2.7).
 ```bash
 uv tool install platformio                     # once
 git clone --branch 2.1.2.5 https://github.com/MarlinFirmware/Marlin.git ~/Marlin
-firmware/apply_config.py ~/Marlin A4988        # or DRV8825
+uv run firmware/apply_config.py ~/Marlin A4988        # or DRV8825
 cd ~/Marlin && pio run -e mega2560 -t upload   # board on USB, 24 V off
 pio device monitor -b 250000
 ```

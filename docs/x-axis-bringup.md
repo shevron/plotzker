@@ -152,7 +152,7 @@ pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
 ```bash
 uv tool install platformio
 git clone --branch 2.1.2.5 https://github.com/MarlinFirmware/Marlin.git ~/Marlin
-firmware/apply_config.py ~/Marlin A4988      # or DRV8825: the chip in the X socket
+uv run firmware/apply_config.py ~/Marlin A4988      # or DRV8825: the chip in the X socket
 ```
 
 `firmware/apply_config.py` sets everything in [`firmware/README.md`](../firmware/README.md)

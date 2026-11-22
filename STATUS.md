@@ -574,7 +574,7 @@ hard to get, we adjust.
 | Lead screws, linear bearings, misc. bearings | assorted | No LM6UU/LM8UU found yet | Only needed for a stepper Z experiment or the pen slide upgrade |
 | Ø6 rod | 1 | ~200 mm, cuttable; the pen holder's rod needs 63 mm | — |
 | Hobby servos | 2+ | **FeeTech FT90M** (metal gears, digital; used for the pen lift) and FS90 (spare); measured in `docs/hardware.md` | Horn thickness, spline height |
-| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers; **95 × 110 × 22 mm**, 4 × Ø3 holes 80 × 100 mm, out of its case ([`docs/controller.md`](docs/controller.md)) | X, Y, Z drivers: red A4988-type clones (photos); E0 to E2 (white) type and sense resistors still unread; pin map (bench) |
+| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers; **95 × 110 × 22 mm**, 4 × Ø3 holes 80 × 100 mm, out of its case ([`docs/controller.md`](docs/controller.md)) | X, Y, Z drivers: red A4988-type clones (photos); E0 to E2: white boards with M0–M2 pins (DRV8825 clone or LV8729-type, chip unread); red drivers' sense resistors unread; pin map (bench) |
 | Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm** (user) | Mounting holes, terminal side |

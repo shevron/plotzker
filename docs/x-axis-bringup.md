@@ -131,7 +131,10 @@ pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
    about 1.0 A with 0.05 Ω sense resistors, 0.7 A with 0.068 Ω, 0.5 A with 0.1 Ω (A4988:
    I = Vref / (8 × R)), all safe for a NEMA17. With the motor unplugged and the board powered,
    measure between the pot's metal screw and GND and adjust slowly with a ceramic or plastic
-   screwdriver. Raise it only if the motor skips. (For a DRV8825: I = Vref / (5 × 0.1 Ω).)
+   screwdriver. Raise it only if the motor skips, in 0.05 V steps, and **not above 0.6 V** (1.2 A
+   at worst, 0.05 Ω) while the sense resistors are unread. They are probably R1/R2 next to the chip,
+   under the heatsink's edge; the glued heatsink is left in place. (R4 = 103 and R5 = 104 are 10 kΩ
+   and 100 kΩ, not sense resistors.) (For a DRV8825: I = Vref / (5 × 0.1 Ω).)
 4. **Motor.** Plug it into X-MOT with power off. Find the two coil pairs with the
    multimeter if the plug isn't keyed (low resistance within a pair, open between pairs).
 5. **Endstop.** Plug it into the **X−** header. **Check the pin order first:** the board's

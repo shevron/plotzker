@@ -81,7 +81,12 @@ Marlin's `M43` pin-debugging command (`PINS_DEBUGGING`) makes this quick and saf
 1. **Driver chips:** read the markings (A4988 / DRV8825 / other) on all 6 drivers.
    *Found (photos, 2026-11-22):* X, Y and Z are **red A4988-type clones** (pin labels `EN MS1 MS2 MS3
    RST SLP STP DIR`, VR1 pot, heatsink over the chip, so the chip and sense resistors are unread);
-   E0 to E2 are a different (white) type, not yet identified. Move a red driver into E0 for Y2.
+   R4 = 103 (10 kΩ) and R5 = 104 (100 kΩ) are not the sense resistors; those are probably R1/R2 beside the chip,
+   hidden by the glued heatsink (left on): work with Vref 0.4 V, max 0.6 V.
+   E0 to E2 are **white boards with a different pinout** (`EN M2 M1 M0 RST SLP STP DIR`,
+   `VM GND 2B 1B 1A 2A VDD GND`, two sense resistors that look like R100): a DRV8825 clone or an
+   LV8729-type board; the chip is under the heatsink, so unconfirmed. Not interchangeable with the red
+   A4988s: use two red ones for Y and Y2 (move Z's red driver into E0).
    Put two **identical** drivers in the Y and E0 sockets. Set Vref for the motors (A4988
    and DRV8825 use different formulas).
 2. **Microstepping jumpers:** check the jumpers under each driver socket (MS1–MS3);

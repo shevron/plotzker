@@ -152,10 +152,10 @@ pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
 ```bash
 uv tool install platformio
 git clone --branch 2.1.2.5 https://github.com/MarlinFirmware/Marlin.git ~/Marlin
-firmware/apply-config.sh ~/Marlin A4988      # or DRV8825: the chip in the X socket
+firmware/apply_config.py ~/Marlin A4988      # or DRV8825: the chip in the X socket
 ```
 
-`firmware/apply-config.sh` sets everything in [`firmware/README.md`](../firmware/README.md)
+`firmware/apply_config.py` sets everything in [`firmware/README.md`](../firmware/README.md)
 (board `BOARD_ZRIB_V53`, no extruders or temperature sensors, driver type, steps/mm, gentle
 speeds and acceleration, slow homing, 410 × 540 travel, `PINS_DEBUGGING`). It leaves two
 settings for the bench: `X_MIN_ENDSTOP_INVERTING` (from the `M119` test) and `INVERT_X_DIR`

@@ -73,7 +73,7 @@ any new decisions in §3, and update the status line at the top.
   X− endstop to the ZRIB and the 24 V PSU, flash a minimal Marlin, and check that the carriage
   moves, stops at the endstop and homes (`G28 X`). Guide: [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md).
   It covers the X part of T2.1 to T2.3 and T2.5; T2.2's full configuration (dual Y, servo, SD) and
-  `firmware/` follow it. `firmware/apply-config.sh` applies the X-axis settings to Marlin 2.1.2.5
+  `firmware/` follow it. `firmware/apply_config.py` applies the X-axis settings to Marlin 2.1.2.5
   (compiles with `pio run -e mega2560`; not flashed yet). *Done when:* the success criteria at the end of the guide's §5 are met,
   the user's readings (§7 of the guide) are recorded in §4 and `docs/controller.md`, and the
   endstop and direction settings found on the bench are recorded in `firmware/README.md`.

@@ -3,13 +3,13 @@
 Marlin 2.1.x for the ZRIB v5.8 (`BOARD_ZRIB_V53`). We keep a script that applies our settings
 to a stock Marlin checkout instead of a copy of Marlin's files.
 
-**Tested:** tag `2.1.2.5` with `apply-config.sh`, A4988 and DRV8825 variants: `pio run -e mega2560`
+**Tested:** tag `2.1.2.5` with `apply_config.py`, A4988 and DRV8825 variants: `pio run -e mega2560`
 compiles (flash 18.8 %, RAM 27.6 %). Not yet flashed to the board (T2.7).
 
 ```bash
 uv tool install platformio                     # once
 git clone --branch 2.1.2.5 https://github.com/MarlinFirmware/Marlin.git ~/Marlin
-firmware/apply-config.sh ~/Marlin A4988        # or DRV8825
+firmware/apply_config.py ~/Marlin A4988        # or DRV8825
 cd ~/Marlin && pio run -e mega2560 -t upload   # board on USB, 24 V off
 pio device monitor -b 250000
 ```

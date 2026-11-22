@@ -10,7 +10,8 @@ requirements, the high-level design and the coding standards are in
 > holder, full assembly and the 1:1 baseboard drilling layout); STLs in `stl/`, test prints
 > pending. CAD migrated from OpenSCAD to PythonSCAD
 > (T3.9, D22; identical STLs). On trial: SVG 2D sketches for profiles (D23), handles and
-> `align()` (D28). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
+> `align()` (D28). The CAD is split into the `cadder` framework and the `plotzker` plotter
+> (T3.24, D36). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
 > toolchain) deferred until the machine runs.
 >
 > **Next:** Phase 2 starts with **T2.7** (X-axis bench bring-up: print and assemble the gantry
@@ -459,7 +460,7 @@ the printed carriage, motor mount and idler mount are the test pieces.
   working tree) and, in the end, shows the changes visually in a static HTML report. Phases:
   **1 snapshot + part comparison ✅** (each revision built in a temporary `git worktree`,
   cached by commit in `build/diff/`; parts added/removed/changed with volume, size and origin
-  deltas; `--json`, `--all`; `src/plotzker/diff/`, `tests/test_diff.py`); **2 HTML report ✅** (one self-contained
+  deltas; `--json`, `--all`; now `cadder/src/cadder/diff/`, `cadder/tests/test_diff.py`); **2 HTML report ✅** (one self-contained
   `index.html`, plain WebGL2 viewer with no libraries: ghost overlay, swipe, before/after, views, opacity; `diff/report.py`, `diff/viewer/viewer.html`; `--open`, `--no-html`); **3 added/removed material ✅** (manifold3d booleans `B−A` green / `A−B` red, slivers < 0.01 mm³
   dropped; section plane with cap colour; zoom to change; `diff/boolean.py`; swipe was in phase 2); **4 assembly diff ✅** (instances matched by geometry, so it works on old revisions without
   names: unchanged, moved, modified, added, removed; labelled by the printable part of the same
@@ -468,6 +469,23 @@ the printed carriage, motor mount and idler mount are the test pieces.
   commit and changed-file list, FEM verdict hints from `fem/verdicts.toml`, thumbnails, `--serve`;
   `diff/source.py`). *Done when:* a change to a part and to an
   assembly can be seen in the browser as an overlay with the change highlighted.
+
+- [x] **T3.24 Split the CAD into a framework (cadder) and the plotter (plotzker).** The package
+  `plotter_cad` is renamed `plotzker` (like the repo), and everything that isn't the plotter moves
+  to **cadder** (D36), a uv workspace member in `cadder/` that will later get its own repo:
+  part classes (`Part` → `MaterialPart` → `PrintedPart`), `Assembly` / `AssemblyCheck`,
+  handles, geometry helpers, regions, print tolerances and nut slots, the material library
+  loader, the vendor-hardware catalog, 1:1 SVG drawings, FEM, the design diff, renders, the
+  FreeCAD assembly export/build, and the command line. A project is a `cadder.project.Project`
+  (`plotzker.project.PROJECT`, found through `[tool.cadder]`); `python -m plotzker` and
+  `cadder` are the same CLI. The plotter keeps its params, `TOL` values, parts, assemblies,
+  assembly checks, loads, materials data, baseboard layout, FreeCAD assembly definition, the
+  endstop/ZRIB boards and the firmware. One part registry (`PARTS`): the 7 parts without FEM data
+  are plain `Part`s. cadder never imports plotzker (ruff TID251, a test); its tests use a fixture
+  project (`cadder/tests/fixture`). Revert point: git tag `pre-cadder-split`. Verified: STLs,
+  part specs and FEM verdicts unchanged; the FreeCAD file has the same components, placements,
+  joints and GUI state; the drilling layout output is identical; the design diff builds
+  revisions from before the split. **Open:** where cadder's docs and agent live (see D36).
 
 #### Phase 4 — Build
 
@@ -550,6 +568,7 @@ update the log once it is agreed (README §7.1).
 | D34 | **X belt attached at the bottom of the carriage (merged to master after the prototype; revert point: git tag `pre-x-belt-bottom` = the design with the belt at the top, `git checkout pre-x-belt-bottom`):** bridge under the beam, rear block behind it with the lower belt run clamped on its flat top (cap above); motor/idler axis lowered from z 93.8 to **70.7** (motor body 1 mm above the unclamped rear bolt heads: the motor mount clamps only the front bolt row, the idler mount only the rear row, so the endstop plug space is free); belt 3 mm further back (y 26) so the clamp nuts stay under a full roof on the block's 45° ramp; X− endstop board lies directly on the idler mount's foot (no pad part, no ±4 mm pad slots; trigger nut slot from the underside). Gantry height and brackets unchanged. Plastic: motor + idler mounts + pad 57.7 → 31.3 cm³, carriage +1.3 → net **−25 cm³** (−17 %) | 🟡 | T3.3, T3.4 |
 | D29 | **No heat-set inserts: pressed-in hex nuts (nut traps) everywhere.** The nut sits in a slot or hex shaft with a wall behind it that takes the load (`TOL.nut_wall`, 2 mm). Y/X idler tension screws: slot from the top; X endstop pad screws: slots from the rear face; belt clamp screws (brackets): hex shafts from the top, nut 4 mm above the underside (`CLAMP.nut_z`), M3×14; X carriage rear block: slot from the back; tool-plate screws: slots from the bottom edge. Endstop boards (X and Y): M3 through the board and the mount into a nut in a hex pocket on the pad's underside (X, M3×6) or the tower's outboard face (Y, M3×12), not self-tapping into printed pilots; **avoid self-tapping into printed plastic wherever possible** (it wears and is a failure point). Exception: the servo's own screws in the pen holder Dropped the `Preload.SLOT` carriage fallback (eccentric spacers are available) | ✅ | README §7 rule 2 |
 | D35 | **Shelf under the X idler mount (T3.19):** the left bracket's base extends 10 mm outboard (`BRACKET.shelf_x` = −48, over the mount's footprint, y 16…62.5) so the mount's foot and end block rest on the bracket instead of hanging past its edge. Chosen over a thicker end block, gussets or a different print orientation, which barely helped while the overhang governed (plan §21). Costs 4.7 cm³ and 10 mm of bracket width; clearances checked in the assembly (nearest part: Y belt, ~5 mm) | ✅ | T3.19, plan §21 |
+| D36 | **CAD split into `cadder` (generic framework) and `plotzker` (the plotter)** (T3.24). One repo for now; cadder is a uv workspace member (`cadder/`, its own `pyproject.toml`) and moves to its own repo later. cadder never imports a project; it has the whole generic vendor-hardware catalog; firmware stays in plotzker (the Marlin config script edits `#define`s, not CAD). A project registers parts, assemblies, assembly checks, FreeCAD assemblies, design checks and its own commands on a `Project`. Part classes: `Part` (any part), `MaterialPart` (material, optional FEM; plates, purchased parts), `PrintedPart` (print profile, build direction). Candidates to move with cadder later: `docs/fem.md`, `fem-subagent-plan.md`, `diff-tool.md`, `sketch-formats.md`, the generic half of README §7, the `fem-analyst` agent, the generic Makefile targets | ✅ | T3.24, README §5 |
 
 ---
 

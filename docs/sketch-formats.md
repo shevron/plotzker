@@ -10,7 +10,7 @@ constraints* (FreeCAD-Sketcher style) and PythonSCAD extrudes the solved result?
 
 ## What D23 does today
 
-`geometry.load_sketch()` → `osimport(svg)`: filled outlines, y flipped, curves faceted.
+`geometry.load_sketch()` (now `cadder.geometry`) → `osimport(svg)`: filled outlines, y flipped, curves faceted.
 Dimensions live only in a comment; changing one means redrawing. No constraints, no
 named parameters, no link to `params.py`.
 
@@ -75,7 +75,7 @@ repo, but note it if the project is ever published under another license.
   check `uv sync` on your machine).
 - Proposed spike if B: `plotzker/sketch.py` (~150 lines: `Sketch`, `point/line/arc`,
   constraint helpers, `to_pythonscad()`), port `vslot_2020` and compare the area against the
-  SVG-derived areas recorded in `hardware/vslot.py`.
+  SVG-derived areas recorded in `hardware/vslot.py` (now `cadder.hardware.vslot`).
 
 Sources and confidence: PlaneGCS API and SolveSpace record format were read from the
 `planegcs` docs and `file.cpp`; the python-solvespace result and the planegcs build

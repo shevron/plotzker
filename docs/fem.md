@@ -25,23 +25,28 @@ The `structural` flag in a part's `Part` definition is what counts; `fem-status`
 
 ## Defining a part's FEM spec
 
-`python -m plotzker fem-status` (or `make fem-status`) lists every printable part with its
-state: no spec yet, never checked, the last verdict, or **STALE** when the part's properties or its
+`python -m plotzker fem-status` (or `make fem-status`) lists every part with its
+state: no material or FEM data yet, no spec yet, never checked, the last verdict, or **STALE** when the part's properties or its
 geometry changed since that verdict.
 
-A part is a `Part` (`src/plotzker/part.py`) defined at the end of its module and registered
-in `parts/__init__.py` (`PARTS`). `python -m plotzker part NAME [--json]` prints it.
+The FEM runner and the part classes are cadder's (`cadder.fem`, `cadder.part`); the plotter's
+parts, loads and data are plotzker's. A printed part is a `PrintedPart` (`cadder/src/cadder/part.py`)
+defined at the end of its module and registered in `parts/__init__.py` (`PARTS`). `python -m
+plotzker part NAME [--json]` prints it. Any `MaterialPart` (a plate, a purchased part) can be
+checked the same way; a `PrintedPart` adds the print profile and its knockdowns.
 
-- **Frame.** `frame="installed"` (the part's assembly frame, easiest for loads) or `"print"`.
-  `build_direction` is the layer normal pointing up from the bed, in that frame: layers are
-  perpendicular to it. Printed parts are transversely isotropic about it.
+- **Frame.** `frame="installed"` (the part's assembly frame, easiest for loads; the part then
+  gives that geometry as `analysis`) or the default `"output"` frame of its `build` (shown as
+  `"print"` for a printed part). `build_direction` is the layer normal pointing up from the bed,
+  in that frame: layers are perpendicular to it. Printed parts are transversely isotropic about
+  it (`material_axis`).
 - **Units.** mm, N, MPa, degrees, mm/s².
-- **Regions** (`src/plotzker/regions.py`): `Box` and `Cylinder` (axis x, y or z; `inner_radius`
+- **Regions** (`cadder.regions`): `Box` and `Cylinder` (axis x, y or z; `inner_radius`
   makes a ring). Loads and supports act on the **surface** that a region covers; a region may cover
   part of a face (the covered area is sampled, so it doesn't depend on the mesh). `facing` keeps
   only faces whose **outward normal** points that way (within `facing_tol_deg`), so to push on a
   hole wall in +x use `facing=(-1, 0, 0)`. Displacement limits look at the **mesh nodes** inside
-  the region. Keep regions to a real contact area: `tests/test_part.py` checks each one touches
+  the region. Keep regions to a real contact area: `tests/test_part_specs.py` checks each one touches
   the part.
 - **Loads** (`LoadCase`): `Force` (total vector, spread over the covered area; `bearing=True` for
   an axle in a bore: the share of each face falls off with the cosine of its angle to the force), `Moment` (a pure
@@ -61,9 +66,10 @@ in `parts/__init__.py` (`PARTS`). `python -m plotzker part NAME [--json]` prints
 - **Safety factor:** `FemSpec.safety_factor` (default 3), overridable per load case.
 - **Parts that share a design** (the belt tensioner) build their spec from one description
   (`slider_fem`, `mount_fem` in `parts/tension_idler.py`) placed in the part's frame with a
-  `Placement` (`regions.py`); an exact mirror image is a `Part` with `mirror_of` set.
+  `Placement` (`cadder.regions`); an exact mirror image is a part with `mirror_of` set.
 
 Materials are in `src/plotzker/materials.toml`, print profiles in `src/plotzker/profiles/`
+(loaded with `cadder.materials.MaterialLibrary`; `plotzker.materials.DEFAULT_PRINT`)
 (`default.toml` is PETG, 0.6 mm nozzle, 0.3 mm layers, 3 perimeters, 20 % gyroid). The profile's
 stiffness and strength factors (0.6) stand in for infill; a material's `sustained_factor` (0.5) is
 the creep allowance. All of these are assumptions until measured.

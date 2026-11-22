@@ -9,6 +9,9 @@ duplicate their content here.
   standards, comments, testing, firmware).
 - [`STATUS.md`](STATUS.md): the status line, work plan, open questions, detailed decisions,
   inventory, key numbers, as-built design notes and ideas.
+- [`cadder/README.md`](cadder/README.md): the generic CAD framework the plotter is built on
+  (README §5, §7.4: what goes in `cadder` and what in `plotzker`; cadder never imports
+  plotzker). Read it before changing anything under `cadder/`.
 
 ## Starting a session
 

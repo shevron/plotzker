@@ -61,4 +61,6 @@ embedded. It opens from disk, works offline and can be sent as is. It needs a cu
 - FEM notes only compare `fem/verdicts.toml` between the revisions ("re-checked" or "not re-run
   since this change"); `make fem-status` tells whether a verdict is stale.
 
-Code: `src/plotzker/diff/`; tests: `tests/test_diff.py`.
+Code: `cadder/src/cadder/diff/` (cadder); tests: `cadder/tests/test_diff.py`. The project tells it
+where its source, parameter file and verdicts are (`cadder.project.Project`); revisions from before
+the cadder split (tag `pre-cadder-split`) are built through the project's legacy registries.

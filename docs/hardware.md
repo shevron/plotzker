@@ -38,7 +38,7 @@ so bracket thickness + 10 mm screw length works well).
 Source: the SK10 row of a vendor dimension table (supplied by user; the table itself is
 not kept in the repository). Shape: a 42 mm wide base flange with one mounting hole each
 side of an 18 mm wide upright body; the body is slit above the shaft bore and closed by
-the clamping bolt. `Sk10Spec` in `hardware/linear_motion.py`
+the clamping bolt. `Sk10Spec` in `cadder/hardware/linear_motion.py`
 names each field descriptively and gives the vendor symbol in its comment (e.g. `shaft_h` [h],
 `hole_pitch` [B]).
 
@@ -121,7 +121,7 @@ Design rules: mounts are face-mounted, so body length only matters for clearance
 
 | Item | Value |
 |------|-------|
-| Profile | 20 mm series V-slot (**4020 confirmed V-slot by user**); drawn as SVG sketches from a vendor drawing of the 2040: `src/plotzker/hardware/vslot_2020.svg`, `vslot_2040.svg` (D23). T-slot: lip **1.85** thick with a 45° chamfer (opening 9.9 at the face, **6.2** neck), cavity 12 wide, **6.1** deep to a 5.8 flat; bore **Ø4.2**; the 2040 has a closed octagonal cavity between its two cores. Bold = printed on the drawing; the rest scaled from it (±0.1, *assumed*). Section area 161 mm² (2020) / 296 mm² (2040) → ~0.44 / ~0.80 kg/m |
+| Profile | 20 mm series V-slot (**4020 confirmed V-slot by user**); drawn as SVG sketches from a vendor drawing of the 2040: `cadder/src/cadder/hardware/vslot_2020.svg`, `vslot_2040.svg` (D23). T-slot: lip **1.85** thick with a 45° chamfer (opening 9.9 at the face, **6.2** neck), cavity 12 wide, **6.1** deep to a 5.8 flat; bore **Ø4.2**; the 2040 has a closed octagonal cavity between its two cores. Bold = printed on the drawing; the rest scaled from it (±0.1, *assumed*). Section area 161 mm² (2020) / 296 mm² (2040) → ~0.44 / ~0.80 kg/m |
 | V-wheel | **Ø24 × 10 mm** (user), POM on 2 × 625 bearings |
 | Wheel axis to the extrusion face | **9.85** (standard 39.7 mm wheel spacing across 20 mm) *(assumed)* |
 | Plain spacers | 6 mm *(assumed)* |
@@ -134,6 +134,6 @@ Design rules: mounts are face-mounted, so body length only matters for clearance
 | Endstop | **Creality-type board** (from a Creality printer), measured with photos (`hardware/endstop.py`): board 20 wide × 19 long × **1.5 thick**, connector 10 wide × 7.2 long × 5.6 high (normal to the board), 2 mm of it past the rear edge (measured); a plug enters from the rear, so the CAD keeps a 15 mm × (10 + 2 × 2) mm × (5.6 + 2) mm space free behind it (`ENDSTOP.plug_len`, `plug_clearance`). **2 × M3 holes 15 mm apart** across the width at the rear (hole edges 1 mm from the sides, 1.5 mm from the rear edge). Micro switch **across the width at the front edge**: body 13 wide × 6.3 along the board × 5.3 high, protruding 1 mm past the front edge, ~2.5 mm right of center *(assumed)*. Lever: 3.8 wide × 0.3 thick metal strip hinged at the **left** end of the body's front face (board seen from above, connector at the rear), sweeping right: tip **5 mm** past the front edge at rest, **1.5 mm** fully pressed; length ~13.5 mm, hinge ~1.2 mm from the body end *(assumed)*. The trigger pushes it toward the board, along the board's length. Click point not measured (modeled at 75 % of the travel). **Measured with the board resting on its underside (T3.14):** the flat PCB underside is 1.8 mm above the table, i.e. solder joints and pins stick out up to **1.8 mm** (uneven; tallest at the front-left, the switch's NC leg); the lever at rest spans 4.2–8.0 mm above the lowest solder tip, i.e. **2.4–6.2 above the flat PCB underside** (model: 2.25–6.05; it sags a little at the far end from its hinge); M3 head Ø5.34  |
 | Servo: **FeeTech FT90M** (chosen for the pen holder; metal gears, digital) | Body **23.2 × 12.1 × 25.5** (L × W × H; the height includes the round gear boss but not the output spline; **confirmed by the user's measurement**; boss **3.8**, so the body is 21.7), **13.5 g**, 1.9 kg·cm at 4.8 V, horn spline 20T / 3.95 mm (vendor listings). **Measured by the user:** tab span **32.5**, tabs **17** above the bottom of the body (to the underside of the tabs), mounting-hole spacing **28.5**, shaft center **5.9** from the end of the body. tab thickness **1.6**, mounting-hole Ø**1.8**. The servo comes with four horns (cross, two-sided, single-sided, disc); the **single-sided arm** is **17** from the shaft center to the tip, with **4 holes 2.5 apart, the last 1.9 from the tip**. Spline height above the boss and horn thickness not yet measured |
 | Servo: FeeTech FS90 (spare) | Plastic gears, analog, ~23.2 × 12.5 × 22, 9 g; not used |
-| M3 hex nut | measured: 5.4 across flats, 2.25 thick; pressed into printed slots (hex-profile slot, `nut_slot.py`: AF + 0.3 designed, thickness + 0.1; the print comes out ~0.1 narrower and ~0.1 thicker); no heat-set inserts (D29) |
-| Fasteners | ISO 4762 / ISO 4032 / ISO 7089 standard dimensions (`hardware/fasteners.py`) |
+| M3 hex nut | measured: 5.4 across flats, 2.25 thick; pressed into printed slots (hex-profile slot, `cadder.printing.nut_slot`: AF + 0.3 designed, thickness + 0.1; the print comes out ~0.1 narrower and ~0.1 thicker); no heat-set inserts (D29) |
+| Fasteners | ISO 4762 / ISO 4032 / ISO 7089 standard dimensions (`cadder/hardware/fasteners.py`) |
 

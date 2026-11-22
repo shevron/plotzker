@@ -1,5 +1,11 @@
 # Plan: FEM check sub-agent
 
+> **Since T3.24 (D36)** the generic code named below lives in cadder: `part.py`, `regions.py`,
+> `print_profile.py` / `materials.py` (loaders), `geometry.py`, `part_report.py`, `fem/` and the
+> CLI (`build.py`) are now `cadder.part`, `cadder.regions`, `cadder.materials`,
+> `cadder.geometry`, `cadder.report`, `cadder.fem` and `cadder.cli`. `PRINTABLE_PARTS` and
+> `PARTS` are one registry (`plotzker.parts.PARTS`). The plan is kept as written.
+
 **Status:** agreed in review; tracked as T3.18 in [`STATUS.md`](../STATUS.md). Nothing is implemented yet.
 
 Goal: after a part or assembly is designed or significantly changed, an independent

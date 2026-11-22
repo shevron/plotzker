@@ -1,0 +1,29 @@
+# One printed material for the tests (generic PETG datasheet values).
+
+[petg]
+description = "3D-printed PETG (FDM)"
+density_g_cm3 = 1.27
+e_in_plane_mpa = 2000
+e_build_mpa = 1600
+nu_in_plane = 0.38
+nu_build = 0.38
+g_build_mpa = 600
+strength_in_plane_mpa = 40
+strength_build_mpa = 20
+sustained_factor = 0.5
+assumed = true
+source = "Generic PETG datasheet ranges"
+
+[steel]
+description = "Structural steel (isotropic)"
+density_g_cm3 = 7.85
+e_in_plane_mpa = 200000
+e_build_mpa = 200000
+nu_in_plane = 0.3
+nu_build = 0.3
+g_build_mpa = 77000
+strength_in_plane_mpa = 250
+strength_build_mpa = 250
+sustained_factor = 1.0
+assumed = false
+source = "EN 10025 S235, yield"

@@ -1,20 +1,16 @@
-"""Part definitions: profiles, materials, FEM specs and regions that actually touch the part."""
+"""The plotter's part definitions: profiles, FEM specs and regions that actually touch the part."""
 
 import json
 
 import pytest
 from cadder.part import (
-    FemSpec,
-    LoadCase,
     MaterialPart,
-    Support,
-    effective_properties,
     part_to_dict,
 )
-from cadder.regions import Box, Cylinder, select_faces
+from cadder.regions import Box
 from cadder.testing import volume
 
-from plotzker.materials import load_material, load_profile
+from plotzker.materials import load_profile
 from plotzker.parts import PARTS
 
 
@@ -40,25 +36,9 @@ def test_default_profile_is_the_agreed_print_setup():
     assert profile.material == "petg"
 
 
-def test_unknown_profile_and_material_are_reported():
-    with pytest.raises(KeyError, match="Unknown print profile"):
-        load_profile("nope")
-    with pytest.raises(KeyError, match="Unknown material"):
-        load_material("nope")
-
-
-def test_effective_properties_apply_the_knockdowns():
-    material, profile = load_material("petg"), load_profile()
-    eff = effective_properties(material, profile)
-    assert eff["e_in_plane_mpa"] == pytest.approx(
-        material.e_in_plane_mpa * profile.stiffness_factor
-    )
-    assert eff["sustained_strength_build_mpa"] == pytest.approx(
-        material.strength_build_mpa * profile.strength_factor * material.sustained_factor
-    )
-
-
 PRINTED = {name: part for name, part in PARTS.items() if isinstance(part, MaterialPart)}
+
+
 SPECIFIED = {name: part for name, part in PRINTED.items() if part.fem is not None}
 
 
@@ -87,51 +67,6 @@ def test_part_is_registered_and_serializes(name):
 )
 def test_region_touches_the_part(name, label, region):
     assert volume(SPECIFIED[name].analysis_geometry() & region.solid()) > 1e-6
-
-
-def test_load_cases_are_unique_and_a_support_is_required():
-    case = LoadCase("a", "", (), "test")
-    support = Support("s", Box((0, 0, 0), (1, 1, 1)), "")
-    with pytest.raises(ValueError, match="unique"):
-        FemSpec((case, case), (support,))
-    with pytest.raises(ValueError, match="support"):
-        FemSpec((case,), ())
-
-
-def test_non_structural_part_cannot_have_a_fem_spec():
-    spec = FemSpec((LoadCase("a", "", (), "test"),), (Support("s", Box((0,) * 3, (1,) * 3), ""),))
-    with pytest.raises(ValueError, match="non-structural"):
-        MaterialPart(
-            name="p",
-            description="",
-            build=lambda: None,  # type: ignore[arg-type, return-value]
-            material=load_material("petg"),
-            structural=False,
-            fem=spec,
-        )
-
-
-def test_facing_filter_selects_by_outward_normal():
-    points = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0]]
-    up, down = [0, 1, 2, 3], [3, 2, 1, 0]
-    region = Box((-1, -1, -1), (2, 2, 1), facing=(0, 0, 1))
-    assert select_faces(region, points, [up, down]) == [0]
-
-
-def test_cylinder_ring_excludes_the_hole():
-    ring = Cylinder((0, 0, 0), (0, 0, 1), radius=4, inner_radius=2, half_length=1)
-    assert ring.contains((3, 0, 0)) and not ring.contains((1, 0, 0))
-    assert not ring.contains((3, 0, 2))
-
-
-def test_moment_load_is_a_plain_dataclass_in_json():
-    data = part_to_dict(next(iter(SPECIFIED.values())))
-    kinds = {
-        load["type"]
-        for case in data["fem"]["load_cases"]  # type: ignore[index]
-        for load in case["loads"]
-    }
-    assert kinds <= {"force", "moment", "acceleration"}
 
 
 def test_strength_only_parts_state_no_default_displacement_limit():

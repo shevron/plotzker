@@ -1,6 +1,7 @@
 """SVG sketches load at 1 unit = 1 mm, with the origin at the bottom-left corner."""
 
 import pytest
+
 from cadder.geometry import load_sketch, teardrop
 from cadder.hardware import VSLOT
 from cadder.hardware.vslot import PROFILE_SKETCHES, SKETCH_DIR, vslot_profile

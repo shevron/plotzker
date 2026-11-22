@@ -36,6 +36,10 @@ ignore = [
     "RUF001", "RUF002", "RUF003",  # ×, –, → and box-drawing characters in docstrings/comments
 ]
 
+# cadder is a framework: it never imports a project (its tests use their own fixture project)
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"plotzker".msg = "cadder must not depend on a project"
+
 [tool.ruff.lint.isort]
 known-first-party = ["cadder"]
 known-third-party = ["pythonscad", "vtk"]

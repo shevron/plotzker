@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from cadder.diff.compare import Status, compare_snapshots, format_report
 from cadder.diff.snapshot import BuildConfig, PartFile, Snapshot, take_snapshot
 from cadder.diff.stlio import measure, read_stl, same_surface
@@ -222,7 +223,7 @@ def test_identical_assemblies_are_unchanged(tmp_path: Path) -> None:
 def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
     """A repository with two commits: params.py and a part module changed, FEM verdict re-run."""
     repo = tmp_path / "gitrepo"
-    (repo / "src/plotzker/parts").mkdir(parents=True)
+    (repo / "src/demo/parts").mkdir(parents=True)
     (repo / "fem").mkdir()
     run = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t"]
     subprocess.run([*run, "init", "-q"], check=True)
@@ -234,12 +235,12 @@ def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
             [*run, "rev-parse", "HEAD"], capture_output=True, text=True, check=True
         ).stdout.strip()
 
-    (repo / "src/plotzker/params.py").write_text("W = 1\n")
-    (repo / "src/plotzker/parts/p.py").write_text("T = 2\n")
+    (repo / "src/demo/params.py").write_text("W = 1\n")
+    (repo / "src/demo/parts/p.py").write_text("T = 2\n")
     (repo / "fem/verdicts.toml").write_text('[p]\nverdict = "PASS"\n[q]\nverdict = "PASS"\n')
     first = commit("first")
-    (repo / "src/plotzker/params.py").write_text("W = 2\n")
-    (repo / "src/plotzker/parts/p.py").write_text("T = 3\n")
+    (repo / "src/demo/params.py").write_text("W = 2\n")
+    (repo / "src/demo/parts/p.py").write_text("T = 3\n")
     (repo / "fem/verdicts.toml").write_text('[p]\nverdict = "FAIL"\n[q]\nverdict = "PASS"\n')
     return repo, first, commit("second")
 
@@ -250,8 +251,8 @@ def test_source_info_between_commits(tmp_path: Path) -> None:
     repo, first, second = _git_repo(tmp_path)
     assert commit_log(repo, first, second) == [f"{second[:7]} second"]
     files = {f.path: f for f in changed_files(repo, first, second)}
-    assert set(files) == {"src/plotzker/params.py", "src/plotzker/parts/p.py"}
-    diff = file_diff(repo, first, second, "src/plotzker/parts/p.py")
+    assert set(files) == {"src/demo/params.py", "src/demo/parts/p.py"}
+    diff = file_diff(repo, first, second, "src/demo/parts/p.py")
     assert "-T = 2" in diff
     assert "+T = 3" in diff
     assert "diff --git" not in diff
@@ -266,7 +267,25 @@ def test_source_info_against_worktree(tmp_path: Path) -> None:
     from cadder.diff.source import changed_files
 
     repo, _, second = _git_repo(tmp_path)
-    (repo / "src/plotzker/params.py").write_text("W = 3\n")
+    (repo / "src/demo/params.py").write_text("W = 3\n")
     files = changed_files(repo, second, WORKTREE)
-    assert [f.path for f in files] == ["src/plotzker/params.py"]
+    assert [f.path for f in files] == ["src/demo/params.py"]
     assert changed_files(repo, WORKTREE, WORKTREE) == []
+
+
+def test_snapshot_builds_the_project_of_a_revision(tmp_path: Path) -> None:
+    """The driver imports the project from the revision's own tree."""
+    import shutil
+
+    repo = tmp_path / "repo"
+    shutil.copytree(Path(__file__).parent / "fixture", repo)
+    run = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*run, "init", "-q"], check=True)
+    subprocess.run([*run, "add", "."], check=True)
+    subprocess.run([*run, "commit", "-qm", "demo"], check=True)
+    config = BuildConfig("demo.project:PROJECT", ("src",))
+    snap = take_snapshot(repo, "HEAD", tmp_path / "cache", config)
+    assert snap.error is None, snap.error
+    assert sorted(snap.parts) == ["block", "tag"]  # the plate is not exported (stl=False)
+    assert snap.parts["block"].source == "src/demo/project.py"
+    assert sorted(snap.assemblies) == ["stack"]

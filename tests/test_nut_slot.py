@@ -3,9 +3,9 @@
 import pytest
 from pythonscad import union
 
-from plotter_cad.hardware import hex_nut, metric
-from plotter_cad.nut_slot import _ROTATIONS, nut_slot
-from plotter_cad.params import TOL
+from plotzker.hardware import hex_nut, metric
+from plotzker.nut_slot import _ROTATIONS, nut_slot
+from plotzker.params import TOL
 from solids import bounding_box, volume
 
 AXES = "xyz"

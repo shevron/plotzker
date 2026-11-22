@@ -1,4 +1,4 @@
-# Last FEM verdict per part (written by `python -m plotter_cad fem`).
+# Last FEM verdict per part (written by `python -m plotzker fem`).
 
 [gantry_end_bracket_left]
 verdict = "FAIL"

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  2D sketch: 2040 V-slot extrusion profile (20 mm series), drawn upright: 20 wide,
+  40 tall. The same profile lying flat (40 wide, 20 tall) is this sketch rotated 90 deg.
+  Loaded by plotzker.hardware.vslot (vslot_profile) and extruded to length there.
+
+  Path order: outline clockwise from the top-left corner, one T-slot per line (top,
+  right x 2, bottom, left x 2), then the two bores, then the closed cavity between them.
+
+  Sketch conventions (see plotzker.geometry.load_sketch):
+    - 1 user unit = 1 mm (width/height in mm, viewBox in the same numbers).
+    - The viewBox's bottom-left corner becomes the CAD origin; the sketch appears in
+      CAD the way it is drawn here (SVG y is flipped on import).
+    - Every shape is imported as a filled area; strokes and colors are ignored.
+      Holes are sub-paths of the same <path> with fill-rule="evenodd".
+
+  Dimensions (from a vendor drawing of the 2040; values not printed on it were scaled
+  from the drawing, +-0.1 mm, ASSUMED). Each T-slot, measured from its face:
+    lip 1.85 thick, chamfered 45 deg over its whole thickness: opening 9.9 at the
+      face, 6.2 at the neck;
+    cavity 12 wide behind the lips, straight to 3.0 deep, then 45 deg walls down to a
+      5.8 wide flat 6.1 deep;
+    webs between neighboring cavities ~1.4 thick; bore dia 4.2 (M5 tap drill).
+  Outer corners are drawn sharp (the real profile has small radii).
+  Center cavity: octagon between the two cores (flats 14 from each end, 5.4 long;
+    45 deg walls) with a 3.6 wide pocket toward each side face, leaving a 1.85 wall.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="20mm" height="40mm" viewBox="0 0 20 40">
+  <title>V-slot 2040 profile (upright)</title>
+  <path id="profile" fill="#b8bcc2" fill-rule="evenodd" d="
+    M 0,0
+    L 5.05,0 L 6.9,1.85 L 4,1.85 L 4,3 L 7.1,6.1 L 12.9,6.1 L 16,3 L 16,1.85 L 13.1,1.85 L 14.95,0
+    L 20,0
+    L 20,5.05 L 18.15,6.9 L 18.15,4 L 17,4 L 13.9,7.1 L 13.9,12.9 L 17,16 L 18.15,16 L 18.15,13.1 L 20,14.95
+    L 20,25.05 L 18.15,26.9 L 18.15,24 L 17,24 L 13.9,27.1 L 13.9,32.9 L 17,36 L 18.15,36 L 18.15,33.1 L 20,34.95
+    L 20,40
+    L 14.95,40 L 13.1,38.15 L 16,38.15 L 16,37 L 12.9,33.9 L 7.1,33.9 L 4,37 L 4,38.15 L 6.9,38.15 L 5.05,40
+    L 0,40
+    L 0,34.95 L 1.85,33.1 L 1.85,36 L 3,36 L 6.1,32.9 L 6.1,27.1 L 3,24 L 1.85,24 L 1.85,26.9 L 0,25.05
+    L 0,14.95 L 1.85,13.1 L 1.85,16 L 3,16 L 6.1,12.9 L 6.1,7.1 L 3,4 L 1.85,4 L 1.85,6.9 L 0,5.05
+    Z
+    M 7.9,10 a 2.1,2.1 0 1,0 4.2,0 a 2.1,2.1 0 1,0 -4.2,0 Z
+    M 7.9,30 a 2.1,2.1 0 1,0 4.2,0 a 2.1,2.1 0 1,0 -4.2,0 Z
+    M 7.3,14 L 3.1,18.2 L 1.85,18.2 L 1.85,21.8 L 3.1,21.8 L 7.3,26 L 12.7,26 L 16.9,21.8 L 18.15,21.8 L 18.15,18.2 L 16.9,18.2 L 12.7,14 Z"/>
+</svg>

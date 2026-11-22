@@ -4,8 +4,8 @@ import json
 
 import pytest
 
-from plotter_cad.materials import load_material
-from plotter_cad.part import (
+from plotzker.materials import load_material
+from plotzker.part import (
     FemSpec,
     LoadCase,
     Part,
@@ -13,9 +13,9 @@ from plotter_cad.part import (
     effective_properties,
     part_to_dict,
 )
-from plotter_cad.parts import PARTS, PRINTABLE_PARTS
-from plotter_cad.print_profile import load_profile
-from plotter_cad.regions import Box, Cylinder, select_faces
+from plotzker.parts import PARTS, PRINTABLE_PARTS
+from plotzker.print_profile import load_profile
+from plotzker.regions import Box, Cylinder, select_faces
 from solids import volume
 
 
@@ -133,9 +133,9 @@ def test_strength_only_parts_state_no_default_displacement_limit():
 
 
 def test_motor_loads_carry_pull_couple_weight_and_at_a_jam_the_stall_torque():
-    from plotter_cad.loads import MOTOR_LOADS, X_BELT_LOADS
-    from plotter_cad.part import Force, Moment
-    from plotter_cad.parts.motor_fem import motor_loads
+    from plotzker.loads import MOTOR_LOADS, X_BELT_LOADS
+    from plotzker.part import Force, Moment
+    from plotzker.parts.motor_fem import motor_loads
 
     region = Box((0, 0, 0), (1, 1, 1))
     args = (region, X_BELT_LOADS)

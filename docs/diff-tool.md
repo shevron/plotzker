@@ -7,7 +7,7 @@ what the change looks like in 3D.
 ```bash
 make diff                                  # HEAD → working tree (uncommitted changes)
 make diff REV_A=HEAD~3 REV_B=HEAD          # any two revisions (branches, tags and hashes work)
-python -m plotter_cad diff --open          # same, and open the HTML report
+python -m plotzker diff --open          # same, and open the HTML report
 ```
 
 Needs the `diff` extra (numpy, manifold3d), installed by `make develop`.
@@ -61,4 +61,4 @@ embedded. It opens from disk, works offline and can be sent as is. It needs a cu
 - FEM notes only compare `fem/verdicts.toml` between the revisions ("re-checked" or "not re-run
   since this change"); `make fem-status` tells whether a verdict is stale.
 
-Code: `src/plotter_cad/diff/`; tests: `tests/test_diff.py`.
+Code: `src/plotzker/diff/`; tests: `tests/test_diff.py`.

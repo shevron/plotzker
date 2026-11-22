@@ -3,7 +3,7 @@
 `make freecad` builds `PenPlotter.FCStd`, a FreeCAD 1.x Assembly of the machine (same solid
 model as `assemblies/machine.py`, at mid-travel, pen up). Two steps:
 
-1. `python -m plotter_cad freecad` cuts the model into 79 named components (printed parts,
+1. `python -m plotzker freecad` cuts the model into 79 named components (printed parts,
    purchased parts, fasteners grouped per place) in the machine frame. Components that are the
    same shape (V-wheels, SK10s, SCS10UU, motors, pulleys, idlers, runners and beam, ...) share
    one STL: → 56 files in `stl/` plus `components.json` (rigid bodies, colors, joint axes,

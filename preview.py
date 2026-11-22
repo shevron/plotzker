@@ -1,7 +1,7 @@
 """Preview a part or assembly in the PythonSCAD app.
 
 Open this file in PythonSCAD, set ``NAME`` to a key of ``PRINTABLE_PARTS`` or
-``ASSEMBLIES`` (see ``python -m plotter_cad render --help``), and render.
+``ASSEMBLIES`` (see ``python -m plotzker render --help``), and render.
 """
 
 import sys
@@ -15,8 +15,8 @@ sys.path.insert(0, str(_ROOT / "src"))
 
 from pythonscad import show
 
-from plotter_cad.assemblies import ASSEMBLIES
-from plotter_cad.parts import PRINTABLE_PARTS
+from plotzker.assemblies import ASSEMBLIES
+from plotzker.parts import PRINTABLE_PARTS
 
 NAME = "skeleton"
 

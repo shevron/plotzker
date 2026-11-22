@@ -35,25 +35,25 @@ test:  ## Run the unit tests (pytest)
 	$(UV_RUN) python -m pytest
 
 stl:  ## Generate the STLs of all printable parts into stl/
-	$(UV_RUN) python -m plotter_cad stl
+	$(UV_RUN) python -m plotzker stl
 
 render:  ## Generate PNG renders of all parts and assemblies into renders/ (needs the PythonSCAD app)
-	$(UV_RUN) python -m plotter_cad render
+	$(UV_RUN) python -m plotzker render
 
 render-inspect:  ## Render every view (iso, rear iso, front, rear, left, right, top) into renders/inspect/; NAMES="x_carriage gantry" limits it
-	$(UV_RUN) python -m plotter_cad render --inspect $(NAMES)
+	$(UV_RUN) python -m plotzker render --inspect $(NAMES)
 
 FREECAD_BIN ?= /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd
 
 freecad:  ## Build the FreeCAD Assembly (freecad/PenPlotter.FCStd; needs FreeCAD 1.x, see freecad/README.md)
-	$(UV_RUN) python -m plotter_cad freecad
+	$(UV_RUN) python -m plotzker freecad
 	$(FREECAD_BIN) freecad/build_assembly.py
 
 fem:  ## FEM check of parts into fem/results/ (needs FreeCAD's gmsh and CalculiX); NAMES="x_idler_slider ..."
-	$(UV_RUN) python -m plotter_cad fem $(NAMES)
+	$(UV_RUN) python -m plotzker fem $(NAMES)
 
 fem-status:  ## FEM state of every printable part; flags verdicts that are stale (spec or geometry changed)
-	$(UV_RUN) python -m plotter_cad fem-status
+	$(UV_RUN) python -m plotzker fem-status
 
 diff:  ## Parts changed between revisions: REV_A=HEAD REV_B=WORKTREE (defaults); add ARGS=--all
-	$(UV_RUN) python -m plotter_cad diff $(REV_A) $(REV_B) $(ARGS)
+	$(UV_RUN) python -m plotzker diff $(REV_A) $(REV_B) $(ARGS)

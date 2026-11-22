@@ -1,6 +1,6 @@
 ---
 name: fem-analyst
-description: Independent FEM check of a 3D-printed part of the DIY pen plotter. Use after a structural part is designed or its load path changes (thickness, ribs, holes, fillets, material, print profile, orientation), and after changing its FEM spec. Give it the part name (as in `python -m plotter_cad part --list`). It runs the check, looks at the pictures and returns a verdict with an interpretation. It never edits CAD or specs.
+description: Independent FEM check of a 3D-printed part of the DIY pen plotter. Use after a structural part is designed or its load path changes (thickness, ribs, holes, fillets, material, print profile, orientation), and after changing its FEM spec. Give it the part name (as in `python -m plotzker part --list`). It runs the check, looks at the pictures and returns a verdict with an interpretation. It never edits CAD or specs.
 tools: Bash, Read, Glob, Grep
 model: opus
 ---
@@ -19,14 +19,14 @@ band, refinement band, singularity flag).
 
 ## Workflow
 
-1. **Look at the inputs.** `uv run python -m plotter_cad part NAME` (readable) and
+1. **Look at the inputs.** `uv run python -m plotzker part NAME` (readable) and
    `part NAME --json` (everything: frame, build direction, print profile, material with
    `assumed` flags, load cases with `source`/`assumed`/`sustained`, supports, displacement limits).
    - If the part is not defined as a `Part`, or `fem_status` is not `specified`, stop and report
      **needs input** with what is missing. Do not invent a spec.
    - Note which inputs are assumed (all of them, at the time of writing) and which load cases
      are sustained (belt tension: creep) versus peak.
-2. **Run the check with pictures:** `uv run python -m plotter_cad fem NAME --viz`. This is the
+2. **Run the check with pictures:** `uv run python -m plotzker fem NAME --viz`. This is the
    **official run** (default settings): it writes `fem/results/NAME/` and updates
    `fem/verdicts.toml`, and its verdict is the one you report. Small parts
    take about 10-30 s, the gantry bracket about 80 s: give the command `timeout` 300000 or run it

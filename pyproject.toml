@@ -1,9 +1,9 @@
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13"]
-build-backend = "uv_build"  # finds src/plotter_cad itself; ships every file in it (incl. SVG sketches)
+build-backend = "uv_build"  # finds src/plotzker itself; ships every file in it (incl. SVG sketches)
 
 [project]
-name = "plotter-cad"
+name = "plotzker"
 version = "0.1.0"
 description = "Parametric CAD (PythonSCAD) for the DIY pen plotter"
 readme = "README.md"
@@ -18,7 +18,7 @@ diff = ["numpy>=2", "manifold3d>=3.0"]
 dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
-plotter-cad = "plotter_cad.build:main"
+plotzker = "plotzker.build:main"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -37,18 +37,18 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["plotter_cad"]
+known-first-party = ["plotzker"]
 known-third-party = ["pythonscad", "vtk"]
 
 [tool.mypy]
 python_version = "3.14"
 mypy_path = ["src", "stubs"]
-packages = ["plotter_cad"]
+packages = ["plotzker"]
 strict = true
 cache_dir = ".mypy_cache"
 
 [[tool.mypy.overrides]]
-module = "plotter_cad.fem.viz_render"  # runs in FreeCAD's Python (vtk), not in this environment
+module = "plotzker.fem.viz_render"  # runs in FreeCAD's Python (vtk), not in this environment
 ignore_errors = true
 ignore_missing_imports = true
 

@@ -21,7 +21,7 @@ deflection, and reports pass/fail plus, optionally, pictures of how it fails.
 ## 2. Architecture
 
 ```
-src/plotter_cad/
+src/plotzker/
 ├── part.py              ← Part base class + FEM/print dataclasses (typed, validated)
 ├── profiles/            ← print profiles: default.toml, others as needed
 ├── materials.toml       ← PETG (printed, anisotropic), 6063 aluminum, steel, plywood, POM
@@ -59,10 +59,10 @@ sync with the design.
 
 | Command | Output |
 |---------|--------|
-| `python -m plotter_cad part --list` | All parts with profile, material, FEM-required flag, last verdict (and whether it is stale) |
-| `python -m plotter_cad part <name>` | Human-readable properties |
-| `python -m plotter_cad part <name> --json` | Same as JSON, with regions and handles resolved to numeric coordinates: this is what the sub-agent reads |
-| `python -m plotter_cad fem <name> [--viz]` | Run the check, write `fem/results/<name>/`, update the verdict |
+| `python -m plotzker part --list` | All parts with profile, material, FEM-required flag, last verdict (and whether it is stale) |
+| `python -m plotzker part <name>` | Human-readable properties |
+| `python -m plotzker part <name> --json` | Same as JSON, with regions and handles resolved to numeric coordinates: this is what the sub-agent reads |
+| `python -m plotzker fem <name> [--viz]` | Run the check, write `fem/results/<name>/`, update the verdict |
 | `make fem NAMES="..."` | Same, via the Makefile |
 
 ### 2.3 Print profiles and materials
@@ -187,7 +187,7 @@ or overturns this.
 |---|------|-----------|
 | F0 ✅ | Spike | The gmsh + ccx pipeline reproduces a cantilever closed-form result within 2 %, runs on the X idler slider, and offscreen rendering works; tooling choice confirmed |
 | F1 ✅ | Part class, profiles, materials | `part.py`, `default.toml`, `materials.toml` exist with validation and tests; the three first parts are migrated and the `part` CLI prints them as JSON; you have reviewed the assumed loads and limits |
-| F2 ✅ | Runner | `python -m plotter_cad fem <name>` produces verdicts, JSON and a Markdown report; solver benchmarks in the tests (skipped if `ccx` is missing) |
+| F2 ✅ | Runner | `python -m plotzker fem <name>` produces verdicts, JSON and a Markdown report; solver benchmarks in the tests (skipped if `ccx` is missing) |
 | F3 ✅ | Visualization | `--viz` produces the PNGs and `.vtu` |
 | F4 ✅ | Agent and process | `.claude/agents/fem-analyst.md`, `docs/fem.md`, README/CLAUDE.md/STATUS.md edits done; a dry run on a real part gives a report you accept |
 | F5 | Later | Migrate all remaining parts to part classes; assemblies with contacts; buckling/modal; calibration; `make fem-status` stale check |
@@ -246,12 +246,12 @@ The spike scripts were scratch work; F1/F2 implement the real thing.
 
 | Item | Where |
 |------|-------|
-| Part class: geometry function, frame, build direction, profile, material, FEM spec (load cases, supports, displacement limits, safety factor) | `src/plotter_cad/part.py` |
-| Regions (box, cylinder/ring; selected by face centroid and outward normal, or by node for limits) | `src/plotter_cad/regions.py` |
+| Part class: geometry function, frame, build direction, profile, material, FEM spec (load cases, supports, displacement limits, safety factor) | `src/plotzker/part.py` |
+| Regions (box, cylinder/ring; selected by face centroid and outward normal, or by node for limits) | `src/plotzker/regions.py` |
 | Print profile loader and `profiles/default.toml` (PETG, 0.6 mm, 0.3 mm, 3 perimeters, 20 % gyroid; stiffness and strength factors 0.6, assumed) | `print_profile.py`, `profiles/` |
 | Materials loader and `materials.toml` (PETG, all values assumed) | `materials.py`, `materials.toml` |
 | Assumed belt loads in one place | `loads.py` |
-| CLI: `python -m plotter_cad part --list`, `part NAME`, `part NAME --json` | `build.py`, `part_report.py` |
+| CLI: `python -m plotzker part --list`, `part NAME`, `part NAME --json` | `build.py`, `part_report.py` |
 | `PLOTTER_FN=20` environment variable lowers the facet count for FEM meshes (default 64 unchanged) | `geometry.py` |
 | Registry of parts defined as `Part`; the other 18 printable parts are listed as "not yet defined" | `parts/__init__.py` (`PARTS`) |
 | Definitions: `x_idler_slider`, `x_idler_mount`, `gantry_end_bracket_left` (the right bracket is a mirror, done in F5) | `PART` at the end of each module |
@@ -297,8 +297,8 @@ That is very conservative on purpose; the first F2 results will show whether it 
 
 | Item | Where |
 |------|-------|
-| `python -m plotter_cad fem NAMES...` (also `make fem NAMES="..."`; `--size MM`): runs the whole pipeline, writes `fem/results/<name>/{report.md,result.json,part.json,...}`, updates `fem/verdicts.toml` (verdict, date, geometry hash, spec hash), exits 1 on FAIL or INCONCLUSIVE | `src/plotter_cad/fem/`, `build.py` |
-| `python -m plotter_cad part NAME --stl PATH`: the part in its analysis frame (the runner calls it in a subprocess with `PLOTTER_FN=20`) | `part_report.py` |
+| `python -m plotzker fem NAMES...` (also `make fem NAMES="..."`; `--size MM`): runs the whole pipeline, writes `fem/results/<name>/{report.md,result.json,part.json,...}`, updates `fem/verdicts.toml` (verdict, date, geometry hash, spec hash), exits 1 on FAIL or INCONCLUSIVE | `src/plotzker/fem/`, `build.py` |
+| `python -m plotzker part NAME --stl PATH`: the part in its analysis frame (the runner calls it in a subprocess with `PLOTTER_FN=20`) | `part_report.py` |
 | STL cleaning, gmsh meshing with fallbacks, CalculiX deck (transversely isotropic material, material axis 3 = build direction), `.frd` reader | `fem/stl.py`, `mesh.py`, `ccx.py` |
 | Loads as nodal forces (force, exact couple, body acceleration), supports as constrained nodes | `fem/applied.py` |
 | Failure index (in-plane and interlayer modes), displacement criteria, status thresholds (PASS up to 85 % of a limit, MARGINAL up to 100 %, FAIL beyond) | `fem/evaluate.py` |
@@ -369,7 +369,7 @@ remains available for experiments.
 
 ## 15. F3 results (2026-11-20: done)
 
-`python -m plotter_cad fem NAMES --viz` (or `make fem NAMES="..." ` with `--viz` added to the
+`python -m plotzker fem NAMES --viz` (or `make fem NAMES="..." ` with `--viz` added to the
 command) writes, for every load case, into `fem/results/<name>/viz/`:
 
 | File | Shows |

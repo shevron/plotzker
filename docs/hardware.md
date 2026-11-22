@@ -1,6 +1,6 @@
 # Hardware reference dimensions
 
-Vendor-part dimensions we design around. These values go into `src/plotter_cad/hardware/` (one frozen `*Spec` dataclass per part).
+Vendor-part dimensions we design around. These values go into `src/plotzker/hardware/` (one frozen `*Spec` dataclass per part).
 All in mm.
 
 ## SCS10UU linear bearing block (Y axis, 4 pcs)
@@ -74,7 +74,7 @@ names each field descriptively and gives the vendor symbol in its comment (e.g. 
 | Y endstop trigger screw | ~48.5 | on top of the gantry bracket, front-outboard corner |
 
 So the gantry end brackets must lift the beam **~24.5 mm above the SCS top face**.
-All of this is computed in `src/plotter_cad/params.py`; a design check (`params.design_checks()`) fails the build if the carriage
+All of this is computed in `src/plotzker/params.py`; a design check (`params.design_checks()`) fails the build if the carriage
 would hit 15 mm media.
 
 **SCS10UU top face (measured by user):** two raised **10 mm flats**, one each side of the
@@ -121,7 +121,7 @@ Design rules: mounts are face-mounted, so body length only matters for clearance
 
 | Item | Value |
 |------|-------|
-| Profile | 20 mm series V-slot (**4020 confirmed V-slot by user**); drawn as SVG sketches from a vendor drawing of the 2040: `src/plotter_cad/hardware/vslot_2020.svg`, `vslot_2040.svg` (D23). T-slot: lip **1.85** thick with a 45° chamfer (opening 9.9 at the face, **6.2** neck), cavity 12 wide, **6.1** deep to a 5.8 flat; bore **Ø4.2**; the 2040 has a closed octagonal cavity between its two cores. Bold = printed on the drawing; the rest scaled from it (±0.1, *assumed*). Section area 161 mm² (2020) / 296 mm² (2040) → ~0.44 / ~0.80 kg/m |
+| Profile | 20 mm series V-slot (**4020 confirmed V-slot by user**); drawn as SVG sketches from a vendor drawing of the 2040: `src/plotzker/hardware/vslot_2020.svg`, `vslot_2040.svg` (D23). T-slot: lip **1.85** thick with a 45° chamfer (opening 9.9 at the face, **6.2** neck), cavity 12 wide, **6.1** deep to a 5.8 flat; bore **Ø4.2**; the 2040 has a closed octagonal cavity between its two cores. Bold = printed on the drawing; the rest scaled from it (±0.1, *assumed*). Section area 161 mm² (2020) / 296 mm² (2040) → ~0.44 / ~0.80 kg/m |
 | V-wheel | **Ø24 × 10 mm** (user), POM on 2 × 625 bearings |
 | Wheel axis to the extrusion face | **9.85** (standard 39.7 mm wheel spacing across 20 mm) *(assumed)* |
 | Plain spacers | 6 mm *(assumed)* |

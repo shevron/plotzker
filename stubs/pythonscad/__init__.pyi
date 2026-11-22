@@ -1,4 +1,4 @@
-"""Minimal type stubs for the parts of the ``pythonscad`` module that plotter_cad uses."""
+"""Minimal type stubs for the parts of the ``pythonscad`` module that plotzker uses."""
 
 from collections.abc import Sequence
 from typing import Any, Self

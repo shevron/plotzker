@@ -4,8 +4,8 @@ import math
 
 import pytest
 
-from plotter_cad import build
-from plotter_cad.parts import PRINTABLE_PARTS
+from plotzker import build
+from plotzker.parts import PRINTABLE_PARTS
 from solids import bounding_box, shell_count, touching, volume
 
 
@@ -37,9 +37,9 @@ def test_x_carriage_clamp_nuts_each_have_a_pocket_and_a_roof():
     """T3.13: each belt clamp nut fits its own pocket (flat-first) and has plastic above it."""
     from pythonscad import cube
 
-    from plotter_cad.hardware import hex_nut, metric
-    from plotter_cad.params import CLAMP, TOL, X_BELT
-    from plotter_cad.parts.x_carriage import CLAMP_X, x_carriage_installed
+    from plotzker.hardware import hex_nut, metric
+    from plotzker.params import CLAMP, TOL, X_BELT
+    from plotzker.parts.x_carriage import CLAMP_X, x_carriage_installed
 
     carriage = x_carriage_installed()
     nut_z = X_BELT.back_z - CLAMP.nut_z - TOL.nut_trap_h(3) / 2
@@ -57,6 +57,6 @@ def test_x_carriage_clamp_nuts_each_have_a_pocket_and_a_roof():
 
 def test_tension_idler_slider_is_free_of_the_rail():
     """The slider rides on the rail's dovetail without touching it (a sliding fit)."""
-    from plotter_cad.parts.tension_idler import rail, slider
+    from plotzker.parts.tension_idler import rail, slider
 
     assert not touching(rail(), slider())

@@ -4,7 +4,7 @@ import dataclasses
 
 import pytest
 
-from plotter_cad import params
+from plotzker import params
 
 
 def test_design_checks_pass():

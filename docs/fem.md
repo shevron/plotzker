@@ -25,18 +25,18 @@ The `structural` flag in a part's `Part` definition is what counts; `fem-status`
 
 ## Defining a part's FEM spec
 
-`python -m plotter_cad fem-status` (or `make fem-status`) lists every printable part with its
+`python -m plotzker fem-status` (or `make fem-status`) lists every printable part with its
 state: no spec yet, never checked, the last verdict, or **STALE** when the part's properties or its
 geometry changed since that verdict.
 
-A part is a `Part` (`src/plotter_cad/part.py`) defined at the end of its module and registered
-in `parts/__init__.py` (`PARTS`). `python -m plotter_cad part NAME [--json]` prints it.
+A part is a `Part` (`src/plotzker/part.py`) defined at the end of its module and registered
+in `parts/__init__.py` (`PARTS`). `python -m plotzker part NAME [--json]` prints it.
 
 - **Frame.** `frame="installed"` (the part's assembly frame, easiest for loads) or `"print"`.
   `build_direction` is the layer normal pointing up from the bed, in that frame: layers are
   perpendicular to it. Printed parts are transversely isotropic about it.
 - **Units.** mm, N, MPa, degrees, mm/s².
-- **Regions** (`src/plotter_cad/regions.py`): `Box` and `Cylinder` (axis x, y or z; `inner_radius`
+- **Regions** (`src/plotzker/regions.py`): `Box` and `Cylinder` (axis x, y or z; `inner_radius`
   makes a ring). Loads and supports act on the **surface** that a region covers; a region may cover
   part of a face (the covered area is sampled, so it doesn't depend on the mesh). `facing` keeps
   only faces whose **outward normal** points that way (within `facing_tol_deg`), so to push on a
@@ -48,7 +48,7 @@ in `parts/__init__.py` (`PARTS`). `python -m plotter_cad part NAME [--json]` pri
   couple as linearly varying forces), `Acceleration` (inertia of the whole part). Give each case a
   `source`; keep `assumed=True` until a number is measured. `sustained=True` for loads that act
   continuously (belt tension): they are judged against the material's creep-reduced strength.
-  Magnitudes shared between parts live in `src/plotter_cad/loads.py`.
+  Magnitudes shared between parts live in `src/plotzker/loads.py`.
 - **Supports:** a region held fixed in the directions marked in `constrain`. Make the set
   statically determinate (no rigid-body motion) and say in the description what it stands for.
   Supports are fixed constraints: no contact, no bolt preload. Friction of a foot clamped by a
@@ -63,7 +63,7 @@ in `parts/__init__.py` (`PARTS`). `python -m plotter_cad part NAME [--json]` pri
   (`slider_fem`, `mount_fem` in `parts/tension_idler.py`) placed in the part's frame with a
   `Placement` (`regions.py`); an exact mirror image is a `Part` with `mirror_of` set.
 
-Materials are in `src/plotter_cad/materials.toml`, print profiles in `src/plotter_cad/profiles/`
+Materials are in `src/plotzker/materials.toml`, print profiles in `src/plotzker/profiles/`
 (`default.toml` is PETG, 0.6 mm nozzle, 0.3 mm layers, 3 perimeters, 20 % gyroid). The profile's
 stiffness and strength factors (0.6) stand in for infill; a material's `sustained_factor` (0.5) is
 the creep allowance. All of these are assumptions until measured.
@@ -71,7 +71,7 @@ the creep allowance. All of these are assumptions until measured.
 ## Running a check
 
 ```
-python -m plotter_cad fem NAME... [--viz] [--refine auto|always|never] [--size MM] [--uniform]
+python -m plotzker fem NAME... [--viz] [--refine auto|always|never] [--size MM] [--uniform]
                                   [--no-record] [--out DIR]
 ```
 
@@ -122,14 +122,14 @@ belt tensioner showed it (STATUS.md T3.19): the belt pulls the idler axle ~14 mm
 screw, so a couple twists the slider in its dovetail. The slider tilts by the clearance (no
 stiffness, so the FEM cannot find it) while the mount's ridge and block bend; the idler leans.
 
-`ASSEMBLY_CHECKS` (`src/plotter_cad/assembly_checks.py`) lists assemblies: member parts and, per
+`ASSEMBLY_CHECKS` (`src/plotzker/assembly_checks.py`) lists assemblies: member parts and, per
 limit, the terms that add up (a member's displacement limit from its recorded result, or a rigid
 term from geometry: `tension_idler.dovetail_play`). The total is judged against the sum of the
 members' own limits, with the same PASS/MARGINAL/FAIL bands. Run it after its members:
 
 ```
-python -m plotter_cad fem y_idler_slider_left y_idler_mount_left   # also runs y_idler_tensioner_left
-python -m plotter_cad fem x_idler_tensioner               # from the recorded member results (bracket + slider)
+python -m plotzker fem y_idler_slider_left y_idler_mount_left   # also runs y_idler_tensioner_left
+python -m plotzker fem x_idler_tensioner               # from the recorded member results (bracket + slider)
 ```
 
 It writes `fem/results/<assembly>/report.md` and `result.json` and records the verdict in

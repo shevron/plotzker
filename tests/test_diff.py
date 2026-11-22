@@ -1,4 +1,4 @@
-"""Tests for the design diff (``plotter_cad.diff``): STL reading, measuring, part comparison."""
+"""Tests for the design diff (``plotzker.diff``): STL reading, measuring, part comparison."""
 
 import struct
 import subprocess
@@ -8,9 +8,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from plotter_cad.diff.compare import Status, compare_snapshots, format_report
-from plotter_cad.diff.snapshot import PartFile, Snapshot, take_snapshot
-from plotter_cad.diff.stlio import measure, read_stl, same_surface
+from plotzker.diff.compare import Status, compare_snapshots, format_report
+from plotzker.diff.snapshot import PartFile, Snapshot, take_snapshot
+from plotzker.diff.stlio import measure, read_stl, same_surface
 
 # Corner indices of a box's 12 triangles, outward facing.
 _FACES = [
@@ -132,7 +132,7 @@ def test_report_embeds_changed_meshes_only(tmp_path: Path) -> None:
     import json
     import re
 
-    from plotter_cad.diff.report import write_report
+    from plotzker.diff.report import write_report
 
     same = write_ascii(tmp_path / "same.stl", box(1, 1, 1))
     tall = write_ascii(tmp_path / "tall.stl", box(1, 1, 2))
@@ -153,7 +153,7 @@ def test_report_embeds_changed_meshes_only(tmp_path: Path) -> None:
 
 
 def test_solid_diff_of_boxes() -> None:
-    from plotter_cad.diff.boolean import solid_diff
+    from plotzker.diff.boolean import solid_diff
 
     # A 1×1×1 box grows to 1×1×2 and loses nothing; a box shifted by 0.5 in x gains and loses
     # a 0.5×1×1 slab.
@@ -169,7 +169,7 @@ def test_solid_diff_of_boxes() -> None:
 
 
 def test_solid_diff_ignores_slivers() -> None:
-    from plotter_cad.diff.boolean import solid_diff
+    from plotzker.diff.boolean import solid_diff
 
     result = solid_diff(box(10, 10, 10), box(10, 10, 10.00005))  # 0.005 mm³
     assert result.added is None
@@ -183,7 +183,7 @@ def _asm(tmp_path: Path, name: str, items: list[np.ndarray]) -> Path:
 
 
 def test_assembly_instances_matched_by_geometry(tmp_path: Path) -> None:
-    from plotter_cad.diff.assembly import InstanceStatus, compare_assembly
+    from plotzker.diff.assembly import InstanceStatus, compare_assembly
 
     a = _asm(
         tmp_path,
@@ -212,7 +212,7 @@ def test_assembly_instances_matched_by_geometry(tmp_path: Path) -> None:
 
 
 def test_identical_assemblies_are_unchanged(tmp_path: Path) -> None:
-    from plotter_cad.diff.assembly import compare_assembly
+    from plotzker.diff.assembly import compare_assembly
 
     items = [box(1, 1, 1), box(1, 1, 1, at=5), box(2, 2, 2)]
     change = compare_assembly("asm", _asm(tmp_path, "a", items), _asm(tmp_path, "b", items), {})
@@ -222,7 +222,7 @@ def test_identical_assemblies_are_unchanged(tmp_path: Path) -> None:
 def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
     """A repository with two commits: params.py and a part module changed, FEM verdict re-run."""
     repo = tmp_path / "gitrepo"
-    (repo / "src/plotter_cad/parts").mkdir(parents=True)
+    (repo / "src/plotzker/parts").mkdir(parents=True)
     (repo / "fem").mkdir()
     run = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t"]
     subprocess.run([*run, "init", "-q"], check=True)
@@ -234,24 +234,24 @@ def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
             [*run, "rev-parse", "HEAD"], capture_output=True, text=True, check=True
         ).stdout.strip()
 
-    (repo / "src/plotter_cad/params.py").write_text("W = 1\n")
-    (repo / "src/plotter_cad/parts/p.py").write_text("T = 2\n")
+    (repo / "src/plotzker/params.py").write_text("W = 1\n")
+    (repo / "src/plotzker/parts/p.py").write_text("T = 2\n")
     (repo / "fem/verdicts.toml").write_text('[p]\nverdict = "PASS"\n[q]\nverdict = "PASS"\n')
     first = commit("first")
-    (repo / "src/plotter_cad/params.py").write_text("W = 2\n")
-    (repo / "src/plotter_cad/parts/p.py").write_text("T = 3\n")
+    (repo / "src/plotzker/params.py").write_text("W = 2\n")
+    (repo / "src/plotzker/parts/p.py").write_text("T = 3\n")
     (repo / "fem/verdicts.toml").write_text('[p]\nverdict = "FAIL"\n[q]\nverdict = "PASS"\n')
     return repo, first, commit("second")
 
 
 def test_source_info_between_commits(tmp_path: Path) -> None:
-    from plotter_cad.diff.source import changed_files, commit_log, fem_hints, file_diff
+    from plotzker.diff.source import changed_files, commit_log, fem_hints, file_diff
 
     repo, first, second = _git_repo(tmp_path)
     assert commit_log(repo, first, second) == [f"{second[:7]} second"]
     files = {f.path: f for f in changed_files(repo, first, second)}
-    assert set(files) == {"src/plotter_cad/params.py", "src/plotter_cad/parts/p.py"}
-    diff = file_diff(repo, first, second, "src/plotter_cad/parts/p.py")
+    assert set(files) == {"src/plotzker/params.py", "src/plotzker/parts/p.py"}
+    diff = file_diff(repo, first, second, "src/plotzker/parts/p.py")
     assert "-T = 2" in diff
     assert "+T = 3" in diff
     assert "diff --git" not in diff
@@ -262,11 +262,11 @@ def test_source_info_between_commits(tmp_path: Path) -> None:
 
 
 def test_source_info_against_worktree(tmp_path: Path) -> None:
-    from plotter_cad.diff.snapshot import WORKTREE
-    from plotter_cad.diff.source import changed_files
+    from plotzker.diff.snapshot import WORKTREE
+    from plotzker.diff.source import changed_files
 
     repo, _, second = _git_repo(tmp_path)
-    (repo / "src/plotter_cad/params.py").write_text("W = 3\n")
+    (repo / "src/plotzker/params.py").write_text("W = 3\n")
     files = changed_files(repo, second, WORKTREE)
-    assert [f.path for f in files] == ["src/plotter_cad/params.py"]
+    assert [f.path for f in files] == ["src/plotzker/params.py"]
     assert changed_files(repo, WORKTREE, WORKTREE) == []

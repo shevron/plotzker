@@ -3,7 +3,7 @@
 import pytest
 from pythonscad import cylinder
 
-from plotter_cad.geometry import (
+from plotzker.geometry import (
     frame_axes,
     frame_handle,
     get_handle,
@@ -11,9 +11,9 @@ from plotter_cad.geometry import (
     handle,
     shift_handle,
 )
-from plotter_cad.params import BRACKET, CLAMP
-from plotter_cad.parts.belt_clamp import belt_clamp
-from plotter_cad.parts.gantry_end_bracket import Side, gantry_end_bracket
+from plotzker.params import BRACKET, CLAMP
+from plotzker.parts.belt_clamp import belt_clamp
+from plotzker.parts.gantry_end_bracket import Side, gantry_end_bracket
 from solids import bounding_box
 
 

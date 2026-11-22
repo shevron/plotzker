@@ -2,9 +2,9 @@
 
 import pytest
 
-from plotter_cad.geometry import load_sketch, teardrop
-from plotter_cad.hardware import VSLOT
-from plotter_cad.hardware.vslot import PROFILE_SKETCHES, SKETCH_DIR, vslot_profile
+from plotzker.geometry import load_sketch, teardrop
+from plotzker.hardware import VSLOT
+from plotzker.hardware.vslot import PROFILE_SKETCHES, SKETCH_DIR, vslot_profile
 
 
 def outline_stats(sketch) -> tuple[float, list[float], list[float]]:

@@ -4,9 +4,9 @@ import itertools
 import math
 import xml.etree.ElementTree as ET
 
-from plotter_cad import build, layout
-from plotter_cad.assemblies import baseboard
-from plotter_cad.params import FRAME
+from plotzker import build, layout
+from plotzker.assemblies import baseboard
+from plotzker.params import FRAME
 from solids import flatten, volume
 
 

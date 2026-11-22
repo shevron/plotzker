@@ -5,23 +5,23 @@ import math
 import pytest
 from pythonscad import cube, export
 
-from plotter_cad.fem.applied import force_on_region, moment_on_region, net_force
-from plotter_cad.fem.ccx import Supports, local_axes
-from plotter_cad.fem.evaluate import (
+from plotzker.fem.applied import force_on_region, moment_on_region, net_force
+from plotzker.fem.ccx import Supports, local_axes
+from plotzker.fem.evaluate import (
     Status,
     Strengths,
     failure_index,
     status_for,
     worst,
 )
-from plotter_cad.fem.mesh import Mesh, TriFace, cover_region, covered_weights
-from plotter_cad.fem.report import spec_hash, status_lines
-from plotter_cad.fem.runner import RunOptions, analyze
-from plotter_cad.fem.solve import proportional
-from plotter_cad.fem.stl import clean_stl
-from plotter_cad.fem.tools import tools_available
-from plotter_cad.materials import load_material
-from plotter_cad.part import (
+from plotzker.fem.mesh import Mesh, TriFace, cover_region, covered_weights
+from plotzker.fem.report import spec_hash, status_lines
+from plotzker.fem.runner import RunOptions, analyze
+from plotzker.fem.solve import proportional
+from plotzker.fem.stl import clean_stl
+from plotzker.fem.tools import tools_available
+from plotzker.materials import load_material
+from plotzker.part import (
     DisplacementLimit,
     FemSpec,
     Force,
@@ -30,9 +30,9 @@ from plotter_cad.part import (
     Support,
     effective_properties,
 )
-from plotter_cad.parts import PARTS
-from plotter_cad.print_profile import load_profile
-from plotter_cad.regions import Box, Cylinder, Placement
+from plotzker.parts import PARTS
+from plotzker.print_profile import load_profile
+from plotzker.regions import Box, Cylinder, Placement
 
 needs_solvers = pytest.mark.skipif(not tools_available(), reason="gmsh and CalculiX not installed")
 
@@ -270,8 +270,8 @@ def test_status_lines_flag_stale_and_missing_checks(tmp_path):
 def test_dovetail_play_tilt_follows_the_clearance_and_plate_length():
     import dataclasses
 
-    from plotter_cad.params import TENSION_IDLER
-    from plotter_cad.parts.tension_idler import dovetail_play
+    from plotzker.params import TENSION_IDLER
+    from plotzker.parts.tension_idler import dovetail_play
 
     base = dovetail_play(TENSION_IDLER)
     assert base.tilt_rad == pytest.approx(base.play_mm / TENSION_IDLER.plate_len)
@@ -289,9 +289,9 @@ def _write_result(folder, criteria):
 
 
 def test_assembly_sums_member_deflections_and_play(tmp_path):
-    from plotter_cad.assembly_checks import tensioner_assembly
-    from plotter_cad.fem.assembly import check_assembly
-    from plotter_cad.params import TENSION_IDLER
+    from plotzker.assembly_checks import tensioner_assembly
+    from plotzker.fem.assembly import check_assembly
+    from plotzker.params import TENSION_IDLER
 
     # a dovetail tensioner (the generic prototype) on the Y parts' names: the play adds a rigid term
     assembly = tensioner_assembly(
@@ -322,8 +322,8 @@ def test_assembly_sums_member_deflections_and_play(tmp_path):
     )
     result = check_assembly(assembly, PARTS, tmp_path)
     by_name = {r.name: r for r in result.rows}
-    from plotter_cad.params import TENSION_IDLER
-    from plotter_cad.parts.tension_idler import dovetail_play
+    from plotzker.params import TENSION_IDLER
+    from plotzker.parts.tension_idler import dovetail_play
 
     play = dovetail_play(TENSION_IDLER)
     # the play adds to the two deflections: each part is within its own 0.1, the pair is not
@@ -334,7 +334,7 @@ def test_assembly_sums_member_deflections_and_play(tmp_path):
 
 
 def test_floating_idlers_have_no_dovetail_play_term():
-    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+    from plotzker.assembly_checks import ASSEMBLY_CHECKS
 
     for assembly in ASSEMBLY_CHECKS.values():
         for limit in assembly.limits:
@@ -342,8 +342,8 @@ def test_floating_idlers_have_no_dovetail_play_term():
 
 
 def test_assembly_is_inconclusive_without_member_results(tmp_path):
-    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
-    from plotter_cad.fem.assembly import check_assembly
+    from plotzker.assembly_checks import ASSEMBLY_CHECKS
+    from plotzker.fem.assembly import check_assembly
 
     result = check_assembly(ASSEMBLY_CHECKS["x_idler_tensioner"], PARTS, tmp_path)
     assert result.status is Status.INCONCLUSIVE
@@ -351,7 +351,7 @@ def test_assembly_is_inconclusive_without_member_results(tmp_path):
 
 
 def test_assembly_members_and_criteria_exist():
-    from plotter_cad.assembly_checks import ASSEMBLY_CHECKS
+    from plotzker.assembly_checks import ASSEMBLY_CHECKS
 
     for assembly in ASSEMBLY_CHECKS.values():
         for member in assembly.members:

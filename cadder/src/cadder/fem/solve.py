@@ -6,12 +6,11 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
+from cadder.fem import applied
+from cadder.fem.ccx import DEFAULT_SOLVER, Results, SolverMaterial, run_ccx, write_input
+from cadder.fem.mesh import Mesh
 from cadder.part import MaterialPart
 from cadder.types import Vec3
-
-from plotzker.fem import applied
-from plotzker.fem.ccx import DEFAULT_SOLVER, Results, SolverMaterial, run_ccx, write_input
-from plotzker.fem.mesh import Mesh
 
 #: Cores CalculiX may use in total (the performance cores of a laptop).
 MAX_THREADS = 8

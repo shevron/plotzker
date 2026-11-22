@@ -52,9 +52,9 @@ class Project:
     params_file: str | None = None
     #: FEM verdicts file, relative to ``root``
     verdicts_file: str = "fem/verdicts.toml"
-    #: ``"module:ATTRIBUTE"`` registries tried, in order, when the design diff builds a revision
-    #: from before this project used cadder (a dict of build functions or of parts)
-    legacy_specs: tuple[str, ...] = ()
+    #: ``("module:PARTS", "module:ASSEMBLIES")`` registries tried, in order, when the design
+    #: diff builds a revision from before this project used cadder (dicts of build functions)
+    legacy_specs: tuple[tuple[str, str], ...] = ()
     outputs: Mapping[str, str] = field(
         default_factory=lambda: {
             "stl": "stl",

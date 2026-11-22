@@ -19,8 +19,8 @@ from pathlib import Path
 
 import numpy as np
 
-from plotzker.diff.snapshot import Snapshot
-from plotzker.diff.stlio import Triangles, shape_hash, surface_area
+from cadder.diff.snapshot import Snapshot
+from cadder.diff.stlio import Triangles, shape_hash, surface_area
 
 #: Volumes and areas count as equal within this relative difference.
 REL_TOL = 1e-4

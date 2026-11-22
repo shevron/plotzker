@@ -3,6 +3,20 @@
 import math
 
 import pytest
+from cadder.fem.applied import force_on_region, moment_on_region, net_force
+from cadder.fem.ccx import Supports, local_axes
+from cadder.fem.evaluate import (
+    Status,
+    Strengths,
+    failure_index,
+    status_for,
+    worst,
+)
+from cadder.fem.mesh import Mesh, TriFace, cover_region, covered_weights
+from cadder.fem.report import spec_hash, status_lines
+from cadder.fem.runner import RunOptions, analyze
+from cadder.fem.solve import proportional
+from cadder.fem.stl import clean_stl
 from cadder.part import (
     DisplacementLimit,
     FemSpec,
@@ -13,23 +27,9 @@ from cadder.part import (
     effective_properties,
 )
 from cadder.regions import Box, Cylinder, Placement
+from cadder.tools import tools_available
 from pythonscad import cube, export
 
-from plotzker.fem.applied import force_on_region, moment_on_region, net_force
-from plotzker.fem.ccx import Supports, local_axes
-from plotzker.fem.evaluate import (
-    Status,
-    Strengths,
-    failure_index,
-    status_for,
-    worst,
-)
-from plotzker.fem.mesh import Mesh, TriFace, cover_region, covered_weights
-from plotzker.fem.report import spec_hash, status_lines
-from plotzker.fem.runner import RunOptions, analyze
-from plotzker.fem.solve import proportional
-from plotzker.fem.stl import clean_stl
-from plotzker.fem.tools import tools_available
 from plotzker.materials import load_material, load_profile
 from plotzker.parts import PARTS
 
@@ -191,7 +191,8 @@ def test_net_force_ignores_loads_on_constrained_directions():
 @needs_solvers
 def test_real_part_runs_end_to_end(tmp_path):
     """The slider's verdict depends on assumed loads; the analysis itself must be sound."""
-    result = analyze(PARTS["x_idler_slider"], tmp_path, log=lambda _: None)
+    options = RunOptions(project="plotzker.project:PROJECT")
+    result = analyze(PARTS["x_idler_slider"], tmp_path, options, log=lambda _: None)
     assert all(c.ok for c in result.checks), [c.detail for c in result.checks if not c.ok]
     assert {c.case for c in result.criteria} == {"belt_preload", "belt_peak"}
     assert (tmp_path / "x_idler_slider" / "result.json").is_file()
@@ -295,8 +296,9 @@ def _write_result(folder, criteria):
 
 
 def test_assembly_sums_member_deflections_and_play(tmp_path):
+    from cadder.fem.assembly import check_assembly
+
     from plotzker.assembly_checks import tensioner_assembly
-    from plotzker.fem.assembly import check_assembly
     from plotzker.params import TENSION_IDLER
 
     # a dovetail tensioner (the generic prototype) on the Y parts' names: the play adds a rigid term
@@ -348,8 +350,9 @@ def test_floating_idlers_have_no_dovetail_play_term():
 
 
 def test_assembly_is_inconclusive_without_member_results(tmp_path):
+    from cadder.fem.assembly import check_assembly
+
     from plotzker.assembly_checks import ASSEMBLY_CHECKS
-    from plotzker.fem.assembly import check_assembly
 
     result = check_assembly(ASSEMBLY_CHECKS["x_idler_tensioner"], PARTS, tmp_path)
     assert result.status is Status.INCONCLUSIVE

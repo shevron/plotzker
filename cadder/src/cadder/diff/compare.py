@@ -6,11 +6,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from plotzker.diff.snapshot import Snapshot
-from plotzker.diff.stlio import MeshStats, measure, read_stl, same_surface
+from cadder.diff.snapshot import Snapshot
+from cadder.diff.stlio import MeshStats, measure, read_stl, same_surface
 
 if TYPE_CHECKING:
-    from plotzker.diff.assembly import AssemblyChange
+    from cadder.diff.assembly import AssemblyChange
 
 #: Meshes whose triangle centroids agree within this many mm count as the same part.
 SAME_TOLERANCE_MM = 1e-3
@@ -114,7 +114,7 @@ def to_json(
             return o.value
         raise TypeError(type(o))
 
-    from plotzker.diff.assembly import to_dict
+    from cadder.diff.assembly import to_dict
 
     doc = {
         "a": {"label": a.label, "commit": a.commit, "error": a.error},

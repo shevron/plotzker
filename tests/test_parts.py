@@ -3,10 +3,11 @@
 import math
 
 import pytest
+from cadder.render import export_stls
 from cadder.testing import bounding_box, shell_count, touching, volume
 
-from plotzker import build
 from plotzker.parts import PARTS
+from plotzker.project import PROJECT
 
 
 def assert_printable(solid):
@@ -23,14 +24,14 @@ def test_part_is_printable(name):
 
 
 def test_stl_export_writes_every_part(tmp_path):
-    written = build.export_stls(out_dir=tmp_path)
+    written = export_stls(PROJECT, out_dir=tmp_path)
     assert sorted(path.name for path in written) == sorted(f"{n}.stl" for n in PARTS)
     assert all(path.stat().st_size > 0 for path in written)
 
 
 def test_stl_export_rejects_unknown_names(tmp_path):
     with pytest.raises(SystemExit, match="Unknown name"):
-        build.export_stls(["no_such_part"], out_dir=tmp_path)
+        export_stls(PROJECT, ["no_such_part"], out_dir=tmp_path)
 
 
 def test_x_carriage_clamp_nuts_each_have_a_pocket_and_a_roof():

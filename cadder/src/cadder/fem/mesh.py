@@ -7,9 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from cadder.regions import Region
+from cadder.tools import find_tool
 from cadder.types import Vec3
-
-from plotzker.fem.tools import find_tool
 
 #: Nodes closer than this (mm) are the same node.
 MERGE_TOL = 5e-4

@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 
 from cadder.testing import flatten, volume
 
-from plotzker import build, layout
+from plotzker import cli, layout
 from plotzker.assemblies import baseboard
 from plotzker.params import FRAME
 
@@ -30,7 +30,7 @@ def test_fasteners_pass_through_their_holes():
 
 
 def test_layout_files_are_written(tmp_path):
-    svg, table = build.export_layout(tmp_path)
+    svg, table = cli.export_layout(tmp_path)
     root = ET.parse(svg).getroot()
     assert root.get("width") == "700mm" and root.get("height") == "900mm"
     assert table.read_text().count("\n| ") >= len(layout.board_holes())

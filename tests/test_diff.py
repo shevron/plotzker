@@ -1,4 +1,4 @@
-"""Tests for the design diff (``plotzker.diff``): STL reading, measuring, part comparison."""
+"""Tests for the design diff (``cadder.diff``): STL reading, measuring, part comparison."""
 
 import struct
 import subprocess
@@ -7,10 +7,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
-from plotzker.diff.compare import Status, compare_snapshots, format_report
-from plotzker.diff.snapshot import PartFile, Snapshot, take_snapshot
-from plotzker.diff.stlio import measure, read_stl, same_surface
+from cadder.diff.compare import Status, compare_snapshots, format_report
+from cadder.diff.snapshot import BuildConfig, PartFile, Snapshot, take_snapshot
+from cadder.diff.stlio import measure, read_stl, same_surface
 
 # Corner indices of a box's 12 triangles, outward facing.
 _FACES = [
@@ -118,7 +117,8 @@ def test_snapshot_of_a_commit_leaves_no_worktree(tmp_path: Path) -> None:
     subprocess.run(
         [*run, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "c"], check=True
     )
-    result = take_snapshot(repo, "HEAD", tmp_path / "cache")
+    config = BuildConfig("nothing.project:PROJECT")
+    result = take_snapshot(repo, "HEAD", tmp_path / "cache", config)
     assert result.parts == {}
     assert result.error
     worktrees = subprocess.run(
@@ -132,7 +132,7 @@ def test_report_embeds_changed_meshes_only(tmp_path: Path) -> None:
     import json
     import re
 
-    from plotzker.diff.report import write_report
+    from cadder.diff.report import write_report
 
     same = write_ascii(tmp_path / "same.stl", box(1, 1, 1))
     tall = write_ascii(tmp_path / "tall.stl", box(1, 1, 2))
@@ -153,7 +153,7 @@ def test_report_embeds_changed_meshes_only(tmp_path: Path) -> None:
 
 
 def test_solid_diff_of_boxes() -> None:
-    from plotzker.diff.boolean import solid_diff
+    from cadder.diff.boolean import solid_diff
 
     # A 1×1×1 box grows to 1×1×2 and loses nothing; a box shifted by 0.5 in x gains and loses
     # a 0.5×1×1 slab.
@@ -169,7 +169,7 @@ def test_solid_diff_of_boxes() -> None:
 
 
 def test_solid_diff_ignores_slivers() -> None:
-    from plotzker.diff.boolean import solid_diff
+    from cadder.diff.boolean import solid_diff
 
     result = solid_diff(box(10, 10, 10), box(10, 10, 10.00005))  # 0.005 mm³
     assert result.added is None
@@ -183,7 +183,7 @@ def _asm(tmp_path: Path, name: str, items: list[np.ndarray]) -> Path:
 
 
 def test_assembly_instances_matched_by_geometry(tmp_path: Path) -> None:
-    from plotzker.diff.assembly import InstanceStatus, compare_assembly
+    from cadder.diff.assembly import InstanceStatus, compare_assembly
 
     a = _asm(
         tmp_path,
@@ -212,7 +212,7 @@ def test_assembly_instances_matched_by_geometry(tmp_path: Path) -> None:
 
 
 def test_identical_assemblies_are_unchanged(tmp_path: Path) -> None:
-    from plotzker.diff.assembly import compare_assembly
+    from cadder.diff.assembly import compare_assembly
 
     items = [box(1, 1, 1), box(1, 1, 1, at=5), box(2, 2, 2)]
     change = compare_assembly("asm", _asm(tmp_path, "a", items), _asm(tmp_path, "b", items), {})
@@ -245,7 +245,7 @@ def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
 
 
 def test_source_info_between_commits(tmp_path: Path) -> None:
-    from plotzker.diff.source import changed_files, commit_log, fem_hints, file_diff
+    from cadder.diff.source import changed_files, commit_log, fem_hints, file_diff
 
     repo, first, second = _git_repo(tmp_path)
     assert commit_log(repo, first, second) == [f"{second[:7]} second"]
@@ -262,8 +262,8 @@ def test_source_info_between_commits(tmp_path: Path) -> None:
 
 
 def test_source_info_against_worktree(tmp_path: Path) -> None:
-    from plotzker.diff.snapshot import WORKTREE
-    from plotzker.diff.source import changed_files
+    from cadder.diff.snapshot import WORKTREE
+    from cadder.diff.source import changed_files
 
     repo, _, second = _git_repo(tmp_path)
     (repo / "src/plotzker/params.py").write_text("W = 3\n")

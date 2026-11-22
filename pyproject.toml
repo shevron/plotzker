@@ -19,7 +19,7 @@ diff = ["cadder[diff]"]
 dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
-plotzker = "plotzker.build:main"
+plotzker = "plotzker.cli:main"
 
 [tool.cadder]
 project = "plotzker.project:PROJECT"  # the cadder CLI finds the project here

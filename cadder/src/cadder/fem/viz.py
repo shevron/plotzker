@@ -4,12 +4,11 @@ import json
 import subprocess
 from pathlib import Path
 
+from cadder.fem.ccx import Tensor
+from cadder.fem.evaluate import Strengths, failure_index
+from cadder.fem.mesh import Mesh
+from cadder.tools import find_tool
 from cadder.types import Vec3
-
-from plotzker.fem.ccx import Tensor
-from plotzker.fem.evaluate import Strengths, failure_index
-from plotzker.fem.mesh import Mesh
-from plotzker.fem.tools import find_tool
 
 RENDER_SCRIPT = Path(__file__).with_name("viz_render.py")
 #: Seconds the renderer may take for one load case.

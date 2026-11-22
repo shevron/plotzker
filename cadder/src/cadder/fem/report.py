@@ -8,10 +8,9 @@ import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 
+from cadder.fem.runner import FemResult, export_part_stl
+from cadder.fem.stl import clean_stl
 from cadder.part import MaterialPart, Part, part_to_dict
-
-from plotzker.fem.runner import FemResult, export_part_stl
-from plotzker.fem.stl import clean_stl
 
 
 def spec_hash(part: MaterialPart) -> str:
@@ -71,7 +70,7 @@ def update_verdicts(path: Path, part: MaterialPart, result: FemResult, geometry_
         "geometry": geometry_hash,
         "spec": spec_hash(part),
     }
-    lines = ["# Last FEM verdict per part (written by `python -m plotzker fem`).", ""]
+    lines = ["# Last FEM verdict per part (written by the `fem` command).", ""]
     for name in sorted(entries):
         lines.append(f"[{name}]")
         lines += [f'{k} = "{v}"' for k, v in entries[name].items()]
@@ -79,11 +78,11 @@ def update_verdicts(path: Path, part: MaterialPart, result: FemResult, geometry_
     path.write_text("\n".join(lines))
 
 
-def current_geometry_hash(part: MaterialPart) -> str:
+def current_geometry_hash(part: MaterialPart, project: str) -> str:
     """Hash of the part's cleaned FEM STL as it is now (what a check would hash)."""
     with tempfile.TemporaryDirectory() as folder:
         raw = Path(folder) / "raw.stl"
-        export_part_stl(part, raw)
+        export_part_stl(part, raw, project)
         return file_hash(clean_stl(raw, Path(folder) / "clean.stl").path)
 
 
@@ -92,8 +91,10 @@ def status_lines(
     parts: Mapping[str, Part],
     verdicts: Path,
     check_geometry: bool = True,
+    project: str = "",
 ) -> list[str]:
-    """One line per part: its FEM state, and whether the last verdict is stale."""
+    """One line per part: its FEM state, and whether the last verdict is stale. Checking the
+    geometry exports each part from ``project`` (its spec)."""
     recorded: dict[str, dict[str, str]] = {}
     if verdicts.is_file():
         with verdicts.open("rb") as f:
@@ -116,7 +117,7 @@ def status_lines(
             stale = []
             if entry.get("spec") != spec_hash(part):
                 stale.append("spec")
-            if check_geometry and entry.get("geometry") != current_geometry_hash(part):
+            if check_geometry and entry.get("geometry") != current_geometry_hash(part, project):
                 stale.append("geometry")
             changed = " and ".join(stale)
             state = (

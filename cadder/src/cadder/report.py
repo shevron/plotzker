@@ -1,4 +1,4 @@
-"""Text and JSON reports of the part definitions (``python -m plotzker part``)."""
+"""Text and JSON reports of a project's parts (the ``part`` command)."""
 
 import json
 from collections.abc import Mapping
@@ -6,10 +6,8 @@ from pathlib import Path
 
 from cadder.part import MaterialPart, Part, PrintedPart, part_to_dict
 
-from plotzker.parts import PARTS
 
-
-def list_parts(parts: Mapping[str, Part] = PARTS) -> str:
+def list_parts(parts: Mapping[str, Part]) -> str:
     """One line per part: its profile, material and FEM state."""
     rows = []
     for name, part in parts.items():
@@ -31,7 +29,7 @@ def _get(name: str, parts: Mapping[str, Part]) -> Part:
     raise SystemExit(f"{name}: unknown part. Defined: {', '.join(parts)}")
 
 
-def export_part_stl(name: str, dest: Path, parts: Mapping[str, Part] = PARTS) -> None:
+def export_part_stl(name: str, dest: Path, parts: Mapping[str, Part]) -> None:
     """Write the part, in its analysis frame, as an STL file."""
     from pythonscad import export
 
@@ -40,12 +38,12 @@ def export_part_stl(name: str, dest: Path, parts: Mapping[str, Part] = PARTS) ->
     export(solid, str(dest))
 
 
-def part_json(name: str, parts: Mapping[str, Part] = PARTS) -> str:
+def part_json(name: str, parts: Mapping[str, Part]) -> str:
     """Everything the FEM sub-agent needs about a part, as JSON."""
     return json.dumps(part_to_dict(_get(name, parts)), indent=2)
 
 
-def part_text(name: str, parts: Mapping[str, Part] = PARTS) -> str:
+def part_text(name: str, parts: Mapping[str, Part]) -> str:
     """A readable summary of a part."""
     part = _get(name, parts)
     lines = [f"{part.name}: {part.description}"]

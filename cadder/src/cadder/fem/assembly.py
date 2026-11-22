@@ -14,9 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from cadder.assembly import AssemblyCheck, assembly_to_dict
+from cadder.fem.evaluate import Status, status_for, worst
 from cadder.part import MaterialPart
-
-from plotzker.fem.evaluate import Status, status_for, worst
 
 
 @dataclass
@@ -180,7 +179,7 @@ def update_verdicts(
         "date": datetime.date.today().isoformat(),
         "spec": spec_hash(assembly, parts, path),
     }
-    lines = ["# Last FEM verdict per part (written by `python -m plotzker fem`).", ""]
+    lines = ["# Last FEM verdict per part (written by the `fem` command).", ""]
     for name in sorted(entries):
         lines.append(f"[{name}]")
         lines += [f'{k} = "{v}"' for k, v in entries[name].items()]
@@ -189,6 +188,7 @@ def update_verdicts(
 
 
 def run_assemblies(
+    checks: Mapping[str, AssemblyCheck],
     names: list[str],
     parts: Mapping[str, MaterialPart],
     out_dir: Path,
@@ -196,12 +196,10 @@ def run_assemblies(
     record: bool = True,
     log: Callable[[str], None] = print,
 ) -> list[AssemblyResult]:
-    """Check the named assemblies from the members' recorded results; write the reports."""
-    from plotzker.assembly_checks import ASSEMBLY_CHECKS
-
+    """Check the named assembly checks from the members' recorded results; write the reports."""
     results = []
     for name in names:
-        assembly = ASSEMBLY_CHECKS[name]
+        assembly = checks[name]
         result = check_assembly(assembly, parts, out_dir, verdicts)
         folder = out_dir / name
         folder.mkdir(parents=True, exist_ok=True)

@@ -14,11 +14,11 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from plotzker.diff.assembly import AssemblyChange, InstanceChange, InstanceStatus
-from plotzker.diff.boolean import solid_diff
-from plotzker.diff.compare import PartChange, Status
-from plotzker.diff.snapshot import Snapshot
-from plotzker.diff.stlio import Triangles, read_stl
+from cadder.diff.assembly import AssemblyChange, InstanceChange, InstanceStatus
+from cadder.diff.boolean import solid_diff
+from cadder.diff.compare import PartChange, Status
+from cadder.diff.snapshot import Snapshot
+from cadder.diff.stlio import Triangles, read_stl
 
 VIEWER = Path(__file__).parent / "viewer" / "viewer.html"
 _PLACEHOLDER = "/*__DIFF_DATA__*/null"

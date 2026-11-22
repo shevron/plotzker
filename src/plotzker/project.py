@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from cadder.project import Project
 
 if TYPE_CHECKING:
+    import typer
     from cadder.assembly import Assembly, AssemblyCheck
     from cadder.part import Part
 
@@ -48,6 +49,18 @@ def _report() -> str:
     return report() + "\n" + clearance_report()
 
 
+def _commands(app: typer.Typer) -> None:
+    from plotzker.cli import commands
+
+    commands(app)
+
+
+def _layout() -> object:
+    from plotzker.cli import export_layout
+
+    return export_layout()
+
+
 PROJECT = Project(
     name="plotzker",
     spec="plotzker.project:PROJECT",
@@ -58,6 +71,12 @@ PROJECT = Project(
     assembly_checks=_assembly_checks,
     design_checks=_design_checks,
     report=_report,
+    commands=_commands,
+    all_steps=(_layout,),
     params_file="src/plotzker/params.py",
-    legacy_specs=("plotter_cad.parts:PRINTABLE_PARTS",),
+    # revisions before the cadder split (tag pre-cadder-split) and during it
+    legacy_specs=(
+        ("plotter_cad.parts:PRINTABLE_PARTS", "plotter_cad.assemblies:ASSEMBLIES"),
+        ("plotzker.parts:PRINTABLE_PARTS", "plotzker.assemblies:ASSEMBLIES"),
+    ),
 )

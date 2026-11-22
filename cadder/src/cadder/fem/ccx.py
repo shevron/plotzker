@@ -7,10 +7,9 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from cadder.fem.mesh import Mesh
+from cadder.tools import find_tool
 from cadder.types import Vec3
-
-from plotzker.fem.mesh import Mesh
-from plotzker.fem.tools import find_tool
 
 Tensor = tuple[float, float, float, float, float, float]  #: xx, yy, zz, xy, yz, zx
 

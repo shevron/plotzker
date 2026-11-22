@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import manifold3d
 import numpy as np
 
-from plotzker.diff.stlio import Triangles
+from cadder.diff.stlio import Triangles
 
 #: Pieces of added/removed material below this volume are noise, mm³.
 MIN_PIECE_MM3 = 0.01

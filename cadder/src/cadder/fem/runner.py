@@ -6,17 +6,14 @@ import os
 import subprocess
 import sys
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal
 
-from cadder.part import MaterialPart, part_to_dict
-from cadder.regions import Region
-
-from plotzker.fem import applied
-from plotzker.fem.ccx import DEFAULT_SOLVER, Results, SolverMaterial
-from plotzker.fem.evaluate import (
+from cadder.fem import applied
+from cadder.fem.ccx import DEFAULT_SOLVER, Results, SolverMaterial
+from cadder.fem.evaluate import (
     Status,
     Strengths,
     displacement_value,
@@ -26,7 +23,7 @@ from plotzker.fem.evaluate import (
     stress_result,
     worst,
 )
-from plotzker.fem.mesh import (
+from cadder.fem.mesh import (
     STRATEGIES,
     Mesh,
     SizeField,
@@ -35,9 +32,11 @@ from plotzker.fem.mesh import (
     nodes_in_region,
     patch_edge_nodes,
 )
-from plotzker.fem.solve import Forces, Solved, solve_cases
-from plotzker.fem.stl import CleanStl, clean_stl
-from plotzker.fem.viz import node_utilization, render, write_case_data
+from cadder.fem.solve import Forces, Solved, solve_cases
+from cadder.fem.stl import CleanStl, clean_stl
+from cadder.fem.viz import node_utilization, render, write_case_data
+from cadder.part import MaterialPart, part_to_dict
+from cadder.regions import Region
 
 #: Facet count for the part's STL: coarse holes keep the mesher fast (docs/fem-subagent-plan.md).
 FEM_FACETS = 20
@@ -104,11 +103,15 @@ class FemResult:
         return data
 
 
-def export_part_stl(part: MaterialPart, dest: Path) -> None:
-    """Export the part in its analysis frame with coarse facets (a subprocess sets the facets)."""
+def export_part_stl(part: MaterialPart, dest: Path, project: str) -> None:
+    """Export the part in its analysis frame with coarse facets: a subprocess, because the facet
+    count is read when the geometry modules are imported. ``project`` is the project's spec."""
+    if not project:
+        raise RuntimeError(f"STL export of {part.name}: no project spec to export it from")
     env = {**os.environ, "CADDER_FN": str(FEM_FACETS)}
+    cmd = [sys.executable, "-m", "cadder", "--project", project, "part", part.name]
     result = subprocess.run(
-        [sys.executable, "-m", "plotzker", "part", part.name, "--stl", str(dest)],
+        [*cmd, "--stl", str(dest)],
         capture_output=True,
         text=True,
         env=env,
@@ -235,6 +238,8 @@ class RunOptions:
     graded: bool = True  #: coarse elements away from loads and supports
     solver: str = DEFAULT_SOLVER
     viz: bool = False  #: also write pictures and a .vtu per load case
+    #: the project's spec (``"package.module:PROJECT"``): the part is exported in a subprocess
+    project: str = ""
 
 
 def _size_field(part: MaterialPart, extent: float, options: RunOptions) -> SizeField:
@@ -467,7 +472,7 @@ def analyze(
     log(f"  exporting and cleaning the STL ({FEM_FACETS} facets per hole)")
     raw = stl or work / "part_raw.stl"
     if stl is None:
-        export_part_stl(part, raw)
+        export_part_stl(part, raw, options.project)
     clean: CleanStl = clean_stl(raw, work / "part.stl")
     extent = max(clean.bbox[1][i] - clean.bbox[0][i] for i in range(3))
     field = _size_field(part, extent, options)
@@ -565,6 +570,7 @@ def _assumed_inputs(part: MaterialPart) -> list[str]:
 
 
 def run_checks(
+    parts: Mapping[str, MaterialPart],
     names: list[str],
     out_dir: Path,
     verdicts: Path | None,
@@ -572,19 +578,18 @@ def run_checks(
     log: Callable[[str], None] = print,
     record: bool = True,
 ) -> list[FemResult]:
-    """Check the named parts, write reports and the verdicts file, print a summary."""
-    from plotzker.fem.report import file_hash, markdown, update_verdicts
-    from plotzker.parts import PARTS as ALL_PARTS
+    """Check the named parts (of ``parts``, the project's parts with a material), write reports
+    and the verdicts file, print a summary."""
+    from cadder.fem.report import file_hash, markdown, update_verdicts
 
-    PARTS = {n: p for n, p in ALL_PARTS.items() if isinstance(p, MaterialPart)}  # noqa: N806
-    unknown = [n for n in names if n not in PARTS]
+    unknown = [n for n in names if n not in parts]
     if unknown:
         raise SystemExit(
-            f"No material or FEM data: {', '.join(unknown)}. Defined: {', '.join(PARTS)}"
+            f"No material or FEM data: {', '.join(unknown)}. Defined: {', '.join(parts)}"
         )
     targets: list[str] = []
     for name in names:
-        base = PARTS[name].mirror_of
+        base = parts[name].mirror_of
         if base:
             log(f"{name}: exact mirror image of {base}; its check applies")
         if (base or name) not in targets:
@@ -592,7 +597,7 @@ def run_checks(
     results = []
     for name in targets:
         log(f"{name}:")
-        part = PARTS[name]
+        part = parts[name]
         try:
             result = analyze(part, out_dir, options, log)
         except (RuntimeError, applied.SpecError) as exc:

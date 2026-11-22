@@ -1,5 +1,5 @@
 """Run the command-line interface: ``python -m plotzker``."""
 
-from plotzker.build import main
+from plotzker.cli import main
 
 main()

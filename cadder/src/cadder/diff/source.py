@@ -10,13 +10,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from plotzker.diff.snapshot import WORKTREE, Snapshot
+from cadder.diff.snapshot import WORKTREE, Snapshot
 
 #: Source diffs longer than this many lines are cut (the viewer says so).
 MAX_DIFF_LINES = 400
-#: The shared parameter module, whose changes explain most part changes.
-PARAMS_PATH = "src/plotzker/params.py"
-SOURCE_ROOT = "src/plotzker"
+
+
+@dataclass(frozen=True)
+class SourceLayout:
+    """Where a project's source and FEM verdicts are, relative to the repository root."""
+
+    #: folders whose changed files are listed
+    roots: tuple[str, ...] = ("src",)
+    #: the shared parameter module, whose changes explain most part changes (None: none)
+    params_file: str | None = None
+    verdicts_file: str = "fem/verdicts.toml"
 
 
 @dataclass(frozen=True)
@@ -61,12 +69,18 @@ def commit_log(repo: Path, a: str, b: str) -> list[str]:
     return out.splitlines()
 
 
-def changed_files(repo: Path, a: str, b: str) -> list[FileChange]:
-    """Source files under ``src/plotzker`` that differ, with added/deleted line counts."""
+def changed_files(
+    repo: Path,
+    a: str,
+    b: str,
+    layout: SourceLayout = SourceLayout(),  # noqa: B008
+) -> list[FileChange]:
+    """Source files under the layout's roots that differ, with added/deleted line counts (a
+    moved file shows as ``old => new``)."""
     args = _diff_args(a, b)
     if args is None:
         return []
-    out = _git(repo, "diff", "--numstat", *args, "--", SOURCE_ROOT)
+    out = _git(repo, "diff", "--numstat", "-M", *args, "--", *layout.roots)
     files = []
     for line in out.splitlines():
         added, deleted, path = line.split("\t", 2)
@@ -88,25 +102,25 @@ def file_diff(repo: Path, a: str, b: str, path: str) -> str:
     return "\n".join(body)
 
 
-def _verdicts(repo: Path, rev: str) -> dict[str, dict[str, Any]]:
-    """``fem/verdicts.toml`` as of ``rev`` ({} if it has none)."""
+def _verdicts(repo: Path, rev: str, path: str) -> dict[str, dict[str, Any]]:
+    """The verdicts file ``path`` as of ``rev`` ({} if it has none)."""
     try:
-        if rev == WORKTREE:
-            text = (repo / "fem" / "verdicts.toml").read_text()
-        else:
-            text = _git(repo, "show", f"{rev}:fem/verdicts.toml")
+        worktree = rev == WORKTREE
+        text = (repo / path).read_text() if worktree else _git(repo, "show", f"{rev}:{path}")
         return tomllib.loads(text)
     except OSError, RuntimeError, tomllib.TOMLDecodeError:
         return {}
 
 
-def fem_hints(repo: Path, a: str, b: str, changed: list[str]) -> dict[str, str]:
+def fem_hints(
+    repo: Path, a: str, b: str, changed: list[str], verdicts: str = "fem/verdicts.toml"
+) -> dict[str, str]:
     """A one-line FEM note for each changed part that has a verdict in either revision.
 
     "re-checked" if the verdict entry differs between the revisions; "not re-run" if the part
-    changed but its entry did not (the verdict may be stale: ``make fem-status`` tells).
+    changed but its entry did not (the verdict may be stale: the ``fem-status`` command tells).
     """
-    va, vb = _verdicts(repo, a), _verdicts(repo, b)
+    va, vb = _verdicts(repo, a, verdicts), _verdicts(repo, b, verdicts)
     hints = {}
     for name in changed:
         ea, eb = va.get(name), vb.get(name)
@@ -123,10 +137,16 @@ def fem_hints(repo: Path, a: str, b: str, changed: list[str]) -> dict[str, str]:
     return hints
 
 
-def collect(repo: Path, a: Snapshot, b: Snapshot, changed_parts: list[str]) -> dict[str, Any]:
+def collect(
+    repo: Path,
+    a: Snapshot,
+    b: Snapshot,
+    changed_parts: list[str],
+    layout: SourceLayout = SourceLayout(),  # noqa: B008
+) -> dict[str, Any]:
     """Source information for the report: ``{"log", "files", "params", "parts": {name: {...}}}``."""
     parts: dict[str, dict[str, str]] = {}
-    hints = fem_hints(repo, a.commit, b.commit, changed_parts)
+    hints = fem_hints(repo, a.commit, b.commit, changed_parts, layout.verdicts_file)
     for name in changed_parts:
         pf = b.parts.get(name) or a.parts.get(name)
         path = pf.source if pf and pf.source else ""
@@ -138,9 +158,9 @@ def collect(repo: Path, a: Snapshot, b: Snapshot, changed_parts: list[str]) -> d
         "log": commit_log(repo, a.commit, b.commit),
         "files": [
             {"path": f.path, "added": f.added, "deleted": f.deleted}
-            for f in changed_files(repo, a.commit, b.commit)
+            for f in changed_files(repo, a.commit, b.commit, layout)
         ],
-        "params": file_diff(repo, a.commit, b.commit, PARAMS_PATH),
+        "params": file_diff(repo, a.commit, b.commit, layout.params_file or ""),
         "parts": parts,
     }
 

@@ -12,9 +12,9 @@ image; :func:`y_idler_slider` returns each in print orientation.
 
 Hardware: toothed idler (``IDLER``); 1 × M5×25 ISO 4762 (axle) + 1 × M5 nut (pressed into the
 outboard arm's outside); 1 × M3 nut (pressed in from the top of the rear wall).
-Print: default profile (``profiles/default.toml``); lying on its side, the inboard arm's outer face
-on the bed (the build direction is −x in the left side frame, so the layers run along the arms
-that carry the belt's pull); no supports.
+Print: default profile (``profiles/default.toml``); upside down, the flat top on the bed (the build
+direction is -z, so the layers lie in the horizontal plane, parallel to the belt's pull and to the
+tightening of the axle nut and the tension screw); no supports.
 
 FEM: see :func:`plotter_cad.parts.floating_idler.slider_fem`; the right slider is the exact mirror
 image, so the left one's check applies.
@@ -40,7 +40,7 @@ def y_idler_slider_installed() -> Solid:
 
 
 def y_idler_slider(side: Side = Side.LEFT) -> Solid:
-    """The slider for one side in print orientation: lying on its side (the right one is the
+    """The slider for one side in print orientation: upside down (the right one is the
     mirror image: its axle nut is on the other arm)."""
     part = slider_for_print(Y_IDLER)
     return part.mirror([0, 1, 0]) if side is Side.RIGHT else part
@@ -55,7 +55,7 @@ PART_LEFT = Part(
     description="Y idler slider (left): floating carrier of the idler axle, tied to the tower",
     build=y_idler_slider_installed,
     frame="installed",
-    build_direction=PLACEMENT.vector((0, -Y_IDLER.head_side, 0)),
+    build_direction=(0, 0, -1),
     fem=slider_fem(Y_IDLER, PLACEMENT, Y_BELT_LOADS, "loads.Y_BELT_LOADS"),
 )
 PART_RIGHT = Part(
@@ -63,6 +63,6 @@ PART_RIGHT = Part(
     description="Y idler slider (right): mirror image of the left one",
     build=lambda: y_idler_slider_installed().mirror([1, 0, 0]),
     frame="installed",
-    build_direction=PLACEMENT.vector((0, -Y_IDLER.head_side, 0)),
+    build_direction=(0, 0, -1),
     mirror_of="y_idler_slider_left",
 )

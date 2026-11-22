@@ -396,3 +396,25 @@ def test_y_idler_axle_bolt_and_nut_clear_the_tower_walls(side, shift):
     )
     for part in (shcs(t.axle_m, t.axle_len).align(axle), nut):
         assert volume(part & mount) < 1e-3
+
+
+@pytest.mark.parametrize("which", ["x", "y"])
+def test_floating_slider_arm_ends_have_a_straight_45_degree_top_front(which):
+    """T3.22: printed upside down the arms' round ends must not droop: the top front corner is a
+    straight 45° line, so material is solid just below it and absent just above it."""
+    from pythonscad import cube
+
+    from plotter_cad.params import X_IDLER, Y_IDLER
+    from plotter_cad.parts.floating_idler import slider_local
+
+    t = X_IDLER if which == "x" else Y_IDLER
+    s = slider_local(t)
+    y_mid = t.gap_y / 2 + t.arm_t / 2
+    x = t.chamfer_x + 1.0  # past the start of the line
+    line_z = t.arm_top - 1.0  # the 45° line's height there
+
+    def probe(dz: float):
+        return cube([0.4, 1, 0.4]).translate([x - 0.2, y_mid - 0.5, line_z + dz - 0.2])
+
+    assert volume(s & probe(-0.8)) > 0.9 * 0.4 * 0.4 * 1  # solid below the line
+    assert volume(s & probe(+0.8)) < 1e-3  # nothing above it

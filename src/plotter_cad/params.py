@@ -1732,7 +1732,9 @@ class FloatingIdler:
     travel: float = 8  #: DESIGN: slider travel (tensioning range)
     stop_gap: float = 0.5  #: slider to tower when fully tensioned
     arm_clear: float = 1.5  #: web to the idler flange
-    arm_end_r: float = 6.5  #: radius around the axle at the arms' front ends
+    #: radius around the axle at the arms' front ends: the ring of material that the axle pushes;
+    #: its hoop stress is across the layers when the slider prints upside down
+    arm_end_r: float = 9.0
     below_axle: float = 11.0  #: DESIGN: slider underside below the axle (clears the endstop plug)
     nut_slot_extra: float = 0.2  #: extra thickness of the nut slot (it prints standing)
     tip_clear: float = 1.0  #: screw tip to the tunnel's end when tight
@@ -1832,6 +1834,12 @@ class FloatingIdler:
     def length(self) -> float:
         """Slider length (x)."""
         return self.axle_x + self.arm_end_r
+
+    @property
+    def chamfer_x(self) -> float:
+        """Where the arms' flat top ends and the 45° line down to the round end starts: the point
+        from which the tangent to the round end (radius ``arm_end_r``) is at 45°."""
+        return self.axle_x + (math.sqrt(2) - 1) * self.arm_end_r
 
     @property
     def rear_mid(self) -> float:

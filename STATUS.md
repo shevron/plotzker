@@ -436,7 +436,7 @@ the printed carriage, motor mount and idler mount are the test pieces.
   0.09 / 0.16 mm; strength 0.69 / 0.62); X assembly check **MARGINAL** (vertical 0.11 / 0.19 mm
   of 0.2; was FAIL at 0.55 / 0.76). The tower reaches 20 mm further out than the old block
   (outer face x = −68 vs −48). **Open:** print and test (ring-and-wall fit, 0.5 mm wall gap; the
-  round 3.4 mm hole in the plate prints lying on its side); decide the Y tensioners' fix.
+  round 3.4 mm hole in the plate prints lying on its side; the slider prints upside down, top on the bed, so its layers are parallel to the belt's pull and the nut tightening; its arm ends are 9 mm round with a 45° top front corner so that nothing droops or flips it in a slicer, plan §27); decide the Y tensioners' fix.
   - [ ] Follow-up: X idler position (`X_DRIVE.idler_x`, now −21): moving it inboard shortens the
     overhang by the same amount, at the cost of X travel (16 mm spare).
 
@@ -444,7 +444,7 @@ the printed carriage, motor mount and idler mount are the test pieces.
   mounts: no rail, the M3 screw along the belt line at the axle's height through a tower at the
   front of the mount's foot (plate 11.4 mm, two 8 mm walls, `Y_IDLER`); the slider is the same
   part as the X one (`parts/floating_idler.py` builds both: `params.FloatingIdler`, `X_IDLER`,
-  `Y_IDLER`), head on the inboard arm, printed on its side. The tower's walls stand on a pad on
+  `Y_IDLER`), head on the inboard arm, printed upside down (top on the bed). The tower's walls stand on a pad on
   the foot, the foot's wood screws moved outboard of the walls (bosses beyond the outboard wall),
   and the foot reaches 19 mm further to the front (tower's outer face at machine y 14). The
   dovetail (`Y_TENSIONER`) is gone from the machine; `tension_idler.py` stays as the generic
@@ -574,7 +574,7 @@ hard to get, we adjust.
 | Lead screws, linear bearings, misc. bearings | assorted | No LM6UU/LM8UU found yet | Only needed for a stepper Z experiment or the pen slide upgrade |
 | Ø6 rod | 1 | ~200 mm, cuttable; the pen holder's rod needs 63 mm | — |
 | Hobby servos | 2+ | **FeeTech FT90M** (metal gears, digital; used for the pen lift) and FS90 (spare); measured in `docs/hardware.md` | Horn thickness, spline height |
-| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers; **95 × 110 × 22 mm**, 4 × Ø3 holes 80 × 100 mm, out of its case ([`docs/controller.md`](docs/controller.md)) | Driver chip type; pin map (bench) |
+| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers; **95 × 110 × 22 mm**, 4 × Ø3 holes 80 × 100 mm, out of its case ([`docs/controller.md`](docs/controller.md)) | X, Y, Z drivers: red A4988-type clones (photos); E0 to E2 (white) type and sense resistors still unread; pin map (bench) |
 | Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm** (user) | Mounting holes, terminal side |

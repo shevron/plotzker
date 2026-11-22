@@ -21,9 +21,10 @@ axle at ``X_DRIVE.idler_x``.
 Hardware: toothed idler (``IDLER``); 1 × M5×25 ISO 4762 (axle, head on the +y arm) + 1 × M5 nut
 (pressed into the -y arm's outside); 1 × M3 nut (pressed in from the top of the wall) + 1 ×
 M3×``X_IDLER.screw_len`` ISO 4762 (tension screw, from the tower's outer face).
-Print: default profile (``profiles/default.toml``); lying on its side, the +y arm's outer face on
-the bed (the build direction is -y in the installed frame, so the layers run along the arms that
-carry the belt's pull); no supports; the tunnel is a teardrop lying flat, closed by a 1.6 mm wall.
+Print: default profile (``profiles/default.toml``); upside down, the flat top on the bed (the
+build direction is -z, so the layers lie in the xy plane, parallel to the belt's pull and to the
+tightening of the axle nut and the tension screw); no supports; the holes along x and y are
+teardrops pointing up, the tunnel is closed by a 1.6 mm wall.
 
 FEM: the belt pulls the axle bore inboard; the M3 nut's seat holds it in x; the screw holds it
 sideways and vertically in the tunnel and one outer face stands for the tower's wall (roll);
@@ -58,7 +59,7 @@ def x_idler_slider_installed() -> Solid:
 
 
 def x_idler_slider() -> Solid:
-    """Print orientation: lying on its side, the +y arm's outer face on the bed."""
+    """Print orientation: upside down, the top on the bed."""
     return slider_for_print(X)
 
 
@@ -67,6 +68,6 @@ PART = Part(
     description="X idler slider: floating U-shaped carrier of the idler axle, tied to the tower",
     build=x_idler_slider_installed,
     frame="installed",
-    build_direction=(0, -X.head_side, 0),
+    build_direction=(0, 0, -1),
     fem=slider_fem(X, PLACEMENT, X_BELT_LOADS, "loads.X_BELT_LOADS"),
 )

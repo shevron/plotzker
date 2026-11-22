@@ -36,10 +36,13 @@ def slider_local(t: FloatingIdler) -> Solid:
     arms = []
     for sy in (-1, 1):
         y0 = -(t.gap_y / 2 + t.arm_t) if sy < 0 else t.gap_y / 2
+        # the top front corner is a straight 45° line, tangent to the round end: printed upside
+        # down it is no overhang that droops, so a slicer doesn't flip the part to avoid it
         arms.append(
             hull(
                 cube([EPS, t.arm_t, top - zb]).translate([0, y0, zb]),
                 cube([t.axle_x - t.arm_end_r, t.arm_t, EPS]).translate([0, y0, zb]),
+                cube([EPS, t.arm_t, EPS]).translate([t.chamfer_x, y0, top - EPS]),
                 cylinder(d=2 * t.arm_end_r, h=t.arm_t, fn=FN)
                 .rotate([-90, 0, 0])
                 .translate([t.axle_x, y0, t.axle_z]),
@@ -47,12 +50,12 @@ def slider_local(t: FloatingIdler) -> Solid:
         )
     web = cube([t.web_t, w, top - zb]).translate([0, -w / 2, zb])
     body = web | arms[0] | arms[1]
-    # printed on its side: the axle hole is vertical, and the tunnel lies flat as a teardrop
-    # pointing up (toward the arm that carries the axle nut)
-    up = -t.head_side
+    # printed upside down (the top on the bed, +z down): the holes along y and x lie flat, so
+    # their teardrops point to -z (print up); the nut pocket has a flat on that side (a 4.6 mm
+    # bridge: a corner there would be a 30° overhang)
     axle_hole = (
         teardrop_y(TOL.bolt_hole_d(t.axle_m), w + 2)
-        .rotate([0, 90, 0])
+        .rotate([180, 0, 0])
         .translate([t.axle_x, 0, t.axle_z])
     )
     axle_nut = (
@@ -66,20 +69,17 @@ def slider_local(t: FloatingIdler) -> Solid:
     # the screw's hole through the thrust wall and on into the blind tunnel for its tip
     tunnel = (
         teardrop_x(TOL.bolt_hole_d(t.screw_m), t.tunnel_end + 1)
-        .rotate([-90 * up, 0, 0])
+        .rotate([180, 0, 0])
         .translate([(t.tunnel_end - 1) / 2, 0, t.screw_z])
     )
     return body - axle_hole - axle_nut - screw_nut - tunnel
 
 
 def slider_for_print(t: FloatingIdler) -> Solid:
-    """Print orientation: lying on its side, the outer face of the arm that carries the axle bolt's
-    head on the bed (the layers run along the arms, which carry the belt's pull). Its build
-    direction is ``(0, -t.head_side, 0)`` in the tensioner frame."""
-    s = slider_local(t)
-    if t.head_side > 0:  # +y arm down
-        return s.rotate([-90, 0, 0]).translate([0, -t.z_bottom, t.width / 2])
-    return s.rotate([90, 0, 0]).translate([0, t.arm_top, t.width / 2])
+    """Print orientation: upside down, the slider's flat top on the bed. The layers then lie in
+    the xy plane, parallel to both the belt's pull (x) and the axle's and the nut's tightening
+    directions (y, x); the build direction is ``(0, 0, -1)`` in the tensioner frame."""
+    return slider_local(t).rotate([180, 0, 0]).translate([0, 0, t.arm_top])
 
 
 def tower(t: FloatingIdler) -> Solid:

@@ -79,6 +79,9 @@ Key pins from `pins_ZRIB_V53.h` (to be verified on the v5.8, see below):
 Marlin's `M43` pin-debugging command (`PINS_DEBUGGING`) makes this quick and safe:
 
 1. **Driver chips:** read the markings (A4988 / DRV8825 / other) on all 6 drivers.
+   *Found (photos, 2026-11-22):* X, Y and Z are **red A4988-type clones** (pin labels `EN MS1 MS2 MS3
+   RST SLP STP DIR`, VR1 pot, heatsink over the chip, so the chip and sense resistors are unread);
+   E0 to E2 are a different (white) type, not yet identified. Move a red driver into E0 for Y2.
    Put two **identical** drivers in the Y and E0 sockets. Set Vref for the motors (A4988
    and DRV8825 use different formulas).
 2. **Microstepping jumpers:** check the jumpers under each driver socket (MS1–MS3);

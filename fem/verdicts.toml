@@ -32,14 +32,14 @@ spec = "b8c4a6a801ca6919"
 
 [x_idler_slider]
 verdict = "MARGINAL"
-date = "2026-11-21"
-geometry = "8825815394e906fc"
-spec = "c35cb1622e0a438a"
+date = "2026-11-22"
+geometry = "ddfc1a901f3bd91f"
+spec = "2fcdd30c860d186f"
 
 [x_idler_tensioner]
-verdict = "MARGINAL"
-date = "2026-11-21"
-spec = "955600ccf7a634b0"
+verdict = "PASS"
+date = "2026-11-22"
+spec = "ed5193e5be7e38f9"
 
 [x_motor_mount]
 verdict = "FAIL"
@@ -61,19 +61,19 @@ spec = "2c8717f70652aa81"
 
 [y_idler_slider_left]
 verdict = "MARGINAL"
-date = "2026-11-21"
-geometry = "e7bc41f39ab419e2"
-spec = "c4829e87da33e7b4"
+date = "2026-11-22"
+geometry = "3e4f85f48cdabaad"
+spec = "e6471beafef9710f"
 
 [y_idler_tensioner_left]
 verdict = "PASS"
-date = "2026-11-21"
-spec = "ba515d7903bc44e4"
+date = "2026-11-22"
+spec = "d0a6e93bd44d78aa"
 
 [y_idler_tensioner_right]
 verdict = "PASS"
-date = "2026-11-21"
-spec = "44a91443412e5931"
+date = "2026-11-22"
+spec = "82def28a61d2de84"
 
 [y_motor_mount_left]
 verdict = "FAIL"

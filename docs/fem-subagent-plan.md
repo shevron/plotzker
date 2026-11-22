@@ -718,3 +718,38 @@ both ends; `params.FloatingIdler` holds the dimensions, `X_IDLER` and `Y_IDLER` 
 The Y mount's tower stands on the foot, which is screwed to the baseboard right beside it, so the
 load path is short and stiff (the X tower hangs 20 mm off the bracket's edge). The tower plate of
 both is 11.4 mm: the screw's length quantizes to M3×25 up to that thickness and to M3×30 above it.
+
+## 27. Floating idler sliders printed upside down (2026-11-22)
+
+Request (user): print the slider with its top on the bed, so the layers are parallel to the
+belt's pull and to the axle nut's and the tension screw's tightening directions. Done
+(`floating_idler.slider_for_print`, build direction −z; the holes along x and y are teardrops
+pointing up; the nut slot's far end is a 3.3 mm flat bridge).
+
+**FEM:** the ring of material that the axle pushes (the arms' round ends, hoop stress along z)
+now lies across the layers. With the arm ends at 6.5 mm the strength utilization went from 0.46
+(printed on its side) to 1.15, a FAIL. The arm ends are now 9 mm (`FloatingIdler.arm_end_r`):
+
+| Print orientation | arm_end_r | X slider strength (preload / peak) |
+|---|---|---|
+| on its side (layers across the arms' ring) | 6.5 | 0.46 / 0.41 |
+| upside down | 6.5 | 1.15 / 1.02 (FAIL) |
+| upside down | 8 | 0.73 / 0.65 (Y inconclusive: 5.5 % convergence) |
+| **upside down** | **9** | **0.54 / 0.49** (Y 0.53 / 0.48) |
+| (on its side, same 9 mm, for comparison) | 9 | 0.36 / 0.32 |
+
+Axle displacement unchanged (0.01-0.05 mm); both assemblies PASS. Caveat: on a finer mesh
+(`--size 1.2`) every variant, in either orientation, reads about 1.5: that is the singular edge of
+the bearing-load patch, not the ring (the default mesh excludes it), so only the default-mesh
+numbers are comparable. A bigger ring costs 2.5 mm of slider height and 2.5 mm of length in front
+of the axle.
+
+**Follow-up (user): no overhang, so a slicer doesn't flip the part.** The round arm ends drooped
+printed top down (a circle leaving a flat bed face is a growing overhang), and a slicer that
+auto-orients flips such a part (the first version, which printed on its back, put the layers
+across the pull). The arms' top front corner is now a straight 45° line tangent to the round end
+(`FloatingIdler.chamfer_x`; the flat top runs on to 0.41 × `arm_end_r` past the axle). An STL
+check of the printed slider (triangles facing down more than 45° from vertical, off the bed)
+leaves only two small flat bridges: the axle nut pocket's top (a flat, 4.6 mm: a corner up would be
+a 30° overhang) and the nut slot's far end (3.3 mm). FEM unchanged (strength 0.56 / 0.50 X, 0.55 /
+0.49 Y; assemblies PASS). A test checks the chamfer line.

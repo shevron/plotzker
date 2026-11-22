@@ -26,7 +26,7 @@ pen holder, servo, loom, ZRIB hangers. This guide is the first slice of T2.1–T
 | `x_carriage` | 1 | Front face down, no supports |
 | `x_motor_mount` | 1 | The STL is already the right-hand (mirrored) part |
 | `x_endstop_mount` | 1 | Foot that carries the endstop board |
-| `x_idler_slider` | 1 | Prints on its side |
+| `x_idler_slider` | 1 | Prints upside down (top on the bed) |
 | `belt_clamp` | 2 | The X belt's two ends (Y needs 4 more later) |
 
 Do **not** print `x_idler_mount.stl`: it is left over from the old design. If you change the
@@ -60,7 +60,7 @@ The bolt counts follow the assembly model (`assemblies/gantry.py`); verify when 
 
 ### Electronics and tools
 
-ZRIB v5.8, one StepStick driver (A4988 or DRV8825), the 24 V PSU, mains cable and plug,
+ZRIB v5.8, one StepStick driver (A4988 on hand), the 24 V PSU, mains cable and plug,
 USB-B cable (data, not charge-only), multimeter, small ceramic or plastic screwdriver (Vref
 pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
 
@@ -126,11 +126,12 @@ pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
    die). Leave the other sockets empty for now. Check the MS1–MS3 jumpers under the X
    socket: all three fitted gives 1/16 on an A4988 (80 steps/mm) and 1/32 on a DRV8825 (160
    steps/mm).
-3. **Vref.** With the motor unplugged and the board powered, set the driver's reference
-   voltage for about 1 A: A4988 with 0.068 Ω sense resistors (R068): Vref = 8 × 0.068 × 1 A
-   ≈ 0.55 V; DRV8825 with 0.1 Ω (R100): Vref = 5 × 0.1 × 1 A ≈ 0.5 V. Read the resistor
-   markings first: formulas differ. Measure between the pot's metal screw and GND; adjust
-   slowly. Raise it only if the motor skips.
+3. **Vref.** Our X driver is a red A4988 clone (pins `EN MS1 MS2 MS3 RST SLP STP DIR`); the chip
+   is under the heatsink and the sense resistors are not readable, so start at **Vref = 0.4 V**:
+   about 1.0 A with 0.05 Ω sense resistors, 0.7 A with 0.068 Ω, 0.5 A with 0.1 Ω (A4988:
+   I = Vref / (8 × R)), all safe for a NEMA17. With the motor unplugged and the board powered,
+   measure between the pot's metal screw and GND and adjust slowly with a ceramic or plastic
+   screwdriver. Raise it only if the motor skips. (For a DRV8825: I = Vref / (5 × 0.1 Ω).)
 4. **Motor.** Plug it into X-MOT with power off. Find the two coil pairs with the
    multimeter if the plug isn't keyed (low resistance within a pair, open between pairs).
 5. **Endstop.** Plug it into the **X−** header. **Check the pin order first:** the board's

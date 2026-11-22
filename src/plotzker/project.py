@@ -12,6 +12,7 @@ from cadder.project import Project
 if TYPE_CHECKING:
     import typer
     from cadder.assembly import Assembly, AssemblyCheck
+    from cadder.freecad import FreeCadAssembly
     from cadder.part import Part
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -33,6 +34,12 @@ def _assembly_checks() -> Mapping[str, AssemblyCheck]:
     from plotzker.assembly_checks import ASSEMBLY_CHECKS
 
     return ASSEMBLY_CHECKS
+
+
+def _freecad_assemblies() -> Mapping[str, FreeCadAssembly]:
+    from plotzker.freecad_assembly import PEN_PLOTTER
+
+    return {PEN_PLOTTER.name: PEN_PLOTTER}
 
 
 def _design_checks() -> Iterator[tuple[bool, str]]:
@@ -69,6 +76,7 @@ PROJECT = Project(
     parts=_parts,
     assemblies=_assemblies,
     assembly_checks=_assembly_checks,
+    freecad_assemblies=_freecad_assemblies,
     design_checks=_design_checks,
     report=_report,
     commands=_commands,

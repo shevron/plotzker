@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <Document SchemaVersion="1" HasExpansion="1">
-    <!-- Template for the GuiDocument.xml that build_assembly.py adds to PenPlotter.FCStd: the view-provider
+    <!-- Template for the GuiDocument.xml that cadder/freecad/build.py adds to each .FCStd it builds: the view-provider
      state (visibility, colors, the joints' Python view providers) that FreeCAD only writes when saving from
      the GUI. Without it, a headless-built Assembly opens with everything hidden and its joints fail to
      recompute ("'int' object has no attribute 'redrawJointPlacements'").

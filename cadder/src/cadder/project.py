@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     import typer
 
     from cadder.assembly import Assembly, AssemblyCheck
+    from cadder.freecad.model import FreeCadAssembly
     from cadder.part import MaterialPart, Part
 
 
@@ -40,6 +41,8 @@ class Project:
     parts: Callable[[], Mapping[str, Part]]
     assemblies: Callable[[], Mapping[str, Assembly]] = dict
     assembly_checks: Callable[[], Mapping[str, AssemblyCheck]] = dict
+    #: FreeCAD assemblies with rigid bodies and joints (the ``freecad`` command)
+    freecad_assemblies: Callable[[], Mapping[str, FreeCadAssembly]] = dict
     #: design rules as ``(ok, message)`` pairs (``check`` and every export run them first)
     design_checks: Callable[[], Iterable[tuple[bool, str]]] | None = None
     #: key numbers printed by ``check``

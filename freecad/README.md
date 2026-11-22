@@ -1,20 +1,25 @@
 # FreeCAD assembly
 
-`make freecad` builds `PenPlotter.FCStd`, a FreeCAD 1.x Assembly of the machine (same solid
-model as `assemblies/machine.py`, at mid-travel, pen up). Two steps:
+`make freecad` (`python -m plotzker freecad`) builds `PenPlotter.FCStd`, a FreeCAD 1.x Assembly
+of the machine (same solid model as `assemblies/machine.py`, at mid-travel, pen up). The
+plotter only *defines* the assembly (`src/plotzker/freecad_assembly.py`: components, rigid
+bodies, joints); cadder exports and builds it (`cadder.freecad`, see its module docs). Two
+steps:
 
-1. `python -m plotzker freecad` cuts the model into 79 named components (printed parts,
-   purchased parts, fasteners grouped per place) in the machine frame. Components that are the
-   same shape (V-wheels, SK10s, SCS10UU, motors, pulleys, idlers, runners and beam, ...) share
-   one STL: → 56 files in `stl/` plus `components.json` (rigid bodies, colors, joint axes,
-   travel, and each component's placement).
-2. `freecadcmd build_assembly.py` (no GUI or display needed, so it runs in CI) creates one
-   `App::Part` (mesh) per distinct shape (the shared ones are hidden masters in a hidden
-   "Parts" group, the assembly holds an `App::Link` per use), grounds the baseboard and adds
-   the joints. It then writes `GuiDocument.xml` into the file itself (copied from the prototypes in `gui_document.xml`, with lxml, which FreeCAD's Python ships):
-   visibility, colors and the joints' Python view providers, which FreeCAD otherwise only
-   stores when saving from the GUI. Without it the file opens with everything hidden and the
-   joints fail to recompute.
+1. Export: the model is cut into 84 named components (printed parts, purchased parts,
+   fasteners grouped per place) in the machine frame. Components that are the same shape
+   (V-wheels, SK10s, SCS10UU, motors, pulleys, idlers, runners and beam, ...) share one STL:
+   → 61 files in `PenPlotter/stl/` plus `PenPlotter/manifest.json` (components with colors and
+   placements, rigid bodies, joints with their axes and travel limits).
+2. Build: `freecadcmd` runs cadder's builder (no GUI or display needed, so it runs in CI). It
+   creates one `App::Part` (mesh) per distinct shape (the shared ones are hidden masters in a
+   hidden "Parts" group, the assembly holds an `App::Link` per use), grounds the baseboard,
+   fixes every component to its body's root and adds the joints. It then writes
+   `GuiDocument.xml` into the file itself: visibility, colors and the joints' Python view
+   providers, which FreeCAD otherwise only stores when saving from the GUI. Without it the
+   file opens with everything hidden and the joints fail to recompute.
+
+`python -m plotzker freecad --export-only` stops after step 1 (no FreeCAD needed).
 
 Open `PenPlotter.FCStd` in FreeCAD and drag parts in the Assembly workbench.
 

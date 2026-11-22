@@ -15,7 +15,7 @@ develop:  ## Set up the development environment (.venv on pyenv's Python, all de
 	uv sync --extra dev --extra diff
 
 clean:  ## Remove all generated files (STLs, renders, FreeCAD assembly, caches, build output); keeps .venv
-	rm -rf stl renders fem/results freecad/stl freecad/components.json freecad/*.FCStd freecad/*.FCBak build dist .pytest_cache .ruff_cache .mypy_cache
+	rm -rf stl renders fem/results freecad/*/ freecad/*.FCStd freecad/*.FCBak build dist .pytest_cache .ruff_cache .mypy_cache
 	find . -path ./.venv -prune -o -name __pycache__ -type d -exec rm -rf {} +
 
 check: typecheck  ## Run the static code checks (ruff lint + formatting, mypy)
@@ -43,11 +43,8 @@ render:  ## Generate PNG renders of all parts and assemblies into renders/ (need
 render-inspect:  ## Render every view (iso, rear iso, front, rear, left, right, top) into renders/inspect/; NAMES="x_carriage gantry" limits it
 	$(UV_RUN) python -m plotzker render --inspect $(NAMES)
 
-FREECAD_BIN ?= /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd
-
 freecad:  ## Build the FreeCAD Assembly (freecad/PenPlotter.FCStd; needs FreeCAD 1.x, see freecad/README.md)
 	$(UV_RUN) python -m plotzker freecad
-	$(FREECAD_BIN) freecad/build_assembly.py
 
 fem:  ## FEM check of parts into fem/results/ (needs FreeCAD's gmsh and CalculiX); NAMES="x_idler_slider ..."
 	$(UV_RUN) python -m plotzker fem $(NAMES)

@@ -1,16 +1,17 @@
-"""Locating the external solvers (gmsh and CalculiX), which ship inside FreeCAD."""
+"""Locating FreeCAD's programs: the FEM solvers (gmsh, CalculiX), ``freecadcmd`` and its Python."""
 
 import os
 import shutil
 from pathlib import Path
 
-#: Where FreeCAD.app keeps ``ccx``, ``gmsh`` and its Python (override with ``CADDER_FEM_BIN_DIR``).
+#: Where FreeCAD.app keeps ``ccx``, ``gmsh``, ``freecadcmd`` and its Python (override with
+#: ``CADDER_FREECAD_BIN_DIR``).
 FREECAD_BIN_DIR = Path("/Applications/FreeCAD.app/Contents/Resources/bin")
 
 
 def find_tool(name: str) -> Path:
-    """Path of the executable ``name`` (``ccx``, ``gmsh``, ``python``)."""
-    folder = Path(os.environ.get("CADDER_FEM_BIN_DIR", FREECAD_BIN_DIR))
+    """Path of the executable ``name`` (``ccx``, ``gmsh``, ``freecadcmd``, ``python``)."""
+    folder = Path(os.environ.get("CADDER_FREECAD_BIN_DIR", FREECAD_BIN_DIR))
     candidate = folder / name
     if candidate.is_file():
         return candidate
@@ -19,7 +20,7 @@ def find_tool(name: str) -> Path:
         return Path(found)
     raise RuntimeError(
         f"{name} not found in {folder}. Install FreeCAD 1.x (it bundles gmsh and CalculiX) or "
-        "set CADDER_FEM_BIN_DIR to the folder holding them."
+        "set CADDER_FREECAD_BIN_DIR to the folder holding them."
     )
 
 

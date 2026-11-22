@@ -63,7 +63,7 @@ strict = true
 cache_dir = ".mypy_cache"
 
 [[tool.mypy.overrides]]
-module = ["plotzker.fem.viz_render", "cadder.fem.viz_render"]  # FreeCAD's Python (vtk), not this environment
+module = ["cadder.fem.viz_render", "cadder.freecad.build"]  # run in FreeCAD's Python, not this one
 ignore_errors = true
 ignore_missing_imports = true
 

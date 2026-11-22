@@ -9,8 +9,7 @@ __pycache__/
 stl/
 renders/
 fem/results/
-freecad/stl/
-freecad/components.json
+freecad/*/
 freecad/*.FCStd
 freecad/*.FCBak
 build/

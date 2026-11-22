@@ -1,9 +1,9 @@
 """The plotter's own commands, added to cadder's CLI (``python -m plotzker`` or ``cadder``).
 
     python -m plotzker layout     # baseboard drilling layout → docs/
-    python -m plotzker freecad    # machine components for the FreeCAD assembly → freecad/
 
-Every other command (check, stl, render, part, fem, fem-status, diff, all) is cadder's.
+Every other command (check, stl, render, part, fem, fem-status, diff, freecad, all) is
+cadder's.
 """
 
 from pathlib import Path
@@ -39,14 +39,6 @@ def commands(app: typer.Typer) -> None:
     ) -> None:
         """Write the baseboard drilling layout (SVG + table)."""
         export_layout(out)
-
-    @app.command("freecad")
-    @reports_errors
-    def freecad_command() -> None:
-        """Export the machine components for the FreeCAD assembly."""
-        from plotzker.freecad_export import export_freecad
-
-        export_freecad()
 
 
 def main() -> None:

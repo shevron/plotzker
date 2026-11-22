@@ -1,27 +1,18 @@
-"""Export the machine as individual components for the FreeCAD assembly (``freecad/``).
+"""The machine as a FreeCAD assembly (``freecad/PenPlotter.FCStd``, see ``freecad/README.md``).
 
 Cuts the same solid model that ``assemblies/machine.py`` draws into named components (printed
 parts, purchased parts, grouped fasteners), each placed in the machine frame at the reference
-pose (gantry and carriage at mid-travel, pen up). Writes ``freecad/stl/<name>.stl`` and
-``freecad/components.json``: the component list (rigid body, color) and the joint axes (all
-numbers come from ``params``). ``freecad/build_assembly.py`` turns them into the FreeCAD
-Assembly with its joints.
-
-Usage: ``python -m plotzker freecad``.
+pose (gantry and carriage at mid-travel, pen up), in four rigid bodies (base, gantry, carriage,
+pen slide), with the joints that give the machine its motion (all numbers from ``params``).
+cadder exports and builds it: ``python -m plotzker freecad``.
 """
 
-import itertools
-import json
-import re
-import tempfile
-from functools import reduce
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import typer
+from cadder.freecad import Body, Components, FreeCadAssembly, Joint
 from cadder.handles import get_handles
 from cadder.hardware import vslot_x
-from pythonscad import export, translate
+from pythonscad import translate
 
 from plotzker import params
 from plotzker.assemblies import baseboard
@@ -53,8 +44,6 @@ from plotzker.types import Side
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
-FREECAD_DIR = REPO_ROOT / "freecad"
 
 #: Reference pose of the export: fractions of the gantry and carriage travel, pen lifted.
 GANTRY_POS = 0.5
@@ -77,162 +66,6 @@ RED = (220, 20, 60)
 BOARD = (0, 100, 60)
 
 
-class Exporter:
-    """Collects components (name, solid, rigid body, color) and writes them out."""
-
-    def __init__(self) -> None:
-        self.entries: list[dict[str, Any]] = []
-        self.solids: dict[str, Solid] = {}
-
-    def add(
-        self, name: str, solid: Solid | list[Solid], body: str, color: tuple[int, int, int]
-    ) -> None:
-        """Register one component; a list of solids (fasteners) is united into one."""
-        assert name not in self.solids, name
-        if isinstance(solid, list):
-            solid = reduce(lambda a, b: a | b, solid)
-        self.solids[name] = solid
-        self.entries.append({"name": name, "body": body, "color": list(color)})
-
-    def write(self, out_dir: Path) -> None:
-        """Write one STL per distinct shape; set each entry's ``stl``, ``center``, ``rotation``.
-
-        Components that are the same shape in another place or orientation (V-wheels, SK10s,
-        motors, ...) share one STL: each entry gets the placement (``rotation`` matrix about
-        the bounding-box ``center``) that takes the shared mesh to that component's place.
-        """
-        stl_dir = out_dir / "stl"
-        stl_dir.mkdir(parents=True, exist_ok=True)
-        for old in stl_dir.glob("*.stl"):
-            old.unlink()
-        with tempfile.TemporaryDirectory() as tmp:
-            shapes = {}
-            for name, solid in self.solids.items():
-                path = Path(tmp) / f"{name}.stl"
-                export(solid, str(path))
-                shapes[name] = _Shape.read(path)
-            groups = _congruent_groups(shapes)
-            for members in groups:
-                master = members[0]
-                stl_name = _master_name([name for name, _ in members])
-                text = (Path(tmp) / f"{master[0]}.stl").read_text()
-                (stl_dir / f"{stl_name}.stl").write_text(text)
-                for name, rotation in members:
-                    entry = next(e for e in self.entries if e["name"] == name)
-                    entry["stl"] = stl_name
-                    entry["center"] = list(shapes[name].center)
-                    entry["rotation"] = [v for row in rotation for v in row]
-                shared = f" (x{len(members)}: {', '.join(n for n, _ in members)})"
-                typer.echo(f"wrote {stl_name}.stl" + (shared if len(members) > 1 else ""))
-
-
-#: The 24 proper rotations that map the axes onto themselves (as integer matrices).
-def _rotations() -> list[tuple[tuple[int, ...], ...]]:
-    found = []
-    for perm in itertools.permutations(range(3)):
-        for signs in itertools.product((1, -1), repeat=3):
-            rows = tuple(tuple(signs[r] if perm[r] == c else 0 for c in range(3)) for r in range(3))
-            det = (
-                rows[0][0] * (rows[1][1] * rows[2][2] - rows[1][2] * rows[2][1])
-                - rows[0][1] * (rows[1][0] * rows[2][2] - rows[1][2] * rows[2][0])
-                + rows[0][2] * (rows[1][0] * rows[2][1] - rows[1][1] * rows[2][0])
-            )
-            if det == 1:
-                found.append(rows)
-    return found
-
-
-_ROTATIONS = _rotations()
-_IDENTITY = _ROTATIONS[[r == ((1, 0, 0), (0, 1, 0), (0, 0, 1)) for r in _ROTATIONS].index(True)]
-_TOL = 0.02  #: mm; two points closer than this are the same vertex
-
-
-class _Shape:
-    """Vertex cloud of an STL, centered on its bounding box."""
-
-    def __init__(self, points: list[tuple[float, float, float]], facets: int) -> None:
-        self.facets = facets
-        lo = [min(p[k] for p in points) for k in range(3)]
-        hi = [max(p[k] for p in points) for k in range(3)]
-        self.center = tuple((a + b) / 2 for a, b in zip(lo, hi, strict=True))
-        self.extents = tuple(round(b - a, 2) for a, b in zip(lo, hi, strict=True))
-        self.points = [
-            (p[0] - self.center[0], p[1] - self.center[1], p[2] - self.center[2]) for p in points
-        ]
-        self.signature = (len(points), facets, tuple(sorted(self.extents)))
-
-    @classmethod
-    def read(cls, path: Path) -> _Shape:
-        """Parse an ASCII STL."""
-        vertices = [
-            tuple(float(v) for v in line.split()[1:4])
-            for line in path.read_text().splitlines()
-            if line.lstrip().startswith("vertex")
-        ]
-        unique = list({(round(x, 3), round(y, 3), round(z, 3)) for x, y, z in vertices})
-        return cls(unique, len(vertices) // 3)
-
-    def maps_to(self, other: _Shape, rotation: tuple[tuple[int, ...], ...]) -> bool:
-        """Whether ``other`` is this shape, rotated about the centers, point for point."""
-        cell = 4 * _TOL
-        grid: dict[tuple[int, int, int], list[tuple[float, float, float]]] = {}
-        for p in other.points:
-            grid.setdefault(
-                (round(p[0] / cell), round(p[1] / cell), round(p[2] / cell)), []
-            ).append(p)
-        for x, y, z in self.points:
-            q = tuple(r[0] * x + r[1] * y + r[2] * z for r in rotation)
-            key = (round(q[0] / cell), round(q[1] / cell), round(q[2] / cell))
-            if not any(
-                abs(c[0] - q[0]) < _TOL and abs(c[1] - q[1]) < _TOL and abs(c[2] - q[2]) < _TOL
-                for dx in (-1, 0, 1)
-                for dy in (-1, 0, 1)
-                for dz in (-1, 0, 1)
-                for c in grid.get((key[0] + dx, key[1] + dy, key[2] + dz), ())
-            ):
-                return False
-        return True
-
-
-def _congruent_groups(
-    shapes: dict[str, _Shape],
-) -> list[list[tuple[str, tuple[tuple[int, ...], ...]]]]:
-    """Group components that are the same shape (rotation + translation, no mirroring).
-
-    Each group is ``[(name, rotation)]`` with the first member as the master (identity)."""
-    groups: list[list[tuple[str, tuple[tuple[int, ...], ...]]]] = []
-    for name, shape in shapes.items():
-        for group in groups:
-            master = shapes[group[0][0]]
-            if master.signature != shape.signature:
-                continue
-            rotation = next((r for r in _ROTATIONS if master.maps_to(shape, r)), None)
-            if rotation is not None:
-                group.append((name, rotation))
-                break
-        else:
-            groups.append([(name, _IDENTITY)])
-    return groups
-
-
-#: Shared-STL names where the members' own names do not agree on one.
-_SHARED_NAMES = {
-    "y_motor": "nema17",
-    "y_pulley": "gt2_pulley",
-    "y_idler": "gt2_idler",
-    "y_endstop": "endstop_board",
-    "runner": "vslot_2040",  # the runners and the gantry beam
-}
-
-
-def _master_name(names: list[str]) -> str:
-    """STL name for a group: the first member's name without side / position suffix."""
-    if len(names) == 1:
-        return names[0]
-    base = re.sub(r"(_[LR])?(_(top|bottom))?(_?\d+)?$", "", names[0])
-    return _SHARED_NAMES.get(base, base)
-
-
 def _mirror_x(items: list[Solid], x: float) -> list[Solid]:
     """Mirror items about x = 0, then move them by ``x`` (the right side of a symmetric pair)."""
     return [translate(item.mirror([1, 0, 0]), [x, 0, 0]) for item in items]
@@ -242,17 +75,17 @@ def _shift(items: list[Solid], offset: list[float]) -> list[Solid]:
     return [translate(item, offset) for item in items]
 
 
-def _fixed_parts(ex: Exporter) -> None:
+def _fixed_parts(ex: Components) -> None:
     """Baseboard and everything screwed to it."""
     bb = baseboard
     items = bb.fixed_assembly()
-    ex.add("baseboard", bb.baseboard(), "base", WOOD)
+    ex.add("baseboard", bb.baseboard(), "base", WOOD, transparency=60)
 
     runners = bb.runners()
     per_runner = 1 + 2 * len(params.BASEBOARD.runner_screw_x)
     assert len(runners) == per_runner * len(params.BASEBOARD.runner_y)
     for i in range(len(params.BASEBOARD.runner_y)):
-        ex.add(f"runner_{i}", runners[i * per_runner], "base", ALU)
+        ex.add(f"runner_{i}", runners[i * per_runner], "base", ALU, shape="vslot_2040")
     ex.add(
         "runner_fasteners",
         [s for i, s in enumerate(runners) if i % per_runner],
@@ -275,7 +108,7 @@ def _fixed_parts(ex: Exporter) -> None:
     ex.add("sk10_fasteners", fasteners, "base", FASTENER)
 
     bed = bb.bed()
-    ex.add("bed_panel", bed[0], "base", BED)
+    ex.add("bed_panel", bed[0], "base", BED, transparency=60)
     ex.add("bed_steel", bed[1], "base", STEEL)
     ex.add("bed_posts", bed[2:], "base", FASTENER)
 
@@ -295,7 +128,7 @@ def _fixed_parts(ex: Exporter) -> None:
     assert len(items) == 1 + len(runners) + len(shafts) + len(bed) + len(zrib)
 
 
-def _y_drive_parts(ex: Exporter, gantry_y: float) -> None:
+def _y_drive_parts(ex: Components, gantry_y: float) -> None:
     """Y motor and idler ends, endstops and the static lower belt run on each side."""
     sides = ((Side.LEFT, "L", Y_AXIS.shaft_x[0], False), (Side.RIGHT, "R", Y_AXIS.shaft_x[1], True))
     for side, label, shaft_x, mirrored in sides:
@@ -310,17 +143,17 @@ def _y_drive_parts(ex: Exporter, gantry_y: float) -> None:
         m = place(motor)
         ex.add(f"y_idler_mount_{label}", i[0], "base", PRINTED)
         ex.add(f"y_idler_slider_{label}", i[1], "base", PRINTED)
-        ex.add(f"y_idler_{label}", i[2], "base", ALU)
+        ex.add(f"y_idler_{label}", i[2], "base", ALU, shape="gt2_idler")
         ex.add(f"y_idler_fasteners_{label}", i[3:], "base", FASTENER)
         ex.add(f"y_motor_mount_{label}", m[0], "base", PRINTED)
-        ex.add(f"y_motor_{label}", m[1], "base", MOTOR)
-        ex.add(f"y_pulley_{label}", m[2], "base", SILVER)
+        ex.add(f"y_motor_{label}", m[1], "base", MOTOR, shape="nema17")
+        ex.add(f"y_pulley_{label}", m[2], "base", SILVER, shape="gt2_pulley")
         ex.add(f"y_motor_screws_{label}", m[3:], "base", FASTENER)
         ex.add(f"y_belt_lower_{label}", place(runs[:1])[0], "base", DARK)
-        ex.add(f"y_endstop_{label}", y_endstop_board(side), "base", BOARD)
+        ex.add(f"y_endstop_{label}", y_endstop_board(side), "base", BOARD, shape="endstop_board")
 
 
-def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
+def _gantry_parts(ex: Components, gantry_y: float) -> None:
     """Both gantry ends, the beam, and the X belt's upper run."""
     left_x, right_x = Y_AXIS.shaft_x
     n_front = len(
@@ -410,7 +243,7 @@ def _x_belt_return(gantry_y: float) -> Solid:
     )
 
 
-def _carriage_parts(ex: Exporter, gantry_y: float, carriage_x: float) -> None:
+def _carriage_parts(ex: Components, gantry_y: float, carriage_x: float) -> None:
     """X carriage with wheels, fasteners and the pen holder."""
     items = _shift(carriage_assembly(), [carriage_x, gantry_y, 0])
     assert len(items) == 17
@@ -505,21 +338,99 @@ def _axes(gantry_y: float, carriage_x: float) -> dict[str, Any]:
     return axes
 
 
-def export_freecad(out_dir: Path = FREECAD_DIR) -> Path:
-    """Write the component STLs and ``components.json``; returns the manifest path."""
+def components() -> Components:
+    """The machine's components at the reference pose."""
     params.check_design()
     gantry_y = gantry_y_at(GANTRY_POS)
     carriage_x = carriage_x_at(CARRIAGE_POS)
-    ex = Exporter()
+    ex = Components()
     _fixed_parts(ex)
     _y_drive_parts(ex, gantry_y)
     _gantry_parts(ex, gantry_y)
     _carriage_parts(ex, gantry_y, carriage_x)
-    ex.write(out_dir)
-    manifest = {
+    return ex
+
+
+def joints() -> list[Joint]:
+    """The joints that give the machine its motion; travel limits from the reference pose."""
+    gantry_y = gantry_y_at(GANTRY_POS)
+    carriage_x = carriage_x_at(CARRIAGE_POS)
+    axes = _axes(gantry_y, carriage_x)
+
+    def joint(kind: str, a: str, b: str, axis: str, label: str, **kw: Any) -> Joint:
+        return Joint(kind, a, b, tuple(axes[axis]["origin"]), tuple(axes[axis]["dir"]), label, **kw)  # type: ignore[arg-type]
+
+    y_lo, y_hi = Y_AXIS.gantry_y_range
+    x_lo, x_hi = CARRIAGE.center_x_range
+    found = [
+        # Gantry on the Y shafts: one Slider (along Y) on the left shaft. The right blocks are
+        # Fixed to the gantry; a second joint on the right shaft would close a loop (shaft -
+        # block - gantry - block - shaft - baseboard) and over-constrain the solver, which then
+        # rejects dragging ("a grounded object moved").
+        joint(
+            "Slider",
+            "y_shaft_L",
+            "scs10uu_L0",
+            "y_shaft_L",
+            "Gantry slides on Y shaft (Y)",
+            limits=(y_lo - gantry_y, y_hi - gantry_y),
+        ),
+        joint(
+            "Slider",
+            "gantry_beam",
+            "x_carriage",
+            "beam",
+            "Carriage slides on beam (X)",
+            limits=(x_lo - carriage_x, x_hi - carriage_x),
+        ),
+        # pen up at the reference pose, so it can only go down
+        joint(
+            "Slider", "pen_body", "pen_slide", "pen_slide", "Pen slide (Z)", limits=(-PEN.lift, 0.0)
+        ),
+    ]
+    for side in "LR":
+        found += [
+            joint(
+                "Revolute",
+                f"y_idler_slider_{side}",
+                f"y_idler_{side}",
+                f"y_idler_{side}",
+                f"Y idler {side} turns",
+            ),
+            joint(
+                "Revolute",
+                f"y_motor_{side}",
+                f"y_pulley_{side}",
+                f"y_pulley_{side}",
+                f"Y pulley {side} turns",
+            ),
+        ]
+    found += [
+        # the idler turns on the (floating) slider, T3.22
+        joint("Revolute", "x_idler_slider", "x_idler", "x_idler", "X idler turns"),
+        joint("Revolute", "x_motor", "x_pulley", "x_pulley", "X pulley turns"),
+        joint("Revolute", "pen_servo", "pen_horn", "pen_horn", "Servo horn turns"),
+    ]
+    for side in "LR":
+        for pos in ("top", "bottom"):
+            found.append(
+                joint(
+                    "Revolute",
+                    "x_carriage",
+                    f"vwheel_{side}_{pos}",
+                    f"vwheel_{side}_{pos}",
+                    f"V-wheel {side} {pos} turns",
+                )
+            )
+    return found
+
+
+def metadata() -> dict[str, object]:
+    """Reference pose and travel, for whoever reads the manifest."""
+    return {
         "reference_pose": {
-            "gantry_y": gantry_y,
-            "carriage_x": carriage_x,
+            "gantry_y": gantry_y_at(GANTRY_POS),
+            "carriage_x": carriage_x_at(CARRIAGE_POS),
             "pen": "up",
         },
         "travel": {
@@ -527,11 +438,22 @@ def export_freecad(out_dir: Path = FREECAD_DIR) -> Path:
             "carriage_x": list(CARRIAGE.center_x_range),
             "pen_lift": PEN.lift,
         },
-        "axes": _axes(gantry_y, carriage_x),
-        "components": ex.entries,
         "frame": {"board": list(FRAME.board_size), "bracket_len_y": BRACKET.len_y},
     }
-    path = out_dir / "components.json"
-    path.write_text(json.dumps(manifest, indent=1) + "\n")
-    typer.echo(f"wrote {path}")
-    return path
+
+
+#: The whole machine, at mid-travel with the pen up
+PEN_PLOTTER = FreeCadAssembly(
+    name="PenPlotter",
+    label="Pen plotter",
+    description="The machine at mid-travel, pen up: four rigid bodies and their joints",
+    components=components,
+    bodies=(
+        Body("base", "baseboard", grounded=True),
+        Body("gantry", "gantry_beam"),
+        Body("carriage", "x_carriage"),
+        Body("slide", "pen_slide"),
+    ),
+    joints=joints,
+    metadata=metadata,
+)

@@ -325,6 +325,28 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
             folder,
         )
 
+    @app.command("freecad")
+    @reports_errors
+    def freecad_command(
+        names: Annotated[
+            list[str] | None, typer.Argument(help="FreeCAD assembly names (default: all).")
+        ] = None,
+        export_only: Annotated[
+            bool, typer.Option("--export-only", help="Write STLs and manifest, skip FreeCAD.")
+        ] = False,
+        out: OutDir = None,
+    ) -> None:
+        """Build the project's FreeCAD assemblies (needs FreeCAD 1.x for the build step)."""
+        from cadder.freecad.export import build_assembly, export_assembly
+        from cadder.render import select
+
+        assemblies = project.freecad_assemblies()
+        folder = out or project.path("freecad")
+        for name in select(names, assemblies):
+            manifest = export_assembly(assemblies[name], folder, log=typer.echo)
+            if not export_only:
+                build_assembly(manifest, log=typer.echo)
+
     @app.command("all")
     @reports_errors
     def all_command(pythonscad: PythonscadBinary = None) -> None:

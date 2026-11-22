@@ -76,7 +76,7 @@ python -m plotzker fem NAME... [--viz] [--refine auto|always|never] [--size MM] 
 ```
 
 or `make fem NAMES="..."`. It needs gmsh and CalculiX (bundled in FreeCAD.app, or set
-`CADDER_FEM_BIN_DIR`). The part is exported in its analysis frame with 20-facet holes
+`CADDER_FREECAD_BIN_DIR`). The part is exported in its analysis frame with 20-facet holes
 (`CADDER_FN=20`), cleaned, meshed (quadratic tetrahedra, fine near loads and supports) and
 solved per load case. A second, finer mesh is solved only when some criterion is between **0.6
 and 1.6** of its limit (or with `--refine always`), and then the two are compared. Load cases

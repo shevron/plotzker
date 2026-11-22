@@ -8,12 +8,13 @@ import tomllib
 from collections.abc import Mapping
 from pathlib import Path
 
+from cadder.part import MaterialPart, Part, part_to_dict
+
 from plotzker.fem.runner import FemResult, export_part_stl
 from plotzker.fem.stl import clean_stl
-from plotzker.part import Part, part_to_dict
 
 
-def spec_hash(part: Part) -> str:
+def spec_hash(part: MaterialPart) -> str:
     """Hash of everything the check depends on besides geometry (part properties)."""
     return hashlib.sha256(json.dumps(part_to_dict(part), sort_keys=True).encode()).hexdigest()[:16]
 
@@ -58,7 +59,7 @@ def markdown(result: FemResult) -> str:
     return "\n".join(lines)
 
 
-def update_verdicts(path: Path, part: Part, result: FemResult, geometry_hash: str) -> None:
+def update_verdicts(path: Path, part: MaterialPart, result: FemResult, geometry_hash: str) -> None:
     """Record the verdict, date and input hashes of ``part`` in the committed verdicts file."""
     entries: dict[str, dict[str, str]] = {}
     if path.is_file():
@@ -78,7 +79,7 @@ def update_verdicts(path: Path, part: Part, result: FemResult, geometry_hash: st
     path.write_text("\n".join(lines))
 
 
-def current_geometry_hash(part: Part) -> str:
+def current_geometry_hash(part: MaterialPart) -> str:
     """Hash of the part's cleaned FEM STL as it is now (what a check would hash)."""
     with tempfile.TemporaryDirectory() as folder:
         raw = Path(folder) / "raw.stl"
@@ -92,7 +93,7 @@ def status_lines(
     verdicts: Path,
     check_geometry: bool = True,
 ) -> list[str]:
-    """One line per printable part: its FEM state, and whether the last verdict is stale."""
+    """One line per part: its FEM state, and whether the last verdict is stale."""
     recorded: dict[str, dict[str, str]] = {}
     if verdicts.is_file():
         with verdicts.open("rb") as f:
@@ -100,8 +101,8 @@ def status_lines(
     lines = []
     for name in names:
         part = parts.get(name)
-        if part is None:
-            state = "not yet defined as a Part"
+        if not isinstance(part, MaterialPart):
+            state = "no material or FEM data yet"
         elif not part.structural:
             state = "not structural"
         elif part.mirror_of:

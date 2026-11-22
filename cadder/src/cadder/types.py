@@ -8,5 +8,6 @@ Vec3 = tuple[float, float, float]
 #: A handle: a 4×4 transformation matrix marking a position and orientation on a part.
 Matrix = list[list[float]]
 
-#: The coordinate frame a part is analyzed in: its print frame (the STL) or its installed frame.
-Frame = Literal["print", "installed"]
+#: The coordinate frame a part is analyzed in: its output frame (the STL; for a print, the print
+#: bed) or its installed frame (the assembly's, where loads are easiest to state).
+Frame = Literal["output", "installed"]

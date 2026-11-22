@@ -2,7 +2,7 @@
 
 Works on the members' recorded results (``fem/results/<part>/result.json``), so the parts must
 have been checked first, and their verdicts must be current (the verdicts file says which spec and
-geometry each result belongs to). See :class:`plotzker.part.Assembly`.
+geometry each result belongs to). See :class:`cadder.assembly.AssemblyCheck`.
 """
 
 import datetime
@@ -13,8 +13,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from cadder.assembly import AssemblyCheck, assembly_to_dict
+from cadder.part import MaterialPart
+
 from plotzker.fem.evaluate import Status, status_for, worst
-from plotzker.part import Assembly, Part, assembly_to_dict
 
 
 @dataclass
@@ -60,7 +62,7 @@ class AssemblyResult:
         }
 
 
-def _base(parts: Mapping[str, Part], name: str) -> str:
+def _base(parts: Mapping[str, MaterialPart], name: str) -> str:
     """The part whose check applies to ``name`` (itself, or the original of a mirror image)."""
     return parts[name].mirror_of or name
 
@@ -75,7 +77,10 @@ def _member_values(results: Path, base: str) -> dict[tuple[str, str], float]:
 
 
 def check_assembly(
-    assembly: Assembly, parts: Mapping[str, Part], results: Path, verdicts: Path | None = None
+    assembly: AssemblyCheck,
+    parts: Mapping[str, MaterialPart],
+    results: Path,
+    verdicts: Path | None = None,
 ) -> AssemblyResult:
     """Sum the members' displacements and the rigid terms per limit and load case; judge them."""
     values: dict[str, dict[tuple[str, str], float]] = {}
@@ -122,7 +127,7 @@ def check_assembly(
     return AssemblyResult(assembly.name, status, rows, notes)
 
 
-def markdown(assembly: Assembly, result: AssemblyResult) -> str:
+def markdown(assembly: AssemblyCheck, result: AssemblyResult) -> str:
     """The report: verdict and, per limit and load case, every term of the sum."""
     lines = [
         f"# Assembly check: {assembly.name}",
@@ -157,7 +162,7 @@ def _recorded(path: Path | None) -> dict[str, dict[str, str]]:
         return tomllib.load(f)
 
 
-def spec_hash(assembly: Assembly, parts: Mapping[str, Part], verdicts: Path) -> str:
+def spec_hash(assembly: AssemblyCheck, parts: Mapping[str, MaterialPart], verdicts: Path) -> str:
     """Hash of the assembly's definition and of the member verdicts it was computed from."""
     recorded = _recorded(verdicts)
     members = {m: recorded.get(_base(parts, m), {}) for m in assembly.members}
@@ -166,7 +171,7 @@ def spec_hash(assembly: Assembly, parts: Mapping[str, Part], verdicts: Path) -> 
 
 
 def update_verdicts(
-    path: Path, assembly: Assembly, parts: Mapping[str, Part], result: AssemblyResult
+    path: Path, assembly: AssemblyCheck, parts: Mapping[str, MaterialPart], result: AssemblyResult
 ) -> None:
     """Record the verdict of ``assembly`` next to the parts' (kept in the same sorted file)."""
     entries = _recorded(path)
@@ -185,7 +190,7 @@ def update_verdicts(
 
 def run_assemblies(
     names: list[str],
-    parts: Mapping[str, Part],
+    parts: Mapping[str, MaterialPart],
     out_dir: Path,
     verdicts: Path | None,
     record: bool = True,
@@ -210,7 +215,7 @@ def run_assemblies(
 
 
 def assembly_status_lines(
-    assemblies: Mapping[str, Assembly], parts: Mapping[str, Part], verdicts: Path
+    assemblies: Mapping[str, AssemblyCheck], parts: Mapping[str, MaterialPart], verdicts: Path
 ) -> list[str]:
     """One line per assembly: its last verdict, and whether a member's verdict changed since."""
     recorded = _recorded(verdicts)

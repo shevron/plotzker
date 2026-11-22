@@ -18,13 +18,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cadder.geometry import EPS, FN, FN_HOLE, teardrop_x, teardrop_y
+from cadder.part import DisplacementLimit, FemSpec, Force, LoadCase, Support
 from cadder.printing import nut_slot
 from cadder.regions import Box, Cylinder, Placement
 from pythonscad import cube, cylinder, hull
 
 from plotzker.loads import BeltLoads
 from plotzker.params import TOL, FloatingIdler
-from plotzker.part import DisplacementLimit, FemSpec, Force, LoadCase, Support
 
 if TYPE_CHECKING:
     from pythonscad import Solid

@@ -29,13 +29,14 @@ from typing import TYPE_CHECKING
 from cadder.geometry import EPS, teardrop_x
 from cadder.handles import handle, set_handles
 from cadder.hardware import NEMA17
+from cadder.part import DisplacementLimit, FemSpec, LoadCase, PrintedPart, Support
 from cadder.regions import Box, Cylinder, bond_zone
 from cadder.types import Matrix
 from pythonscad import cube, hull
 
 from plotzker.loads import Y_BELT_LOADS
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE
-from plotzker.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
 from plotzker.parts.motor_fem import motor_loads
 from plotzker.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotzker.parts.wood_screw import wood_screw_boss, wood_screw_hole
@@ -154,12 +155,15 @@ def _case(name: str, jam: bool) -> LoadCase:
     )
 
 
-PART_LEFT = Part(
+PART_LEFT = PrintedPart(
     name="y_motor_mount_left",
     description="Y motor mount (left): plate for the NEMA17 behind the rear SK10",
-    build=y_motor_mount_installed,
+    build=lambda: y_motor_mount(Side.LEFT),
+    analysis=y_motor_mount_installed,
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=FemSpec(
         load_cases=(_case("belt_preload", False), _case("belt_peak", True)),
         supports=(
@@ -181,11 +185,14 @@ PART_LEFT = Part(
         ),
     ),
 )
-PART_RIGHT = Part(
+PART_RIGHT = PrintedPart(
     name="y_motor_mount_right",
     description="Y motor mount (right): mirror image of the left one",
-    build=lambda: y_motor_mount_installed().mirror([1, 0, 0]),
+    build=lambda: y_motor_mount(Side.RIGHT),
+    analysis=lambda: y_motor_mount_installed().mirror([1, 0, 0]),
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     mirror_of="y_motor_mount_left",
 )

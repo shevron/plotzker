@@ -29,12 +29,13 @@ from typing import TYPE_CHECKING
 from cadder.geometry import EPS, FN_HOLE
 from cadder.handles import frame_handle, set_handles
 from cadder.hardware import SCS10UU, metric
+from cadder.part import PrintedPart
 from cadder.types import Matrix
 from pythonscad import cube, cylinder, union
 
 from plotzker.hardware import ENDSTOP
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import BRACKET, TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
-from plotzker.part import Part
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -119,11 +120,14 @@ def x_endstop_mount() -> Solid:
     return x_endstop_mount_installed().translate([0, 0, -FOOT_Z0])
 
 
-PART = Part(
+PART = PrintedPart(
     name="x_endstop_mount",
     description="X endstop mount: foot under the endstop board, clamped by the rear bolts",
-    build=x_endstop_mount_installed,
+    build=x_endstop_mount,
+    analysis=x_endstop_mount_installed,
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     structural=False,
 )

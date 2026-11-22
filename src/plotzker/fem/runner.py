@@ -11,6 +11,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from cadder.part import MaterialPart, part_to_dict
 from cadder.regions import Region
 
 from plotzker.fem import applied
@@ -37,7 +38,6 @@ from plotzker.fem.mesh import (
 from plotzker.fem.solve import Forces, Solved, solve_cases
 from plotzker.fem.stl import CleanStl, clean_stl
 from plotzker.fem.viz import node_utilization, render, write_case_data
-from plotzker.part import Part, effective_properties, part_to_dict
 
 #: Facet count for the part's STL: coarse holes keep the mesher fast (docs/fem-subagent-plan.md).
 FEM_FACETS = 20
@@ -104,7 +104,7 @@ class FemResult:
         return data
 
 
-def export_part_stl(part: Part, dest: Path) -> None:
+def export_part_stl(part: MaterialPart, dest: Path) -> None:
     """Export the part in its analysis frame with coarse facets (a subprocess sets the facets)."""
     env = {**os.environ, "CADDER_FN": str(FEM_FACETS)}
     result = subprocess.run(
@@ -117,10 +117,10 @@ def export_part_stl(part: Part, dest: Path) -> None:
         raise RuntimeError(f"STL export of {part.name} failed: {result.stderr.strip()[-300:]}")
 
 
-def _solver_material(part: Part) -> SolverMaterial:
+def _solver_material(part: MaterialPart) -> SolverMaterial:
     """The part's effective material in solver units."""
-    eff = effective_properties(part.material_data, part.print_profile)
-    mat = part.material_data
+    eff = part.effective_properties()
+    mat = part.material
     return SolverMaterial(
         eff["e_in_plane_mpa"],
         eff["e_build_mpa"],
@@ -132,7 +132,7 @@ def _solver_material(part: Part) -> SolverMaterial:
 
 
 def _mesh_and_solve(
-    part: Part,
+    part: MaterialPart,
     stl: Path,
     field: SizeField,
     work: Path,
@@ -156,9 +156,9 @@ def _mesh_and_solve(
     raise RuntimeError(f"no usable {tag} mesh of {part.name}")
 
 
-def _strengths(part: Part, sustained: bool) -> Strengths:
+def _strengths(part: MaterialPart, sustained: bool) -> Strengths:
     """Allowable stresses for a load case (creep factor for sustained loads)."""
-    eff = effective_properties(part.material_data, part.print_profile)
+    eff = part.effective_properties()
     if sustained:
         return Strengths(
             eff["sustained_strength_in_plane_mpa"],
@@ -170,7 +170,7 @@ def _strengths(part: Part, sustained: bool) -> Strengths:
     )
 
 
-def _named_regions(part: Part) -> list[tuple[str, Region]]:
+def _named_regions(part: MaterialPart) -> list[tuple[str, Region]]:
     """Labeled regions of the part's supports and loads (where the mesh needs to be fine)."""
     assert part.fem is not None
     named = [(f"support {sup.name}", sup.region) for sup in part.fem.supports]
@@ -182,12 +182,12 @@ def _named_regions(part: Part) -> list[tuple[str, Region]]:
     return named
 
 
-def _load_regions(part: Part) -> list[Region]:
+def _load_regions(part: MaterialPart) -> list[Region]:
     """Regions of the part's loads and supports."""
     return [region for _, region in _named_regions(part)]
 
 
-def _patch_edges(part: Part, mesh: Mesh) -> dict[str, set[int]]:
+def _patch_edges(part: MaterialPart, mesh: Mesh) -> dict[str, set[int]]:
     """Nodes on the outline of every loaded and supported patch, by label."""
     return {
         label: patch_edge_nodes([c.face for c in cover_region(mesh, region)])
@@ -195,7 +195,7 @@ def _patch_edges(part: Part, mesh: Mesh) -> dict[str, set[int]]:
     }
 
 
-def _excluded_nodes(part: Part, mesh: Mesh) -> set[int]:
+def _excluded_nodes(part: MaterialPart, mesh: Mesh) -> set[int]:
     """Nodes near the edges of loaded and supported patches, where stress peaks are artifacts."""
     edge: set[int] = set()
     for nodes in _patch_edges(part, mesh).values():
@@ -237,7 +237,7 @@ class RunOptions:
     viz: bool = False  #: also write pictures and a .vtu per load case
 
 
-def _size_field(part: Part, extent: float, options: RunOptions) -> SizeField:
+def _size_field(part: MaterialPart, extent: float, options: RunOptions) -> SizeField:
     """Element sizes: fine near the loads and supports, coarser elsewhere."""
     near = options.size or (SMALL_PART_SIZE if extent <= SMALL_PART_LIMIT else LARGE_PART_SIZE)
     if not options.graded:
@@ -256,7 +256,7 @@ def _size_field(part: Part, extent: float, options: RunOptions) -> SizeField:
     return SizeField(near, far, tuple(boxes), transition=3 * near)
 
 
-def _judge(part: Part, solved: Solved, reference: Solved | None) -> list[Criterion]:
+def _judge(part: MaterialPart, solved: Solved, reference: Solved | None) -> list[Criterion]:
     """Strength and displacement criteria of every load case on one mesh."""
     spec = part.fem
     assert spec is not None
@@ -269,7 +269,7 @@ def _judge(part: Part, solved: Solved, reference: Solved | None) -> list[Criteri
         sf = case.safety_factor or spec.safety_factor
         run = solved.results[case.name]
         allow = _strengths(part, case.sustained)
-        sr = stress_result(mesh, run.stress, part.build_direction, allow, excluded)
+        sr = stress_result(mesh, run.stress, part.axis, allow, excluded)
         util = sr.robust * sf
         status = status_for(util)
         note = ""
@@ -280,7 +280,7 @@ def _judge(part: Part, solved: Solved, reference: Solved | None) -> list[Criteri
             ref = stress_result(
                 reference.mesh,
                 reference.results[case.name].stress,
-                part.build_direction,
+                part.axis,
                 allow,
                 excluded_ref,
             )
@@ -289,9 +289,7 @@ def _judge(part: Part, solved: Solved, reference: Solved | None) -> list[Criteri
             if abs(drift) > 0.25:
                 note += " (sharp-corner singularity likely: judge with care)"
         where = tuple(round(c, 1) for c in mesh.nodes[sr.robust_node])
-        principal, across, shear = stress_components(
-            run.stress[sr.robust_node], part.build_direction
-        )
+        principal, across, shear = stress_components(run.stress[sr.robust_node], part.axis)
         patch, distance = _nearest_patch(mesh, sr.robust_node, edges)
         rows.append(
             Criterion(
@@ -333,7 +331,7 @@ def _judge(part: Part, solved: Solved, reference: Solved | None) -> list[Criteri
     return rows
 
 
-def _equilibrium(part: Part, solved: Solved) -> list[Check]:
+def _equilibrium(part: MaterialPart, solved: Solved) -> list[Check]:
     """Reactions must balance the loads on the free directions."""
     assert part.fem is not None
     supports = applied.support_nodes(solved.mesh, part.fem.supports)
@@ -361,7 +359,7 @@ def _equilibrium(part: Part, solved: Solved) -> list[Check]:
     return checks
 
 
-def _convergence(part: Part, first: Solved, second: Solved) -> list[Check]:
+def _convergence(part: MaterialPart, first: Solved, second: Solved) -> list[Check]:
     """The compliance (external work) must agree between the two meshes."""
     assert part.fem is not None
     checks = []
@@ -387,7 +385,11 @@ def _convergence(part: Part, first: Solved, second: Solved) -> list[Check]:
 
 
 def _pictures(
-    part: Part, final: Solved, criteria: list[Criterion], work: Path, log: Callable[[str], None]
+    part: MaterialPart,
+    final: Solved,
+    criteria: list[Criterion],
+    work: Path,
+    log: Callable[[str], None],
 ) -> list[str]:
     """Render pictures and a .vtu of every load case into ``work/viz``."""
     spec = part.fem
@@ -398,8 +400,8 @@ def _pictures(
         allow = _strengths(part, case.sustained)
         sf = case.safety_factor or spec.safety_factor
         run = final.results[case.name]
-        util = node_utilization(run.stress, part.build_direction, allow, sf)
-        hotspot = stress_result(final.mesh, run.stress, part.build_direction, allow, excluded)
+        util = node_utilization(run.stress, part.axis, allow, sf)
+        hotspot = stress_result(final.mesh, run.stress, part.axis, allow, excluded)
         rows = [c for c in criteria if c.case == case.name]
         lines = [f"{part.name} / {case.name}: {worst([c.status for c in rows]).value}"]
         lines += [
@@ -439,7 +441,7 @@ def _keep_only(work: Path, tag: str) -> None:
 
 
 def analyze(
-    part: Part,
+    part: MaterialPart,
     out_dir: Path,
     options: RunOptions = RunOptions(),  # noqa: B008 - frozen, shared on purpose
     log: Callable[[str], None] = print,
@@ -553,15 +555,10 @@ def _displacement_row(
     )
 
 
-def _assumed_inputs(part: Part) -> list[str]:
+def _assumed_inputs(part: MaterialPart) -> list[str]:
     """Inputs that are assumptions, not measurements."""
     assert part.fem is not None
-    items = (
-        [f"material {part.material_data.name}: {part.material_data.source}"]
-        if part.material_data.assumed
-        else []
-    )
-    items.append(f"print profile {part.profile}: infill knockdown factors")
+    items = part.assumed_inputs()
     items += [f"load case {c.name}: {c.source}" for c in part.fem.load_cases if c.assumed]
     items += [f"limit {lim.name}" for lim in part.fem.displacement_limits if lim.assumed]
     return items
@@ -577,12 +574,13 @@ def run_checks(
 ) -> list[FemResult]:
     """Check the named parts, write reports and the verdicts file, print a summary."""
     from plotzker.fem.report import file_hash, markdown, update_verdicts
-    from plotzker.parts import PARTS
+    from plotzker.parts import PARTS as ALL_PARTS
 
+    PARTS = {n: p for n, p in ALL_PARTS.items() if isinstance(p, MaterialPart)}  # noqa: N806
     unknown = [n for n in names if n not in PARTS]
     if unknown:
         raise SystemExit(
-            f"Not defined as a Part: {', '.join(unknown)}. Defined: {', '.join(PARTS)}"
+            f"No material or FEM data: {', '.join(unknown)}. Defined: {', '.join(PARTS)}"
         )
     targets: list[str] = []
     for name in names:

@@ -3,6 +3,15 @@
 import math
 
 import pytest
+from cadder.part import (
+    DisplacementLimit,
+    FemSpec,
+    Force,
+    LoadCase,
+    PrintedPart,
+    Support,
+    effective_properties,
+)
 from cadder.regions import Box, Cylinder, Placement
 from pythonscad import cube, export
 
@@ -22,15 +31,6 @@ from plotzker.fem.solve import proportional
 from plotzker.fem.stl import clean_stl
 from plotzker.fem.tools import tools_available
 from plotzker.materials import load_material, load_profile
-from plotzker.part import (
-    DisplacementLimit,
-    FemSpec,
-    Force,
-    LoadCase,
-    Part,
-    Support,
-    effective_properties,
-)
 from plotzker.parts import PARTS
 
 needs_solvers = pytest.mark.skipif(not tools_available(), reason="gmsh and CalculiX not installed")
@@ -39,7 +39,7 @@ L, W, H = 100.0, 10.0, 5.0
 LOAD_N = 1.0
 
 
-def beam_part(build_direction: tuple[float, float, float]) -> Part:
+def beam_part(build_direction: tuple[float, float, float]) -> PrintedPart:
     """A cantilever along x, fixed at x = 0, loaded by LOAD_N down at the free end."""
     spec = FemSpec(
         load_cases=(
@@ -64,8 +64,15 @@ def beam_part(build_direction: tuple[float, float, float]) -> Part:
             ),
         ),
     )
-    return Part(
-        "beam", "test beam", lambda: cube([L, W, H]), "installed", build_direction, fem=spec
+    profile = load_profile()
+    return PrintedPart(
+        name="beam",
+        description="test beam",
+        build=lambda: cube([L, W, H]),
+        build_direction=build_direction,
+        profile=profile,
+        material=load_material(profile.material),
+        fem=spec,
     )
 
 
@@ -263,7 +270,7 @@ def test_status_lines_flag_stale_and_missing_checks(tmp_path):
     assert "PASS (2026-01-01)" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
     verdicts.write_text(entry.replace(spec_hash(part), "old"))
     assert "STALE (spec changed" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
-    assert "not yet defined" in status_lines(["other"], {}, verdicts, False)[0]
+    assert "no material or FEM data" in status_lines(["other"], {}, verdicts, False)[0]
 
 
 def test_dovetail_play_tilt_follows_the_clearance_and_plate_length():

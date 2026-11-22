@@ -38,14 +38,15 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import FN_HOLE
 from cadder.handles import frame_handle, handle, set_handles
+from cadder.part import PrintedPart, Support
 from cadder.regions import Box, Cylinder, Placement, bond_zone
 from cadder.types import Matrix
 from pythonscad import cube, cylinder, union
 
 from plotzker.hardware import ENDSTOP
 from plotzker.loads import Y_BELT_LOADS
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_IDLER
-from plotzker.part import Part, Support
 from plotzker.parts.floating_idler import mount_fem, tower
 from plotzker.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotzker.parts.wood_screw import wood_screw_boss, wood_screw_hole
@@ -174,12 +175,15 @@ FOOT_BEARING = Box(
 #: Friction around each wood screw: the foot's underside is bonded to the baseboard
 BOND_ZONES = [bond_zone((_SCREW_X, y, 0.0)) for y in _SCREW_YS]
 
-PART_LEFT = Part(
+PART_LEFT = PrintedPart(
     name="y_idler_mount_left",
     description="Y idler mount (left): foot on the baseboard with the floating idler's tower",
-    build=y_idler_mount_installed,
+    build=lambda: y_idler_mount(Side.LEFT),
+    analysis=y_idler_mount_installed,
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=mount_fem(
         Y_IDLER,
         PLACEMENT,
@@ -202,11 +206,14 @@ PART_LEFT = Part(
     ),
 )
 
-PART_RIGHT = Part(
+PART_RIGHT = PrintedPart(
     name="y_idler_mount_right",
     description="Y idler mount (right): foot on the baseboard (other-hand endstop tower)",
-    build=lambda: y_idler_mount_installed(Side.RIGHT),
+    build=lambda: y_idler_mount(Side.RIGHT),
+    analysis=lambda: y_idler_mount_installed(Side.RIGHT),
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=PART_LEFT.fem,
 )

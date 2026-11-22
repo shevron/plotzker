@@ -28,13 +28,14 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import FN_HOLE, lever_couple, teardrop
 from cadder.handles import handle, set_handles
+from cadder.part import DisplacementLimit, FemSpec, Force, LoadCase, Moment, PrintedPart, Support
 from cadder.regions import Box, Cylinder
 from cadder.types import Matrix, Vec3
 from pythonscad import cube, cylinder, linear_extrude, polygon
 
 from plotzker.loads import PEN_DRAG, PEN_KNOCK, PEN_PRESSURE, SERVO_STALL
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import FRAME, PEN, TOL
-from plotzker.part import DisplacementLimit, FemSpec, Force, LoadCase, Moment, Part, Support
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -211,12 +212,15 @@ def _limit(axis: str, direction: Vec3) -> DisplacementLimit:
     return DisplacementLimit(f"pen_seat_{axis}", PEN_SEAT, 0.05, direction, ("pen_contact",))
 
 
-PART = Part(
+PART = PrintedPart(
     name="pen_slide",
     description="Pen slide: sleeves on the rod, V-block for the pen, lug for the servo horn",
-    build=pen_slide_head,
+    build=pen_slide,
+    analysis=pen_slide_head,
     frame="installed",
     build_direction=(0, 1, 0),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=FemSpec(
         load_cases=(
             _at_pen(

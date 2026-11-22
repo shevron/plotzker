@@ -29,7 +29,11 @@ _DRIVER = textwrap.dedent(
         from pythonscad import export
         # revisions before the rename (tag pre-cadder-split) have the package plotter_cad
         pkg = "plotzker" if (Path(sys.argv[1]) / "plotzker").is_dir() else "plotter_cad"
-        PRINTABLE_PARTS = importlib.import_module(pkg + ".parts").PRINTABLE_PARTS
+        parts_module = importlib.import_module(pkg + ".parts")
+        # before the Part registry (tag pre-cadder-split): PRINTABLE_PARTS of build functions
+        PRINTABLE_PARTS = getattr(parts_module, "PRINTABLE_PARTS", None) or {
+            name: part.build for name, part in parts_module.PARTS.items() if part.stl
+        }
         here = Path(importlib.import_module(pkg).__file__).resolve()
         if not here.is_relative_to(Path(sys.argv[1]).resolve()):
             raise ImportError("revision has no " + pkg + " package; imported " + str(here))
@@ -50,7 +54,10 @@ _DRIVER = textwrap.dedent(
     result["assemblies"] = {}
     try:
         import numpy as np
-        ASSEMBLIES = importlib.import_module(pkg + ".assemblies").ASSEMBLIES
+        ASSEMBLIES = {
+            name: getattr(a, "build", a)
+            for name, a in importlib.import_module(pkg + ".assemblies").ASSEMBLIES.items()
+        }
     except Exception:
         ASSEMBLIES = {}
     for name, build in ASSEMBLIES.items():

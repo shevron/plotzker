@@ -21,6 +21,9 @@ dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 [project.scripts]
 plotzker = "plotzker.build:main"
 
+[tool.cadder]
+project = "plotzker.project:PROJECT"  # the cadder CLI finds the project here
+
 [tool.uv.workspace]
 members = ["cadder"]  # the generic framework, developed here until it moves to its own repo
 

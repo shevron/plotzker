@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from cadder.drawing import SvgDrawing, markdown_table, stroke
 from cadder.hardware import SK10
 
 from plotzker.params import (
@@ -128,49 +129,24 @@ def drilling_svg() -> str:
     """The layout as an SVG drawn at 1 : 1 (1 user unit = 1 mm, printed size in mm)."""
     bx, by, _ = FRAME.board_size
     bb = BASEBOARD
+    d = SvgDrawing(bx, by)
+    thin = stroke("#000", 0.4)
+    dashed = stroke("#06c", 0.4, "6 3")
+    dotted = stroke("#888", 0.3, "2 2")
 
-    def fy(y: float) -> float:
-        """SVG y (down) from machine y (up)."""
-        return by - y
-
-    out: list[str] = []
-
-    def rect(x0: float, y0: float, x1: float, y1: float, style: str, label: str = "") -> None:
-        out.append(
-            f'<rect x="{x0:g}" y="{fy(y1):g}" width="{x1 - x0:g}" height="{y1 - y0:g}" {style}/>'
-        )
-        if label:
-            text((x0 + x1) / 2, (y0 + y1) / 2, label, anchor="middle", size=7)
-
-    def text(x: float, y: float, s: str, anchor: str = "start", size: float = 6) -> None:
-        out.append(
-            f'<text x="{x:g}" y="{fy(y):g}" font-size="{size:g}" text-anchor="{anchor}" '
-            f'font-family="Helvetica, Arial, sans-serif" fill="#222">{s}</text>'
-        )
-
-    thin = 'fill="none" stroke="#000" stroke-width="0.4"'
-    dashed = 'fill="none" stroke="#06c" stroke-width="0.4" stroke-dasharray="6 3"'
-    dotted = 'fill="none" stroke="#888" stroke-width="0.3" stroke-dasharray="2 2"'
-
-    rect(0, 0, bx, by, 'fill="#fff" stroke="#000" stroke-width="0.8"')
+    d.rect(0, 0, bx, by, stroke("#000", 0.8, fill="#fff"))
     fx, fyy = FRAME.bed_origin
-    rect(fx, fyy, fx + FRAME.bed_size[0], fyy + FRAME.bed_size[1], dotted)
-    text(fx + 4, fyy + FRAME.bed_size[1] - 6, "bed panel (on the posts)", size=6)
+    d.rect(fx, fyy, fx + FRAME.bed_size[0], fyy + FRAME.bed_size[1], dotted)
+    d.text(fx + 4, fyy + FRAME.bed_size[1] - 6, "bed panel (on the posts)", size=6)
     a3x, a3y = REQ.media_a3
-    rect((bx - a3x) / 2, (by - a3y) / 2, (bx + a3x) / 2, (by + a3y) / 2, dotted, "A3 sheet")
+    d.rect((bx - a3x) / 2, (by - a3y) / 2, (bx + a3x) / 2, (by + a3y) / 2, dotted, "A3 sheet")
     for ry in bb.runner_y:
-        rect(
-            bb.runner_x[0],
-            ry - bb.runner_w / 2,
-            bb.runner_x[1],
-            ry + bb.runner_w / 2,
-            dashed,
-        )
-        text(
+        d.rect(bb.runner_x[0], ry - bb.runner_w / 2, bb.runner_x[1], ry + bb.runner_w / 2, dashed)
+        d.text(
             bb.runner_x[0] + 3, ry - bb.runner_w / 2 - 3, "runner 2040 on edge (underside)", size=5
         )
     zc, zr = bb.zrib_center, abs(ZMOUNT.plate_v[0])
-    rect(
+    d.rect(
         zc[0] - ZMOUNT.leg_u[1],
         zc[1] - zr,
         zc[0] + ZMOUNT.leg_u[1],
@@ -179,12 +155,9 @@ def drilling_svg() -> str:
         "ZRIB mount (underside)",
     )
     for x in Y_AXIS.shaft_x:
-        out.append(
-            f'<line x1="{x:g}" y1="{fy(Y_AXIS.shaft_y0):g}" x2="{x:g}" '
-            f'y2="{fy(Y_AXIS.shaft_y0 + 700):g}" stroke="#999" stroke-width="0.4"/>'
-        )
+        d.line(x, Y_AXIS.shaft_y0, x, Y_AXIS.shaft_y0 + 700, "#999", 0.4)
         for y in Y_AXIS.sk10_y:
-            rect(
+            d.rect(
                 x - SK10.width / 2,
                 y - SK10.length / 2,
                 x + SK10.width / 2,
@@ -192,48 +165,34 @@ def drilling_svg() -> str:
                 thin,
             )
     for name, (x0, y0, x1, y1) in mount_zones().items():
-        rect(x0, y0, x1, y1, 'fill="#fde9d0" fill-opacity="0.6" stroke="#c60" stroke-width="0.4"')
-        text((x0 + x1) / 2, y1 + 4, f"{name}: not pre-drilled", anchor="middle", size=5)
+        d.rect(x0, y0, x1, y1, 'fill="#fde9d0" fill-opacity="0.6" stroke="#c60" stroke-width="0.4"')
+        d.text((x0 + x1) / 2, y1 + 4, f"{name}: not pre-drilled", anchor="middle", size=5)
 
     for y0 in LOOM.rail_starts:
-        rect(
+        d.rect(
             LOOM.rail_x - LOOM.rail_t - LOOM.foot_w,
             y0,
             LOOM.rail_x,
             y0 + LOOM.rail_len,
             'fill="#dde8f5" stroke="#06c" stroke-width="0.4"',
         )
-    text(
+    d.text(
         LOOM.rail_x - 40,
         LOOM.rail_y0 - 8,
         "loom rails: not pre-drilled, wall 42 from the shaft",
         size=5,
     )
-    holes = board_holes()
-    for i, h in enumerate(holes, 1):
+    for i, h in enumerate(board_holes(), 1):
         color = "#c00" if h.side == SIDE_TOP else "#06c"
         if h.countersink_d:
-            out.append(
-                f'<circle cx="{h.x:g}" cy="{fy(h.y):g}" r="{h.countersink_d / 2:g}" '
-                f'fill="none" stroke="{color}" stroke-width="0.3"/>'
-            )
-        out.append(
-            f'<circle cx="{h.x:g}" cy="{fy(h.y):g}" r="{h.d / 2:g}" fill="none" '
-            f'stroke="{color}" stroke-width="0.5"/>'
-        )
-        out.append(
-            f'<path d="M{h.x - 6:g},{fy(h.y):g}H{h.x + 6:g}'
-            f'M{h.x:g},{fy(h.y) - 6:g}V{fy(h.y) + 6:g}" '
-            f'stroke="{color}" stroke-width="0.3"/>'
-        )
-        text(h.x + 5, h.y + 5, str(i), size=6)
+            d.circle(h.x, h.y, h.countersink_d / 2, stroke(color, 0.3))
+        d.circle(h.x, h.y, h.d / 2, stroke(color, 0.5))
+        d.crosshair(h.x, h.y, 6, color, 0.3)
+        d.text(h.x + 5, h.y + 5, str(i), size=6)
 
-    out.append(
-        f'<path d="M20,{by - 20:g}h100" stroke="#000" stroke-width="1"/>'
-        f'<path d="M20,{by - 24:g}v8M120,{by - 24:g}v8" stroke="#000" stroke-width="1"/>'
-    )
-    text(20, 22, "100 mm: print at 100 % and check this bar", size=6)
-    text(
+    d.scale_bar(20, 20, 100)
+    d.text(20, 22, "100 mm: print at 100 % and check this bar", size=6)
+    d.text(
         8,
         by - 8,
         "Baseboard 700 × 900 × 18, top face, front-left corner = origin. "
@@ -241,26 +200,20 @@ def drilling_svg() -> str:
         "`python -m plotzker layout`.",
         size=5,
     )
-    return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" width="{bx:g}mm" height="{by:g}mm" '
-        f'viewBox="0 0 {bx:g} {by:g}">\n' + "\n".join(out) + "\n</svg>\n"
-    )
+    return d.to_svg()
 
 
 def hole_table() -> str:
     """Markdown table of the holes, numbered as in the drawing."""
-    rows = [
-        "| # | Group | x | y | Ø | Face | Notes |",
-        "|---|-------|---|---|---|------|-------|",
-    ]
+    rows = []
     for i, h in enumerate(board_holes(), 1):
         notes = h.note
         if h.countersink_d:
             notes += f"; countersink Ø{h.countersink_d:g}"
         if h.depth:
             notes += f"; {h.depth:g} deep"
-        rows.append(f"| {i} | {h.group} | {h.x:g} | {h.y:g} | {h.d:g} | {h.side} | {notes} |")
-    return "\n".join(rows)
+        rows.append((i, h.group, f"{h.x:g}", f"{h.y:g}", f"{h.d:g}", h.side, notes))
+    return markdown_table(("#", "Group", "x", "y", "Ø", "Face", "Notes"), rows)
 
 
 def write_layout(out_dir: Path) -> list[Path]:

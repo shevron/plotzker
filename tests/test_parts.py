@@ -6,7 +6,7 @@ import pytest
 from cadder.testing import bounding_box, shell_count, touching, volume
 
 from plotzker import build
-from plotzker.parts import PRINTABLE_PARTS
+from plotzker.parts import PARTS
 
 
 def assert_printable(solid):
@@ -17,14 +17,14 @@ def assert_printable(solid):
     assert 0 < volume(solid) < math.prod(h - low for low, h in zip(lo, hi, strict=True))
 
 
-@pytest.mark.parametrize("name", PRINTABLE_PARTS)
+@pytest.mark.parametrize("name", PARTS)
 def test_part_is_printable(name):
-    assert_printable(PRINTABLE_PARTS[name]())
+    assert_printable(PARTS[name].build())
 
 
 def test_stl_export_writes_every_part(tmp_path):
     written = build.export_stls(out_dir=tmp_path)
-    assert sorted(path.name for path in written) == sorted(f"{n}.stl" for n in PRINTABLE_PARTS)
+    assert sorted(path.name for path in written) == sorted(f"{n}.stl" for n in PARTS)
     assert all(path.stat().st_size > 0 for path in written)
 
 

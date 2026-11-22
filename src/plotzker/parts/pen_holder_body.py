@@ -34,13 +34,14 @@ from typing import TYPE_CHECKING
 from cadder.geometry import FN_HOLE, teardrop
 from cadder.handles import handle, set_handles
 from cadder.hardware import FT90M
+from cadder.part import FemSpec, Force, LoadCase, Moment, PrintedPart, Support
 from cadder.regions import Box, Cylinder
 from cadder.types import Matrix, Vec3
 from pythonscad import cube, cylinder, linear_extrude, polygon
 
 from plotzker.loads import PEN_KNOCK, SERVO_STALL
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import FRAME, PEN, TOL, TOOL_PLATE
-from plotzker.part import FemSpec, Force, LoadCase, Moment, Part, Support
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -284,12 +285,15 @@ _STALL = LoadCase(
     "loads.SERVO_STALL",
 )
 
-PART = Part(
+PART = PrintedPart(
     name="pen_holder_body",
     description="Pen holder body: plate on the carriage, rod arms and the servo wall",
-    build=pen_holder_body_head,
+    build=pen_holder_body,
+    analysis=pen_holder_body_head,
     frame="installed",
     build_direction=(1, 0, 0),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=FemSpec(
         load_cases=(_knock("pen_knock_x", (1, 0, 0)), _knock("pen_knock_d", (0, 1, 0)), _STALL),
         supports=(

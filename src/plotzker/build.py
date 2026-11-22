@@ -83,14 +83,14 @@ def export_stls(names: Iterable[str] | None = None, out_dir: Path = STL_DIR) -> 
     """Export printable parts as STL; returns the written paths."""
     from pythonscad import export
 
-    from plotzker.parts import PRINTABLE_PARTS
+    from plotzker.parts import PARTS
 
     params.check_design()
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
-    for name in _select(names, PRINTABLE_PARTS):
+    for name in _select(names, {n: p for n, p in PARTS.items() if p.stl}):
         path = out_dir / f"{name}.stl"
-        export(PRINTABLE_PARTS[name](), str(path))
+        export(PARTS[name].build(), str(path))
         typer.echo(
             f"wrote {path.relative_to(REPO_ROOT) if path.is_relative_to(REPO_ROOT) else path}"
         )
@@ -141,11 +141,11 @@ def render_pngs(
     all sides.
     """
     from plotzker.assemblies import ASSEMBLIES
-    from plotzker.parts import PRINTABLE_PARTS
+    from plotzker.parts import PARTS
 
     exe = find_pythonscad(binary)
     targets = {
-        **{n: "parts:PRINTABLE_PARTS" for n in PRINTABLE_PARTS},
+        **{n: "parts:PARTS" for n in PARTS},
         **{n: "assemblies:ASSEMBLIES" for n in ASSEMBLIES},
     }
     views: dict[str, tuple[float, float, float] | None]
@@ -167,7 +167,7 @@ def render_pngs(
                     sys.path.insert(0, {str(SRC_DIR)!r})
                     from pythonscad import show
                     from plotzker.{module} import {registry}
-                    show({registry}[{name!r}]())
+                    show({registry}[{name!r}].build())
                     """
                 )
             )
@@ -204,13 +204,13 @@ def _fem_status(check_geometry: bool) -> None:
     """Print the FEM state of every printable part."""
     from plotzker.fem.assembly import assembly_status_lines
     from plotzker.fem.report import status_lines
-    from plotzker.parts import PARTS, PRINTABLE_PARTS
+    from plotzker.parts import MATERIAL_PARTS, PARTS
 
     verdicts = FEM_DIR / "verdicts.toml"
     from plotzker.assembly_checks import ASSEMBLY_CHECKS
 
-    lines = status_lines(list(PRINTABLE_PARTS), PARTS, verdicts, check_geometry)
-    print("\n".join(lines + assembly_status_lines(ASSEMBLY_CHECKS, PARTS, verdicts)))
+    lines = status_lines(list(PARTS), PARTS, verdicts, check_geometry)
+    print("\n".join(lines + assembly_status_lines(ASSEMBLY_CHECKS, MATERIAL_PARTS, verdicts)))
 
 
 class Refine(StrEnum):
@@ -235,7 +235,7 @@ def _run_fem(
     from plotzker.assembly_checks import ASSEMBLY_CHECKS
     from plotzker.fem.assembly import run_assemblies
     from plotzker.fem.runner import RunOptions, run_checks
-    from plotzker.parts import PARTS
+    from plotzker.parts import MATERIAL_PARTS
 
     options = RunOptions(size, refine.value, not uniform, solver, viz)
     part_names = [n for n in names if n not in ASSEMBLY_CHECKS]
@@ -250,7 +250,7 @@ def _run_fem(
         if a.name not in wanted and part_names and set(a.members) <= set(part_names)
     ]
     statuses += [
-        r.status.value for r in run_assemblies(wanted, PARTS, out, verdicts, record=record)
+        r.status.value for r in run_assemblies(wanted, MATERIAL_PARTS, out, verdicts, record=record)
     ]
     return all(s in ("PASS", "MARGINAL") for s in statuses)
 

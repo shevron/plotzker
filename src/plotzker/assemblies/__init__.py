@@ -1,11 +1,10 @@
 """Assemblies: parts placed with hardware models for fit checks and renders.
 
 Each assembly function returns a list of colored solids. :data:`ASSEMBLIES` maps a
-render name (``renders/<name>.png``) to the function that builds it.
+render name (``renders/<name>.png``) to its :class:`~cadder.assembly.Assembly`.
 """
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING
+from cadder.assembly import Assembly
 
 from plotzker.assemblies import (
     carriage,
@@ -20,19 +19,63 @@ from plotzker.assemblies import (
 )
 from plotzker.types import Side
 
-if TYPE_CHECKING:
-    from pythonscad import Solid
-
-ASSEMBLIES: dict[str, Callable[[], list[Solid]]] = {
-    "carriage": carriage.carriage_fit_check,
-    "gantry": gantry.gantry_fit_check,
-    "gantry_end_left": lambda: gantry.gantry_end_local(Side.LEFT),  # idler, endstop (close-up)
-    "gantry_end_right": lambda: gantry.gantry_end_local(Side.RIGHT),  # motor (close-up)
-    "hardware_gallery": hardware_gallery.hardware_gallery,
-    "machine": machine.machine,
-    "pen_holder": pen_holder.pen_holder_fit_check,
-    "skeleton": skeleton.skeleton,
-    "tension_idler_fit": tension_idler.tension_idler_fit_check,
-    "y_drive": y_drive.y_drive_fit_check,
-    "zrib_mount": zrib_mount.zrib_mount_fit_check,
+ASSEMBLIES: dict[str, Assembly] = {
+    a.name: a
+    for a in (
+        Assembly(
+            name="carriage",
+            description="The carriage assembly on a 240 mm piece of the beam",
+            build=carriage.carriage_fit_check,
+        ),
+        Assembly(
+            name="gantry",
+            description="The gantry at mid-board on 400 mm stubs of the Y shafts",
+            build=gantry.gantry_fit_check,
+        ),
+        Assembly(
+            name="gantry_end_left",
+            description="Close-up of the left gantry end: X idler and endstop",
+            build=lambda: gantry.gantry_end_local(Side.LEFT),
+        ),
+        Assembly(
+            name="gantry_end_right",
+            description="Close-up of the right gantry end: X motor",
+            build=lambda: gantry.gantry_end_local(Side.RIGHT),
+        ),
+        Assembly(
+            name="hardware_gallery",
+            description="All vendor-part models laid out in rows for a visual check",
+            build=hardware_gallery.hardware_gallery,
+        ),
+        Assembly(
+            name="machine",
+            description="The machine at mid-travel, pen up",
+            build=machine.machine,
+        ),
+        Assembly(
+            name="pen_holder",
+            description="The carriage with its pen holder on a piece of the beam, pen up",
+            build=pen_holder.pen_holder_fit_check,
+        ),
+        Assembly(
+            name="skeleton",
+            description="Frame, Y axis, gantry and carriage",
+            build=skeleton.skeleton,
+        ),
+        Assembly(
+            name="tension_idler_fit",
+            description="Generic tension idler: rail, slider, idler, axle and tension screw",
+            build=tension_idler.tension_idler_fit_check,
+        ),
+        Assembly(
+            name="y_drive",
+            description="Baseboard, shafts, SK10s, gantry and both Y drives",
+            build=y_drive.y_drive_fit_check,
+        ),
+        Assembly(
+            name="zrib_mount",
+            description="The ZRIB mount on a piece of baseboard, upside down",
+            build=zrib_mount.zrib_mount_fit_check,
+        ),
+    )
 }

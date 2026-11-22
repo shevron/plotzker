@@ -10,8 +10,9 @@ Limits are the sum of the members' own limits (nothing new is decided): both par
 their budget at most, and play is an extra that must fit in it.
 """
 
+from cadder.assembly import AssemblyCheck, AssemblyLimit, AssemblyTerm
+
 from plotzker.params import TensionIdler
-from plotzker.part import Assembly, AssemblyLimit, AssemblyTerm
 from plotzker.parts.tension_idler import dovetail_play
 
 #: Per-part limits of the tensioner's mount and slider (tension_idler.slider_fem / mount_fem)
@@ -31,7 +32,7 @@ def tensioner_assembly(
     slider: str,
     mount_prefix: str,
     t: TensionIdler | None = None,
-) -> Assembly:
+) -> AssemblyCheck:
     """Mount + slider of one belt idler, judged on the idler axle's total displacement.
 
     ``t`` is a dovetail tensioner: its slider tilts in the clearance, which is a rigid term. With
@@ -53,7 +54,7 @@ def tensioner_assembly(
             )
         return AssemblyLimit(f"idler_axle_{direction}", 2 * one_part_mm, tuple(terms))
 
-    return Assembly(
+    return AssemblyCheck(
         name,
         description,
         (mount, slider),
@@ -71,7 +72,7 @@ def tensioner_assembly(
     )
 
 
-ASSEMBLY_CHECKS: dict[str, Assembly] = {
+ASSEMBLY_CHECKS: dict[str, AssemblyCheck] = {
     a.name: a
     for a in (
         tensioner_assembly(

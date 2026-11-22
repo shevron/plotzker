@@ -48,23 +48,24 @@ from typing import TYPE_CHECKING
 from cadder.geometry import EPS, FN_HOLE, lever_couple, teardrop_x
 from cadder.handles import handle, set_handles
 from cadder.hardware import ECCENTRIC, metric
-from cadder.printing import nut_slot
-from cadder.regions import Box, Cylinder
-from cadder.types import Matrix, Vec3
-from pythonscad import cube, cylinder, hull, linear_extrude, polygon
-
-from plotzker.loads import ACCELERATION, CARRIAGE_HEAD_KG, PEN_KNOCK, PEN_TIP_Z, X_BELT_LOADS, G
-from plotzker.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
-from plotzker.part import (
+from cadder.part import (
     DisplacementLimit,
     FemSpec,
     Force,
     Load,
     LoadCase,
     Moment,
-    Part,
+    PrintedPart,
     Support,
 )
+from cadder.printing import nut_slot
+from cadder.regions import Box, Cylinder
+from cadder.types import Matrix, Vec3
+from pythonscad import cube, cylinder, hull, linear_extrude, polygon
+
+from plotzker.loads import ACCELERATION, CARRIAGE_HEAD_KG, PEN_KNOCK, PEN_TIP_Z, X_BELT_LOADS, G
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
+from plotzker.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -372,12 +373,15 @@ def _limits(axis_name: str, direction: Vec3) -> DisplacementLimit:
     )
 
 
-PART = Part(
+PART = PrintedPart(
     name="x_carriage",
     description="X carriage: wheels on the beam, belt clamps, tool-plate hook",
-    build=x_carriage_installed,
+    build=x_carriage,
+    analysis=x_carriage_installed,
     frame="installed",
     build_direction=(0, 1, 0),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=FemSpec(
         load_cases=(
             _belt_case("belt_preload", X_BELT_LOADS.preload_n, True),

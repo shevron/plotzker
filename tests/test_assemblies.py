@@ -30,7 +30,7 @@ from plotzker.parts.y_motor_mount import y_motor_mount_installed
 
 @pytest.mark.parametrize("name", ASSEMBLIES)
 def test_assembly_builds(name):
-    assert volume(union(*flatten(ASSEMBLIES[name]()))) > 0
+    assert volume(union(*flatten(ASSEMBLIES[name].build()))) > 0
 
 
 # The skeleton is left out on purpose: its bed has nothing to sit on until the bed

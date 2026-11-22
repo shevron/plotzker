@@ -34,12 +34,13 @@ see :data:`PART`.
 from typing import TYPE_CHECKING
 
 from cadder.handles import handle, set_handles
+from cadder.part import PrintedPart
 from cadder.regions import Placement
 from cadder.types import Matrix
 
 from plotzker.loads import X_BELT_LOADS
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import X_IDLER
-from plotzker.part import Part
 from plotzker.parts.floating_idler import slider_fem, slider_for_print, slider_local
 
 if TYPE_CHECKING:
@@ -64,11 +65,14 @@ def x_idler_slider() -> Solid:
     return slider_for_print(X)
 
 
-PART = Part(
+PART = PrintedPart(
     name="x_idler_slider",
     description="X idler slider: floating U-shaped carrier of the idler axle, tied to the tower",
-    build=x_idler_slider_installed,
+    build=x_idler_slider,
+    analysis=x_idler_slider_installed,
     frame="installed",
     build_direction=(0, 0, -1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=slider_fem(X, PLACEMENT, X_BELT_LOADS, "loads.X_BELT_LOADS"),
 )

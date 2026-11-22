@@ -2,11 +2,11 @@
 gantry bracket that carries the X motor mount (docs/fem-subagent-plan.md §18)."""
 
 from cadder.geometry import lever_couple
+from cadder.part import Force, Load, Moment
 from cadder.regions import Region
 from cadder.types import Vec3
 
 from plotzker.loads import MOTOR_LOADS, BeltLoads
-from plotzker.part import Force, Load, Moment
 
 
 def motor_loads(

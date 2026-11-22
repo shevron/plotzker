@@ -35,13 +35,13 @@ from typing import TYPE_CHECKING
 from cadder.geometry import EPS, FN, FN_HOLE, teardrop_x, teardrop_y
 from cadder.handles import handle, set_handles
 from cadder.hardware import metric
+from cadder.part import DisplacementLimit, FemSpec, Force, LoadCase, Moment, Support
 from cadder.printing import nut_slot
 from cadder.regions import Box, Cylinder, Placement
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon, union
 
 from plotzker.loads import BeltLoads
 from plotzker.params import TENSION_IDLER, TOL, TensionIdler
-from plotzker.part import DisplacementLimit, FemSpec, Force, LoadCase, Moment, Support
 
 if TYPE_CHECKING:
     from pythonscad import Solid

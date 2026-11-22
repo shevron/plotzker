@@ -1,15 +1,13 @@
 """Printable parts, one module per part, each modeled in its print orientation.
 
-:data:`PRINTABLE_PARTS` maps each STL name (``stl/<name>.stl``) to the function that
-builds it; the build CLI exports every entry. :data:`PARTS` holds the parts that are defined as
-:class:`~plotzker.part.Part` (print profile, material, FEM specification); parts are moved
-over one at a time (``docs/fem-subagent-plan.md``).
+:data:`PARTS` maps each part's name (= STL file name, ``stl/<name>.stl``) to its
+:class:`~cadder.part.Part`. Parts with a print profile, material and FEM specification are
+printed parts (:class:`~cadder.part.PrintedPart`, module-level ``PART``); the others are
+plain ``Part`` objects until they get their data (``docs/fem-subagent-plan.md``).
 """
 
-from collections.abc import Callable
-from functools import partial
+from cadder.part import MaterialPart, Part
 
-from plotzker.part import Part
 from plotzker.parts import (
     belt_clamp,
     gantry_end_bracket,
@@ -30,29 +28,45 @@ from plotzker.parts import (
 )
 from plotzker.types import Side
 
-PRINTABLE_PARTS: dict[str, Callable[[], object]] = {
-    "gantry_end_bracket_left": partial(gantry_end_bracket.gantry_end_bracket, Side.LEFT),
-    "gantry_end_bracket_right": partial(gantry_end_bracket.gantry_end_bracket, Side.RIGHT),
-    "belt_clamp": belt_clamp.belt_clamp,
-    "loom_anchor": loom_anchor.loom_anchor,
-    "loom_rail": loom_rail.loom_rail,
-    "pen_holder_body": pen_holder_body.pen_holder_body,
-    "pen_slide": pen_slide.pen_slide,
-    "tension_idler_rail": tension_idler.tension_idler_rail,
-    "tension_idler_slider": tension_idler.tension_idler_slider,
-    "x_carriage": x_carriage.x_carriage,
-    "zrib_hanger": zrib_hanger.zrib_hanger,
-    "zrib_guard": zrib_guard.zrib_guard,
-    "x_motor_mount": x_motor_mount.x_motor_mount,
-    "x_endstop_mount": x_endstop_mount.x_endstop_mount,
-    "x_idler_slider": x_idler_slider.x_idler_slider,
+#: Printed parts not yet given a print profile, material and FEM data
+_PLAIN: dict[str, Part] = {
+    part.name: part
+    for part in (
+        Part(
+            name="belt_clamp",
+            description="Belt clamp cap: clamps a belt end (×4 for Y, ×2 for X)",
+            build=belt_clamp.belt_clamp,
+        ),
+        Part(
+            name="loom_anchor",
+            description="Loom anchor on the right gantry bracket",
+            build=loom_anchor.loom_anchor,
+        ),
+        Part(name="loom_rail", description="Loom rail segment (×6)", build=loom_rail.loom_rail),
+        Part(
+            name="tension_idler_rail",
+            description="Generic belt-tensioning idler, rail (prototype)",
+            build=tension_idler.tension_idler_rail,
+        ),
+        Part(
+            name="tension_idler_slider",
+            description="Generic belt-tensioning idler, slider (prototype)",
+            build=tension_idler.tension_idler_slider,
+        ),
+        Part(
+            name="zrib_hanger",
+            description="ZRIB hanger: carries the controller under the baseboard (×2)",
+            build=zrib_hanger.zrib_hanger,
+        ),
+        Part(
+            name="zrib_guard",
+            description="ZRIB guard strap under the board's long edges (×2)",
+            build=zrib_guard.zrib_guard,
+        ),
+    )
 }
-for _side in Side:
-    PRINTABLE_PARTS[f"y_motor_mount_{_side.value}"] = partial(y_motor_mount.y_motor_mount, _side)
-    PRINTABLE_PARTS[f"y_idler_mount_{_side.value}"] = partial(y_idler_mount.y_idler_mount, _side)
-    PRINTABLE_PARTS[f"y_idler_slider_{_side.value}"] = partial(y_idler_slider.y_idler_slider, _side)
 
-PARTS: dict[str, Part] = {
+_PRINTED: dict[str, Part] = {
     part.name: part
     for part in (
         gantry_end_bracket.PART_LEFT,
@@ -70,4 +84,35 @@ PARTS: dict[str, Part] = {
         y_idler_slider.PART_LEFT,
         y_idler_slider.PART_RIGHT,
     )
+}
+
+#: Order of listings and exports
+_ORDER = [
+    "gantry_end_bracket_left",
+    "gantry_end_bracket_right",
+    "belt_clamp",
+    "loom_anchor",
+    "loom_rail",
+    "pen_holder_body",
+    "pen_slide",
+    "tension_idler_rail",
+    "tension_idler_slider",
+    "x_carriage",
+    "zrib_hanger",
+    "zrib_guard",
+    "x_motor_mount",
+    "x_endstop_mount",
+    "x_idler_slider",
+] + [
+    f"{kind}_{side.value}"
+    for side in Side
+    for kind in ("y_motor_mount", "y_idler_mount", "y_idler_slider")
+]
+
+#: Every part of the plotter, by name (= STL file name)
+PARTS: dict[str, Part] = {name: (_PRINTED | _PLAIN)[name] for name in _ORDER}
+
+#: The parts with a material (and so possibly an FEM check)
+MATERIAL_PARTS: dict[str, MaterialPart] = {
+    name: part for name, part in PARTS.items() if isinstance(part, MaterialPart)
 }

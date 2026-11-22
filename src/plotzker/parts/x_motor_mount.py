@@ -31,13 +31,14 @@ from typing import TYPE_CHECKING
 from cadder.geometry import EPS, FN_HOLE, teardrop_y
 from cadder.handles import handle, set_handles
 from cadder.hardware import NEMA17, SCS10UU, metric
+from cadder.part import DisplacementLimit, FemSpec, LoadCase, PrintedPart, Support
 from cadder.regions import Box, Cylinder, bond_zone
 from cadder.types import Matrix
 from pythonscad import cube, cylinder
 
 from plotzker.loads import X_BELT_LOADS
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
-from plotzker.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
 from plotzker.parts.motor_fem import motor_loads
 
 if TYPE_CHECKING:
@@ -174,12 +175,15 @@ def _case(name: str, jam: bool) -> LoadCase:
     )
 
 
-PART = Part(
+PART = PrintedPart(
     name="x_motor_mount",
     description="X motor mount: plate for the NEMA17 (designed in the left bracket frame)",
-    build=x_motor_mount_left,
+    build=x_motor_mount,
+    analysis=x_motor_mount_left,
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=FemSpec(
         load_cases=(_case("belt_preload", False), _case("belt_peak", True)),
         supports=(

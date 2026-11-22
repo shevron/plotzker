@@ -4,21 +4,23 @@ import json
 from collections.abc import Mapping
 from pathlib import Path
 
-from plotzker.part import Part, part_to_dict
-from plotzker.parts import PARTS, PRINTABLE_PARTS
+from cadder.part import MaterialPart, Part, PrintedPart, part_to_dict
+
+from plotzker.parts import PARTS
 
 
-def list_parts() -> str:
-    """One line per printable part: its profile, material and FEM state."""
+def list_parts(parts: Mapping[str, Part] = PARTS) -> str:
+    """One line per part: its profile, material and FEM state."""
     rows = []
-    for name in PRINTABLE_PARTS:
-        part = PARTS.get(name)
-        if part is None:
-            rows.append(f"{name:<28} (not yet defined as a Part)")
+    for name, part in parts.items():
+        if isinstance(part, PrintedPart):
+            setup = f"{part.profile.name}/{part.material.name:<6}"
+        elif isinstance(part, MaterialPart):
+            setup = f"{part.material.name:<14}"
         else:
-            rows.append(
-                f"{name:<28} {part.profile}/{part.material_data.name:<6} FEM: {part.fem_status}"
-            )
+            rows.append(f"{name:<28} ({part.fem_status})")
+            continue
+        rows.append(f"{name:<28} {setup} FEM: {part.fem_status}")
     return "\n".join(rows)
 
 
@@ -26,15 +28,16 @@ def _get(name: str, parts: Mapping[str, Part]) -> Part:
     """The part called ``name``, or a helpful error."""
     if name in parts:
         return parts[name]
-    hint = "not yet defined as a Part" if name in PRINTABLE_PARTS else "unknown part"
-    raise SystemExit(f"{name}: {hint}. Defined: {', '.join(parts)}")
+    raise SystemExit(f"{name}: unknown part. Defined: {', '.join(parts)}")
 
 
 def export_part_stl(name: str, dest: Path, parts: Mapping[str, Part] = PARTS) -> None:
     """Write the part, in its analysis frame, as an STL file."""
     from pythonscad import export
 
-    export(_get(name, parts).build(), str(dest))
+    part = _get(name, parts)
+    solid = part.analysis_geometry() if isinstance(part, MaterialPart) else part.build()
+    export(solid, str(dest))
 
 
 def part_json(name: str, parts: Mapping[str, Part] = PARTS) -> str:
@@ -45,11 +48,20 @@ def part_json(name: str, parts: Mapping[str, Part] = PARTS) -> str:
 def part_text(name: str, parts: Mapping[str, Part] = PARTS) -> str:
     """A readable summary of a part."""
     part = _get(name, parts)
-    prof, mat = part.print_profile, part.material_data
-    lines = [
-        f"{part.name}: {part.description}",
-        f"  analysis frame: {part.frame}; build direction {part.build_direction}",
-        f"  print profile '{prof.name}': {prof.description}",
+    lines = [f"{part.name}: {part.description}"]
+    if not isinstance(part, MaterialPart):
+        return "\n".join([*lines, f"  {part.fem_status}"])
+    mat = part.material
+    if isinstance(part, PrintedPart):
+        prof = part.profile
+        frame = PrintedPart.OUTPUT_FRAME if part.frame == "output" else part.frame
+        lines += [
+            f"  analysis frame: {frame}; build direction {part.build_direction}",
+            f"  print profile '{prof.name}': {prof.description}",
+        ]
+    else:
+        lines.append(f"  analysis frame: {part.frame}; material axis {part.material_axis}")
+    lines += [
         f"  material {mat.name}: {mat.description}{' (assumed values)' if mat.assumed else ''}",
         f"  FEM: {part.fem_status}",
     ]

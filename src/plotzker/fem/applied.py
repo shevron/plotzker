@@ -3,12 +3,12 @@
 import math
 from collections.abc import Sequence
 
+from cadder.part import Acceleration, Force, Load, LoadCase, Moment, Support
 from cadder.regions import Region
 from cadder.types import Vec3
 
 from plotzker.fem.ccx import Supports
 from plotzker.fem.mesh import Cover, Mesh, TriFace, cover_region, covered_nodes, covered_weights
-from plotzker.part import Acceleration, Force, Load, LoadCase, Moment, Support
 
 
 class SpecError(ValueError):

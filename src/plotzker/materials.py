@@ -27,3 +27,9 @@ def material_names() -> list[str]:
 def profile_names() -> list[str]:
     """Names of all print profiles."""
     return LIBRARY.profile_names()
+
+
+#: The print setup of every printed part unless it names another one (``profiles/default.toml``)
+DEFAULT_PRINT = LIBRARY.profile()
+#: Its material
+DEFAULT_MATERIAL = LIBRARY.material(DEFAULT_PRINT.material)

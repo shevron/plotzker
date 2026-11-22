@@ -43,22 +43,23 @@ from typing import TYPE_CHECKING
 from cadder.geometry import EPS, FN_HOLE, teardrop_x, teardrop_y
 from cadder.handles import handle, set_handles
 from cadder.hardware import SCS10UU, VSLOT, metric
+from cadder.part import (
+    DisplacementLimit,
+    FemSpec,
+    Force,
+    Load,
+    LoadCase,
+    PrintedPart,
+    Support,
+)
 from cadder.printing import nut_slot
 from cadder.regions import Box, Cylinder, Placement
 from cadder.types import Matrix, Vec3
 from pythonscad import cube, cylinder, hull
 
 from plotzker.loads import X_BELT_LOADS, Y_BELT_LOADS
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_DRIVE, X_IDLER, Y_AXIS
-from plotzker.part import (
-    DisplacementLimit,
-    FemSpec,
-    Force,
-    Load,
-    LoadCase,
-    Part,
-    Support,
-)
 from plotzker.parts.floating_idler import head_load, tower, tower_limits
 from plotzker.parts.motor_fem import motor_loads
 from plotzker.parts.x_motor_mount import FOOT_X
@@ -387,19 +388,25 @@ def _spec(side: Side) -> FemSpec:
     )
 
 
-PART_LEFT = Part(
+PART_LEFT = PrintedPart(
     name="gantry_end_bracket_left",
     description="Gantry end bracket, left: SCS blocks, beam face plate, Y belt clamps",
-    build=gantry_end_bracket_local,
+    build=lambda: gantry_end_bracket(Side.LEFT),
+    analysis=gantry_end_bracket_local,
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=_spec(Side.LEFT),
 )
-PART_RIGHT = Part(
+PART_RIGHT = PrintedPart(
     name="gantry_end_bracket_right",
     description="Gantry end bracket, right (shown in the left frame): carries the X motor mount",
-    build=lambda: gantry_end_bracket_local(Side.RIGHT),
+    build=lambda: gantry_end_bracket(Side.RIGHT),
+    analysis=lambda: gantry_end_bracket_local(Side.RIGHT),
     frame="installed",
     build_direction=(0, 0, 1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=_spec(Side.RIGHT),
 )

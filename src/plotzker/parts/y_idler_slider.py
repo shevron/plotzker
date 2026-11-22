@@ -22,11 +22,12 @@ image, so the left one's check applies.
 
 from typing import TYPE_CHECKING
 
+from cadder.part import PrintedPart
 from cadder.regions import Placement
 
 from plotzker.loads import Y_BELT_LOADS
+from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import Y_AXIS, Y_DRIVE, Y_IDLER
-from plotzker.part import Part
 from plotzker.parts.floating_idler import slider_fem, slider_for_print, slider_local
 from plotzker.parts.y_idler_mount import to_side_frame
 from plotzker.types import Side
@@ -51,19 +52,25 @@ def y_idler_slider(side: Side = Side.LEFT) -> Solid:
 #: The tensioner's frame in the left side frame (slide direction +y)
 PLACEMENT = Placement(1, (Y_AXIS.belt_x, Y_DRIVE.idler_block_y, 0.0))
 
-PART_LEFT = Part(
+PART_LEFT = PrintedPart(
     name="y_idler_slider_left",
     description="Y idler slider (left): floating carrier of the idler axle, tied to the tower",
-    build=y_idler_slider_installed,
+    build=lambda: y_idler_slider(Side.LEFT),
+    analysis=y_idler_slider_installed,
     frame="installed",
     build_direction=(0, 0, -1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     fem=slider_fem(Y_IDLER, PLACEMENT, Y_BELT_LOADS, "loads.Y_BELT_LOADS"),
 )
-PART_RIGHT = Part(
+PART_RIGHT = PrintedPart(
     name="y_idler_slider_right",
     description="Y idler slider (right): mirror image of the left one",
-    build=lambda: y_idler_slider_installed().mirror([1, 0, 0]),
+    build=lambda: y_idler_slider(Side.RIGHT),
+    analysis=lambda: y_idler_slider_installed().mirror([1, 0, 0]),
     frame="installed",
     build_direction=(0, 0, -1),
+    profile=DEFAULT_PRINT,
+    material=DEFAULT_MATERIAL,
     mirror_of="y_idler_slider_left",
 )

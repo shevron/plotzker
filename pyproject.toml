@@ -1,6 +1,6 @@
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13"]
-build-backend = "uv_build"  # finds src/plotzker itself; ships every file in it (incl. SVG sketches)
+build-backend = "uv_build"  # finds src/plotzker itself; ships every file in it (TOML data, SVG)
 
 [project]
 name = "plotzker"
@@ -9,21 +9,32 @@ description = "Parametric CAD (PythonSCAD) for the DIY pen plotter"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "cadder",
     "pythonscad>=1.1",
     "typer>=0.29.2",
 ]
 
 [project.optional-dependencies]
-diff = ["numpy>=2", "manifold3d>=3.0"]
+diff = ["cadder[diff]"]
 dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
 plotzker = "plotzker.build:main"
 
+[tool.uv.workspace]
+members = ["cadder"]  # the generic framework, developed here until it moves to its own repo
+
+[tool.uv.sources]
+cadder = { workspace = true }
+
+[tool.uv]
+python-preference = "only-system"  # use the pyenv interpreter (.python-version), no uv-managed download
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "cadder/tests"]
 addopts = "-ra"
 
+# Ruff: these settings cover src/ and tests/; cadder/ has its own (cadder/pyproject.toml).
 [tool.ruff]
 line-length = 100
 target-version = "py314"
@@ -38,22 +49,20 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["plotzker"]
-known-third-party = ["pythonscad", "vtk"]
+known-third-party = ["cadder", "pythonscad", "vtk"]  # cadder: a separate package (workspace member)
 
+# Mypy checks both packages in one run.
 [tool.mypy]
 python_version = "3.14"
-mypy_path = ["src", "stubs"]
-packages = ["plotzker"]
+mypy_path = ["src", "cadder/src", "cadder/stubs"]
+packages = ["plotzker", "cadder"]
 strict = true
 cache_dir = ".mypy_cache"
 
 [[tool.mypy.overrides]]
-module = "plotzker.fem.viz_render"  # runs in FreeCAD's Python (vtk), not in this environment
+module = ["plotzker.fem.viz_render", "cadder.fem.viz_render"]  # FreeCAD's Python (vtk), not this environment
 ignore_errors = true
 ignore_missing_imports = true
-
-[tool.uv]
-python-preference = "only-system"  # use the pyenv interpreter (.python-version), no uv-managed download
 
 [[tool.mypy.overrides]]
 module = "manifold3d"  # no type stubs

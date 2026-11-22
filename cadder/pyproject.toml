@@ -1,0 +1,57 @@
+[build-system]
+requires = ["uv_build>=0.12.5,<0.13"]
+build-backend = "uv_build"  # finds src/cadder itself; ships every file in it (SVG sketches, HTML)
+
+[project]
+name = "cadder"
+version = "0.1.0"
+description = "Framework for software-driven CAD projects on PythonSCAD: parts, assemblies, FEM, diff, FreeCAD"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "pythonscad>=1.1",
+    "typer>=0.29.2",
+]
+
+[project.optional-dependencies]
+diff = ["numpy>=2", "manifold3d>=3.0"]
+dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+cadder = "cadder.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "RUF", "TID"]
+ignore = [
+    "F403", "F405",  # star imports are not used, but keep PythonSCAD examples pasteable
+    "RUF001", "RUF002", "RUF003",  # ×, –, → and box-drawing characters in docstrings/comments
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["cadder"]
+known-third-party = ["pythonscad", "vtk"]
+
+[tool.mypy]
+python_version = "3.14"
+mypy_path = ["src", "stubs"]
+packages = ["cadder"]
+strict = true
+cache_dir = ".mypy_cache"
+
+[[tool.mypy.overrides]]
+module = "cadder.fem.viz_render"  # runs in FreeCAD's Python (vtk), not in this environment
+ignore_errors = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "manifold3d"  # no type stubs
+ignore_missing_imports = true

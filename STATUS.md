@@ -13,8 +13,10 @@ requirements, the high-level design and the coding standards are in
 > `align()` (D28). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
 > toolchain) deferred until the machine runs.
 >
-> **Next:** T3.8 X cable (the ribbon festoon mock-up decides; the Y loom is modeled). Phase 2
-> can run in parallel; the first test prints and the baseboard drilling (T4.1) are unblocked.
+> **Next:** Phase 2 starts with **T2.7** (X-axis bench bring-up: print and assemble the gantry
+> and carriage, wire the X motor and endstop, flash Marlin, home X; guide in
+> [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md)). T3.8 X cable (the ribbon festoon mock-up
+> decides; the Y loom is modeled) can run in parallel; the baseboard drilling (T4.1) is unblocked.
 
 **Contents:** 1 Work plan · 2 Open questions · 3 Decision log · 4 Inventory ·
 5 Key numbers · 6 As-built design notes · 7 Ideas and future possibilities
@@ -66,6 +68,15 @@ any new decisions in §3, and update the status line at the top.
 - [ ] **T2.5 Driver current (Vref).** Set Vref for the motors in use; both Y drivers identical.
 - [ ] **T2.6 (Optional) TFT35-E3.** Identify the AUX connector pins; connect the TFT in touch
   mode (Serial2 on EXP1 or AUX).
+- [ ] **T2.7 X-axis bench bring-up (first milestone, user's choice).** Print and assemble the
+  gantry and X carriage on four SCS blocks (no Y axis, baseboard or servo), wire the X motor and
+  X− endstop to the ZRIB and the 24 V PSU, flash a minimal Marlin, and check that the carriage
+  moves, stops at the endstop and homes (`G28 X`). Guide: [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md).
+  It covers the X part of T2.1 to T2.3 and T2.5; T2.2's full configuration (dual Y, servo, SD) and
+  `firmware/` follow it. `firmware/apply-config.sh` applies the X-axis settings to Marlin 2.1.2.5
+  (compiles with `pio run -e mega2560`; not flashed yet). *Done when:* the success criteria at the end of the guide's §5 are met,
+  the user's readings (§7 of the guide) are recorded in §4 and `docs/controller.md`, and the
+  endstop and direction settings found on the bench are recorded in `firmware/README.md`.
 
 #### Phase 3 — Mechanical CAD (PythonSCAD; conventions in README §7.4, workflow in README §6)
 

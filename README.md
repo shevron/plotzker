@@ -375,6 +375,7 @@ Plotter/
 ├── .python-version      ← Python version for pyenv and uv (3.14)
 ├── docs/
 │   ├── controller.md    ← ZRIB v5.8 analysis, pin map, bring-up checklist
+│   ├── x-axis-bringup.md ← first bench bring-up: assemble the gantry, wire the X motor and endstop, flash, home X
 │   ├── hardware.md      ← vendor part dimensions for CAD
 │   ├── diff-tool.md     ← design diff between git revisions: usage, report, limits
 │   ├── sketch-formats.md ← research on parametric 2D sketch formats

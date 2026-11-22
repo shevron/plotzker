@@ -6,9 +6,10 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from cadder.regions import Region
+from cadder.types import Vec3
+
 from plotzker.fem.tools import find_tool
-from plotzker.regions import Region
-from plotzker.types import Vec3
 
 #: Nodes closer than this (mm) are the same node.
 MERGE_TOL = 5e-4
@@ -139,7 +140,7 @@ def mesh_stl(
                 timeout=GMSH_TIMEOUT_S,
             )
         except subprocess.TimeoutExpired:
-            last = f"timed out after {GMSH_TIMEOUT_S} s (is the STL too fine? use PLOTTER_FN=20)"
+            last = f"timed out after {GMSH_TIMEOUT_S} s (is the STL too fine? use CADDER_FN=20)"
             continue
         if result.returncode == 0 and msh.is_file():
             mesh = read_msh(msh, used.near)

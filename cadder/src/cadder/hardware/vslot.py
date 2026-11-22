@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cylinder, linear_extrude
 
-from plotzker.geometry import load_sketch
+from cadder.geometry import load_sketch
 
 if TYPE_CHECKING:
     from pythonscad import Solid

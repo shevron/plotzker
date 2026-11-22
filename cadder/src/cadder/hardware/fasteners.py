@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
 
-from plotzker.geometry import cos_deg
+from cadder.geometry import cos_deg
 
 if TYPE_CHECKING:
     from pythonscad import Solid

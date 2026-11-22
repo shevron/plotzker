@@ -1,10 +1,12 @@
 """FEM loads of a belt-driven NEMA17 on a mount, shared by the X and Y motor mounts and by the
 gantry bracket that carries the X motor mount (docs/fem-subagent-plan.md §18)."""
 
-from plotzker.loads import MOTOR_LOADS, BeltLoads, lever_couple
+from cadder.geometry import lever_couple
+from cadder.regions import Region
+from cadder.types import Vec3
+
+from plotzker.loads import MOTOR_LOADS, BeltLoads
 from plotzker.part import Force, Load, Moment
-from plotzker.regions import Region
-from plotzker.types import Vec3
 
 
 def motor_loads(

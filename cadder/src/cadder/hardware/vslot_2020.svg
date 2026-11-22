@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   2D sketch: 2020 V-slot extrusion profile (20 mm series, one unit).
-  Loaded by plotzker.hardware.vslot (vslot_profile) and extruded to length there.
+  Loaded by cadder.hardware.vslot (vslot_profile) and extruded to length there.
 
   Path order: outline clockwise from the top-left corner, one T-slot per line (top,
   right, bottom, left), then the bore.
 
-  Sketch conventions (see plotzker.geometry.load_sketch):
+  Sketch conventions (see cadder.geometry.load_sketch):
     - 1 user unit = 1 mm (width/height in mm, viewBox in the same numbers).
     - The viewBox's bottom-left corner becomes the CAD origin; the sketch appears in
       CAD the way it is drawn here (SVG y is flipped on import).

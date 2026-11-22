@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import typer
+from cadder.handles import get_handles
+from cadder.hardware import vslot_x
 from pythonscad import export, translate
 
 from plotzker import params
@@ -33,8 +35,6 @@ from plotzker.assemblies.y_drive import (
     y_idler_end_local,
     y_motor_end_local,
 )
-from plotzker.geometry import get_handles
-from plotzker.hardware import vslot_x
 from plotzker.params import (
     BEAM,
     BRACKET,
@@ -395,9 +395,8 @@ def _gantry_parts(ex: Exporter, gantry_y: float) -> None:
 
 def _x_belt_return(gantry_y: float) -> Solid:
     """The X belt's upper (free) run, as ``gantry_assembly`` draws it."""
+    from cadder.hardware import GT2, PULLEY
     from pythonscad import cube
-
-    from plotzker.hardware import GT2, PULLEY
 
     left_x, _ = Y_AXIS.shaft_x
     return cube(

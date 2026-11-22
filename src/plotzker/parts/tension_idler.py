@@ -32,15 +32,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN, FN_HOLE, teardrop_x, teardrop_y
+from cadder.handles import handle, set_handles
+from cadder.hardware import metric
+from cadder.printing import nut_slot
+from cadder.regions import Box, Cylinder, Placement
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon, union
 
-from plotzker.geometry import EPS, FN, FN_HOLE, handle, set_handles, teardrop_x, teardrop_y
-from plotzker.hardware import metric
 from plotzker.loads import BeltLoads
-from plotzker.nut_slot import nut_slot
 from plotzker.params import TENSION_IDLER, TOL, TensionIdler
 from plotzker.part import DisplacementLimit, FemSpec, Force, LoadCase, Moment, Support
-from plotzker.regions import Box, Cylinder, Placement
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -180,9 +181,9 @@ def slider(t: TensionIdler = T) -> Solid:
         .translate([x0 + t.axle_x, t.nut_y, t.axle_z])
     )
     nut_t = TOL.nut_trap_h(t.screw_m) + t.nut_slot_extra
-    screw_nut = nut_slot(t.screw_m, arm_top - t.screw_z + 1, "x", "+z", t.nut_slot_extra).translate(
-        [x0 + TOL.nut_wall + nut_t / 2, 0, t.screw_z]
-    )
+    screw_nut = nut_slot(
+        t.screw_m, arm_top - t.screw_z + 1, "x", "+z", t.nut_slot_extra, tol=TOL
+    ).translate([x0 + TOL.nut_wall + nut_t / 2, 0, t.screw_z])
     screw_hole = (
         cylinder(d=TOL.bolt_hole_d(t.screw_m), h=2 * length, fn=FN_HOLE)
         .rotate([0, 90, 0])

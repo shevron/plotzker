@@ -6,25 +6,22 @@ Machine frame (``params``). Not printable.
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, mirror, translate
-
-from plotzker.geometry import frame_axes, get_handle, get_handles, handle, shift_handle
-from plotzker.hardware import (
+from cadder.handles import frame_axes, get_handle, get_handles, handle, place_in_frame, shift_handle
+from cadder.hardware import (
     GT2,
     PULLEY,
     SCS10UU,
-    endstop_keepout,
-    endstop_placed,
     gt2_idler,
     gt2_pulley,
     hex_nut,
     nema17,
-    place_in_frame,
     scs10uu,
     shcs,
     vslot_x,
-    y_shaft,
 )
+from pythonscad import cube, mirror, translate
+
+from plotzker.hardware import endstop_keepout, endstop_placed, y_shaft
 from plotzker.params import (
     BEAM,
     BRACKET,

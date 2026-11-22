@@ -7,12 +7,13 @@ is ``machine.py`` (T3.7). Not printable.
 
 from typing import TYPE_CHECKING
 
+from cadder.hardware import sk10
 from pythonscad import cube, translate
 
 from plotzker.assemblies.carriage import carriage_assembly
 from plotzker.assemblies.gantry import gantry_assembly
 from plotzker.assemblies.y_drive import y_drive_assembly
-from plotzker.hardware import sk10, y_shaft
+from plotzker.hardware import y_shaft
 from plotzker.params import CARRIAGE, FRAME, REQ, TOOL_PLATE, Y_AXIS
 
 if TYPE_CHECKING:

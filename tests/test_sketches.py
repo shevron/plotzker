@@ -1,10 +1,9 @@
 """SVG sketches load at 1 unit = 1 mm, with the origin at the bottom-left corner."""
 
 import pytest
-
-from plotzker.geometry import load_sketch, teardrop
-from plotzker.hardware import VSLOT
-from plotzker.hardware.vslot import PROFILE_SKETCHES, SKETCH_DIR, vslot_profile
+from cadder.geometry import load_sketch, teardrop
+from cadder.hardware import VSLOT
+from cadder.hardware.vslot import PROFILE_SKETCHES, SKETCH_DIR, vslot_profile
 
 
 def outline_stats(sketch) -> tuple[float, list[float], list[float]]:

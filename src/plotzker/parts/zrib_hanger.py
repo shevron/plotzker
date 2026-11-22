@@ -31,13 +31,14 @@ Print: PETG; 0.2 mm layers; 4 perimeters; 40 % infill; outer face (v) down; no s
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import FN_HOLE, teardrop
+from cadder.handles import handle, set_handles
+from cadder.printing import nut_slot
+from cadder.types import Matrix
 from pythonscad import cube, cylinder, linear_extrude
 
-from plotzker.geometry import FN_HOLE, handle, set_handles, teardrop
 from plotzker.hardware import ZRIB
-from plotzker.nut_slot import nut_slot
 from plotzker.params import TOL, WOOD_SCREW, ZMOUNT
-from plotzker.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -123,7 +124,7 @@ def zrib_hanger_mount() -> Solid:
         body = body - _hole_z(
             TOL.bolt_hole_d(3), us, m.strap_screw_v, m.strap_top_z - 1, m.strap_nut_z + nut_t + 5
         )
-        body = body - nut_slot(3, m.strap_screw_v - v0 + 1, "z", "-y").translate(
+        body = body - nut_slot(3, m.strap_screw_v - v0 + 1, "z", "-y", tol=TOL).translate(
             [us, m.strap_screw_v, m.strap_nut_z + nut_t / 2]
         )
     return set_handles(body, **_handles())

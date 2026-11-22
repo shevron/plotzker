@@ -6,11 +6,8 @@ Machine frame (``params``): the board's top face is z = 0. Not printable.
 
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder
-
-from plotzker.assemblies.zrib_mount import zrib_mount_assembly
-from plotzker.geometry import FN_HOLE
-from plotzker.hardware import (
+from cadder.geometry import FN_HOLE
+from cadder.hardware import (
     SK10,
     countersunk_screw,
     hex_nut,
@@ -21,8 +18,11 @@ from plotzker.hardware import (
     t_nut,
     vslot_x,
     washer,
-    y_shaft,
 )
+from pythonscad import cube, cylinder
+
+from plotzker.assemblies.zrib_mount import zrib_mount_assembly
+from plotzker.hardware import y_shaft
 from plotzker.layout import SIDE_UNDER, Hole, board_holes
 from plotzker.params import BASEBOARD, FRAME, Y_AXIS
 

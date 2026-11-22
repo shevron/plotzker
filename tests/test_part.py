@@ -3,8 +3,10 @@
 import json
 
 import pytest
+from cadder.regions import Box, Cylinder, select_faces
+from cadder.testing import volume
 
-from plotzker.materials import load_material
+from plotzker.materials import load_material, load_profile
 from plotzker.part import (
     FemSpec,
     LoadCase,
@@ -14,9 +16,6 @@ from plotzker.part import (
     part_to_dict,
 )
 from plotzker.parts import PARTS, PRINTABLE_PARTS
-from plotzker.print_profile import load_profile
-from plotzker.regions import Box, Cylinder, select_faces
-from solids import volume
 
 
 def regions_of(part: Part) -> list[tuple[str, object]]:

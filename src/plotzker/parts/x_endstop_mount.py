@@ -26,13 +26,15 @@ FEM: not structural (the board's loads are a few newtons at most).
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN_HOLE
+from cadder.handles import frame_handle, set_handles
+from cadder.hardware import SCS10UU, metric
+from cadder.types import Matrix
 from pythonscad import cube, cylinder, union
 
-from plotzker.geometry import EPS, FN_HOLE, frame_handle, set_handles
-from plotzker.hardware import ENDSTOP, SCS10UU, metric
+from plotzker.hardware import ENDSTOP
 from plotzker.params import BRACKET, TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
 from plotzker.part import Part
-from plotzker.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

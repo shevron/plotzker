@@ -22,12 +22,13 @@ image, so the left one's check applies.
 
 from typing import TYPE_CHECKING
 
+from cadder.regions import Placement
+
 from plotzker.loads import Y_BELT_LOADS
 from plotzker.params import Y_AXIS, Y_DRIVE, Y_IDLER
 from plotzker.part import Part
 from plotzker.parts.floating_idler import slider_fem, slider_for_print, slider_local
 from plotzker.parts.y_idler_mount import to_side_frame
-from plotzker.regions import Placement
 from plotzker.types import Side
 
 if TYPE_CHECKING:

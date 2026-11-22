@@ -22,10 +22,11 @@ flat side down; no supports.
 import math
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN_HOLE
+from cadder.handles import handle, set_handles
+from cadder.hardware import GT2
 from pythonscad import cube, cylinder
 
-from plotzker.geometry import EPS, FN_HOLE, handle, set_handles
-from plotzker.hardware import GT2
 from plotzker.params import CLAMP, TOL
 
 if TYPE_CHECKING:

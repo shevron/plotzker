@@ -40,12 +40,15 @@ apart; held by the 8 block bolts; see :data:`PART`.
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN_HOLE, teardrop_x, teardrop_y
+from cadder.handles import handle, set_handles
+from cadder.hardware import SCS10UU, VSLOT, metric
+from cadder.printing import nut_slot
+from cadder.regions import Box, Cylinder, Placement
+from cadder.types import Matrix, Vec3
 from pythonscad import cube, cylinder, hull
 
-from plotzker.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x, teardrop_y
-from plotzker.hardware import SCS10UU, VSLOT, metric
 from plotzker.loads import X_BELT_LOADS, Y_BELT_LOADS
-from plotzker.nut_slot import nut_slot
 from plotzker.params import BEAM, BRACKET, CLAMP, LOOM, TOL, X_DRIVE, X_IDLER, Y_AXIS
 from plotzker.part import (
     DisplacementLimit,
@@ -60,8 +63,7 @@ from plotzker.parts.floating_idler import head_load, tower, tower_limits
 from plotzker.parts.motor_fem import motor_loads
 from plotzker.parts.x_motor_mount import FOOT_X
 from plotzker.parts.x_motor_mount import PULLEY_POINT as MOTOR_PULLEY
-from plotzker.regions import Box, Cylinder, Placement
-from plotzker.types import Matrix, Side, Vec3
+from plotzker.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -152,7 +154,9 @@ def _loom_cutouts() -> list[Solid]:
             cylinder(d=TOL.bolt_hole_d(3), h=BRACKET.base_t, fn=FN_HOLE).translate([x, y, 0])
         )
         cuts.append(
-            nut_slot(3, x - BRACKET.x_out + 1, "z", "-x").translate([x, y, top - nut_t / 2])
+            nut_slot(3, x - BRACKET.x_out + 1, "z", "-x", tol=TOL).translate(
+                [x, y, top - nut_t / 2]
+            )
         )
     return cuts
 
@@ -203,7 +207,9 @@ def _cutouts() -> list[Solid]:
         )
     )
     cuts.append(
-        nut_slot(3, FACE_TOP + 1 - b.trig_z, "y", "+z").translate([b.trig_x, boss_mid_y, b.trig_z])
+        nut_slot(3, FACE_TOP + 1 - b.trig_z, "y", "+z", tol=TOL).translate(
+            [b.trig_x, boss_mid_y, b.trig_z]
+        )
     )
     return cuts
 

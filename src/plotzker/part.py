@@ -16,10 +16,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from plotzker.materials import Material, load_material
-from plotzker.print_profile import DEFAULT_PROFILE, PrintProfile, load_profile
-from plotzker.regions import Region
-from plotzker.types import Frame, Vec3
+from cadder.materials import Material, PrintProfile
+from cadder.regions import Region
+from cadder.types import Frame, Vec3
+
+from plotzker.materials import DEFAULT_PROFILE, load_material, load_profile
 
 if TYPE_CHECKING:
     from pythonscad import Solid

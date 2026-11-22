@@ -1,10 +1,14 @@
-"""Measurements on PythonSCAD solids, shared by the tests.
+"""Measurements on PythonSCAD solids, for a project's tests.
 
 Everything works on the solid's mesh, so no STL export is needed.
 """
 
 import itertools
 from collections.abc import Iterable, Iterator
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pythonscad import Solid
 
 Box = tuple[list[float], list[float]]
 
@@ -12,16 +16,16 @@ Box = tuple[list[float], list[float]]
 TOUCH = 0.05
 
 
-def flatten(items) -> Iterator:
+def flatten(items: object) -> Iterator[Solid]:
     """The solids of an assembly: assemblies return (possibly nested) lists."""
     if isinstance(items, (list, tuple)):
         for item in items:
             yield from flatten(item)
     else:
-        yield items
+        yield items  # type: ignore[misc]
 
 
-def volume(solid) -> float:
+def volume(solid: Solid) -> float:
     """Enclosed volume of a 3D solid (mm³)."""
     points, faces = solid.mesh()
     total = 0.0
@@ -33,7 +37,7 @@ def volume(solid) -> float:
     return total / 6
 
 
-def bounding_box(solid) -> Box:
+def bounding_box(solid: Solid) -> Box:
     """``(lowest corner, highest corner)`` of a 3D solid."""
     points, _ = solid.mesh()
     return (
@@ -42,7 +46,7 @@ def bounding_box(solid) -> Box:
     )
 
 
-def shell_count(solid) -> int:
+def shell_count(solid: Solid) -> int:
     """Number of separate closed surfaces of a solid.
 
     1 for an ordinary one-piece part; more if it has loose pieces or enclosed voids.
@@ -63,20 +67,20 @@ def shell_count(solid) -> int:
     return len({find(vertex) for face in faces for vertex in face})
 
 
-def touching(a, b, box_a: Box | None = None, box_b: Box | None = None) -> bool:
+def touching(a: Solid, b: Solid, box_a: Box | None = None, box_b: Box | None = None) -> bool:
     """True if two solids overlap or have faces within :data:`TOUCH` of each other."""
     (a_lo, a_hi), (b_lo, b_hi) = box_a or bounding_box(a), box_b or bounding_box(b)
     if any(a_lo[i] > b_hi[i] + TOUCH or b_lo[i] > a_hi[i] + TOUCH for i in range(3)):
         return False
-    nudges = [[0, 0, 0]] + [
-        [sign * TOUCH if axis == i else 0 for i in range(3)]
+    nudges: list[list[float]] = [[0.0, 0.0, 0.0]] + [
+        [sign * TOUCH if axis == i else 0.0 for i in range(3)]
         for axis in range(3)
         for sign in (1, -1)
     ]
     return any(volume(a & b.translate(nudge)) > 1e-6 for nudge in nudges)
 
 
-def connected_groups(items: Iterable) -> list[list[int]]:
+def connected_groups(items: Iterable[object]) -> list[list[int]]:
     """Group the solids of an assembly that touch each other, directly or through others.
 
     Returns lists of item indices, largest group first. A fully connected assembly

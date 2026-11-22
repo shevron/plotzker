@@ -17,14 +17,14 @@ parts that use it place it with a translation (X) or ``Placement`` (FEM) and a q
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN, FN_HOLE, teardrop_x, teardrop_y
+from cadder.printing import nut_slot
+from cadder.regions import Box, Cylinder, Placement
 from pythonscad import cube, cylinder, hull
 
-from plotzker.geometry import EPS, FN, FN_HOLE, teardrop_x, teardrop_y
 from plotzker.loads import BeltLoads
-from plotzker.nut_slot import nut_slot
 from plotzker.params import TOL, FloatingIdler
 from plotzker.part import DisplacementLimit, FemSpec, Force, LoadCase, Support
-from plotzker.regions import Box, Cylinder, Placement
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -63,9 +63,9 @@ def slider_local(t: FloatingIdler) -> Solid:
         .rotate([-90, 0, 0])
         .translate([t.axle_x, t.nut_y, t.axle_z])
     )
-    screw_nut = nut_slot(t.screw_m, top - t.screw_z + 1, "x", "+z", t.nut_slot_extra).translate(
-        [TOL.nut_wall + t.nut_t / 2, 0, t.screw_z]
-    )
+    screw_nut = nut_slot(
+        t.screw_m, top - t.screw_z + 1, "x", "+z", t.nut_slot_extra, tol=TOL
+    ).translate([TOL.nut_wall + t.nut_t / 2, 0, t.screw_z])
     # the screw's hole through the thrust wall and on into the blind tunnel for its tip
     tunnel = (
         teardrop_x(TOL.bolt_hole_d(t.screw_m), t.tunnel_end + 1)

@@ -1,12 +1,12 @@
 """The hex-profile nut slot (T3.12): oriented right, and it holds a nut against turning."""
 
 import pytest
+from cadder.hardware import hex_nut, metric
+from cadder.printing import _ROTATIONS, nut_slot
+from cadder.testing import bounding_box, volume
 from pythonscad import union
 
-from plotzker.hardware import hex_nut, metric
-from plotzker.nut_slot import _ROTATIONS, nut_slot
 from plotzker.params import TOL
-from solids import bounding_box, volume
 
 AXES = "xyz"
 

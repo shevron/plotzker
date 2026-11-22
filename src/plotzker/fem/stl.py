@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from plotzker.types import Vec3
+from cadder.types import Vec3
 
 #: Vertices closer than this (mm) are welded together.
 WELD_TOL = 1e-3

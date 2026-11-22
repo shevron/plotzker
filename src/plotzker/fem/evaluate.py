@@ -5,9 +5,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
+from cadder.types import Vec3
+
 from plotzker.fem.ccx import Tensor, local_axes
 from plotzker.fem.mesh import Mesh
-from plotzker.types import Vec3
 
 #: Share of a limit used at which a passing result is still called marginal.
 MARGINAL_FROM = 0.85

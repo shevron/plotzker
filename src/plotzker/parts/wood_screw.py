@@ -4,9 +4,9 @@ heads on top; the boss is as thick as the long screws need (the foot alone is to
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import FN_HOLE
 from pythonscad import cylinder
 
-from plotzker.geometry import FN_HOLE
 from plotzker.params import WOOD_SCREW
 
 if TYPE_CHECKING:

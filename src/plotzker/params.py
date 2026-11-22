@@ -19,10 +19,9 @@ import math
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from plotzker.geometry import cos_deg
-from plotzker.hardware import (
+from cadder.checks import run_design_checks
+from cadder.hardware import (
     ECCENTRIC,
-    ENDSTOP,
     FT90M,
     GT2,
     IDLER,
@@ -32,64 +31,20 @@ from plotzker.hardware import (
     SK10,
     VSLOT,
     VWHEEL,
-    Y_SHAFT,
-    ZRIB,
     metric,
 )
+from cadder.printing import Tolerances
+
+from plotzker.hardware import ENDSTOP, Y_SHAFT, ZRIB
 
 # -----------------------------------------------------------------------------
 # Print tolerances (tune after a test print; defaults from README.md §7.4)
 # -----------------------------------------------------------------------------
 
 
-@dataclass(frozen=True)
-class Tolerances:
-    """Print tolerances."""
-
-    bolt: float = 0.4  #: clearance-hole oversize: M3 → 3.4, M5 → 5.4
-    slide: float = 0.2  #: sliding fit (diametral)
-    press: float = 0.0  #: press fit (0 to -0.1)
-    nut: float = 0.1  #: nut trap: across-flats oversize (snug: nuts are pressed in)
-    #: hex-profile nut slot (`nut_slot.nut_slot`): across-flats oversize, ~0.1 mm per side plus
-    #: the ~0.1 mm the print comes out narrow
-    nut_slot: float = 0.3
-    nut_t: float = 0.1  #: nut trap: thickness oversize (the print comes out ~0.1 thicker)
-    gap: float = 0.3  #: general clearance between mating printed parts
-    min_wall: float = 1.6  #: 4 perimeters at 0.4 mm nozzle
-    layer_h: float = 0.2
-    nozzle_d: float = 0.4
-    nut_wall: float = 2.0  #: plastic that backs a pressed-in nut (takes the thrust or pull)
-
-    def bolt_hole_d(self, m: float) -> float:
-        """Clearance hole for an M``m`` bolt."""
-        return m + self.bolt
-
-    def nut_trap_af(self, m: float) -> float:
-        """Across flats of a nut trap."""
-        return metric(m).nut_af + self.nut
-
-    def nut_trap_ac(self, m: float) -> float:
-        """Across corners of a nut trap (for a 6-sided cylinder)."""
-        return self.nut_trap_af(m) / cos_deg(30)
-
-    def nut_trap_h(self, m: float) -> float:
-        """Height (thickness) of a nut trap slot."""
-        return metric(m).nut_h + self.nut_t
-
-    def cbore_d(self, m: float) -> float:
-        """Counterbore for a socket head cap screw head."""
-        return metric(m).head_d + 2 * self.bolt
-
-    def slide_d(self, d: float) -> float:
-        """Hole diameter for a sliding fit on a ``d`` mm part."""
-        return d + self.slide
-
-    def press_d(self, d: float) -> float:
-        """Hole diameter for a press fit on a ``d`` mm part."""
-        return d + self.press
-
-
-TOL = Tolerances()
+#: Print tolerances of this machine's prints (PETG, default profile); cadder's defaults, with the
+#: nut slot values measured on test prints (T3.12).
+TOL = Tolerances(nut_slot=0.3, nut_t=0.1)
 
 # -----------------------------------------------------------------------------
 # Requirements (README §2, STATUS.md §5)
@@ -1559,10 +1514,6 @@ BASEBOARD = Baseboard()
 # -----------------------------------------------------------------------------
 
 
-class DesignError(ValueError):
-    """Raised when the parameters violate a design requirement."""
-
-
 @dataclass(frozen=True)
 class TensionIdler:
     """Generic belt-tensioning idler (prototype): a U-shaped slider on a dovetail rail.
@@ -2252,10 +2203,8 @@ def design_checks() -> Iterator[tuple[bool, str]]:
 
 
 def check_design() -> None:
-    """Raise :class:`DesignError` listing every failed design rule."""
-    failures = [message for passed, message in design_checks() if not passed]
-    if failures:
-        raise DesignError("Design checks failed:\n  " + "\n  ".join(failures))
+    """Raise :class:`cadder.checks.DesignError` listing every failed design rule."""
+    run_design_checks(design_checks())
 
 
 def report() -> str:

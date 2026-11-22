@@ -5,7 +5,7 @@ Not printable.
 
 from typing import TYPE_CHECKING
 
-from plotzker.hardware import (
+from cadder.hardware import (
     B608,
     B623,
     B625,
@@ -14,7 +14,6 @@ from plotzker.hardware import (
     LM8UU,
     VWHEEL,
     bearing,
-    endstop,
     gt2_belt,
     gt2_idler,
     gt2_pulley,
@@ -27,8 +26,9 @@ from plotzker.hardware import (
     vslot_x,
     vwheel,
     washer,
-    y_shaft,
 )
+
+from plotzker.hardware import endstop, y_shaft
 
 if TYPE_CHECKING:
     from pythonscad import Solid

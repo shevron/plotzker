@@ -26,18 +26,20 @@ the plate's motor face; held by the two wood screws and the baseboard; see :data
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, teardrop_x
+from cadder.handles import handle, set_handles
+from cadder.hardware import NEMA17
+from cadder.regions import Box, Cylinder, bond_zone
+from cadder.types import Matrix
 from pythonscad import cube, hull
 
-from plotzker.geometry import EPS, handle, set_handles, teardrop_x
-from plotzker.hardware import NEMA17
 from plotzker.loads import Y_BELT_LOADS
 from plotzker.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE
 from plotzker.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
 from plotzker.parts.motor_fem import motor_loads
 from plotzker.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotzker.parts.wood_screw import wood_screw_boss, wood_screw_hole
-from plotzker.regions import Box, Cylinder, bond_zone
-from plotzker.types import Matrix, Side
+from plotzker.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

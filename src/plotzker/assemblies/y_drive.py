@@ -6,30 +6,18 @@ Machine frame (``params``). Not printable.
 
 from typing import TYPE_CHECKING
 
+from cadder.handles import frame_axes, get_handle, get_handles, place_in_frame, shift_handle
+from cadder.hardware import GT2, PULLEY, gt2_idler, gt2_pulley, hex_nut, metric, nema17, shcs, sk10
+from cadder.types import Matrix
 from pythonscad import cube, mirror, translate
 
 from plotzker.assemblies.gantry import gantry_assembly
-from plotzker.geometry import frame_axes, get_handle, get_handles, shift_handle
-from plotzker.hardware import (
-    GT2,
-    PULLEY,
-    endstop_keepout,
-    endstop_placed,
-    gt2_idler,
-    gt2_pulley,
-    hex_nut,
-    metric,
-    nema17,
-    place_in_frame,
-    shcs,
-    sk10,
-    y_shaft,
-)
+from plotzker.hardware import endstop_keepout, endstop_placed, y_shaft
 from plotzker.params import BRACKET, FRAME, TOL, Y_AXIS, Y_DRIVE, Y_IDLER
 from plotzker.parts.y_idler_mount import y_idler_mount_installed
 from plotzker.parts.y_idler_slider import y_idler_slider_installed
 from plotzker.parts.y_motor_mount import y_motor_mount_installed
-from plotzker.types import Matrix, Side
+from plotzker.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

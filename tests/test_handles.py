@@ -1,20 +1,13 @@
 """Handles: the helpers agree with plain transforms, and parts expose usable handles."""
 
 import pytest
+from cadder.handles import frame_axes, frame_handle, get_handle, get_handles, handle, shift_handle
+from cadder.testing import bounding_box
 from pythonscad import cylinder
 
-from plotzker.geometry import (
-    frame_axes,
-    frame_handle,
-    get_handle,
-    get_handles,
-    handle,
-    shift_handle,
-)
 from plotzker.params import BRACKET, CLAMP
 from plotzker.parts.belt_clamp import belt_clamp
 from plotzker.parts.gantry_end_bracket import Side, gantry_end_bracket
-from solids import bounding_box
 
 
 @pytest.mark.parametrize("rotation", [(0, 0, 0), (90, 0, 0), (-90, 0, 0), (0, -90, 0), (0, 0, 90)])

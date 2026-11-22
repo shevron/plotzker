@@ -6,8 +6,7 @@ definitions read these, they don't repeat them (docs/fem-subagent-plan.md §18).
 
 from dataclasses import dataclass
 
-from plotzker.hardware import PULLEY
-from plotzker.types import Vec3
+from cadder.hardware import PULLEY
 
 #: ASSUMED: peak acceleration of the axes (firmware cap; the pen allows no more)
 ACCELERATION = 3000.0
@@ -65,12 +64,3 @@ PEN_PRESSURE = 0.080 * G
 PEN_DRAG = 0.5 * PEN_PRESSURE
 #: ASSUMED: pen tip height above the baseboard for the knock levers (mm, middle of the media)
 PEN_TIP_Z = 22.5
-
-
-def lever_couple(arm: Vec3, force: Vec3) -> Vec3:
-    """The couple (N·mm) of moving a force by ``arm`` (mm): arm × force."""
-    return (
-        arm[1] * force[2] - arm[2] * force[1],
-        arm[2] * force[0] - arm[0] * force[2],
-        arm[0] * force[1] - arm[1] * force[0],
-    )

@@ -33,13 +33,14 @@ see :data:`PART`.
 
 from typing import TYPE_CHECKING
 
-from plotzker.geometry import handle, set_handles
+from cadder.handles import handle, set_handles
+from cadder.regions import Placement
+from cadder.types import Matrix
+
 from plotzker.loads import X_BELT_LOADS
 from plotzker.params import X_IDLER
 from plotzker.part import Part
 from plotzker.parts.floating_idler import slider_fem, slider_for_print, slider_local
-from plotzker.regions import Placement
-from plotzker.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

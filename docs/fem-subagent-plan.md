@@ -252,7 +252,7 @@ The spike scripts were scratch work; F1/F2 implement the real thing.
 | Materials loader and `materials.toml` (PETG, all values assumed) | `materials.py`, `materials.toml` |
 | Assumed belt loads in one place | `loads.py` |
 | CLI: `python -m plotzker part --list`, `part NAME`, `part NAME --json` | `build.py`, `part_report.py` |
-| `PLOTTER_FN=20` environment variable lowers the facet count for FEM meshes (default 64 unchanged) | `geometry.py` |
+| `CADDER_FN=20` environment variable lowers the facet count for FEM meshes (default 64 unchanged) | `geometry.py` |
 | Registry of parts defined as `Part`; the other 18 printable parts are listed as "not yet defined" | `parts/__init__.py` (`PARTS`) |
 | Definitions: `x_idler_slider`, `x_idler_mount`, `gantry_end_bracket_left` (the right bracket is a mirror, done in F5) | `PART` at the end of each module |
 | Tests: profile/material loading, knockdowns, JSON output, spec validation, and that **every load, support and limit region touches the actual part** | `tests/test_part.py` |
@@ -298,7 +298,7 @@ That is very conservative on purpose; the first F2 results will show whether it 
 | Item | Where |
 |------|-------|
 | `python -m plotzker fem NAMES...` (also `make fem NAMES="..."`; `--size MM`): runs the whole pipeline, writes `fem/results/<name>/{report.md,result.json,part.json,...}`, updates `fem/verdicts.toml` (verdict, date, geometry hash, spec hash), exits 1 on FAIL or INCONCLUSIVE | `src/plotzker/fem/`, `build.py` |
-| `python -m plotzker part NAME --stl PATH`: the part in its analysis frame (the runner calls it in a subprocess with `PLOTTER_FN=20`) | `part_report.py` |
+| `python -m plotzker part NAME --stl PATH`: the part in its analysis frame (the runner calls it in a subprocess with `CADDER_FN=20`) | `part_report.py` |
 | STL cleaning, gmsh meshing with fallbacks, CalculiX deck (transversely isotropic material, material axis 3 = build direction), `.frd` reader | `fem/stl.py`, `mesh.py`, `ccx.py` |
 | Loads as nodal forces (force, exact couple, body acceleration), supports as constrained nodes | `fem/applied.py` |
 | Failure index (in-plane and interlayer modes), displacement criteria, status thresholds (PASS up to 85 % of a limit, MARGINAL up to 100 %, FAIL beyond) | `fem/evaluate.py` |

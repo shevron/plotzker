@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from plotzker.hardware import SK10
+from cadder.hardware import SK10
+
 from plotzker.params import (
     BASEBOARD,
     FRAME,

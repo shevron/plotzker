@@ -15,9 +15,9 @@ Left side frame (``params.YDrive``): x from the shaft, machine y, z = baseboard 
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS
 from pythonscad import cube
 
-from plotzker.geometry import EPS
 from plotzker.hardware import Y_SHAFT
 from plotzker.params import Y_AXIS, Y_DRIVE
 

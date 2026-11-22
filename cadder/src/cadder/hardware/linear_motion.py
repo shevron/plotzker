@@ -1,6 +1,6 @@
-"""Y axis hardware: Ø10 mm shafts, SK10 shaft supports, SCS10UU bearing blocks.
+"""Linear motion: smooth shafts, SK10 shaft supports, SCS10UU bearing blocks.
 
-Source: docs/hardware.md (vendor table values and measurements). Dimensions in mm.
+Vendor table values and measurements. Dimensions in mm.
 """
 
 from dataclasses import dataclass
@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
-from plotzker.geometry import EPS
+from cadder.geometry import EPS
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -16,16 +16,17 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class Shaft:
-    """Smooth hardened shaft (optical axis)."""
+    """Smooth hardened shaft (optical axis), cut to ``length``."""
 
+    length: float
     d: float = 10
-    length: float = 700
 
 
 @dataclass(frozen=True)
 class Sk10Spec:
     """SK10 shaft end support (vendor symbol in brackets)."""
 
+    shaft_d: float = 10  #: [d1] shaft diameter
     shaft_h: float = 20  #: [h] shaft center above the mounting surface (confirmed)
     side: float = 21  #: [E] center to side (= width / 2)
     width: float = 42  #: [W] overall width, across the shaft
@@ -76,14 +77,15 @@ class Scs10uuSpec:
         return self.recess_w / 2 + self.top_chamfer + self.flat_w / 2
 
 
-Y_SHAFT = Shaft()
 SK10 = Sk10Spec()
 SCS10UU = Scs10uuSpec()
 
 
-def y_shaft(length: float = Y_SHAFT.length) -> Solid:
-    """Ø10 shaft. Origin: start of the shaft on its axis; runs along +Y."""
-    return cylinder(d=Y_SHAFT.d, h=length, fn=32).rotate([-90, 0, 0]).color("WhiteSmoke")
+def shaft(spec: Shaft, length: float | None = None) -> Solid:
+    """A shaft (``length`` overrides the spec's). Origin: start of the shaft on its axis; runs
+    along +Y."""
+    h = spec.length if length is None else length
+    return cylinder(d=spec.d, h=h, fn=32).rotate([-90, 0, 0]).color("WhiteSmoke")
 
 
 def sk10() -> Solid:
@@ -96,7 +98,7 @@ def sk10() -> Solid:
     )
     body = base | cube([s.body_w, s.length, s.height]).translate([-s.body_w / 2, -s.length / 2, 0])
     bore = (
-        cylinder(d=Y_SHAFT.d, h=s.length + 2, center=True, fn=32)
+        cylinder(d=s.shaft_d, h=s.length + 2, center=True, fn=32)
         .rotate([90, 0, 0])
         .translate([0, 0, s.shaft_h])
     )

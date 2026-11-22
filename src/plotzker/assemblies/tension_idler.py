@@ -3,8 +3,9 @@
 
 from typing import TYPE_CHECKING
 
-from plotzker.geometry import get_handle
-from plotzker.hardware import gt2_idler, hex_nut, shcs
+from cadder.handles import get_handle
+from cadder.hardware import gt2_idler, hex_nut, shcs
+
 from plotzker.params import TENSION_IDLER as T
 from plotzker.params import TOL
 from plotzker.parts.tension_idler import SLIDER_X0, tension_idler_installed

@@ -11,6 +11,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from cadder.regions import Region
+
 from plotzker.fem import applied
 from plotzker.fem.ccx import DEFAULT_SOLVER, Results, SolverMaterial
 from plotzker.fem.evaluate import (
@@ -36,7 +38,6 @@ from plotzker.fem.solve import Forces, Solved, solve_cases
 from plotzker.fem.stl import CleanStl, clean_stl
 from plotzker.fem.viz import node_utilization, render, write_case_data
 from plotzker.part import Part, effective_properties, part_to_dict
-from plotzker.regions import Region
 
 #: Facet count for the part's STL: coarse holes keep the mesher fast (docs/fem-subagent-plan.md).
 FEM_FACETS = 20
@@ -105,7 +106,7 @@ class FemResult:
 
 def export_part_stl(part: Part, dest: Path) -> None:
     """Export the part in its analysis frame with coarse facets (a subprocess sets the facets)."""
-    env = {**os.environ, "PLOTTER_FN": str(FEM_FACETS)}
+    env = {**os.environ, "CADDER_FN": str(FEM_FACETS)}
     result = subprocess.run(
         [sys.executable, "-m", "plotzker", "part", part.name, "--stl", str(dest)],
         capture_output=True,

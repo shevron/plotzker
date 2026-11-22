@@ -13,9 +13,9 @@ Print: PETG; 0.2 mm layers; 4 perimeters; 40 % infill; flat; no supports.
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import FN_HOLE
 from pythonscad import cube, cylinder
 
-from plotzker.geometry import FN_HOLE
 from plotzker.params import TOL, ZMOUNT
 
 if TYPE_CHECKING:

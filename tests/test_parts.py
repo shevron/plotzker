@@ -3,10 +3,10 @@
 import math
 
 import pytest
+from cadder.testing import bounding_box, shell_count, touching, volume
 
 from plotzker import build
 from plotzker.parts import PRINTABLE_PARTS
-from solids import bounding_box, shell_count, touching, volume
 
 
 def assert_printable(solid):
@@ -35,9 +35,9 @@ def test_stl_export_rejects_unknown_names(tmp_path):
 
 def test_x_carriage_clamp_nuts_each_have_a_pocket_and_a_roof():
     """T3.13: each belt clamp nut fits its own pocket (flat-first) and has plastic above it."""
+    from cadder.hardware import hex_nut, metric
     from pythonscad import cube
 
-    from plotzker.hardware import hex_nut, metric
     from plotzker.params import CLAMP, TOL, X_BELT
     from plotzker.parts.x_carriage import CLAMP_X, x_carriage_installed
 

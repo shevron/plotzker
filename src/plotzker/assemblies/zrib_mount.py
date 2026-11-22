@@ -6,10 +6,11 @@ z up with 0 at the baseboard underside). Shown with a piece of the baseboard. No
 
 from typing import TYPE_CHECKING
 
+from cadder.handles import get_handle, get_handles
+from cadder.hardware import countersunk_screw, hex_nut, shcs
 from pythonscad import cube
 
-from plotzker.geometry import get_handle, get_handles
-from plotzker.hardware import countersunk_screw, hex_nut, shcs, zrib
+from plotzker.hardware import zrib
 from plotzker.params import FRAME, WOOD_SCREW, ZMOUNT
 from plotzker.parts.zrib_guard import zrib_guard
 from plotzker.parts.zrib_hanger import zrib_hanger_mount

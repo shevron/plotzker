@@ -18,9 +18,9 @@ is a 2 mm bridge).
 import itertools
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN_HOLE
 from pythonscad import cube, cylinder, hull, sphere
 
-from plotzker.geometry import EPS, FN_HOLE
 from plotzker.params import BRACKET, LOOM, TOL
 
 if TYPE_CHECKING:

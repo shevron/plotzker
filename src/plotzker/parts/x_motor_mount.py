@@ -28,16 +28,17 @@ held by the front M5 heads and rests on the bracket's base; see :data:`PART`.
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN_HOLE, teardrop_y
+from cadder.handles import handle, set_handles
+from cadder.hardware import NEMA17, SCS10UU, metric
+from cadder.regions import Box, Cylinder, bond_zone
+from cadder.types import Matrix
 from pythonscad import cube, cylinder
 
-from plotzker.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_y
-from plotzker.hardware import NEMA17, SCS10UU, metric
 from plotzker.loads import X_BELT_LOADS
 from plotzker.params import BRACKET, TOL, X_BELT, X_DRIVE, Y_AXIS
 from plotzker.part import DisplacementLimit, FemSpec, LoadCase, Part, Support
 from plotzker.parts.motor_fem import motor_loads
-from plotzker.regions import Box, Cylinder, bond_zone
-from plotzker.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

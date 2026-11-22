@@ -3,6 +3,7 @@
 import math
 
 import pytest
+from cadder.regions import Box, Cylinder, Placement
 from pythonscad import cube, export
 
 from plotzker.fem.applied import force_on_region, moment_on_region, net_force
@@ -20,7 +21,7 @@ from plotzker.fem.runner import RunOptions, analyze
 from plotzker.fem.solve import proportional
 from plotzker.fem.stl import clean_stl
 from plotzker.fem.tools import tools_available
-from plotzker.materials import load_material
+from plotzker.materials import load_material, load_profile
 from plotzker.part import (
     DisplacementLimit,
     FemSpec,
@@ -31,8 +32,6 @@ from plotzker.part import (
     effective_properties,
 )
 from plotzker.parts import PARTS
-from plotzker.print_profile import load_profile
-from plotzker.regions import Box, Cylinder, Placement
 
 needs_solvers = pytest.mark.skipif(not tools_available(), reason="gmsh and CalculiX not installed")
 

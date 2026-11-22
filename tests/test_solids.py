@@ -1,9 +1,8 @@
 """The measuring helpers the other tests rely on."""
 
 import pytest
+from cadder.testing import bounding_box, connected_groups, shell_count, touching, volume
 from pythonscad import cube, sphere
-
-from solids import bounding_box, connected_groups, shell_count, touching, volume
 
 
 def test_volume_and_bounding_box():

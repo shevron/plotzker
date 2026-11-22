@@ -23,7 +23,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from pythonscad import cube, cylinder, multmatrix
+from cadder.handles import place_in_frame
+from pythonscad import cube, cylinder
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -163,18 +164,6 @@ def endstop_keepout() -> Solid:
     return cube(
         [width, rear_face - e.plug_keepout_v, e.pcb[2] + e.connector[2] + e.plug_clearance]
     ).translate([-width / 2, e.plug_keepout_v, 0])
-
-
-def place_in_frame(
-    solid: Solid,
-    origin: Sequence[float],
-    u: Sequence[float],
-    v: Sequence[float],
-    w: Sequence[float],
-) -> Solid:
-    """``solid`` (modeled in the board frame) with its axes along ``u``, ``v``, ``w``."""
-    matrix = [[u[i], v[i], w[i], origin[i]] for i in range(3)] + [[0, 0, 0, 1]]
-    return multmatrix(solid, matrix)
 
 
 def endstop_placed(

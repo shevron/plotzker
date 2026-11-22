@@ -26,14 +26,15 @@ No supports. Ream the two bores with a 6.2 mm drill if they print tight.
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import FN_HOLE, lever_couple, teardrop
+from cadder.handles import handle, set_handles
+from cadder.regions import Box, Cylinder
+from cadder.types import Matrix, Vec3
 from pythonscad import cube, cylinder, linear_extrude, polygon
 
-from plotzker.geometry import FN_HOLE, handle, set_handles, teardrop
-from plotzker.loads import PEN_DRAG, PEN_KNOCK, PEN_PRESSURE, SERVO_STALL, lever_couple
+from plotzker.loads import PEN_DRAG, PEN_KNOCK, PEN_PRESSURE, SERVO_STALL
 from plotzker.params import FRAME, PEN, TOL
 from plotzker.part import DisplacementLimit, FemSpec, Force, LoadCase, Moment, Part, Support
-from plotzker.regions import Box, Cylinder
-from plotzker.types import Matrix, Vec3
 
 if TYPE_CHECKING:
     from pythonscad import Solid

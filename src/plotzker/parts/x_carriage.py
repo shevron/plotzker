@@ -45,20 +45,15 @@ pen knock act on the tool-plate face, and the wheel axle bolts' head seats hold 
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import EPS, FN_HOLE, lever_couple, teardrop_x
+from cadder.handles import handle, set_handles
+from cadder.hardware import ECCENTRIC, metric
+from cadder.printing import nut_slot
+from cadder.regions import Box, Cylinder
+from cadder.types import Matrix, Vec3
 from pythonscad import cube, cylinder, hull, linear_extrude, polygon
 
-from plotzker.geometry import EPS, FN_HOLE, handle, set_handles, teardrop_x
-from plotzker.hardware import ECCENTRIC, metric
-from plotzker.loads import (
-    ACCELERATION,
-    CARRIAGE_HEAD_KG,
-    PEN_KNOCK,
-    PEN_TIP_Z,
-    X_BELT_LOADS,
-    G,
-    lever_couple,
-)
-from plotzker.nut_slot import nut_slot
+from plotzker.loads import ACCELERATION, CARRIAGE_HEAD_KG, PEN_KNOCK, PEN_TIP_Z, X_BELT_LOADS, G
 from plotzker.params import BEAM, CARRIAGE, CLAMP, TOL, TOOL_PLATE, X_BELT
 from plotzker.part import (
     DisplacementLimit,
@@ -70,8 +65,6 @@ from plotzker.part import (
     Part,
     Support,
 )
-from plotzker.regions import Box, Cylinder
-from plotzker.types import Matrix, Vec3
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -195,7 +188,7 @@ def _tool_plate_interface() -> list[Solid]:
             .translate([x, c.plate_front_y - 1, screw_zc])
         )
         nuts.append(
-            nut_slot(3, screw_zc - tp.bottom_z + 1, "y", "-z").translate(
+            nut_slot(3, screw_zc - tp.bottom_z + 1, "y", "-z", tol=TOL).translate(
                 [x, c.plate_front_y + TOL.nut_wall + nut_t / 2, screw_zc]
             )
         )
@@ -238,9 +231,11 @@ def _belt_clamp_cutouts() -> list[Solid]:
             # each nut has its own pocket: the rear one is pressed in from the back face, the
             # front one from the block's end (the nearer one), flat-first (T3.13)
             if sy > 0:
-                slot = nut_slot(3, REAR_Y1 + 1 - y, "z", "+y")
+                slot = nut_slot(3, REAR_Y1 + 1 - y, "z", "+y", tol=TOL)
             else:
-                slot = nut_slot(3, CARRIAGE.rear_w / 2 + 1 - CLAMP_X, "z", "+x" if sx > 0 else "-x")
+                slot = nut_slot(
+                    3, CARRIAGE.rear_w / 2 + 1 - CLAMP_X, "z", "+x" if sx > 0 else "-x", tol=TOL
+                )
             cuts.append(slot.translate([x, y, nut_z]))
     return cuts
 
@@ -254,7 +249,7 @@ def _endstop_trigger_cutouts() -> list[Solid]:
         .translate([-c.rear_w / 2 + 8, c.trig_y, c.trig_z])
     )
     # the nut is pressed in from the underside (the belt bears on the top face)
-    nut = nut_slot(3, c.trig_z - c.block_z + 1, "x", "-z").translate(
+    nut = nut_slot(3, c.trig_z - c.block_z + 1, "x", "-z", tol=TOL).translate(
         [-c.rear_w / 2 + 3.5, c.trig_y, c.trig_z]
     )
     return [screw, nut]

@@ -36,9 +36,12 @@ mount has its own part (its endstop tower differs), with the same load path.
 
 from typing import TYPE_CHECKING
 
+from cadder.geometry import FN_HOLE
+from cadder.handles import frame_handle, handle, set_handles
+from cadder.regions import Box, Cylinder, Placement, bond_zone
+from cadder.types import Matrix
 from pythonscad import cube, cylinder, union
 
-from plotzker.geometry import FN_HOLE, frame_handle, handle, set_handles
 from plotzker.hardware import ENDSTOP
 from plotzker.loads import Y_BELT_LOADS
 from plotzker.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_IDLER
@@ -46,8 +49,7 @@ from plotzker.part import Part, Support
 from plotzker.parts.floating_idler import mount_fem, tower
 from plotzker.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotzker.parts.wood_screw import wood_screw_boss, wood_screw_hole
-from plotzker.regions import Box, Cylinder, Placement, bond_zone
-from plotzker.types import Matrix, Side
+from plotzker.types import Side
 
 if TYPE_CHECKING:
     from pythonscad import Solid

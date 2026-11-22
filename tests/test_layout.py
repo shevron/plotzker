@@ -4,10 +4,11 @@ import itertools
 import math
 import xml.etree.ElementTree as ET
 
+from cadder.testing import flatten, volume
+
 from plotzker import build, layout
 from plotzker.assemblies import baseboard
 from plotzker.params import FRAME
-from solids import flatten, volume
 
 
 def test_holes_are_on_the_board_and_apart():

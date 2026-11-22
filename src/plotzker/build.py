@@ -35,6 +35,7 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
+from cadder.checks import DesignError
 
 from plotzker import params
 
@@ -290,7 +291,7 @@ def _reports_errors[**P](command: Callable[P, None]) -> Callable[P, None]:
     def run(*args: P.args, **kwargs: P.kwargs) -> None:
         try:
             command(*args, **kwargs)
-        except (params.DesignError, FileNotFoundError, RuntimeError, ValueError) as exc:
+        except (DesignError, FileNotFoundError, RuntimeError, ValueError) as exc:
             typer.secho(str(exc), fg=typer.colors.RED, err=True)
             raise typer.Exit(1) from exc
 

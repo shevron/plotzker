@@ -1,6 +1,9 @@
 """Assemblies build, and their parts actually meet: nothing floats in mid-air."""
 
 import pytest
+from cadder.handles import get_handles, shift_handle
+from cadder.hardware import shcs, sk10, vslot_x
+from cadder.testing import bounding_box, connected_groups, flatten, touching, volume
 from pythonscad import union
 
 from plotzker.assemblies import ASSEMBLIES, baseboard, loom
@@ -17,14 +20,12 @@ from plotzker.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_part
 from plotzker.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotzker.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
 from plotzker.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
-from plotzker.geometry import get_handles, shift_handle
-from plotzker.hardware import shcs, sk10, vslot_x, y_shaft
+from plotzker.hardware import y_shaft
 from plotzker.params import BEAM, CARRIAGE, FRAME, X_DRIVE, Y_AXIS
 from plotzker.parts.gantry_end_bracket import Side, gantry_end_bracket_local
 from plotzker.parts.x_motor_mount import x_motor_mount_left
 from plotzker.parts.y_idler_mount import y_idler_mount_installed
 from plotzker.parts.y_motor_mount import y_motor_mount_installed
-from solids import bounding_box, connected_groups, flatten, touching, volume
 
 
 @pytest.mark.parametrize("name", ASSEMBLIES)
@@ -240,9 +241,9 @@ def test_x_motor_screws_clear_the_mount_bolts():
 
 def test_x_endstop_board_seats_flat_over_its_solder():
     """T3.14: solder joints stick out up to 1.8 mm under the board; only the lands touch it."""
+    from cadder.handles import get_handle
     from pythonscad import cube, cylinder
 
-    from plotzker.geometry import get_handle
     from plotzker.hardware import ENDSTOP
     from plotzker.params import X_ENDSTOP
     from plotzker.parts.x_endstop_mount import x_endstop_mount_installed
@@ -270,7 +271,8 @@ def test_x_endstop_board_seats_flat_over_its_solder():
 
 def test_x_trigger_screw_reaches_through_its_captive_nut():
     """T3.14: the short trigger screw still engages its captive nut with ~3 mm to spare."""
-    from plotzker.hardware import metric
+    from cadder.hardware import metric
+
     from plotzker.params import CARRIAGE
 
     head_underside = -CARRIAGE.rear_w / 2 - metric(3).nut_h  # end of adjustment, outermost lock nut
@@ -334,8 +336,9 @@ def test_x_idler_slider_rides_free_over_its_whole_travel(shift):
 def test_x_idler_axle_bolt_and_nut_clear_the_tower_walls(shift):
     """T3.22: the axle bolt's head, its shank's tip and the nut stick out of the slider's arms; over
     the whole travel they touch neither the tower's walls nor anything else of the bracket."""
-    from plotzker.geometry import get_handle, shift_handle
-    from plotzker.hardware import hex_nut, shcs
+    from cadder.handles import get_handle, shift_handle
+    from cadder.hardware import hex_nut, shcs
+
     from plotzker.params import X_BELT, X_DRIVE, X_IDLER
     from plotzker.parts.x_idler_slider import x_idler_slider_installed
 
@@ -359,8 +362,9 @@ def test_y_idler_slider_rides_free_over_its_whole_travel(side, shift):
     """T3.23: along the whole tension travel the floating slider neither touches its mount (the
     tower's plate and walls, a loose fit) nor reaches into the endstop's plug space or the front
     SK10."""
-    from plotzker.geometry import frame_axes, get_handle
-    from plotzker.hardware import endstop_keepout, place_in_frame
+    from cadder.handles import frame_axes, get_handle, place_in_frame
+
+    from plotzker.hardware import endstop_keepout
     from plotzker.params import Y_IDLER
     from plotzker.parts.y_idler_slider import y_idler_slider_installed
 
@@ -379,8 +383,9 @@ def test_y_idler_slider_rides_free_over_its_whole_travel(side, shift):
 def test_y_idler_axle_bolt_and_nut_clear_the_tower_walls(side, shift):
     """T3.23: the axle bolt's head, its tip and the nut stick out of the slider's arms; over the
     whole travel they touch nothing of the mount."""
-    from plotzker.geometry import get_handle, shift_handle
-    from plotzker.hardware import hex_nut, metric, shcs
+    from cadder.handles import get_handle, shift_handle
+    from cadder.hardware import hex_nut, metric, shcs
+
     from plotzker.params import Y_DRIVE, Y_IDLER
 
     t = Y_IDLER

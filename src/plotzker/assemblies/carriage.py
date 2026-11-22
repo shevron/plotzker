@@ -5,14 +5,14 @@ Carriage-local frame (``params.Carriage``). Not printable.
 
 from typing import TYPE_CHECKING
 
+from cadder.handles import get_handle, get_handles, handle, shift_handle
+from cadder.hardware import GT2, eccentric_spacer, hex_nut, metric, shcs, vslot_x, vwheel
+from cadder.types import Matrix
 from pythonscad import cube
 
-from plotzker.geometry import get_handle, get_handles, handle, shift_handle
-from plotzker.hardware import GT2, eccentric_spacer, hex_nut, metric, shcs, vslot_x, vwheel
 from plotzker.params import BEAM, CARRIAGE, CLAMP
 from plotzker.parts.belt_clamp import belt_clamp
 from plotzker.parts.x_carriage import x_carriage_installed
-from plotzker.types import Matrix
 
 if TYPE_CHECKING:
     from pythonscad import Solid

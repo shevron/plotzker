@@ -13,8 +13,8 @@ from typing import TYPE_CHECKING
 
 from pythonscad import cube, cylinder
 
-from plotzker.geometry import FN_HOLE
-from plotzker.types import Vec3
+from cadder.geometry import FN_HOLE
+from cadder.types import Vec3
 
 if TYPE_CHECKING:
     from pythonscad import Solid

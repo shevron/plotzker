@@ -489,7 +489,7 @@ the printed carriage, motor mount and idler mount are the test pieces.
   slider's nut pocket came out 2.63 mm thick for a 2.35 mm nut (the nut fell out), so
   `nut_slot_extra` is 0.2 → 0 (designed 2.5 mm, expected about 2.43 printed); side-inserted slots
   (endstop board, belt clip) were tight, so `TOL.nut_slot` is 0.3 → 0.4 (0.05 mm more per side).
-  Reprint to check both. Removed the superseded generic tensioner prototype: `parts/tension_idler.py`,
+  Reprint to check both (slider printed after the retune: nut pocket fits). Removed the superseded generic tensioner prototype: `parts/tension_idler.py`,
   `assemblies/tension_idler.py`, `TensionIdler` / `TENSION_IDLER`, the dovetail play term, their
   design checks and tests, the STLs and renders `tension_idler_rail`, `tension_idler_slider`,
   `tension_idler_fit`.
@@ -502,7 +502,9 @@ the printed carriage, motor mount and idler mount are the test pieces.
   the right mount's on the other (`y_idler_mount.idler_for`), so the unmirrored slider fits both;
   the head is inboard on one Y side and outboard on the other. FEM: one slider check (X frame,
   same belt loads), mounts and assemblies re-run. Replaces `x_idler_slider`,
-  `y_idler_slider_left/right`.
+  `y_idler_slider_left/right`. **Print-tested:** the slider works as a tensioner and shows no
+  visible bending under the expected belt tension (so the MARGINAL FEM verdict, a raw peak at a
+  support edge, is accepted; no bore chamfer or larger arm radius needed).
 
 #### Phase 4 — Build
 

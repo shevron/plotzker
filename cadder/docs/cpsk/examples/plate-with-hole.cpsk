@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  CPSK 0.1 example: a rectangular plate with a centred hole.
+  Fully constrained (0 degrees of freedom). The lower-left corner is at the origin.
+  Written in the canonical form (spec §11.4): every constraint is nested, so the top-level
+  <constraints> container is empty and omitted.
+-->
+<sketch xmlns="https://github.com/shevron/plotzker/ns/cpsk" version="0.1"
+        unit-length="mm" unit-angle="deg">
+
+  <metadata>
+    <title>Plate with a hole</title>
+    <description>Rectangle with its lower-left corner at the origin and a centred hole.</description>
+    <created>2026-11-23</created>
+    <tag>example</tag>
+  </metadata>
+
+  <variables>
+    <variable id="width" type="length" value="40" min="10" max="200"
+              description="Plate width"/>
+    <!-- A literal with a unit, converted to the document unit: 25 mm. -->
+    <variable id="height" type="length" value="2.5cm" min="10" max="200"
+              description="Plate height"/>
+    <!-- A derived variable. -->
+    <variable id="hole_d" type="length" value="min(width, height) / 3"
+              description="Hole diameter"/>
+  </variables>
+
+  <!-- Stored coordinates: the solver's initial values and the last solved state. -->
+  <geometry>
+    <line id="bottom" x1="0" y1="0" x2="40" y2="0">
+      <coincident a="self.start" b="origin"/>
+      <horizontal/>
+      <distance id="w" value="width"/>
+      <coincident a="self.end" b="right.start"/>
+      <!-- Joints with later primitives are held by the earlier one (spec §11.4). -->
+      <coincident a="self.start" b="left.end"/>
+      <coincident a="self.start" b="diag.start"/>
+    </line>
+
+    <line id="right" x1="40" y1="0" x2="40" y2="25">
+      <vertical/>
+      <distance id="h" value="height"/>
+      <coincident a="self.end" b="top.start"/>
+      <coincident a="self.end" b="diag.end"/>
+    </line>
+
+    <line id="top" x1="40" y1="25" x2="0" y2="25">
+      <horizontal/>
+      <coincident a="self.end" b="left.start"/>
+    </line>
+
+    <line id="left" x1="0" y1="25" x2="0" y2="0">
+      <vertical/>
+    </line>
+
+    <circle id="hole" cx="20" cy="12.5" r="4.166666666666667">
+      <!-- Centred on the diagonal's midpoint. -->
+      <symmetric a="diag.start" b="diag.end" about="self.center"/>
+      <diameter value="hole_d"/>
+    </circle>
+
+    <!-- Construction geometry: used to centre the hole, not rendered. -->
+    <line id="diag" construction="true" x1="0" y1="0" x2="40" y2="25">
+      <!-- Non-driving: measured after solving; the value is the last measurement. -->
+      <distance id="diagonal" driving="false" value="47.16990566028302"/>
+    </line>
+  </geometry>
+
+</sketch>

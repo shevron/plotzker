@@ -6,6 +6,7 @@
 | **Format version** | 0.1 |
 | **Created** | 2026-11-23 |
 | **Related** | [`../sketch-formats.md`](../sketch-formats.md) (prior research, plotzker D23/D24) |
+| **Specification** | [`../cpsk/spec-0.1.md`](../cpsk/spec-0.1.md) (draft) |
 
 ## Abstract
 

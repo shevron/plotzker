@@ -1,0 +1,363 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  XML Schema for CPSK 0.1 (see spec-0.1.md).
+
+  Checks structure, attribute presence, identifier syntax and uniqueness, and literal syntax.
+  Reference resolution, operand kinds, reserved words, formula syntax, the nesting rules (§9.4)
+  and the conditional rules of the spec (e.g. `value` required on driving constraints) are
+  checked by readers, not by this schema.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:cpsk="https://github.com/shevron/plotzker/ns/cpsk"
+           targetNamespace="https://github.com/shevron/plotzker/ns/cpsk"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+  <!-- ===== Simple types (spec §3) ===== -->
+
+  <xs:simpleType name="Identifier">
+    <xs:restriction base="xs:ID">
+      <xs:pattern value="[A-Za-z_][A-Za-z0-9_]*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- A point, curve or property reference: id, id.start, id.start.x, ... -->
+  <xs:simpleType name="Reference">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Number">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[+\-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+\-]?[0-9]+)?"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Literal">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[+\-]?([0-9]+(\.[0-9]*)?|\.[0-9]+)([eE][+\-]?[0-9]+)?\s*(mm|cm|m|in|deg|rad)?"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Formula syntax (spec §10.2) is checked by readers. -->
+  <xs:simpleType name="Formula">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="1"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="LengthUnit">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mm"/>
+      <xs:enumeration value="cm"/>
+      <xs:enumeration value="m"/>
+      <xs:enumeration value="in"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="AngleUnit">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="deg"/>
+      <xs:enumeration value="rad"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="VariableType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="number"/>
+      <xs:enumeration value="length"/>
+      <xs:enumeration value="angle"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Version">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9]+\.[0-9]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Boolean">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="true"/>
+      <xs:enumeration value="false"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- ===== Root (spec §2, §4) ===== -->
+
+  <xs:element name="sketch">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="metadata" type="cpsk:Metadata" minOccurs="0"/>
+        <xs:element name="variables" type="cpsk:Variables" minOccurs="0"/>
+        <xs:element name="geometry" type="cpsk:Geometry" minOccurs="0"/>
+        <xs:element name="constraints" type="cpsk:Constraints" minOccurs="0"/>
+        <xs:any namespace="##other" processContents="lax" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="version" type="cpsk:Version" use="required"/>
+      <xs:attribute name="unit-length" type="cpsk:LengthUnit" default="mm"/>
+      <xs:attribute name="unit-angle" type="cpsk:AngleUnit" default="deg"/>
+      <xs:anyAttribute namespace="##other" processContents="lax"/>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ===== Metadata (spec §5) ===== -->
+
+  <xs:complexType name="Metadata">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="title" type="xs:string"/>
+      <xs:element name="description" type="xs:string"/>
+      <xs:element name="author" type="xs:string"/>
+      <xs:element name="created" type="xs:string"/>
+      <xs:element name="modified" type="xs:string"/>
+      <xs:element name="tag" type="xs:string"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <!-- ===== Variables (spec §6) ===== -->
+
+  <xs:complexType name="Variables">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="variable" type="cpsk:Variable"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:complexType name="Variable">
+    <xs:attribute name="id" type="cpsk:Identifier" use="required"/>
+    <xs:attribute name="type" type="cpsk:VariableType" default="number"/>
+    <xs:attribute name="value" type="cpsk:Formula" use="required"/>
+    <xs:attribute name="min" type="cpsk:Literal"/>
+    <xs:attribute name="max" type="cpsk:Literal"/>
+    <xs:attribute name="description" type="xs:string"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <!-- ===== Geometry (spec §7) ===== -->
+
+  <xs:complexType name="Geometry">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="point" type="cpsk:Point"/>
+      <xs:element name="line" type="cpsk:Line"/>
+      <xs:element name="circle" type="cpsk:Circle"/>
+      <xs:element name="arc" type="cpsk:Arc"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:attributeGroup name="PrimitiveCommon">
+    <xs:attribute name="id" type="cpsk:Identifier"/>
+    <xs:attribute name="construction" type="cpsk:Boolean" default="false"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:attributeGroup>
+
+  <!-- Each primitive may contain the nested constraints allowed for it (spec §9.4). -->
+
+  <xs:complexType name="Point">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="coincident" type="cpsk:NestedPair"/>
+      <xs:element name="point-on" type="cpsk:NestedPointOn"/>
+      <xs:element name="horizontal" type="cpsk:NestedPair"/>
+      <xs:element name="vertical" type="cpsk:NestedPair"/>
+      <xs:element name="symmetric" type="cpsk:NestedSymmetric"/>
+      <xs:element name="block" type="cpsk:NestedNoOperands"/>
+      <xs:element name="distance" type="cpsk:NestedDimensional"/>
+      <xs:element name="distance-x" type="cpsk:NestedDimensional"/>
+      <xs:element name="distance-y" type="cpsk:NestedDimensional"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:attribute name="x" type="cpsk:Number" use="required"/>
+    <xs:attribute name="y" type="cpsk:Number" use="required"/>
+    <xs:attributeGroup ref="cpsk:PrimitiveCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="Line">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="coincident" type="cpsk:NestedPair"/>
+      <xs:element name="point-on" type="cpsk:NestedPointOn"/>
+      <xs:element name="horizontal" type="cpsk:NestedPair"/>
+      <xs:element name="vertical" type="cpsk:NestedPair"/>
+      <xs:element name="parallel" type="cpsk:NestedPair"/>
+      <xs:element name="perpendicular" type="cpsk:NestedPair"/>
+      <xs:element name="tangent" type="cpsk:NestedPair"/>
+      <xs:element name="equal" type="cpsk:NestedPair"/>
+      <xs:element name="symmetric" type="cpsk:NestedSymmetric"/>
+      <xs:element name="block" type="cpsk:NestedNoOperands"/>
+      <xs:element name="distance" type="cpsk:NestedDimensional"/>
+      <xs:element name="distance-x" type="cpsk:NestedDimensional"/>
+      <xs:element name="distance-y" type="cpsk:NestedDimensional"/>
+      <xs:element name="angle" type="cpsk:NestedDimensional"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:attribute name="x1" type="cpsk:Number" use="required"/>
+    <xs:attribute name="y1" type="cpsk:Number" use="required"/>
+    <xs:attribute name="x2" type="cpsk:Number" use="required"/>
+    <xs:attribute name="y2" type="cpsk:Number" use="required"/>
+    <xs:attributeGroup ref="cpsk:PrimitiveCommon"/>
+  </xs:complexType>
+
+  <xs:group name="RoundNested">
+    <xs:choice>
+      <xs:element name="coincident" type="cpsk:NestedPair"/>
+      <xs:element name="point-on" type="cpsk:NestedPointOn"/>
+      <xs:element name="horizontal" type="cpsk:NestedPair"/>
+      <xs:element name="vertical" type="cpsk:NestedPair"/>
+      <xs:element name="tangent" type="cpsk:NestedPair"/>
+      <xs:element name="equal" type="cpsk:NestedPair"/>
+      <xs:element name="symmetric" type="cpsk:NestedSymmetric"/>
+      <xs:element name="block" type="cpsk:NestedNoOperands"/>
+      <xs:element name="distance" type="cpsk:NestedDimensional"/>
+      <xs:element name="distance-x" type="cpsk:NestedDimensional"/>
+      <xs:element name="distance-y" type="cpsk:NestedDimensional"/>
+      <xs:element name="radius" type="cpsk:NestedIntrinsic"/>
+      <xs:element name="diameter" type="cpsk:NestedIntrinsic"/>
+    </xs:choice>
+  </xs:group>
+
+  <xs:complexType name="Circle">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:group ref="cpsk:RoundNested"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:attribute name="cx" type="cpsk:Number" use="required"/>
+    <xs:attribute name="cy" type="cpsk:Number" use="required"/>
+    <xs:attribute name="r" type="cpsk:Number" use="required"/>
+    <xs:attributeGroup ref="cpsk:PrimitiveCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="Arc">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:group ref="cpsk:RoundNested"/>
+      <xs:element name="angle" type="cpsk:NestedIntrinsic"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:attribute name="cx" type="cpsk:Number" use="required"/>
+    <xs:attribute name="cy" type="cpsk:Number" use="required"/>
+    <xs:attribute name="r" type="cpsk:Number" use="required"/>
+    <xs:attribute name="start-angle" type="cpsk:Number" use="required"/>
+    <xs:attribute name="end-angle" type="cpsk:Number" use="required"/>
+    <xs:attributeGroup ref="cpsk:PrimitiveCommon"/>
+  </xs:complexType>
+
+  <!-- ===== Constraints (spec §9) ===== -->
+
+  <xs:complexType name="Constraints">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="coincident" type="cpsk:TwoOperands"/>
+      <xs:element name="point-on" type="cpsk:PointOn"/>
+      <xs:element name="horizontal" type="cpsk:OneOrTwoOperands"/>
+      <xs:element name="vertical" type="cpsk:OneOrTwoOperands"/>
+      <xs:element name="parallel" type="cpsk:TwoOperands"/>
+      <xs:element name="perpendicular" type="cpsk:TwoOperands"/>
+      <xs:element name="tangent" type="cpsk:TwoOperands"/>
+      <xs:element name="equal" type="cpsk:TwoOperands"/>
+      <xs:element name="symmetric" type="cpsk:Symmetric"/>
+      <xs:element name="block" type="cpsk:OneOperand"/>
+      <xs:element name="distance" type="cpsk:Dimensional"/>
+      <xs:element name="distance-x" type="cpsk:Dimensional"/>
+      <xs:element name="distance-y" type="cpsk:Dimensional"/>
+      <xs:element name="radius" type="cpsk:Dimensional"/>
+      <xs:element name="diameter" type="cpsk:Dimensional"/>
+      <xs:element name="angle" type="cpsk:Dimensional"/>
+      <xs:any namespace="##other" processContents="lax"/>
+    </xs:choice>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:complexType>
+
+  <xs:attributeGroup name="ConstraintCommon">
+    <xs:attribute name="id" type="cpsk:Identifier"/>
+    <xs:anyAttribute namespace="##other" processContents="lax"/>
+  </xs:attributeGroup>
+
+  <xs:complexType name="OneOperand">
+    <xs:attribute name="of" type="cpsk:Reference" use="required"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="TwoOperands">
+    <xs:attribute name="a" type="cpsk:Reference" use="required"/>
+    <xs:attribute name="b" type="cpsk:Reference" use="required"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <!-- Either `of`, or `a` and `b`: checked by readers. -->
+  <xs:complexType name="OneOrTwoOperands">
+    <xs:attribute name="of" type="cpsk:Reference"/>
+    <xs:attribute name="a" type="cpsk:Reference"/>
+    <xs:attribute name="b" type="cpsk:Reference"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="PointOn">
+    <xs:attribute name="point" type="cpsk:Reference" use="required"/>
+    <xs:attribute name="object" type="cpsk:Reference" use="required"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="Symmetric">
+    <xs:attribute name="a" type="cpsk:Reference" use="required"/>
+    <xs:attribute name="b" type="cpsk:Reference" use="required"/>
+    <xs:attribute name="about" type="cpsk:Reference" use="required"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <!-- `value` is required when driving (the default): checked by readers. -->
+  <xs:complexType name="Dimensional">
+    <xs:attribute name="of" type="cpsk:Reference"/>
+    <xs:attribute name="a" type="cpsk:Reference"/>
+    <xs:attribute name="b" type="cpsk:Reference"/>
+    <xs:attributeGroup ref="cpsk:DimensionalCommon"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <!-- ===== Nested constraints (spec §9.4) =====
+       Operands are optional (one may be omitted: it is the parent) and `of` is not allowed.
+       Which operand may be omitted, and that the parent is referenced, are checked by readers. -->
+
+  <xs:attributeGroup name="DimensionalCommon">
+    <xs:attribute name="value" type="cpsk:Formula"/>
+    <xs:attribute name="driving" type="cpsk:Boolean" default="true"/>
+  </xs:attributeGroup>
+
+  <xs:complexType name="NestedNoOperands">
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="NestedPair">
+    <xs:attribute name="a" type="cpsk:Reference"/>
+    <xs:attribute name="b" type="cpsk:Reference"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="NestedPointOn">
+    <xs:attribute name="point" type="cpsk:Reference"/>
+    <xs:attribute name="object" type="cpsk:Reference"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="NestedSymmetric">
+    <xs:attribute name="a" type="cpsk:Reference"/>
+    <xs:attribute name="b" type="cpsk:Reference"/>
+    <xs:attribute name="about" type="cpsk:Reference"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <xs:complexType name="NestedDimensional">
+    <xs:attribute name="a" type="cpsk:Reference"/>
+    <xs:attribute name="b" type="cpsk:Reference"/>
+    <xs:attributeGroup ref="cpsk:DimensionalCommon"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+  <!-- A dimension of the parent itself: radius, diameter, arc sweep. -->
+  <xs:complexType name="NestedIntrinsic">
+    <xs:attributeGroup ref="cpsk:DimensionalCommon"/>
+    <xs:attributeGroup ref="cpsk:ConstraintCommon"/>
+  </xs:complexType>
+
+</xs:schema>

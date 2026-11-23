@@ -4,6 +4,10 @@
 Python constraint-sketch trial (bottom) was rejected and its code removed. Future option:
 automate FreeCAD export (option E/F below).
 
+This research was done for the plotzker pen plotter, cadder's first project; D-numbers are its
+decisions (plotzker `STATUS.md`). What cadder offers today is `cadder.geometry.load_sketch`
+(SVG profiles).
+
 Question: SVG sketches (D23) give us a drawn profile but no parametric intent. Is there a
 better format, or a better way to use SVG, so that a sketch is *a few input values plus
 constraints* (FreeCAD-Sketcher style) and PythonSCAD extrudes the solved result?
@@ -73,7 +77,7 @@ repo, but note it if the project is ever published under another license.
 - B vs D (code-first vs GUI-first)? This changes D23 and the “SVG sketches” rule in `README.md` §7.1.
 - Add `python-solvespace` to `pyproject.toml` (source build needs a C++ toolchain/CMake;
   check `uv sync` on your machine).
-- Proposed spike if B: `plotzker/sketch.py` (~150 lines: `Sketch`, `point/line/arc`,
+- Proposed spike if B: a `sketch.py` module (~150 lines: `Sketch`, `point/line/arc`,
   constraint helpers, `to_pythonscad()`), port `vslot_2020` and compare the area against the
   SVG-derived areas recorded in `hardware/vslot.py` (now `cadder.hardware.vslot`).
 
@@ -88,7 +92,7 @@ reachable), so verify before relying on them.
 Built as `sketch.py`, `hardware/vslot_param.py` and `tests/test_sketch.py` on python-solvespace;
 removed again, since it gives no GUI drawing and little over plain PythonSCAD.
 
-- `plotzker.sketch.Sketch` (~170 lines): points, lines, constraints, `solve()`
+- `Sketch` (~170 lines): points, lines, constraints, `solve()`
   (reports conflicts and leftover degrees of freedom), `to_2d()` → PythonSCAD.
 - `VSlotProfileSpec` holds 7 inputs (size, opening, lip, cavity, wall/floor depth, bore);
   the neck width (6.2) and floor width (5.8) are `@property`s that fall out of the 45°

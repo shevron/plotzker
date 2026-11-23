@@ -4,7 +4,9 @@
 > `print_profile.py` / `materials.py` (loaders), `geometry.py`, `part_report.py`, `fem/` and the
 > CLI (`build.py`) are now `cadder.part`, `cadder.regions`, `cadder.materials`,
 > `cadder.geometry`, `cadder.report`, `cadder.fem` and `cadder.cli`. `PRINTABLE_PARTS` and
-> `PARTS` are one registry (`plotzker.parts.PARTS`). The plan is kept as written.
+> `PARTS` are one registry (`plotzker.parts.PARTS`). `docs/fem.md` below is now split: the method is
+> `cadder/docs/fem.md`, the plotter's parts and data stay in `docs/fem.md`. The plan is kept as
+> written.
 
 **Status:** agreed in review; tracked as T3.18 in [`STATUS.md`](../STATUS.md). Nothing is implemented yet.
 

@@ -77,6 +77,9 @@ complete small example.
 | `freecad [NAMES] [--export-only]` | Build the project's FreeCAD assemblies into `freecad/<name>.FCStd` |
 | `all` | `check`, `stl`, the project's extra outputs (`Project.all_steps`), `render` |
 
+Guides: [FEM checks](docs/fem.md), [design diff](docs/diff.md),
+[FreeCAD assemblies](docs/freecad.md); background: [parametric sketch formats](docs/sketch-formats.md).
+
 A project adds its own commands through `Project.commands`, and can offer its own entry point
 (`python -m mypackage`) with `cadder.cli.run(PROJECT)`.
 

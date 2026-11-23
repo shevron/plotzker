@@ -1,156 +1,57 @@
-# FEM checks of printed parts
+# FEM checks of the plotter's printed parts
 
-How the project checks that printed parts withstand their loads, how to define a part's FEM
-specification, and how to read a result. The design of the tooling and its history is in
-[`fem-subagent-plan.md`](fem-subagent-plan.md). The checks are done by the `fem-analyst`
-sub-agent (`.claude/agents/fem-analyst.md`), which runs the commands below and interprets the
-output.
+The method (writing a spec, running a check, reading a result, assembly checks, limits) is
+cadder's: [`cadder/docs/fem.md`](../cadder/docs/fem.md). This page holds what is the plotter's:
+which parts need a check, where its data lives, and its own modeling choices. The design of the
+tooling and the plotter's FEM history are in [`fem-subagent-plan.md`](fem-subagent-plan.md). The
+checks are done by the `fem-analyst` sub-agent (`.claude/agents/fem-analyst.md`).
 
-## When a check is required
+Commands: `python -m plotzker fem NAME... [--viz]` (`make fem NAMES="..."`), `python -m
+plotzker fem-status` (`make fem-status`), `python -m plotzker part NAME [--json]`.
 
-After a **new structural part**, or a **significant change** to one, and after changing its FEM
-spec. Significant means anything that affects the load path: thickness, ribs, holes, fillets,
-material, print profile, print orientation. Clearance tweaks and cosmetic changes don't count.
+## Which parts
 
 | Part | Structural? | State |
 |------|-------------|-------|
 | `x_idler_slider`, `y_idler_slider_left`, `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
-| `y_idler_slider_right`, `y_motor_mount_right` | exact mirror images | covered by the left part (`Part.mirror_of`) |
+| `y_idler_slider_right`, `y_motor_mount_right` | exact mirror images | covered by the left part (`mirror_of`) |
 | `tension_idler_rail`, `tension_idler_slider` | prototype of the tensioner | not used in the machine |
 | `belt_clamp` | carries belt tension through two screws | to decide |
 | `zrib_hanger` | light (board weight) | to decide |
 | `loom_anchor`, `loom_rail`, `zrib_guard` | no | not structural |
 
-The `structural` flag in a part's `Part` definition is what counts; `fem-status` shows the state.
+## Where things are
 
-## Defining a part's FEM spec
+- **Parts:** a printed part is a `PrintedPart` defined at the end of its module and registered in
+  `src/plotzker/parts/__init__.py` (`PARTS`).
+- **Loads** shared between parts: `src/plotzker/loads.py`.
+- **Materials:** `src/plotzker/materials.toml`; **print profiles:** `src/plotzker/profiles/`
+  (`plotzker.materials.DEFAULT_PRINT`: `default.toml` is PETG, 0.6 mm nozzle, 0.3 mm layers, 3
+  perimeters, 20 % gyroid; stiffness and strength factors 0.6, `sustained_factor` 0.5). All
+  assumptions until measured; calibrating against a loaded printed part is postponed.
+- **Region check:** `tests/test_part_specs.py` checks each region touches its part.
+- **Verdicts:** `fem/verdicts.toml` (committed); results in `fem/results/` (git-ignored).
 
-`python -m plotzker fem-status` (or `make fem-status`) lists every part with its
-state: no material or FEM data yet, no spec yet, never checked, the last verdict, or **STALE** when the part's properties or its
-geometry changed since that verdict.
+## Modeling choices
 
-The FEM runner and the part classes are cadder's (`cadder.fem`, `cadder.part`); the plotter's
-parts, loads and data are plotzker's. A printed part is a `PrintedPart` (`cadder/src/cadder/part.py`)
-defined at the end of its module and registered in `parts/__init__.py` (`PARTS`). `python -m
-plotzker part NAME [--json]` prints it. Any `MaterialPart` (a plate, a purchased part) can be
-checked the same way; a `PrintedPart` adds the print profile and its knockdowns.
-
-- **Frame.** `frame="installed"` (the part's assembly frame, easiest for loads; the part then
-  gives that geometry as `analysis`) or the default `"output"` frame of its `build` (shown as
-  `"print"` for a printed part). `build_direction` is the layer normal pointing up from the bed,
-  in that frame: layers are perpendicular to it. Printed parts are transversely isotropic about
-  it (`material_axis`).
-- **Units.** mm, N, MPa, degrees, mm/s².
-- **Regions** (`cadder.regions`): `Box` and `Cylinder` (axis x, y or z; `inner_radius`
-  makes a ring). Loads and supports act on the **surface** that a region covers; a region may cover
-  part of a face (the covered area is sampled, so it doesn't depend on the mesh). `facing` keeps
-  only faces whose **outward normal** points that way (within `facing_tol_deg`), so to push on a
-  hole wall in +x use `facing=(-1, 0, 0)`. Displacement limits look at the **mesh nodes** inside
-  the region. Keep regions to a real contact area: `tests/test_part_specs.py` checks each one touches
-  the part.
-- **Loads** (`LoadCase`): `Force` (total vector, spread over the covered area; `bearing=True` for
-  an axle in a bore: the share of each face falls off with the cosine of its angle to the force), `Moment` (a pure
-  couple as linearly varying forces), `Acceleration` (inertia of the whole part). Give each case a
-  `source`; keep `assumed=True` until a number is measured. `sustained=True` for loads that act
-  continuously (belt tension): they are judged against the material's creep-reduced strength.
-  Magnitudes shared between parts live in `src/plotzker/loads.py`.
-- **Supports:** a region held fixed in the directions marked in `constrain`. Make the set
-  statically determinate (no rigid-body motion) and say in the description what it stands for.
-  Supports are fixed constraints: no contact, no bolt preload. Friction of a foot clamped by a
-  screw is modeled as a bonded zone of radius `BOND_RADIUS` (8 mm) round the screw
-  (`regions.bond_zone`) on top of a z-only support for the rest of the foot. Where a stiff part
-  holds a seat (the beam on a bracket's face plate) the seat is a support in that direction, not
+- Mount feet clamped by a screw: a bonded zone round the screw (`regions.bond_zone`) on top of a
+  z-only support for the rest of the foot. The beam on a bracket's face plate is a support, not
   a load.
-- **Displacement limits** (`DisplacementLimit`): per region and direction; the default when a part
-  states none is 0.1 mm magnitude. Several limits on one region give directional budgets.
-- **Safety factor:** `FemSpec.safety_factor` (default 3), overridable per load case.
-- **Parts that share a design** (the belt tensioner) build their spec from one description
-  (`slider_fem`, `mount_fem` in `parts/tension_idler.py`) placed in the part's frame with a
-  `Placement` (`cadder.regions`); an exact mirror image is a part with `mirror_of` set.
+- The belt tensioner's parts build their spec from one description (`slider_fem`, `mount_fem` in
+  `parts/tension_idler.py`) placed in each part's frame with a `Placement`.
+- Gantry-level effects (shaft sag, extrusion bending) are hand calculations, not meshed.
 
-Materials are in `src/plotzker/materials.toml`, print profiles in `src/plotzker/profiles/`
-(loaded with `cadder.materials.MaterialLibrary`; `plotzker.materials.DEFAULT_PRINT`)
-(`default.toml` is PETG, 0.6 mm nozzle, 0.3 mm layers, 3 perimeters, 20 % gyroid). The profile's
-stiffness and strength factors (0.6) stand in for infill; a material's `sustained_factor` (0.5) is
-the creep allowance. All of these are assumptions until measured.
+## Assembly checks
 
-## Running a check
+The belt tensioner showed why they are needed (STATUS.md T3.19): the belt pulls the idler axle
+~14 mm above the tension screw, so a couple twists the slider in its dovetail. The slider tilts
+by the clearance while the mount's ridge and block bend; the idler leans.
 
-```
-python -m plotzker fem NAME... [--viz] [--refine auto|always|never] [--size MM] [--uniform]
-                                  [--no-record] [--out DIR]
-```
-
-or `make fem NAMES="..."`. It needs gmsh and CalculiX (bundled in FreeCAD.app, or set
-`CADDER_FREECAD_BIN_DIR`). The part is exported in its analysis frame with 20-facet holes
-(`CADDER_FN=20`), cleaned, meshed (quadratic tetrahedra, fine near loads and supports) and
-solved per load case. A second, finer mesh is solved only when some criterion is between **0.6
-and 1.6** of its limit (or with `--refine always`), and then the two are compared. Load cases
-that are multiples of each other are solved once. Typical times: slider about 10 s, mount about
-20 s, bracket about 80 s with pictures.
-
-**Official and diagnostic runs.** A plain run is the official check: it writes
-`fem/results/NAME/` (git-ignored: `report.md`, `result.json`, `part.json`, `final.msh`,
-`final_<case>.inp/.frd`, `viz/` with `--viz`) and updates `fem/verdicts.toml` (committed: last
-verdict, date, a hash of the cleaned STL and a hash of the part properties; if either hash
-changes the verdict is stale and the check must be repeated). **Diagnostic runs** (a finer mesh,
-a different size) use `--no-record --out DIR` so they overwrite neither the official result nor
-the verdict. The official verdict is always the one from the default settings.
-
-## Reading a result
-
-- **Criteria.** Strength: **utilization** = failure index × safety factor, 1.0 at the allowable.
-  The failure index is the larger of an in-plane mode (largest in-plane principal stress over the
-  in-plane strength) and an interlayer mode (tension across layers plus shear between layers over
-  the interlayer strength, delamination). The report's detail line for strength gives the
-  governing point, the stress components there in MPa with their allowables, and the distance to
-  the nearest load or support patch. Displacements are the largest absolute value along the
-  stated direction over the nodes of the region.
-- **Thresholds.** Status: PASS up to 85 % of a limit, MARGINAL up to 100 %, FAIL beyond. A second
-  mesh is solved when a criterion is between 0.6 and 1.6. The report flags a possible
-  sharp-corner singularity when the peak stress changes by more than 25 % between meshes.
-  Sanity checks: reactions balance the loads within 1 %, compliance (external work) agrees
-  between the two meshes within 5 %, mesh volume within 2 % of the STL.
-- **Verdict** of a part: the worst criterion; **INCONCLUSIVE** if a sanity check failed.
-- **Which load case matters.** Every case is judged; the one with the highest utilization governs
-  the verdict, and it is not always the larger load (a sustained case can govern because of the
-  creep factor). Look at the pictures of that case.
-- **Hot spots.** Strength is judged away from the edges of loaded and supported patches (within
-  1.5 element sizes), where stresses are artifacts; the report states the raw peak when it
-  exceeds the limit, and how much the peak changed between meshes.
-- **Pictures** (`viz/`): deformed shape over a ghost, colored by utilization (blue fine, orange at
-  the allowable, red over) or displacement; a magenta ball marks the governing point.
-
-## Assemblies: deflections and play that add up
-
-A part's check holds its neighbours rigid, so each part can pass while the pair does not. The
-belt tensioner showed it (STATUS.md T3.19): the belt pulls the idler axle ~14 mm above the tension
-screw, so a couple twists the slider in its dovetail. The slider tilts by the clearance (no
-stiffness, so the FEM cannot find it) while the mount's ridge and block bend; the idler leans.
-
-`ASSEMBLY_CHECKS` (`src/plotzker/assembly_checks.py`) lists assemblies: member parts and, per
-limit, the terms that add up (a member's displacement limit from its recorded result, or a rigid
-term from geometry: `tension_idler.dovetail_play`). The total is judged against the sum of the
-members' own limits, with the same PASS/MARGINAL/FAIL bands. Run it after its members:
+`ASSEMBLY_CHECKS` (`src/plotzker/assembly_checks.py`) lists them; the rigid play term is
+`tension_idler.dovetail_play` (worst case: slider pivoting about its plate's front end,
+clearance `slide_gap`, flanks at 45°; it ignores friction and does not shrink with load).
 
 ```
 python -m plotzker fem y_idler_slider_left y_idler_mount_left   # also runs y_idler_tensioner_left
-python -m plotzker fem x_idler_tensioner               # from the recorded member results (bracket + slider)
+python -m plotzker fem x_idler_tensioner                        # from the recorded member results
 ```
-
-It writes `fem/results/<assembly>/report.md` and `result.json` and records the verdict in
-`fem/verdicts.toml`; `fem-status` flags it stale when a member's recorded verdict changed. The
-play model is worst case and rigid (slider pivoting about its plate's front end, clearance
-`slide_gap`, flanks at 45°); it ignores friction and does not shrink with load.
-
-## Limits of the method
-
-- FDM parts are not solid: the infill knockdown is a guess, and layer adhesion and under-extrusion
-  vary. Expect ±30-50 % on stress and stiffness; hence the large safety factors. Calibrating
-  against a loaded printed part is postponed.
-- No contact, friction, bolt preload or nonlinear material; bolted joints are supports.
-- Loads are uniform traction over the covered area unless `bearing=True` (axle bores); a flat
-  patch can put a stress step at its edge.
-- Thin features loaded on small patches, sharp inside corners and couples applied on thin
-  surfaces can give mesh-dependent local stresses. Read the pictures, not only the numbers.
-- Gantry-level effects (shaft sag, extrusion bending) are hand calculations, not meshed.

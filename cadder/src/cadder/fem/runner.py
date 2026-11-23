@@ -38,7 +38,7 @@ from cadder.fem.viz import node_utilization, render, write_case_data
 from cadder.part import MaterialPart, part_to_dict
 from cadder.regions import Region
 
-#: Facet count for the part's STL: coarse holes keep the mesher fast (docs/fem-subagent-plan.md).
+#: Facet count for the part's STL: coarse holes keep the mesher fast.
 FEM_FACETS = 20
 #: How much finer the second mesh of the convergence check is.
 REFINEMENT = 1.6

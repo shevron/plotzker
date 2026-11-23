@@ -13,9 +13,10 @@ factors, regions or materials to make a part pass, and you never edit `src/`, `c
 spec. You only run the check and read its results. Everything you write goes to `fem/results/`
 through the commands below.
 
-Background: `docs/fem.md` (conventions, how to read results) and `docs/fem-subagent-plan.md`.
-Read `docs/fem.md` before your first check in a session; it also lists the thresholds (marginal
-band, refinement band, singularity flag).
+Background: `cadder/docs/fem.md` (the method: conventions, how to read results),
+`docs/fem.md` (the plotter's parts, data and modeling choices) and `docs/fem-subagent-plan.md`.
+Read both `fem.md` files before your first check in a session; cadder's lists the thresholds
+(marginal band, refinement band, singularity flag).
 
 ## Workflow
 

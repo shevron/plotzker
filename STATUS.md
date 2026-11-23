@@ -512,8 +512,9 @@ the printed carriage, motor mount and idler mount are the test pieces.
   references, nested constraints, formulas with units, variable overrides), solves it with
   FreeCAD's solver (`planegcs`, LGPL; on macOS it builds from source: `brew install eigen boost`)
   and exports the solved profile as SVG; `load_sketch` loads `.cpsk` files directly (with
-  `params` overrides and `strict`). Follow-ups: a command-line tool; the FreeCAD import/export plugin (RFC phase 3); the
-  spec's open issues (Appendix A). Using `.cpsk` files as plotter CAD sources would change
+  `params` overrides and `strict`). Follow-ups: a command-line tool; the FreeCAD import/export
+  plugin (RFC phase 3; plan and decisions D1–D7 in `cadder/docs/cpsk/freecad-plugin-plan.md`);
+  the spec's open issues (Appendix A). Using `.cpsk` files as plotter CAD sources would change
   D23/D24 and README §7.1 rule 3: not decided.
 
 #### Phase 4 — Build

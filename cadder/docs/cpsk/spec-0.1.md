@@ -374,8 +374,10 @@ references (§8.1):
 Constraints that version 0.1 does not define (e.g. FreeCAD SnellsLaw, InternalAlignment,
 Weight) are unsupported features (RFC §8).
 
-TBD: verify sign and direction conventions (`angle` between lines, `distance-x`/`distance-y`)
-against FreeCAD and PlaneGCS.
+These conventions match FreeCAD 1.1.3 and PlaneGCS for every constraint form above
+([freecad-conventions.md](freecad-conventions.md)). Tangency between curves is external or
+internal, and tangency between end points keeps the relative direction, as in the stored
+coordinates (§7.3).
 
 Top-level form:
 
@@ -561,16 +563,17 @@ Choices this draft makes where the RFC is open or differs from it. Each needs co
 
 | # | Issue | Draft choice | Alternative |
 |---|---|---|---|
-| A1 | Formulas reading solved values (RFC §5.8, §5.9) | Forbidden in 0.1 (§10.5). Properties are available to consumers only. | Allow, with partial or iterative solving and solve-level cycle detection. |
+| A1 | Formulas reading solved values (RFC §5.8, §5.9) | Forbidden in 0.1 (§10.5). Properties are available to consumers only. FreeCAD also refuses expressions that read reference constraints of the same sketch. | Allow, with partial or iterative solving and solve-level cycle detection. |
 | A2 | Non-driving constraint naming (RFC §5.8) | Attribute `driving="false"`, the term used by FreeCAD and PlaneGCS. | A separate element, e.g. `<measure>`. |
 | A3 | `mid` point references (RFC §5.9 lists them) | Dropped: FreeCAD cannot reference a line midpoint, so they would break the round trip. Use `symmetric` instead. | Keep them; the plugin adds construction geometry. |
 | A4 | Implicit references `origin`, `x_axis`, `y_axis` (not in the RFC) | Added, to match FreeCAD's root point and axes. | |
 | A5 | `version` (RFC §6.3: SHOULD) | REQUIRED. | Optional, defaulting to the reader's version. |
 | A6 | Type rules (RFC §5.4 TBD) | Units checked only for single-literal values; no dimensional analysis in formulas. | Full dimensional analysis. |
-| A7 | Trigonometric angle units (RFC §5.10 TBD) | Document angle unit. | Always radians. |
+| A7 | Trigonometric angle units (RFC §5.10 TBD) | Document angle unit (FreeCAD uses degrees for unitless arguments, the same in degree documents). | Always radians. |
 | A8 | Length units (RFC §5.2 TBD) | `mm`, `cm`, `m`, `in`. | Add `ft`, `um`. |
 | A9 | Formula property names | Underscores (`start_angle`), since names in formulas cannot contain `-`. XML names use hyphens (decided). | Single-word property names only (e.g. `begin`, `finish`), so XML and formula names are identical. |
 | A10 | Shared end points | Each line or arc owns its end points; connections are `coincident` constraints (as FreeCAD). | Shared `point` elements referenced by lines. |
 | A11 | Foreign namespaces (RFC §6.3 TBD) | Extensions, not unknown content (§11.3). | |
 | A12 | Constraint coverage | The FreeCAD subset in §9.3. Distances between circles and lines, perpendicular curves and arc length are left for later. | Include them in 0.1. |
 | A13 | Namespace URI | Placeholder under the plotzker repository. | A URI under a domain owned by the project. |
+| A14 | `^` precedence and associativity (§10.2) | **Decided (2026-11-23).** Mathematical convention: `^` binds tighter than unary minus (`-2^2` = −4) and is right-associative (`2^3^2` = 512), as in Python. FreeCAD differs (4 and 64), so the plugin adds parentheses when translating. | FreeCAD's convention, so formulas translate unchanged. |

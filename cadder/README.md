@@ -48,7 +48,7 @@ complete small example.
 | `cadder.assembly` | `Assembly` (parts and hardware placed for a fit check and render), `AssemblyCheck` (FEM budget across parts: their deflections plus the play between them) |
 | `cadder.freecad` | `FreeCadAssembly` with `Component`s, rigid `Body`s and `Joint`s (Slider, Revolute, ...); exported with shared STLs for congruent components and built into an `.FCStd` by FreeCAD 1.x |
 | `cadder.handles` | Named 4×4 frames on solids (`set_handles`, `get_handle(s)`, `handle`, `frame_handle`, `shift_handle`, `place_in_frame`) so assemblies place parts with `.align(handle)` |
-| `cadder.geometry` | Facet settings (`FN`, `CADDER_FN`), `box`, teardrop holes, the SVG sketch loader `load_sketch`, small vector helpers |
+| `cadder.geometry` | Facet settings (`FN`, `CADDER_FN`), `box`, teardrop holes, the sketch loader `load_sketch` (SVG, and CPSK files solved with `params` overrides), small vector helpers |
 | `cadder.cpsk` | CPSK parametric sketches ([spec](docs/cpsk/spec-0.1.md)): `load`/`loads` (with variable overrides), `Sketch.solve` (FreeCAD's PlaneGCS solver through `planegcs`; degrees of freedom, redundant and conflicting constraints as diagnostics), `to_svg` (a profile for `load_sketch`) |
 | `cadder.printing` | `Tolerances` for FDM prints (clearance holes, nut traps, fits) and `nut_slot`, a hex pocket for a nut pressed in sideways |
 | `cadder.hardware` | Vendor parts with dimensions and simple models: metric fasteners, bearings, GT2 belts/pulleys/idlers, NEMA17 and a micro servo, V-slot extrusions (SVG profiles) with wheels and eccentric spacers, smooth shafts, SK10, SCS10UU |

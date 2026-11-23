@@ -42,8 +42,8 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
         message = f"geometry does not form closed loops: {', '.join(labels)}"
         raise CpskExportError([error(Stage.EXPORT, "open-wire", message, ids=labels)])
 
-    xmin, ymin, xmax, ymax = _bounds(primitives, scale)
-    left, bottom = min(0.0, xmin), min(0.0, ymin)
+    _, _, xmax, ymax = _bounds(primitives, scale)
+    left, bottom = svg_origin(solved)
     top = max(0.0, ymax)
     width, height = max(0.0, xmax) - left, top - bottom
 
@@ -92,6 +92,18 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
         )
     lines.append("</svg>")
     return "\n".join(lines) + "\n"
+
+
+def svg_origin(solved: SolvedSketch) -> tuple[float, float]:
+    """The sketch point, in mm, at the bottom-left corner of :func:`to_svg`'s viewBox.
+
+    :func:`cadder.geometry.load_sketch` places this point at its origin; it is (0, 0) unless
+    the geometry has negative coordinates.
+    """
+    scale = solved.units.to_mm(1.0)
+    primitives = [p for p in solved.primitives if not p.construction]
+    xmin, ymin, _, _ = _bounds(primitives, scale)
+    return min(0.0, xmin), min(0.0, ymin)
 
 
 def _edge(primitive: Primitive, solved: SolvedSketch) -> _Edge:

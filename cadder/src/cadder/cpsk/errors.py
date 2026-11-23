@@ -54,6 +54,10 @@ def warning(
     return Diagnostic(Severity.WARNING, stage, code, message, tuple(ids), line)
 
 
+class CpskWarning(UserWarning):
+    """A warning diagnostic issued through Python's ``warnings`` (by ``load_sketch``)."""
+
+
 class CpskError(Exception):
     """A document cannot be loaded, solved or exported; ``diagnostics`` says why."""
 

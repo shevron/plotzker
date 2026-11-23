@@ -14,6 +14,7 @@ from cadder.cpsk.errors import (
     CpskExportError,
     CpskLoadError,
     CpskSolveError,
+    CpskWarning,
     Diagnostic,
     Severity,
     Stage,
@@ -21,7 +22,7 @@ from cadder.cpsk.errors import (
 from cadder.cpsk.model import Arc, Circle, Constraint, Line, Point, Primitive, Sketch
 from cadder.cpsk.reader import NAMESPACE, RESERVED, load, loads
 from cadder.cpsk.solver import SolvedSketch, solve
-from cadder.cpsk.svg import to_svg
+from cadder.cpsk.svg import svg_origin, to_svg
 
 __all__ = [
     "NAMESPACE",
@@ -33,6 +34,7 @@ __all__ = [
     "CpskExportError",
     "CpskLoadError",
     "CpskSolveError",
+    "CpskWarning",
     "Diagnostic",
     "Line",
     "Point",
@@ -44,5 +46,6 @@ __all__ = [
     "load",
     "loads",
     "solve",
+    "svg_origin",
     "to_svg",
 ]

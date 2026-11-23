@@ -177,7 +177,7 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
     """The command-line app for ``project``, with its own commands added."""
     app = typer.Typer(
         name=prog_name,
-        help=f"cadder commands for the {project.name} project: checks, exports, reports, FEM, diff.",
+        help=f"cadder for {project.name}: checks, exports, reports, FEM and the design diff.",
         no_args_is_help=True,
         add_completion=False,
     )

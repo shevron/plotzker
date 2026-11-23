@@ -8,6 +8,7 @@
 | **Based on** | [RFC: CPSK](../rfc/parametric-sketch-format.md) |
 | **Schema** | [`cpsk-0.1.xsd`](cpsk-0.1.xsd) |
 | **Example** | [`examples/plate-with-hole.cpsk`](examples/plate-with-hole.cpsk) |
+| **Implementations** | `cadder.cpsk` (reader, solver, SVG); [FreeCAD addon](../../freecad-addon/CPSK/README.md) (import, export) |
 
 ## Abstract
 
@@ -568,12 +569,14 @@ Choices this draft makes where the RFC is open or differs from it. Each needs co
 | A3 | `mid` point references (RFC §5.9 lists them) | Dropped: FreeCAD cannot reference a line midpoint, so they would break the round trip. Use `symmetric` instead. | Keep them; the plugin adds construction geometry. |
 | A4 | Implicit references `origin`, `x_axis`, `y_axis` (not in the RFC) | Added, to match FreeCAD's root point and axes. | |
 | A5 | `version` (RFC §6.3: SHOULD) | REQUIRED. | Optional, defaulting to the reader's version. |
-| A6 | Type rules (RFC §5.4 TBD) | Units checked only for single-literal values; no dimensional analysis in formulas. | Full dimensional analysis. |
+| A6 | Type rules (RFC §5.4 TBD) | Units checked only for single-literal values; no dimensional analysis in formulas. FreeCAD accepts a mismatched result (a length × length assigned to a length) but rejects sums of a length and a unitless number; the FreeCAD addon infers dimensions and adds `mm` or `°` to such numbers on import. | Full dimensional analysis. |
 | A7 | Trigonometric angle units (RFC §5.10 TBD) | Document angle unit (FreeCAD uses degrees for unitless arguments, the same in degree documents). | Always radians. |
 | A8 | Length units (RFC §5.2 TBD) | `mm`, `cm`, `m`, `in`. | Add `ft`, `um`. |
 | A9 | Formula property names | Underscores (`start_angle`), since names in formulas cannot contain `-`. XML names use hyphens (decided). | Single-word property names only (e.g. `begin`, `finish`), so XML and formula names are identical. |
 | A10 | Shared end points | Each line or arc owns its end points; connections are `coincident` constraints (as FreeCAD). | Shared `point` elements referenced by lines. |
-| A11 | Foreign namespaces (RFC §6.3 TBD) | Extensions, not unknown content (§11.3). | |
-| A12 | Constraint coverage | The FreeCAD subset in §9.3. Distances between circles and lines, perpendicular curves and arc length are left for later. | Include them in 0.1. |
+| A11 | Foreign namespaces (RFC §6.3 TBD) | Extensions, not unknown content (§11.3). The FreeCAD addon uses one for deactivated constraints (`<freecad:inactive>`). | |
+| A12 | Constraint coverage | The FreeCAD subset in §9.3. Distances between circles and lines, perpendicular curves and arc length are left for later; the FreeCAD addon refuses to export them and lists them. | Include them in 0.1. |
 | A13 | Namespace URI | Placeholder under the plotzker repository. | A URI under a domain owned by the project. |
 | A14 | `^` precedence and associativity (§10.2) | **Decided (2026-11-23).** Mathematical convention: `^` binds tighter than unary minus (`-2^2` = −4) and is right-associative (`2^3^2` = 512), as in Python. FreeCAD differs (4 and 64), so the plugin adds parentheses when translating. | FreeCAD's convention, so formulas translate unchanged. |
+| A15 | Identifiers that FreeCAD reads as units or constants (`t`, `h`, `s`, `g`, `l`, `e`, `N`, …), found in plugin phase 3 | Allowed. The FreeCAD addon renames them on import (`t` → `t_`) and restores them on export (plan D9). | Reserve FreeCAD's unit names too (§3.2), so documents import unchanged; this would forbid common names such as `t` and `h`. |
+| A16 | Canonical arc angles (§11.4), found in plugin phase 3 | Not specified: any `start-angle` and `end-angle` with the same sweep describe the same arc. The FreeCAD addon writes the start in [−180°, 180°) and the end at start + sweep, so files survive FreeCAD's [0°, 360°) normalization. | Make that range the canonical form in §11.4. |

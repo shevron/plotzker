@@ -12,7 +12,8 @@ requirements, the high-level design and the coding standards are in
 > (T3.9, D22; identical STLs). On trial: SVG 2D sketches for profiles (D23), handles and
 > `align()` (D28). The CAD is split into the `cadder` framework and the `plotzker` plotter
 > (T3.24, D36). Q12 answered (tap the second bore of each beam end). Q10 (SVG/PDF
-> toolchain) deferred until the machine runs.
+> toolchain) deferred until the machine runs. cadder gained the CPSK parametric sketch format
+> (draft spec, reader, solver) and a FreeCAD import/export addon (T3.27, T3.28).
 >
 > **Next:** Phase 2 starts with **T2.7** (X-axis bench bring-up: print and assemble the gantry
 > and carriage, wire the X motor and endstop, flash Marlin, home X; guide in
@@ -513,12 +514,19 @@ the printed carriage, motor mount and idler mount are the test pieces.
   references, nested constraints, formulas with units, variable overrides), solves it with
   FreeCAD's solver (`planegcs`, LGPL; on macOS it builds from source: `brew install eigen boost`)
   and exports the solved profile as SVG; `load_sketch` loads `.cpsk` files directly (with
-  `params` overrides and `strict`). Follow-ups: a command-line tool; the FreeCAD import/export
-  plugin (RFC phase 3; plan, decisions D1–D9, phases 0–4 done: `cadder/docs/cpsk/freecad-plugin-plan.md`;
-  the addon is in `cadder/freecad-addon/CPSK/`, installed with `make freecad-addon`; next: phase 5,
-  docs, and a licence for `package.xml`);
-  the spec's open issues (Appendix A). Using `.cpsk` files as plotter CAD sources would change
-  D23/D24 and README §7.1 rule 3: not decided.
+  `params` overrides and `strict`). Follow-ups: a command-line tool; the spec's open issues
+  (Appendix A, now A1–A16; A15 and A16 came from the FreeCAD addon, T3.28). Using `.cpsk` files
+  as plotter CAD sources would change D23/D24 and README §7.1 rule 3: not decided.
+
+- [x] **T3.28 CPSK FreeCAD addon.** Import and export of Sketcher sketches as `.cpsk` (RFC §8;
+  plan and decisions D1–D9: `cadder/docs/cpsk/freecad-plugin-plan.md`; FreeCAD conventions
+  checked in phase 0: `cadder/docs/cpsk/freecad-conventions.md`). The addon
+  (`cadder/freecad-addon/CPSK/`, [README](cadder/freecad-addon/CPSK/README.md)) adds `.cpsk` to
+  FreeCAD 1.1's File > Open, Import and Export; `make freecad-addon` links it into FreeCAD's
+  `Mod` folder. Export refuses unsupported features with a list; variables go to a VarSet;
+  FreeCAD → CPSK → FreeCAD and CPSK → FreeCAD → CPSK give the same files (tested in FreeCAD,
+  with a cross-solver check against `cadder.cpsk`). Follow-ups: a licence (`package.xml`: TBD),
+  an Addon Manager release (needs its own copy of `cpsk_core`), ellipses and B-splines.
 
 #### Phase 4 — Build
 

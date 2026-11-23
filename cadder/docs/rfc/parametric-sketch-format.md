@@ -7,6 +7,7 @@
 | **Created** | 2026-11-23 |
 | **Related** | [`../sketch-formats.md`](../sketch-formats.md) (prior research, plotzker D23/D24) |
 | **Specification** | [`../cpsk/spec-0.1.md`](../cpsk/spec-0.1.md) (draft) |
+| **Implementation** | Reader: `cadder.cpsk`. FreeCAD plugin: [plan](../cpsk/freecad-plugin-plan.md), [addon](../../freecad-addon/CPSK/README.md) |
 
 ## Abstract
 
@@ -360,8 +361,11 @@ The plugin imports and exports CPSK documents as FreeCAD Sketcher sketches.
   it cannot represent, and report them.
 - **Round trip:** FreeCAD → CPSK → FreeCAD MUST be lossless for the supported feature set.
 
-TBD: a FreeCAD-specific namespace (§6.3) to mark converted external geometry and keep details
-that improve round-tripping. Its usefulness is not yet clear.
+The plugin uses a FreeCAD-specific namespace (§6.3) for deactivated constraints, which CPSK
+readers skip as extension content. Converted external geometry is exported as blocked construction geometry
+and needs no marking. Other details that improve round-tripping (identifiers, metadata,
+variable limits, formulas as written) are kept on the FreeCAD side, in a hidden property of the
+sketch, rather than in the file ([plan](../cpsk/freecad-plugin-plan.md), decisions D4, D6).
 
 ## 9. Testing
 

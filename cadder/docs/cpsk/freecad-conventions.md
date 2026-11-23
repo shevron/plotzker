@@ -68,6 +68,23 @@ Arc angles: FreeCAD reports `FirstParameter` in [0, 2π) (e.g. 270° to 360°), 
 - Plan risk "FreeCAD rejects CPSK formulas that mix units" is downgraded: FreeCAD accepted a
   length × length value for a length constraint.
 
+Later phases found more FreeCAD behaviour (details in the
+[plan](freecad-plugin-plan.md)'s "as built" notes):
+
+- FreeCAD reads many short names as units or constants in expressions (`t`, `h`, `s`, `g`, `l`,
+  `e`, `m`, `min`, `in`, capitals such as `N`): a constraint or variable with such a name cannot
+  carry or be used in an expression (plan D9, spec A15). `App.Units.Quantity(name)` tells them.
+- FreeCAD checks units in sums (`Constraints.s - 6` fails: length minus number), though not in
+  assignments (spec A6).
+- FreeCAD stores expressions in its own form: `;` between function arguments, `^` with spaces,
+  `1e1` as `10`.
+- Arc parameters are kept in [0, 2π).
+- With a `package.xml`, FreeCAD 1.1 runs an addon's `Init.py` only for `<workbench>` items.
+- `addConstraint` does not solve: constraints can be added, then made non-driving or
+  deactivated, before the next recompute.
+- A wrong `Sketcher.Constraint` signature (e.g. `Block` with a PosId) crashes FreeCAD instead of
+  raising an error.
+
 The 39 cases are kept as plain data in
 [`cadder/tests/cpsk_freecad/cases.py`](../../tests/cpsk_freecad/cases.py), the corpus for the
 plugin's tests (phase 2). The probe scripts (FreeCAD and CPSK runners, expression probes) were

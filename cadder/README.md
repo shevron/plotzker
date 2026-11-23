@@ -81,7 +81,8 @@ complete small example.
 | `all` | `check`, `stl`, the project's extra outputs (`Project.all_steps`), `render` |
 
 Guides: [FEM checks](docs/fem.md), [design diff](docs/diff.md),
-[FreeCAD assemblies](docs/freecad.md), [CPSK sketch format](docs/cpsk/spec-0.1.md) (draft); background:
+[FreeCAD assemblies](docs/freecad.md), [CPSK sketch format](docs/cpsk/spec-0.1.md) (draft),
+[CPSK FreeCAD addon](freecad-addon/CPSK/README.md); background:
 [parametric sketch formats](docs/sketch-formats.md), [CPSK RFC](docs/rfc/parametric-sketch-format.md).
 
 A project adds its own commands through `Project.commands`, and can offer its own entry point

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Plan accepted (decisions D1–D9: 2026-11-23). Phases 0 ([results](freecad-conventions.md)) to 4 done |
+| **Status** | Plan accepted (decisions D1–D9: 2026-11-23). All phases done ([phase 0 results](freecad-conventions.md)); the addon: [README](../../freecad-addon/CPSK/README.md) |
 | **Date** | 2026-11-23 |
 | **Implements** | [RFC](../rfc/parametric-sketch-format.md) §4 step 3 and §8; [spec 0.1](spec-0.1.md) |
 | **Target** | FreeCAD 1.1 (installed here: 1.1.3, Python 3.11.14) |
@@ -280,7 +280,16 @@ D1–D7 were accepted on 2026-11-23; D8 (from phase 0) and D9 (from phase 3) wer
 | **2. Export** ✅ | `export_sketch` (§4), unsupported-feature report, expressions, external geometry. | A test corpus of FreeCAD sketches exports; `cadder.cpsk` solves each export to FreeCAD's geometry (within 1e-9 mm); unsupported features are refused with a list |
 | **3. Import** ✅ | `import_sketch`, VarSet creation (D2), id preservation (D4). | FreeCAD → CPSK → FreeCAD gives the same geometry, constraints, names and expressions (R5); the spec example imports fully constrained |
 | **4. GUI and install** ✅ | Import/export registration, dialogs, `make freecad-addon` (link into `Mod`), `package.xml`. | Import and export work from the File menu in FreeCAD 1.1 on macOS |
-| **5. Docs** | Addon README, cadder docs, spec updates from phase 0, STATUS tasks. | Docs describe install and use; open spec issues updated |
+| **5. Docs** ✅ | Addon README, cadder docs, spec updates from phase 0, STATUS tasks. | Docs describe install and use; open spec issues updated |
+
+**As built (phase 5):** the [addon README](../../freecad-addon/CPSK/README.md) describes
+installation, use, coverage and round-trip behaviour; the spec's open issues have the findings
+(A6, A11, A12) and two new issues for confirmation (A15: FreeCAD unit names as identifiers,
+A16: canonical arc angles); the RFC's §8 TBD is resolved.
+
+Follow-ups, not in this plan: a licence (`package.xml` says TBD, as the RFC §7.3); an Addon
+Manager release, which needs its own copy of `cpsk_core` in the addon; ellipses and B-splines
+(R1); the constraint forms of spec A12.
 
 ## 8. Testing
 

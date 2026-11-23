@@ -350,8 +350,8 @@ the printed carriage, motor mount and idler mount are the test pieces.
   U-shaped slider (two 6.8 mm arms, rear wall, plate) riding on a dovetail rail, two separate
   prints (0.2 mm per side); an M3 screw through the rail's end block pulls the slider away from
   the belt into a captive nut in its rear wall; the idler has 1 mm end play on each side so it
-  self-aligns with the belt. → `parts/tension_idler.py` (`params.TENSION_IDLER`,
-  `assemblies/tension_idler.py` fit check, STLs `tension_idler_rail`, `tension_idler_slider`).
+  self-aligns with the belt. → (the prototype's code and STLs were removed in T3.25; the floating idlers of T3.22–T3.23
+  replaced it.)
   - [ ] Follow-up: test-print (slide fit and `slide_gap`, M5×25 axle + nut, M3×25 screw; the
     slider prints lying on its back, no bridges; its M3 nut slot is 0.2 mm thicker than the usual
     nut trap, `nut_slot_extra`, because the long slot came out too tight).
@@ -448,8 +448,7 @@ the printed carriage, motor mount and idler mount are the test pieces.
   `Y_IDLER`), head on the inboard arm, printed upside down (top on the bed). The tower's walls stand on a pad on
   the foot, the foot's wood screws moved outboard of the walls (bosses beyond the outboard wall),
   and the foot reaches 19 mm further to the front (tower's outer face at machine y 14). The
-  dovetail (`Y_TENSIONER`) is gone from the machine; `tension_idler.py` stays as the generic
-  prototype. Both screws are M3×25 with a large M3 washer (the X tower plate was cut from 12 to
+  dovetail (`Y_TENSIONER`) is gone from the machine, and so is the generic prototype. Both screws are M3×25 with a large M3 washer (the X tower plate was cut from 12 to
   11.4 mm for it; the M3×30 it needed before made the slider's wall 4 mm thicker). **FEM:** mount
   PASS (strength 0.45 / 0.40; tower seat 0.06 / 0.01 / 0.02 mm), slider MARGINAL (0.50 / 0.44),
   Y assemblies PASS; X (11.4 mm plate): bracket tower seat vertical 0.082 / 0.147 mm (peak over its
@@ -486,6 +485,14 @@ the printed carriage, motor mount and idler mount are the test pieces.
   part specs and FEM verdicts unchanged; the FreeCAD file has the same components, placements,
   joints and GUI state; the drilling layout output is identical; the design diff builds
   revisions from before the split. **Open:** where cadder's docs and agent live (see D36).
+- [x] **T3.25 Nut pocket tolerances and orphaned prototype parts.** Measured on prints: the X
+  slider's nut pocket came out 2.63 mm thick for a 2.35 mm nut (the nut fell out), so
+  `nut_slot_extra` is 0.2 → 0 (designed 2.5 mm, expected about 2.43 printed); side-inserted slots
+  (endstop board, belt clip) were tight, so `TOL.nut_slot` is 0.3 → 0.4 (0.05 mm more per side).
+  Reprint to check both. Removed the superseded generic tensioner prototype: `parts/tension_idler.py`,
+  `assemblies/tension_idler.py`, `TensionIdler` / `TENSION_IDLER`, the dovetail play term, their
+  design checks and tests, the STLs and renders `tension_idler_rail`, `tension_idler_slider`,
+  `tension_idler_fit`.
 
 #### Phase 4 — Build
 

@@ -624,7 +624,8 @@ software-driven CAD projects. Setup and commands are in §6.
   run straight out to the entrance. A plain rectangular slot wide enough for the corners lets
   the nut spin (T3.12). Hex shafts (nut seated along its axis) use `TOL.nut_trap_ac` /
   `nut_trap_h` instead. Print tolerances measured on PETG: slots come out ~0.1 mm narrower
-  across and ~0.1 mm thicker than designed (`TOL.nut_slot`, `TOL.nut_t`).
+  across and ~0.1 mm thicker than designed (`TOL.nut_slot`, `TOL.nut_t`); `TOL.nut_slot` was raised
+  from 0.3 to 0.4 after side-inserted nuts printed tight (T3.25).
 - Prefer designs printable without supports (teardrop holes from `cadder.geometry`, 45°
   overhangs); note any required supports in the module docstring.
 - Each part module starts with a docstring: purpose, required hardware (with

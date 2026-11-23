@@ -15,7 +15,6 @@ from plotzker.parts import (
     loom_rail,
     pen_holder_body,
     pen_slide,
-    tension_idler,
     x_carriage,
     x_endstop_mount,
     x_idler_slider,
@@ -43,16 +42,6 @@ _PLAIN: dict[str, Part] = {
             build=loom_anchor.loom_anchor,
         ),
         Part(name="loom_rail", description="Loom rail segment (×6)", build=loom_rail.loom_rail),
-        Part(
-            name="tension_idler_rail",
-            description="Generic belt-tensioning idler, rail (prototype)",
-            build=tension_idler.tension_idler_rail,
-        ),
-        Part(
-            name="tension_idler_slider",
-            description="Generic belt-tensioning idler, slider (prototype)",
-            build=tension_idler.tension_idler_slider,
-        ),
         Part(
             name="zrib_hanger",
             description="ZRIB hanger: carries the controller under the baseboard (×2)",
@@ -95,8 +84,6 @@ _ORDER = [
     "loom_rail",
     "pen_holder_body",
     "pen_slide",
-    "tension_idler_rail",
-    "tension_idler_slider",
     "x_carriage",
     "zrib_hanger",
     "zrib_guard",

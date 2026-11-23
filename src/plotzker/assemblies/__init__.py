@@ -13,7 +13,6 @@ from plotzker.assemblies import (
     machine,
     pen_holder,
     skeleton,
-    tension_idler,
     y_drive,
     zrib_mount,
 )
@@ -61,11 +60,6 @@ ASSEMBLIES: dict[str, Assembly] = {
             name="skeleton",
             description="Frame, Y axis, gantry and carriage",
             build=skeleton.skeleton,
-        ),
-        Assembly(
-            name="tension_idler_fit",
-            description="Generic tension idler: rail, slider, idler, axle and tension screw",
-            build=tension_idler.tension_idler_fit_check,
         ),
         Assembly(
             name="y_drive",

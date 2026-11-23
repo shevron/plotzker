@@ -44,7 +44,7 @@ from plotzker.hardware import ENDSTOP, Y_SHAFT, ZRIB
 
 #: Print tolerances of this machine's prints (PETG, default profile); cadder's defaults, with the
 #: nut slot values measured on test prints (T3.12).
-TOL = Tolerances(nut_slot=0.3, nut_t=0.1)
+TOL = Tolerances(nut_slot=0.4, nut_t=0.1)
 
 # -----------------------------------------------------------------------------
 # Requirements (README §2, STATUS.md §5)
@@ -1515,145 +1515,6 @@ BASEBOARD = Baseboard()
 
 
 @dataclass(frozen=True)
-class TensionIdler:
-    """Generic belt-tensioning idler (prototype): a U-shaped slider on a dovetail rail.
-
-    Assembly frame: rail on the bed (z = 0), x = slide direction (belt leaves toward +x), y = idler
-    axle, z up. x = 0 is the outer face of the rail's end block.
-    """
-
-    axle_m: float = 5  #: idler axle (bolt) size
-    screw_m: float = 3  #: tension screw size
-    side_play: float = 1.0  #: DESIGN: idler end play to each arm (lets it self-align with the belt)
-    slide_gap: float = TOL.slide  #: DESIGN: dovetail clearance, rail to slider (per side)
-    travel: float = 10  #: DESIGN: slider travel (tensioning range)
-    stop_gap: float = 1  #: slider to end block when fully tensioned
-    block_t: float = 6  #: end block thickness along x (carries the screw head)
-    block_w: float = 16  #: end block width (y)
-    rail_t: float = 6  #: rail base plate thickness (room for M3 counterbores)
-    ridge_h: float = 3.5  #: dovetail height (45° flanks)
-    ridge_neck: float = 9  #: dovetail width at its base
-    roof_t: float = 8  #: slider plate above the dovetail cavity (holds the screw and its nut)
-    mount_margin: float = 10  #: rail plate beyond each side of the slider (mounting holes)
-    mount_m: float = 3  #: rail mounting screws
-    arm_clear: float = 1.5  #: web to the idler flange
-    arm_end_r: float = 6.5  #: radius around the axle at the arms' front ends
-    axle_h: float = 10  #: axle above the slider plate's top face
-    #: DESIGN: extra thickness of the slider's M3 nut slot: it prints standing (axis up) and a
-    #: long slot came out too tight for the nut (T3.15)
-    nut_slot_extra: float = 0.2
-    head_side: int = -1  #: the arm (-1: -y, 1: +y) that carries the axle bolt's head
-    plate_cut: float = 0  #: slider plate (and rail) shortened at the front by this much
-
-    @property
-    def gap_y(self) -> float:
-        """Clear width between the arms: the idler plus its end play on each side."""
-        return IDLER.width + 2 * self.side_play
-
-    @property
-    def arm_t(self) -> float:
-        """Arm thickness: a pressed-in axle nut pocket plus the wall behind it."""
-        return TOL.nut_trap_h(self.axle_m) + TOL.nut_wall
-
-    @property
-    def width(self) -> float:
-        """Slider width (y)."""
-        return self.gap_y + 2 * self.arm_t
-
-    @property
-    def nut_y(self) -> float:
-        """Start (lowest y) of the axle nut's hex pocket, in the outer face of the nut-side arm."""
-        h = TOL.nut_trap_h(self.axle_m)
-        return self.width / 2 - h if self.head_side < 0 else -self.width / 2 - 1
-
-    @property
-    def nut_seat_y(self) -> float:
-        """Lowest y of the axle nut seated in its pocket (the nut model's bottom face)."""
-        return self.width / 2 - metric(self.axle_m).nut_h if self.head_side < 0 else -self.width / 2
-
-    @property
-    def axle_head_rot(self) -> float:
-        """Rotation about x that points a bolt's shank from its head seat through the arms."""
-        return 90 if self.head_side < 0 else -90
-
-    @property
-    def web_t(self) -> float:
-        """Slider rear wall: thrust wall, screw nut pocket, thin wall behind it."""
-        return TOL.nut_wall + TOL.nut_trap_h(self.screw_m) + self.nut_slot_extra + TOL.min_wall
-
-    @property
-    def axle_x(self) -> float:
-        """Axle position along the slider, from its rear face."""
-        return self.web_t + IDLER.flange_d / 2 + self.arm_clear
-
-    @property
-    def length(self) -> float:
-        """Slider length (x)."""
-        return self.axle_x + self.arm_end_r
-
-    def arm_chamfer_x(self, nut_side: bool) -> float:
-        """Where an arm's 45° underside meets the plate's top face (x from the slider's rear).
-
-        The line keeps a wall around what is cut into that arm: the axle nut's hex pocket (nut
-        side) or the bolt hole (head side).
-        """
-        r = TOL.nut_trap_ac(self.axle_m) / 2 if nut_side else TOL.bolt_hole_d(self.axle_m) / 2
-        wall = TOL.min_wall
-        return self.axle_x - self.axle_h + (r + wall) * math.sqrt(2)
-
-    @property
-    def plate_len(self) -> float:
-        """Slider plate (and dovetail) length; the arms reach on beyond it."""
-        return self.length - self.plate_cut
-
-    @property
-    def plate_t(self) -> float:
-        """Slider plate thickness: dovetail cavity plus roof."""
-        return self.ridge_h + self.roof_t
-
-    @property
-    def rail_len(self) -> float:
-        """Rail length: end block, slider at full travel."""
-        return self.block_t + self.stop_gap + self.travel + self.plate_len
-
-    @property
-    def rail_w(self) -> float:
-        """Rail plate width."""
-        return self.width + 2 * self.mount_margin
-
-    @property
-    def slider_z0(self) -> float:
-        """Slider underside, assembly frame."""
-        return self.rail_t + self.slide_gap
-
-    @property
-    def screw_z(self) -> float:
-        """Tension screw axis, assembly frame (middle of the roof)."""
-        return self.slider_z0 + self.ridge_h + self.roof_t / 2
-
-    @property
-    def axle_z(self) -> float:
-        """Idler axle, assembly frame."""
-        return self.slider_z0 + self.plate_t + self.axle_h
-
-    @property
-    def screw_len(self) -> float:
-        """Shortest standard screw (5 mm steps): reaches the nut at full slack."""
-        need = (
-            self.block_t
-            + self.stop_gap
-            + self.travel
-            + TOL.nut_wall
-            + TOL.nut_trap_h(self.screw_m)
-            + 1
-        )
-        return float(5 * math.ceil(need / 5))
-
-
-TENSION_IDLER = TensionIdler()
-
-
-@dataclass(frozen=True)
 class FloatingIdler:
     """A belt idler on a floating slider held only by its tension screw (STATUS.md T3.22, T3.23).
 
@@ -1687,7 +1548,7 @@ class FloatingIdler:
     #: its hoop stress is across the layers when the slider prints upside down
     arm_end_r: float = 9.0
     below_axle: float = 11.0  #: DESIGN: slider underside below the axle (clears the endstop plug)
-    nut_slot_extra: float = 0.2  #: extra thickness of the nut slot (it prints standing)
+    nut_slot_extra: float = 0.0  #: extra thickness of the nut slot (0.2 printed 0.3 mm loose)
     tip_clear: float = 1.0  #: screw tip to the tunnel's end when tight
     head_side: int = 1  #: the arm (-1: -y, 1: +y) that carries the axle bolt's head
     #: DESIGN: tower plate (screw head seat), along x; just thin enough for the M3×25 screw (the
@@ -2047,19 +1908,6 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         and yd.idler_y + yd.idler_slot / 2 + yi.arm_end_r <= ye.keepout_y0,
         "Y idler tower: the walls don't cover the slider's wall, it is off the baseboard, or "
         "the slider reaches the endstop plug's keep-out",
-    )
-    ti = TENSION_IDLER
-    yield (
-        ti.screw_z - metric(ti.screw_m).nut_af / 2 - TOL.nut_slot / 2 > ti.slider_z0 + ti.ridge_h,
-        "Tensioner screw nut pocket cuts into the dovetail cavity",
-    )
-    yield (
-        ti.axle_z - IDLER.flange_d / 2 >= ti.screw_z + TOL.bolt_hole_d(ti.screw_m) / 2,
-        "Tensioner idler flange hits the tension screw",
-    )
-    yield (
-        ti.screw_len - ti.block_t - ti.stop_gap <= ti.length - 1,
-        "Tensioner screw sticks out of the slider at full tension",
     )
     pen_lo, pen_hi = REQ.pen_d_range
     # --- ZRIB mount (T3.7)

@@ -22,19 +22,6 @@ def test_real_part_runs_end_to_end(tmp_path):
     assert (tmp_path / "x_idler_slider" / "result.json").is_file()
 
 
-def test_dovetail_play_tilt_follows_the_clearance_and_plate_length():
-    import dataclasses
-
-    from plotzker.params import TENSION_IDLER
-    from plotzker.parts.tension_idler import dovetail_play
-
-    base = dovetail_play(TENSION_IDLER)
-    assert base.tilt_rad == pytest.approx(base.play_mm / TENSION_IDLER.plate_len)
-    tight = dovetail_play(dataclasses.replace(TENSION_IDLER, slide_gap=TENSION_IDLER.slide_gap / 2))
-    assert tight.tilt_rad == pytest.approx(base.tilt_rad / 2)
-    assert tight.axle_vertical_mm == pytest.approx(base.axle_vertical_mm / 2)
-
-
 def _write_result(folder, criteria):
     import json
 
@@ -43,58 +30,31 @@ def _write_result(folder, criteria):
     (folder / "result.json").write_text(json.dumps({"criteria": rows}))
 
 
-def test_assembly_sums_member_deflections_and_play(tmp_path):
+def test_assembly_sums_member_deflections(tmp_path):
     from cadder.fem.assembly import check_assembly
 
     from plotzker.assembly_checks import tensioner_assembly
-    from plotzker.params import TENSION_IDLER
 
-    # a dovetail tensioner (the generic prototype) on the Y parts' names: the play adds a rigid term
     assembly = tensioner_assembly(
-        "dovetail_test",
-        "",
-        "y_idler_mount_left",
-        "y_idler_slider_left",
-        "idler_seat",
-        TENSION_IDLER,
+        "sum_test", "", "y_idler_mount_left", "y_idler_slider_left", "idler_seat"
     )
     # each part alone is within its own 0.1 mm (the slider's and mount's limit names differ)
-    cases = ("belt_preload",)
-    _write_result(
-        tmp_path / "y_idler_slider_left",
-        [
-            (f"idler_axle_{d}", c, 0.09)
-            for d in ("along_belt", "sideways", "vertical")
-            for c in cases
-        ],
-    )
-    _write_result(
-        tmp_path / "y_idler_mount_left",
-        [
-            (f"idler_seat_{d}", c, 0.09)
-            for d in ("along_belt", "sideways", "vertical")
-            for c in cases
-        ],
-    )
+    for part, prefix in (
+        ("y_idler_slider_left", "idler_axle"),
+        ("y_idler_mount_left", "idler_seat"),
+    ):
+        _write_result(
+            tmp_path / part,
+            [
+                (f"{prefix}_{d}", "belt_preload", 0.09)
+                for d in ("along_belt", "sideways", "vertical")
+            ],
+        )
     result = check_assembly(assembly, PARTS, tmp_path)
     by_name = {r.name: r for r in result.rows}
-    from plotzker.params import TENSION_IDLER
-    from plotzker.parts.tension_idler import dovetail_play
-
-    play = dovetail_play(TENSION_IDLER)
-    # the play adds to the two deflections: each part is within its own 0.1, the pair is not
-    assert by_name["idler_axle_vertical"].total == pytest.approx(0.18 + play.axle_vertical_mm)
-    assert by_name["idler_axle_vertical"].status is Status.FAIL
-    assert by_name["idler_axle_sideways"].total == pytest.approx(0.18)  # no play along the axle
-    assert result.status is Status.FAIL
-
-
-def test_floating_idlers_have_no_dovetail_play_term():
-    from plotzker.assembly_checks import ASSEMBLY_CHECKS
-
-    for assembly in ASSEMBLY_CHECKS.values():
-        for limit in assembly.limits:
-            assert all(term.part is not None for term in limit.terms)
+    # the two deflections add up: 0.18 mm, within the sum of the two 0.1 mm limits
+    assert by_name["idler_axle_vertical"].total == pytest.approx(0.18)
+    assert by_name["idler_axle_vertical"].status is not Status.FAIL
 
 
 def test_assembly_is_inconclusive_without_member_results(tmp_path):

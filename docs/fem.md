@@ -15,7 +15,6 @@ plotzker fem-status` (`make fem-status`), `python -m plotzker part NAME [--json]
 |------|-------------|-------|
 | `x_idler_slider`, `y_idler_slider_left`, `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
 | `y_idler_slider_right`, `y_motor_mount_right` | exact mirror images | covered by the left part (`mirror_of`) |
-| `tension_idler_rail`, `tension_idler_slider` | prototype of the tensioner | not used in the machine |
 | `belt_clamp` | carries belt tension through two screws | to decide |
 | `zrib_hanger` | light (board weight) | to decide |
 | `loom_anchor`, `loom_rail`, `zrib_guard` | no | not structural |
@@ -38,18 +37,18 @@ plotzker fem-status` (`make fem-status`), `python -m plotzker part NAME [--json]
   z-only support for the rest of the foot. The beam on a bracket's face plate is a support, not
   a load.
 - The belt tensioner's parts build their spec from one description (`slider_fem`, `mount_fem` in
-  `parts/tension_idler.py`) placed in each part's frame with a `Placement`.
+  `parts/floating_idler.py`) placed in each part's frame with a `Placement`.
 - Gantry-level effects (shaft sag, extrusion bending) are hand calculations, not meshed.
 
 ## Assembly checks
 
-The belt tensioner showed why they are needed (STATUS.md T3.19): the belt pulls the idler axle
-~14 mm above the tension screw, so a couple twists the slider in its dovetail. The slider tilts
-by the clearance while the mount's ridge and block bend; the idler leans.
+The belt tensioner showed why they are needed (STATUS.md T3.19): the belt pulled the idler axle
+~14 mm above the tension screw, so a couple twisted the slider in its dovetail; it tilted by the
+clearance while the mount bent. The floating idlers (T3.22) have no play, but their slider and
+mount deflections still add up.
 
-`ASSEMBLY_CHECKS` (`src/plotzker/assembly_checks.py`) lists them; the rigid play term is
-`tension_idler.dovetail_play` (worst case: slider pivoting about its plate's front end,
-clearance `slide_gap`, flanks at 45°; it ignores friction and does not shrink with load).
+`ASSEMBLY_CHECKS` (`src/plotzker/assembly_checks.py`) lists them. cadder's `AssemblyTerm` also
+takes a rigid term (`rigid_mm`) for play that the FEM cannot see; none is in use now.
 
 ```
 python -m plotzker fem y_idler_slider_left y_idler_mount_left   # also runs y_idler_tensioner_left

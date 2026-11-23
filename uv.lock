@@ -108,6 +108,7 @@ name = "cadder"
 version = "0.1.0"
 source = { editable = "cadder" }
 dependencies = [
+    { name = "planegcs" },
     { name = "pythonscad" },
     { name = "typer" },
 ]
@@ -128,6 +129,7 @@ requires-dist = [
     { name = "manifold3d", marker = "extra == 'diff'", specifier = ">=3.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "numpy", marker = "extra == 'diff'", specifier = ">=2" },
+    { name = "planegcs", specifier = ">=0.9.6" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pythonscad", specifier = ">=1.1" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
@@ -488,6 +490,16 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/c3/059298687310d527a58bb01f3b1965787ee3b40dce76752eda8b44e9a2c5/pexpect-4.9.0-py2.py3-none-any.whl", hash = "sha256:7236d1e080e4936be2dc3e326cec0af72acf9212a7e1d060210e70a47e253523", size = 63772, upload-time = "2023-11-25T06:56:14.81Z" },
+]
+
+[[package]]
+name = "planegcs"
+version = "0.9.6"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a0/11/d1d156183c88095951a10ed4f76b8c7db3377664987369ad763c8278b87a/planegcs-0.9.6.tar.gz", hash = "sha256:584bca77dd4682b503e37433f19b0888d14d9e75c2a484ff20ddebbafe0a6239", size = 210210, upload-time = "2026-10-10T11:51:03.707Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bc/17/2417c951faf4ebdb4f056b6fdb7b153b5764503d4d0f4b97bfba037e670f/planegcs-0.9.6-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:89c612e6a2249a012d4deb0ed3a9e183eec1eaedb6b1db743b4533adb05a38f6", size = 490261, upload-time = "2026-10-10T11:50:59.833Z" },
+    { url = "https://files.pythonhosted.org/packages/6c/12/c28ad001d9a79941f4081f221678fecb1c82d6b78d6e31f13857fe90584d/planegcs-0.9.6-cp314-cp314-win_amd64.whl", hash = "sha256:4e0b2c8963904c19c4114ee517ec3d0ca89077d9eb47ba1367419af02c37b94e", size = 617875, upload-time = "2026-10-10T11:51:01.582Z" },
 ]
 
 [[package]]

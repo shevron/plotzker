@@ -49,6 +49,7 @@ complete small example.
 | `cadder.freecad` | `FreeCadAssembly` with `Component`s, rigid `Body`s and `Joint`s (Slider, Revolute, ...); exported with shared STLs for congruent components and built into an `.FCStd` by FreeCAD 1.x |
 | `cadder.handles` | Named 4×4 frames on solids (`set_handles`, `get_handle(s)`, `handle`, `frame_handle`, `shift_handle`, `place_in_frame`) so assemblies place parts with `.align(handle)` |
 | `cadder.geometry` | Facet settings (`FN`, `CADDER_FN`), `box`, teardrop holes, the SVG sketch loader `load_sketch`, small vector helpers |
+| `cadder.cpsk` | CPSK parametric sketches ([spec](docs/cpsk/spec-0.1.md)): `load`/`loads` (with variable overrides), `Sketch.solve` (FreeCAD's PlaneGCS solver through `planegcs`; degrees of freedom, redundant and conflicting constraints as diagnostics), `to_svg` (a profile for `load_sketch`) |
 | `cadder.printing` | `Tolerances` for FDM prints (clearance holes, nut traps, fits) and `nut_slot`, a hex pocket for a nut pressed in sideways |
 | `cadder.hardware` | Vendor parts with dimensions and simple models: metric fasteners, bearings, GT2 belts/pulleys/idlers, NEMA17 and a micro servo, V-slot extrusions (SVG profiles) with wheels and eccentric spacers, smooth shafts, SK10, SCS10UU |
 | `cadder.materials` | `Material`, `PrintProfile` and `MaterialLibrary`, which reads a project's materials TOML and print profiles folder |
@@ -78,7 +79,8 @@ complete small example.
 | `all` | `check`, `stl`, the project's extra outputs (`Project.all_steps`), `render` |
 
 Guides: [FEM checks](docs/fem.md), [design diff](docs/diff.md),
-[FreeCAD assemblies](docs/freecad.md); background: [parametric sketch formats](docs/sketch-formats.md).
+[FreeCAD assemblies](docs/freecad.md), [CPSK sketch format](docs/cpsk/spec-0.1.md) (draft); background:
+[parametric sketch formats](docs/sketch-formats.md), [CPSK RFC](docs/rfc/parametric-sketch-format.md).
 
 A project adds its own commands through `Project.commands`, and can offer its own entry point
 (`python -m mypackage`) with `cadder.cli.run(PROJECT)`.
@@ -95,6 +97,7 @@ uv run python -m pytest              # cadder's tests (tests/, on the fixture pr
 uv run mypy && uv run ruff check .   # strict types and lint; `plotzker` imports are banned (TID251)
 ```
 
-The `diff` extra (numpy, manifold3d) is needed for the design diff. Conventions (code style,
+The `diff` extra (numpy, manifold3d) is needed for the design diff. `planegcs` (the CPSK
+solver) has no macOS wheels; it builds from source with Eigen and Boost (`brew install eigen boost`). Conventions (code style,
 typing, testing) are those of the plotzker repository's README §7 for now; they move here with
 cadder.

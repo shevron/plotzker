@@ -506,6 +506,16 @@ the printed carriage, motor mount and idler mount are the test pieces.
   visible bending under the expected belt tension (so the MARGINAL FEM verdict, a raw peak at a
   support edge, is accepted; no bore chamfer or larger arm radius needed).
 
+- [x] **T3.27 CPSK sketch format: draft spec and reader.** A constraint-based parametric sketch
+  format for cadder: RFC (`cadder/docs/rfc/parametric-sketch-format.md`), draft 0.1 spec, XSD
+  and example (`cadder/docs/cpsk/`). The reader `cadder.cpsk` loads a document (structure,
+  references, nested constraints, formulas with units, variable overrides), solves it with
+  FreeCAD's solver (`planegcs`, LGPL; on macOS it builds from source: `brew install eigen boost`)
+  and exports the solved profile as SVG for `load_sketch`. Follow-ups: loading `.cpsk` directly
+  in `load_sketch`; a command-line tool; the FreeCAD import/export plugin (RFC phase 3); the
+  spec's open issues (Appendix A). Using `.cpsk` files as plotter CAD sources would change
+  D23/D24 and README §7.1 rule 3: not decided.
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.

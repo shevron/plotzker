@@ -247,3 +247,60 @@ def test_numbers_are_written_to_round_trip(value, text):
 def test_infinite_numbers_cannot_be_written():
     with pytest.raises(ValueError, match="finite"):
         cpsk_core.format_number(float("inf"))
+
+
+def test_constraints_are_nested_canonically():
+    """Spec §11.4: under `about`'s owner (symmetric), else the first operand primitive."""
+    text = f"""<sketch xmlns="{cpsk_core.NAMESPACE}" version="0.1">
+      <geometry>
+        <line id="a" x1="0" y1="0" x2="4" y2="0"/>
+        <line id="b" x1="4" y1="0" x2="4" y2="3"/>
+        <line id="c" x1="4" y1="3" x2="0" y2="0"/>
+        <point id="p" x="1" y="1"/><point id="q" x="3" y="1"/>
+      </geometry>
+      <constraints>
+        <coincident a="a.start" b="origin"/>
+        <horizontal of="a"/>
+        <!-- the joint -->
+        <coincident a="b.start" b="a.end"/>
+        <coincident a="c.end" b="a.start"/>
+        <distance id="w" of="a" value="4"/>
+        <symmetric a="p" b="q" about="b"/>
+        <distance-x a="origin" b="p" value="1"/>
+        <point-on point="q" object="c"/>
+        <equal a="b" b="b"/>
+      </constraints>
+    </sketch>"""
+    parsed = document.parse(text)
+    cpsk_core.nest_constraints(parsed)
+    written = document.write(parsed)
+    assert "<constraints>" not in written
+    assert (
+        """\
+    <line id="a" x1="0" y1="0" x2="4" y2="0">
+      <coincident a="self.start" b="origin"/>
+      <horizontal/>
+      <!-- the joint -->
+      <coincident a="b.start" b="self.end"/>
+      <coincident a="c.end" b="self.start"/>
+      <distance id="w" value="4"/>
+    </line>
+
+    <line id="b" x1="4" y1="0" x2="4" y2="3">
+      <symmetric a="p" b="q"/>
+      <equal b="self"/>
+    </line>
+
+    <line id="c" x1="4" y1="3" x2="0" y2="0">
+      <point-on point="q"/>
+    </line>
+
+    <point id="p" x="1" y="1">
+      <distance-x a="origin" value="1"/>
+    </point>
+"""
+        in written
+    )
+    nested = cpsk_core.compile_document(parsed).constraints
+    top = cpsk_core.loads(text).constraints
+    assert sorted((c.type, c.value) for c in nested) == sorted((c.type, c.value) for c in top)

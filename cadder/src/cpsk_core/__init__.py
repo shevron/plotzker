@@ -6,6 +6,7 @@ sketches with evaluated formulas (:mod:`cpsk_core.reader`). Solving and SVG expo
 ``cadder.cpsk``. The format is specified in ``cadder/docs/cpsk/spec-0.1.md``.
 """
 
+from cpsk_core.canonical import nest_constraints
 from cpsk_core.document import NAMESPACE, Comment, Document, Element, element, format_number
 from cpsk_core.errors import (
     CpskError,
@@ -18,10 +19,11 @@ from cpsk_core.errors import (
     Stage,
 )
 from cpsk_core.model import Arc, Circle, Constraint, Line, Point, Primitive, Sketch
-from cpsk_core.reader import RESERVED, compile_document, load, loads
+from cpsk_core.reader import OPERANDS, RESERVED, compile_document, load, loads
 
 __all__ = [
     "NAMESPACE",
+    "OPERANDS",
     "RESERVED",
     "Arc",
     "Circle",
@@ -46,4 +48,5 @@ __all__ = [
     "format_number",
     "load",
     "loads",
+    "nest_constraints",
 ]

@@ -61,7 +61,7 @@ _GEOMETRY_ATTRS: dict[str, tuple[str, ...]] = {
     "circle": ("cx", "cy", "r"),
     "arc": ("cx", "cy", "r", "start-angle", "end-angle"),
 }
-_OPERANDS: dict[str, tuple[str, ...]] = {
+OPERANDS: dict[str, tuple[str, ...]] = {
     "coincident": ("a", "b"),
     "point-on": ("point", "object"),
     "horizontal": ("of", "a", "b"),
@@ -79,6 +79,7 @@ _OPERANDS: dict[str, tuple[str, ...]] = {
     "diameter": ("of",),
     "angle": ("of", "a", "b"),
 }
+"""Each constraint type's operand attributes (spec §9.3)."""
 _DIMENSIONS: dict[str, Literal["length", "angle"]] = {
     "distance": "length",
     "distance-x": "length",
@@ -349,10 +350,10 @@ class _Reader:
             self.read_constraint(child, None)
 
     def read_constraint(self, element: Element, parent: int | None) -> None:
-        if element.name not in _OPERANDS:
+        if element.name not in OPERANDS:
             self.unknown(element)
             return
-        allowed: tuple[str, ...] = (*_OPERANDS[element.name], "id")
+        allowed: tuple[str, ...] = (*OPERANDS[element.name], "id")
         if element.name in _DIMENSIONS:
             allowed = (*allowed, "value", "driving")
         self.check_attrs(element, allowed)
@@ -522,7 +523,7 @@ class _Reader:
             return "of"
         if raw.type in _OF_OR_PAIR and "a" not in given and "b" not in given:
             return "of"
-        missing = [name for name in _OPERANDS[raw.type] if name != "of" and name not in given]
+        missing = [name for name in OPERANDS[raw.type] if name != "of" and name not in given]
         if len(missing) > 1:
             names = ", ".join(missing)
             self.error("nesting", f"nested <{raw.type}> omits more than one of {names}", raw.line)
@@ -530,7 +531,7 @@ class _Reader:
         return missing[0] if missing else ""
 
     def build(self, raw: _RawConstraint, value: float | None) -> Constraint | None:
-        given = {name: raw.attrs[name] for name in _OPERANDS[raw.type] if name in raw.attrs}
+        given = {name: raw.attrs[name] for name in OPERANDS[raw.type] if name in raw.attrs}
         if raw.parent is not None:
             if "of" in given:
                 self.error("nesting", f"nested <{raw.type}> must not have 'of'", raw.line)

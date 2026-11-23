@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Plan accepted (decisions D1–D8: 2026-11-23). Phases 0 ([results](freecad-conventions.md)) and 1 done |
+| **Status** | Plan accepted (decisions D1–D8: 2026-11-23). Phases 0 ([results](freecad-conventions.md)), 1 and 2 done |
 | **Date** | 2026-11-23 |
 | **Implements** | [RFC](../rfc/parametric-sketch-format.md) §4 step 3 and §8; [spec 0.1](spec-0.1.md) |
 | **Target** | FreeCAD 1.1 (installed here: 1.1.3, Python 3.11.14) |
@@ -75,6 +75,43 @@ than typed classes per element: it keeps attribute order, comments, unknown CPSK
 extensions without special cases, and `cpsk_core.element()` builds elements in code. The
 writer's canonical layout is described in `cpsk_core.document.write`; the spec example is in that
 layout. Solving moved from `Sketch.solve()` to `cadder.cpsk.solve(sketch)`.
+
+**As built (phase 2):** the addon's package is `cadder/freecad-addon/CPSK/cpsk_freecad/`
+(`Init.py`, `InitGui.py` and `package.xml` come in phase 4):
+
+- `sketch_data.py`: `snapshot(sketch)` reads a `SketchObject` into plain data (geometry,
+  external geometry, constraints, expressions, the document's VarSets, the sketch's solver
+  status). None of the modules import FreeCAD, so the mapping is tested without it.
+- `export_sketch.py`: `to_document(data)` (the mapping, §4) and `export_sketch(sketch, path)`.
+  Unsupported features are collected and raised together as a `CpskExportError` (R4); the
+  document is compiled by `cpsk_core` before it is returned, so a mapping gap cannot write a
+  broken file. Constraints are placed with `cpsk_core.nest_constraints` (spec §11.4, new in
+  `cpsk_core.canonical`).
+- `expressions.py`: FreeCAD expression → CPSK formula, with FreeCAD's precedence (§4.3).
+
+Details settled while building it:
+
+- Variables: every user property of each VarSet that an expression references (directly or
+  through another variable) is exported, in the VarSet's property order, so unused variables
+  survive a round trip. Two referenced VarSets with the same property name, a variable named
+  like a constraint, or another property type than length, distance, angle, float or integer
+  are refused.
+- D6 is implemented for deactivated constraints: they are written, with full operands, inside a
+  `<freecad:inactive>` element (namespace `https://github.com/shevron/plotzker/ns/cpsk-freecad`)
+  in `<constraints>`, which CPSK readers skip. Label positions are not exported yet (phase 3,
+  with D4).
+- D4 (keeping ids from an earlier import) is phase 3 work: export always generates ids.
+- The sketch's label becomes the metadata `<title>`.
+- Angle constraint values are written to 12 significant digits (FreeCAD stores radians, so
+  30° reads back as 29.999999999999996°); lengths and stored coordinates are written exactly.
+- Tests (`cadder/tests/test_cpsk_freecad.py`): the 39 phase 0 cases plus export cases
+  (`cadder/tests/cpsk_freecad/export_cases.py`: VarSet expressions with both precedence
+  differences, external geometry, a deactivated constraint, refusals) map without FreeCAD; with
+  FreeCAD each is built, solved, exported, and `cadder.cpsk` must solve the file to FreeCAD's
+  geometry within 1e-9 mm with 0 degrees of freedom.
+- Found for phase 3: FreeCAD reads some identifiers as units in expressions (a constraint named
+  `h`, hours, cannot be referenced: "Failed to parse expression"). CPSK ids that are FreeCAD unit
+  names need a decision on import.
 
 ## 4. Mapping
 
@@ -180,7 +217,7 @@ D1–D7 were accepted on 2026-11-23; D8, from phase 0, was accepted the same day
 |---|---|---|
 | **0. Conventions spike** ✅ | Script in `freecadcmd`: build one sketch per constraint row in §4.2 and compare FreeCAD's solved geometry with `cadder.cpsk` solving the same constraints. Check expression units, trigonometric units, VarSet references and the tangent `Value`. | Every §4.2 row verified or marked unsupported; spec §9.3 TBD resolved |
 | **1. Core package** ✅ | Extract `cpsk_core` (D1): Python 3.11 syntax, lossless `Document` model, canonical writer; `cadder.cpsk` builds on it. | cadder tests pass; the core's tests pass under FreeCAD's Python (`make test-cpsk-core`); reading and writing the spec example gives the same file |
-| **2. Export** | `export_sketch` (§4), unsupported-feature report, expressions, external geometry. | A test corpus of FreeCAD sketches exports; `cadder.cpsk` solves each export to FreeCAD's geometry (within 1e-9 mm); unsupported features are refused with a list |
+| **2. Export** ✅ | `export_sketch` (§4), unsupported-feature report, expressions, external geometry. | A test corpus of FreeCAD sketches exports; `cadder.cpsk` solves each export to FreeCAD's geometry (within 1e-9 mm); unsupported features are refused with a list |
 | **3. Import** | `import_sketch`, VarSet creation (D2), id preservation (D4). | FreeCAD → CPSK → FreeCAD gives the same geometry, constraints, names and expressions (R5); the spec example imports fully constrained |
 | **4. GUI and install** | Import/export registration, dialogs, `make freecad-addon` (link into `Mod`), `package.xml`. | Import and export work from the File menu in FreeCAD 1.1 on macOS |
 | **5. Docs** | Addon README, cadder docs, spec updates from phase 0, STATUS tasks. | Docs describe install and use; open spec issues updated |
@@ -202,5 +239,6 @@ D1–D7 were accepted on 2026-11-23; D8, from phase 0, was accepted the same day
 |---|---|
 | Sign and direction conventions differ between FreeCAD's constraint operands and the spec | Phase 0, before any mapping code |
 | FreeCAD's unit-aware expressions differ from unitless CPSK formulas | Phase 0: lenient in practice (§4.3); import reports any expression FreeCAD rejects; revisit with spec A6 |
+| CPSK ids that FreeCAD reads as units (`h`, `s`, …) cannot be referenced in FreeCAD expressions | Phase 3: list them and refuse or rename on import (found in phase 2) |
 | FreeCAD internals change between releases (constraint fields, VarSet API) | Only public Python API; pin the tested FreeCAD version in `package.xml`; the cross-solver tests catch drift |
 | Two Python versions to support (3.11 core, 3.14 cadder) | Core tested under both; ruff `target-version = "py311"` for the core |

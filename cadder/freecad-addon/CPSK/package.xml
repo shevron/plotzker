@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
+  <name>CPSK</name>
+  <description>Import and export Sketcher sketches as CPSK files, a constraint-based parametric sketch format (draft 0.1).</description>
+  <version>0.1.0-dev</version>
+  <date>2026-11-23</date>
+  <maintainer email="shahar.evron@gmail.com">Shahar Evron</maintainer>
+  <license>TBD</license>
+  <freecadmin>1.1.0</freecadmin>
+  <content>
+    <!-- A "workbench" item although the addon has no workbench: FreeCAD 1.1 runs Init.py (which
+         registers the file type) only for workbench items when package.xml is present. -->
+    <workbench>
+      <name>CPSK</name>
+      <description>File &gt; Open, Import and Export for .cpsk sketches</description>
+      <subdirectory>./</subdirectory>
+      <tag>sketcher</tag>
+      <tag>import</tag>
+      <tag>export</tag>
+    </workbench>
+  </content>
+</package>

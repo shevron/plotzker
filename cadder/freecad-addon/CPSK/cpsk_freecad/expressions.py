@@ -246,44 +246,112 @@ FREECAD_UNITS = {"mm": "mm", "cm": "cm", "m": "m", "in": "in", "deg": "°", "rad
 """CPSK unit → FreeCAD unit."""
 
 
-def to_freecad(formula: str, resolve: Callable[[str], str]) -> str:
-    """The FreeCAD expression for a CPSK formula; ``resolve`` turns an identifier into a
-    FreeCAD reference (e.g. ``width`` → ``Vars.width``).
+Dimension: TypeAlias = str | None
+"""``"length"``, ``"angle"``, ``"other"`` (an area, a mix) or ``None`` (dimensionless)."""
 
-    Written with FreeCAD's precedence (``-2^2`` → ``-(2 ^ 2)``, ``2^3^2`` → ``2 ^ (3 ^ 2)``).
+_DIMENSIONED = {"length": "mm", "angle": "°"}
+"""Dimensions FreeCAD checks in sums, and the unit a CPSK mm/deg document means for them."""
+
+
+def to_freecad(
+    formula: str,
+    resolve: Callable[[str], str],
+    dimension: Callable[[str], Dimension] = lambda name: None,
+) -> str:
+    """The FreeCAD expression for a CPSK formula in a millimetre and degree document.
+
+    ``resolve`` turns an identifier into a FreeCAD reference (e.g. ``width`` → ``Vars.width``),
+    ``dimension`` says what it measures. Written with FreeCAD's precedence (``-2^2`` →
+    ``-(2 ^ 2)``, ``2^3^2`` → ``2 ^ (3 ^ 2)``). FreeCAD checks units in ``+``, ``-``, ``min``
+    and ``max``, where a CPSK document's unitless number means millimetres or degrees: there
+    such a number gets its unit (``s - 6`` → ``s - 6 mm``), and a unitless subexpression is
+    multiplied by ``1 mm`` or ``1 °``.
     """
-    return _freecad(cpsk_formula.parse(formula), resolve)[0]
+    return _Writer(resolve, dimension).write(cpsk_formula.parse(formula))[0]
 
 
 # FreeCAD levels: 1 sum, 2 product, 3 power (left-associative), 4 unary, 5 primary.
 
 
-def _freecad(node: cpsk_formula.Node, resolve: Callable[[str], str]) -> tuple[str, int]:
-    match node:
-        case cpsk_formula.Number(value=value, unit=None) if value == math.pi:
-            return "pi", 5  # the parser folds the constant into a number
-        case cpsk_formula.Number(value=value, unit=unit):
-            text = format_number(value)
-            return (f"{text} {FREECAD_UNITS[unit]}" if unit else text), 5
-        case cpsk_formula.Name(parts=parts):
-            if parts[0] in CONSTANTS and len(parts) == 1:
-                return parts[0], 5
-            return resolve(".".join(parts)), 5
-        case cpsk_formula.Call(function=function, args=args):
-            return f"{function}({'; '.join(_freecad(a, resolve)[0] for a in args)})", 5
-        case cpsk_formula.Unary(op=op, operand=operand):
-            return f"{op}{_freecad_wrap(operand, 4, resolve)}", 4
-        case cpsk_formula.Binary(op="^", left=left, right=right):
-            return f"{_freecad_wrap(left, 3, resolve)} ^ {_freecad_wrap(right, 4, resolve)}", 3
-        case cpsk_formula.Binary(op=op, left=left, right=right) if op in ("*", "/"):
-            return f"{_freecad_wrap(left, 2, resolve)} {op} {_freecad_wrap(right, 3, resolve)}", 2
-        case cpsk_formula.Binary(op=op, left=left, right=right):
-            return f"{_freecad_wrap(left, 1, resolve)} {op} {_freecad_wrap(right, 2, resolve)}", 1
-    raise AssertionError(node)
+class _Writer:
+    def __init__(self, resolve: Callable[[str], str], dimension: Callable[[str], Dimension]):
+        self.resolve = resolve
+        self.dimension = dimension
+
+    def write(self, node: cpsk_formula.Node) -> tuple[str, int, Dimension]:
+        match node:
+            case cpsk_formula.Number(value=value, unit=None) if value == math.pi:
+                return "pi", 5, None  # the parser folds the constant into a number
+            case cpsk_formula.Number(value=value, unit=None):
+                return format_number(value), 5, None
+            case cpsk_formula.Number(value=value, unit=str(unit)):
+                kind = cpsk_formula.unit_kind(unit)
+                return f"{format_number(value)} {FREECAD_UNITS[unit]}", 5, kind
+            case cpsk_formula.Name(parts=parts):
+                name = ".".join(parts)
+                if name in CONSTANTS:
+                    return name, 5, None
+                return self.resolve(name), 5, self.dimension(name)
+            case cpsk_formula.Call(function=function, args=args):
+                return self.call(function, args)
+            case cpsk_formula.Unary(op=op, operand=operand):
+                text, level, dim = self.write(operand)
+                return f"{op}{_paren(text, level, 4)}", 4, dim
+            case cpsk_formula.Binary(op="^", left=left, right=right):
+                (lt, ll, ld), (rt, rl, _) = self.write(left), self.write(right)
+                return (
+                    f"{_paren(lt, ll, 3)} ^ {_paren(rt, rl, 4)}",
+                    3,
+                    None if ld is None else "other",
+                )
+            case cpsk_formula.Binary(op=op, left=left, right=right) if op in ("*", "/"):
+                (lt, ll, ld), (rt, rl, rd) = self.write(left), self.write(right)
+                if op == "*":
+                    dim = rd if ld is None else ld if rd is None else "other"
+                else:
+                    dim = ld if rd is None else None if ld == rd else "other"
+                return f"{_paren(lt, ll, 2)} {op} {_paren(rt, rl, 3)}", 2, dim
+            case cpsk_formula.Binary(op=op, left=left, right=right):
+                (lt, ll, ld), (rt, rl, rd) = self.matched([left, right])
+                return f"{_paren(lt, ll, 1)} {op} {_paren(rt, rl, 2)}", 1, ld or rd
+        raise AssertionError(node)
+
+    def call(
+        self, function: str, args: tuple[cpsk_formula.Node, ...]
+    ) -> tuple[str, int, Dimension]:
+        if function in ("min", "max", "abs"):
+            written = self.matched(list(args))
+            dim = next((d for _, _, d in written if d is not None), None)
+        else:
+            written = [self.write(a) for a in args]
+            dim = {"sin": None, "cos": None, "tan": None, "sqrt": "other"}.get(function, "angle")
+            if function == "sqrt" and written[0][2] is None:
+                dim = None
+        return f"{function}({'; '.join(text for text, _, _ in written)})", 5, dim
+
+    def matched(self, nodes: list[cpsk_formula.Node]) -> list[tuple[str, int, Dimension]]:
+        """Operands that FreeCAD adds or compares: unitless ones get the others' unit."""
+        written = [self.write(n) for n in nodes]
+        dims = {d for _, _, d in written} - {None}
+        if len(dims) != 1 or (dim := dims.pop()) not in _DIMENSIONED:
+            return written
+        unit = _DIMENSIONED[dim]
+        result: list[tuple[str, int, Dimension]] = []
+        for node, (text, level, own) in zip(nodes, written, strict=True):
+            if own is not None:
+                result.append((text, level, own))
+            elif isinstance(node, cpsk_formula.Number) and text != "pi":
+                result.append((f"{text} {unit}", 5, dim))
+            elif isinstance(node, cpsk_formula.Unary) and isinstance(
+                node.operand, cpsk_formula.Number
+            ):
+                result.append((f"{text} {unit}", 4, dim))
+            else:
+                result.append((f"{_paren(text, level, 2)} * 1 {unit}", 2, dim))
+        return result
 
 
-def _freecad_wrap(node: cpsk_formula.Node, level: int, resolve: Callable[[str], str]) -> str:
-    text, own = _freecad(node, resolve)
+def _paren(text: str, own: int, level: int) -> str:
     return text if own >= level else f"({text})"
 
 

@@ -310,6 +310,7 @@ def test_freecad_round_trip_writes_the_same_file(
     result = imported_results[case["name"]]
     assert set(result) >= {"file", "dof"}, result
     assert result["dof"] == 0
+    assert result["import_warnings"] == []
     first = Path(freecad_results[case["name"]]["file"]).read_text()
     assert Path(result["file"]).read_text() == first
 
@@ -335,6 +336,24 @@ def test_freecad_renames_unit_names_and_export_restores_them(
     assert {"t_", "e_", "span", "tilt"} <= set(properties)
     assert properties["tilt"] == pytest.approx(-18)  # -(2^2) * 5 + 2^(3^0), FreeCAD's precedence
     assert ["Distance", "", True, False] in result["constraints"]  # the deactivated one
+
+
+def test_freecad_file_menu_entry_points(tmp_path: Path) -> None:
+    """Init.py registers .cpsk; importCPSK's open, insert and export work (phase 4)."""
+    addon = Path(__file__).parents[1] / "freecad-addon" / "CPSK"
+    results = _run_freecad(
+        "run_entry_points.py",
+        tmp_path,
+        CPSK_ADDON=str(addon),
+        CPSK_SAMPLE=str(SAMPLES[0]),
+        CPSK_ENTRY_OUT=str(tmp_path),
+    )
+    # once, or twice when the addon is also installed in FreeCAD's Mod folder
+    assert set(results["import_type"]) == set(results["export_type"]) == {"importCPSK"}
+    assert results["inserted"] == ["Plate with a hole", 0, 0]
+    assert results["opened"] == ["plate_with_hole"]
+    assert "exactly one sketch" in results["refused"]
+    assert (tmp_path / "export.cpsk").read_text() == _without_comments(read(SAMPLES[0]))
 
 
 # ----- Import, without FreeCAD -----
@@ -368,9 +387,31 @@ def _without_comments(document: Document) -> str:
     ],
 )
 def test_formulas_translate_to_freecad(cpsk_formula: str, expected: str) -> None:
-    assert to_freecad(cpsk_formula, lambda name: f"Vars.{name}") == expected
+    assert to_freecad(cpsk_formula, lambda name: f"Vars.{name}", _DIMENSIONS.get) == expected
     back = translate(expected, lambda path: path.parts[-1])
     assert parse_formula(back) == parse_formula(cpsk_formula)
+
+
+_DIMENSIONS = {"width": "length", "tilt": "angle"}
+
+
+@pytest.mark.parametrize(
+    ("cpsk_formula", "expected"),
+    [
+        ("width - 6", "Vars.width - 6 mm"),
+        ("-6 + width", "-6 mm + Vars.width"),
+        ("width / 2 + 1", "Vars.width / 2 + 1 mm"),
+        ("(1 + 2) + width", "(1 + 2) * 1 mm + Vars.width"),
+        ("min(width, 3)", "min(Vars.width; 3 mm)"),
+        ("tilt + 5", "Vars.tilt + 5 °"),
+        ("width * 2 + 1cm", "Vars.width * 2 + 1 cm"),
+        ("width * width + 4", "Vars.width * Vars.width + 4"),  # an area: left alone
+        ("ratio + 1", "Vars.ratio + 1"),  # dimensionless
+    ],
+)
+def test_unitless_numbers_in_sums_get_document_units(cpsk_formula: str, expected: str) -> None:
+    """FreeCAD checks units in sums; a unitless number in a mm/deg document means mm or °."""
+    assert to_freecad(cpsk_formula, lambda name: f"Vars.{name}", _DIMENSIONS.get) == expected
 
 
 @pytest.mark.parametrize("path", SAMPLES, ids=[p.stem for p in SAMPLES])
@@ -395,7 +436,8 @@ def test_import_renames_unit_names_where_freecad_needs_them() -> None:
     assert sorted(w.ids[0] for w in warnings if w.code == "renamed") == ["e", "g", "s", "t"]
     assert [v.name for v in data.varsets[0].variables] == ["t_", "e_", "span", "tilt"]
     assert data.varsets[0].variables[2].expression == "t_ * e_ + 1 cm"
-    assert data.expressions["cpsk_3"] == "Constraints.s_ - 6"  # an anonymous constraint
+    assert data.expressions["cpsk_3"] == "Constraints.s_ - 6 mm"  # an anonymous constraint
+    assert data.kept.formulas["c:cpsk_3"] == ("Constraints.s_ - 6 mm", "s - 6")
     assert data.kept.names == {"t_": "t", "e_": "e", "s_": "s", "g_": "g"} | {
         f"cpsk_{n}": "" for n in (1, 2, 3)
     }

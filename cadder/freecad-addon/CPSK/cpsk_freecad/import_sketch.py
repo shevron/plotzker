@@ -107,6 +107,16 @@ def import_sketch(doc: Any, path: str | FilePath) -> tuple[Any, list[Diagnostic]
         raise
     build(sketch, varset, data, label=data.label or FilePath(path).stem)
     doc.recompute()
+    for created in (sketch, varset):
+        if created is not None and "Invalid" in created.State:
+            warnings.append(
+                warning(
+                    Stage.LOAD,
+                    "freecad",
+                    f"FreeCAD reports a problem in {created.Label}: {created.getStatusString()}",
+                    ids=[created.Label],
+                )
+            )
     return sketch, warnings
 
 
@@ -143,11 +153,23 @@ def build(sketch: Any, varset: Any, data: SketchData, *, label: str) -> None:
             sketch.setActive(index, False)
     for name, expression in data.expressions.items():
         sketch.setExpression(f"Constraints.{name}", expression)
+    _store_formulas(data.kept, "c:", sketch)
+    if varset is not None:
+        _store_formulas(data.kept, "v:", varset)
     geometry_ids = [sketch.getGeometryId(i) for i in range(len(sketch.Geometry))]
     sketch.addProperty(
         "App::PropertyString", KEPT_PROPERTY, "CPSK", "CPSK round-trip data", 0, False, True
     )
     setattr(sketch, KEPT_PROPERTY, data.kept.to_json(geometry_ids))
+
+
+def _store_formulas(kept: Kept, prefix: str, owner: Any) -> None:
+    """Record expressions as FreeCAD stored them (it rewrites the text), for export (D4)."""
+    stored = {path.removeprefix(".Constraints."): text for path, text in owner.ExpressionEngine}
+    for key, (_, formula) in list(kept.formulas.items()):
+        name = key.removeprefix(prefix)
+        if key.startswith(prefix) and name in stored:
+            kept.formulas[key] = (stored[name], formula)
 
 
 def _is_freecad_unit(name: str) -> bool:
@@ -255,7 +277,9 @@ class _Importer:
             formula = self._formula(constraint)
             if formula is not None and constraint.driving:
                 name = self._fc_name(constraint, data)
-                data.expressions[name] = to_freecad(formula, self._sketch_reference)
+                expression = to_freecad(formula, self._sketch_reference, self._dimension)
+                data.expressions[name] = expression
+                kept.formulas[f"c:{name}"] = (expression, formula)
         if self.variables:
             data.varsets.append(self._varset(compiled, kept))
         self._check_cycles(compiled)
@@ -425,13 +449,29 @@ class _Importer:
                     name,
                     _PROPERTY_TYPES[element.get("type") or "number"],
                     compiled.variables[identifier],
-                    None
-                    if is_plain_number(formula)
-                    else to_freecad(formula, self._varset_reference),
+                    self._variable_expression(name, formula, kept),
                     element.get("description") or "",
                 )
             )
         return VarSet(self.varset_name, "", tuple(variables))
+
+    def _variable_expression(self, name: str, formula: str, kept: Kept) -> str | None:
+        if is_plain_number(formula):
+            return None
+        expression = to_freecad(formula, self._varset_reference, self._dimension)
+        kept.formulas[f"v:{name}"] = (expression, formula)
+        return expression
+
+    def _dimension(self, identifier: str) -> str | None:
+        """What a variable or constraint value measures (for FreeCAD's unit checks)."""
+        if identifier in self.variables:
+            kind = self.variables[identifier].get("type") or "number"
+            return None if kind == "number" else kind
+        assert self.compiled is not None
+        for constraint in self.compiled.constraints:
+            if constraint.id == identifier:
+                return "angle" if constraint.type == "angle" else "length"
+        return None
 
     def _check_cycles(self, compiled: cpsk.Sketch) -> None:
         """FreeCAD refuses a VarSet that uses the sketch while the sketch uses the VarSet."""

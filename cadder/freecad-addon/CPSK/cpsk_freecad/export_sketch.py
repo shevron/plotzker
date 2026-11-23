@@ -273,7 +273,9 @@ class _Exporter:
     def _value(self, constraint: Constraint) -> str:
         expression = self.data.expressions.get(constraint.name) if constraint.driving else None
         if expression is not None:
-            return translate(expression, self._sketch_resolver)
+            formula = translate(expression, self._sketch_resolver)  # also records references
+            kept = self.kept.formulas.get(f"c:{constraint.name}")
+            return kept[1] if kept is not None and kept[0] == expression else formula
         if constraint.type == "Angle":  # radians; 12 digits turn 29.999999999999996 into 30
             return format_number(float(f"{math.degrees(constraint.value):.12g}"))
         return format_number(constraint.value)
@@ -456,6 +458,9 @@ class _Exporter:
     def _variable_element(self, varset: VarSet, variable: Any) -> Element:
         if variable.expression is not None:
             value = translate(variable.expression, self._varset_resolver(varset))
+            kept = self.kept.formulas.get(f"v:{variable.name}")
+            if varset.name == self.kept.varset and kept is not None:
+                value = kept[1] if kept[0] == variable.expression else value
         else:
             value = format_number(variable.value)
         low, high = self.kept.limits.get(variable.name, (None, None))

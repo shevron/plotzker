@@ -93,6 +93,10 @@ class Kept:
     """The name of the VarSet the import created; exported even if no expression uses it."""
     order: list[str] = field(default_factory=list)
     """That VarSet's variables (FreeCAD names) in document order; FreeCAD sorts properties."""
+    formulas: dict[str, tuple[str, str]] = field(default_factory=dict)
+    """``c:<constraint>`` or ``v:<variable>`` (FreeCAD names) → (the FreeCAD expression as
+    FreeCAD stored it on import, the CPSK formula as written). While the expression is
+    unchanged, export writes the formula as written."""
 
     def to_json(self, geometry_ids: list[int]) -> str:
         """JSON, with geometry indexes turned into GeometryIds (``geometry_ids[index]``)."""
@@ -105,6 +109,7 @@ class Kept:
                 "metadata": [list(item) for item in self.metadata],
                 "varset": self.varset,
                 "order": self.order,
+                "formulas": {key: list(pair) for key, pair in self.formulas.items()},
             },
             ensure_ascii=False,
         )
@@ -121,6 +126,7 @@ class Kept:
             metadata=[(name, text) for name, text in data["metadata"]],
             varset=data["varset"],
             order=list(data.get("order", [])),
+            formulas={key: (pair[0], pair[1]) for key, pair in data.get("formulas", {}).items()},
         )
 
 

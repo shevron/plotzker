@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Plan accepted (decisions D1–D9: 2026-11-23). Phases 0 ([results](freecad-conventions.md)) to 3 done |
+| **Status** | Plan accepted (decisions D1–D9: 2026-11-23). Phases 0 ([results](freecad-conventions.md)) to 4 done |
 | **Date** | 2026-11-23 |
 | **Implements** | [RFC](../rfc/parametric-sketch-format.md) §4 step 3 and §8; [spec 0.1](spec-0.1.md) |
 | **Target** | FreeCAD 1.1 (installed here: 1.1.3, Python 3.11.14) |
@@ -145,6 +145,33 @@ the same plain data the exporter reads (so both directions are tested without Fr
   an anonymous primitive, precedence, a deactivated constraint) import fully constrained and
   export to the same file without its comments (D4).
 
+**As built (phase 4):**
+
+- `Init.py` registers "CPSK sketch (*.cpsk)" with `FreeCAD.addImportType` and `addExportType`;
+  `importCPSK.py` has FreeCAD's importer functions `open`, `insert` and `export`. Warnings go to
+  the Report view; a refused import or export (and an export without exactly one sketch
+  selected) also shows a dialog listing every problem. Without the GUI, errors are raised.
+  There is no `InitGui.py`: File menu types need none.
+- `package.xml` declares the addon as a `<workbench>` item although it has no workbench:
+  FreeCAD 1.1 runs `Init.py` only for workbench items when `package.xml` is present (an
+  `<other>` item is never loaded). Its licence is TBD, as the RFC's.
+- `make freecad-addon` links `cadder/freecad-addon/CPSK` into FreeCAD's user `Mod` folder
+  (`FREECAD_MOD`, default `~/Library/Application Support/FreeCAD/v1-1/Mod`; it refuses to replace
+  anything there that is not a link). `cpsk_freecad` then finds `cpsk_core` in the repository's
+  `cadder/src` (through the link's real path); a released addon would ship a copy instead.
+- Found while testing: FreeCAD checks units in sums. In a mm/deg document a unitless number
+  added to a length or angle means mm or degrees, so the import writes it with its unit
+  (`s - 6` → `Constraints.s - 6 mm`, a unitless subexpression gets `* 1 mm`); `min`, `max` and
+  `abs` likewise. Without this FreeCAD rejected the expression and kept the old value. The
+  import now reports such FreeCAD errors as warnings, and the tests require none. To keep
+  CPSK → FreeCAD → CPSK unchanged, `CpskData` keeps each formula as written with FreeCAD's
+  stored expression; export writes the original while the expression is unchanged.
+- Tests: the entry points run in `freecadcmd` (`run_entry_points.py`). Checked once by hand in
+  FreeCAD 1.1.3's GUI on macOS: the File menu's path (module looked up by extension; `insert`,
+  `open`, `export`) imports the spec example fully constrained and exports it unchanged.
+  FreeCAD's Python `FreeCADGui.insert`/`open` only handle built-in formats, so they cannot be
+  used to test this.
+
 ## 4. Mapping
 
 ### 4.1 Geometry
@@ -252,7 +279,7 @@ D1–D7 were accepted on 2026-11-23; D8 (from phase 0) and D9 (from phase 3) wer
 | **1. Core package** ✅ | Extract `cpsk_core` (D1): Python 3.11 syntax, lossless `Document` model, canonical writer; `cadder.cpsk` builds on it. | cadder tests pass; the core's tests pass under FreeCAD's Python (`make test-cpsk-core`); reading and writing the spec example gives the same file |
 | **2. Export** ✅ | `export_sketch` (§4), unsupported-feature report, expressions, external geometry. | A test corpus of FreeCAD sketches exports; `cadder.cpsk` solves each export to FreeCAD's geometry (within 1e-9 mm); unsupported features are refused with a list |
 | **3. Import** ✅ | `import_sketch`, VarSet creation (D2), id preservation (D4). | FreeCAD → CPSK → FreeCAD gives the same geometry, constraints, names and expressions (R5); the spec example imports fully constrained |
-| **4. GUI and install** | Import/export registration, dialogs, `make freecad-addon` (link into `Mod`), `package.xml`. | Import and export work from the File menu in FreeCAD 1.1 on macOS |
+| **4. GUI and install** ✅ | Import/export registration, dialogs, `make freecad-addon` (link into `Mod`), `package.xml`. | Import and export work from the File menu in FreeCAD 1.1 on macOS |
 | **5. Docs** | Addon README, cadder docs, spec updates from phase 0, STATUS tasks. | Docs describe install and use; open spec issues updated |
 
 ## 8. Testing

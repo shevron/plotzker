@@ -1,11 +1,12 @@
 # Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check typecheck format lint test test-cpsk-core stl render render-inspect freecad fem fem-status diff
+.PHONY: help develop clean check typecheck format lint test test-cpsk-core freecad-addon stl render render-inspect freecad fem fem-status diff
 
 PYTHON_VERSION := $(shell cat .python-version)
 UV_RUN := uv run --extra dev --extra diff
 FREECAD_PYTHON ?= $(or $(CADDER_FREECAD_BIN_DIR),/Applications/FreeCAD.app/Contents/Resources/bin)/python
+FREECAD_MOD ?= $(HOME)/Library/Application Support/FreeCAD/v1-1/Mod
 
 help:  ## List the available commands
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-9s %s\n", $$1, $$2}'
@@ -38,6 +39,12 @@ test:  ## Run the unit tests (pytest)
 test-cpsk-core:  ## Run cpsk_core's tests on FreeCAD's Python 3.11 (FREECAD_PYTHON=...), the oldest it supports
 	PYTHONPATH=cadder/src uv run --no-project --python "$(FREECAD_PYTHON)" --with pytest \
 		python -m pytest cadder/tests/test_cpsk_core.py --noconftest -p no:cacheprovider
+
+freecad-addon:  ## Link the CPSK FreeCAD addon into FreeCAD's Mod folder (FREECAD_MOD=...); restart FreeCAD after
+	mkdir -p "$(FREECAD_MOD)"
+	@if [ -e "$(FREECAD_MOD)/CPSK" ] && [ ! -L "$(FREECAD_MOD)/CPSK" ]; then \
+		echo "$(FREECAD_MOD)/CPSK exists and is not a link; remove it first" >&2; exit 1; fi
+	ln -sfn "$(CURDIR)/cadder/freecad-addon/CPSK" "$(FREECAD_MOD)/CPSK"
 
 stl:  ## Generate the STLs of all printable parts into stl/
 	$(UV_RUN) python -m plotzker stl

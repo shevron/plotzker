@@ -51,7 +51,7 @@ complete small example.
 | `cadder.geometry` | Facet settings (`FN`, `CADDER_FN`), `box`, teardrop holes, the sketch loader `load_sketch` (SVG, and CPSK files solved with `params` overrides), small vector helpers |
 | `cadder.cpsk` | CPSK parametric sketches ([spec](docs/cpsk/spec-0.1.md)): everything in `cpsk_core`, plus `solve` (FreeCAD's PlaneGCS solver through `planegcs`; degrees of freedom, redundant and conflicting constraints as diagnostics; `strict`), `to_svg` (a profile for `load_sketch`) |
 | `cpsk_core` | The CPSK format without a solver, standard library only and Python ≥ 3.11 so FreeCAD's Python can use it: the lossless `Document` (parse, build, canonical `write`, canonical constraint placement `nest_constraints`), `load`/`loads`/`compile_document` (validation, nesting, formulas, variable overrides) into a `Sketch` |
-| `cpsk_freecad` | The FreeCAD addon's package (`freecad-addon/CPSK/`, runs in FreeCAD's Python; not in the wheel): `export_sketch` writes a Sketcher sketch as a `.cpsk` file, refusing unsupported features with a list; `import_sketch` creates a sketch and its VarSet from one; ids, names and metadata survive both round trips ([plan](docs/cpsk/freecad-plugin-plan.md)) |
+| `cpsk_freecad` | The FreeCAD addon's package (`freecad-addon/CPSK/`, runs in FreeCAD's Python; not in the wheel): `export_sketch` writes a Sketcher sketch as a `.cpsk` file, refusing unsupported features with a list; `import_sketch` creates a sketch and its VarSet from one; ids, names and metadata survive both round trips. The addon (`Init.py`, `importCPSK.py`) adds `.cpsk` to FreeCAD's File > Open, Import and Export; `make freecad-addon` installs it ([plan](docs/cpsk/freecad-plugin-plan.md)) |
 | `cadder.printing` | `Tolerances` for FDM prints (clearance holes, nut traps, fits) and `nut_slot`, a hex pocket for a nut pressed in sideways |
 | `cadder.hardware` | Vendor parts with dimensions and simple models: metric fasteners, bearings, GT2 belts/pulleys/idlers, NEMA17 and a micro servo, V-slot extrusions (SVG profiles) with wheels and eccentric spacers, smooth shafts, SK10, SCS10UU |
 | `cadder.materials` | `Material`, `PrintProfile` and `MaterialLibrary`, which reads a project's materials TOML and print profiles folder |
@@ -98,6 +98,7 @@ uv sync --extra dev --extra diff     # from the workspace root, or here
 uv run python -m pytest              # cadder's tests (tests/, on the fixture project)
 uv run mypy && uv run ruff check .   # strict types and lint; `plotzker` imports are banned (TID251)
 make test-cpsk-core                  # (workspace root) cpsk_core's tests on FreeCAD's Python 3.11
+make freecad-addon                   # (workspace root) link the CPSK addon into FreeCAD's Mod folder
 ```
 
 The `diff` extra (numpy, manifold3d) is needed for the design diff. `planegcs` (the CPSK

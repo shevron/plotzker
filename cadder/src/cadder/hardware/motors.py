@@ -23,7 +23,7 @@ class Nema17Spec:
     boss_h: float = 2
     shaft_d: float = 5
     shaft_len: float = 22.6  #: from the face, 39.2 mm motor (measured)
-    #: Shortest shaft on hand (33.5 mm motor, measured): belt lines must work with it.
+    #: Shortest shaft of the supported motors (the 33.5 mm body); belt lines must work with it.
     shaft_len_min: float = 19
     shaft_flat: float = 0.5  #: D-cut depth. ASSUMED
     chamfer: float = 4  #: corner chamfer (visual)

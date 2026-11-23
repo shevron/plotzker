@@ -1,4 +1,4 @@
-"""Visual design diff between two revisions (``python -m plotzker diff``).
+"""Visual design diff between two revisions (``cadder diff``).
 
 Phase 1 (T3.20): build every printable part at two git revisions (or the working tree), compare
 the meshes and report which parts were added, removed or changed. The modules:

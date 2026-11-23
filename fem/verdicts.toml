@@ -12,6 +12,12 @@ date = "2026-11-23"
 geometry = "0407e7a5a2abb832"
 spec = "16cc5f2a6ba76b00"
 
+[idler_slider]
+verdict = "MARGINAL"
+date = "2026-11-23"
+geometry = "296465b6ee31f2fb"
+spec = "efa0272ef444134e"
+
 [pen_holder_body]
 verdict = "MARGINAL"
 date = "2026-11-20"
@@ -30,16 +36,10 @@ date = "2026-11-23"
 geometry = "7e6a5142bb443096"
 spec = "b8c4a6a801ca6919"
 
-[x_idler_slider]
-verdict = "MARGINAL"
-date = "2026-11-23"
-geometry = "296465b6ee31f2fb"
-spec = "72b06bc1f4f3740c"
-
 [x_idler_tensioner]
 verdict = "PASS"
 date = "2026-11-23"
-spec = "af67094e0cc7b0b7"
+spec = "b4a0f2b5fadfd05b"
 
 [x_motor_mount]
 verdict = "FAIL"
@@ -50,7 +50,7 @@ spec = "a4108eede4c1c67a"
 [y_idler_mount_left]
 verdict = "PASS"
 date = "2026-11-23"
-geometry = "5322bd1f01408033"
+geometry = "af042b3e45a7853b"
 spec = "785f5fee747f2666"
 
 [y_idler_mount_right]
@@ -59,21 +59,15 @@ date = "2026-11-23"
 geometry = "02c21901ca557b3d"
 spec = "2c8717f70652aa81"
 
-[y_idler_slider_left]
-verdict = "MARGINAL"
-date = "2026-11-23"
-geometry = "ba41e10242dcf3f7"
-spec = "b236c4b524948e5e"
-
 [y_idler_tensioner_left]
 verdict = "PASS"
 date = "2026-11-23"
-spec = "7dc081850db62ca0"
+spec = "ac65ac758726f8b6"
 
 [y_idler_tensioner_right]
 verdict = "PASS"
 date = "2026-11-23"
-spec = "6b2d25e0a7fb74aa"
+spec = "dd2563b000d80e96"
 
 [y_motor_mount_left]
 verdict = "FAIL"

@@ -2,7 +2,7 @@
 
 Purpose: carries the Y belt idler on the baseboard in front of the front SK10, in line with the
 belt (30 mm outboard of the shaft), tensions the belt, and carries the Y endstop board. The
-idler turns on an M5 axle held at both ends by the U-shaped :mod:`y_idler_slider`, which floats:
+idler turns on an M5 axle held at both ends by the U-shaped :mod:`idler_slider`, which floats:
 no rail, held only by an M3 screw along the belt line at the axle's height, through the tower at
 the front of this foot (a plate with two side walls; see :mod:`floating_idler`). The screw's head
 is reachable from the front. The foot is screwed to the baseboard outboard of the tower. A second
@@ -19,10 +19,11 @@ the end of travel; the screw's length sets the exact trip point.
 
 Frame: left side frame (``params.YDrive``: x from the shaft, machine y, z = baseboard
 top); the part is printed foot down in the same orientation. The right-hand part is the
-mirror image, except for the endstop tower's height and holes: the board is chiral, so
-the lever hinge sits at the other end (:func:`y_idler_mount`).
+mirror image, except for the endstop tower's height and holes (the board is chiral, so the
+lever hinge sits at the other end) and the idler tower's head pocket, which is on the other wall
+so that both sides take the same unmirrored slider (:func:`idler_for`).
 
-Hardware: see :mod:`y_idler_slider` (idler, M5×25 axle + nut, M3 nut) + 1 × M3×``Y_IDLER.screw_len``
+Hardware: see :mod:`idler_slider` (idler, M5×25 axle + nut, M3 nut) + 1 × M3×``Y_IDLER.screw_len``
 ISO 4762 with a large M3 washer (tension screw, from the tower plate's front face); 2 × 4×25
 countersunk wood screws into the baseboard (through 13 mm bosses on the foot, outboard of the
 tower); the endstop board with 2 × M3×12 into 2 × M3 nuts pressed into the endstop tower's outboard
@@ -34,6 +35,7 @@ wood screws (their countersinks) and the baseboard under the foot; see :data:`PA
 mount has its own part (its endstop tower differs), with the same load path.
 """
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from cadder.geometry import FN_HOLE
@@ -46,7 +48,7 @@ from pythonscad import cube, cylinder, union
 from plotzker.hardware import ENDSTOP
 from plotzker.loads import Y_BELT_LOADS
 from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
-from plotzker.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_IDLER
+from plotzker.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_IDLER, FloatingIdler
 from plotzker.parts.floating_idler import mount_fem, tower
 from plotzker.parts.sk10_pocket import PocketEnd, sk10_pocket
 from plotzker.parts.wood_screw import wood_screw_boss, wood_screw_hole
@@ -60,8 +62,22 @@ AXIS_Z = T.axle_z  #: idler axle height
 SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the foot's ends (y)
 #: The wood screws' x: bosses just outboard of the tower's wall
 SCREW_X = Y_DRIVE.idler_foot_x0 + WOOD_SCREW.boss_d / 2 + 0.5
-#: Idler axle: bolt head seat on the slider's inboard arm, shank toward -x (slider at mid-travel)
-AXLE: Matrix = handle([Y_AXIS.belt_x + T.width / 2, Y_DRIVE.idler_y, AXIS_Z], [0, 90, 0])
+
+
+def idler_for(side: Side) -> FloatingIdler:
+    """The idler as built in the left side frame for ``side``. The right side is that frame's
+    mirror image, so to put the axle bolt's head on the same arm of the one (unmirrored) slider
+    its tower has the head on the other wall in that frame."""
+    return T if side is Side.LEFT else replace(T, head_side=-T.head_side)
+
+
+def axle_handle(side: Side) -> Matrix:
+    """Idler axle: bolt head seat on the head arm, shank toward the other arm (slider at
+    mid-travel)."""
+    head_x = Y_AXIS.belt_x - idler_for(side).head_side * T.width / 2  # tensioner y → side -x
+    return handle([head_x, Y_DRIVE.idler_y, AXIS_Z], [0, -90 * idler_for(side).head_side, 0])
+
+
 #: Tension screw: head seat on the tower plate's front face, shank toward +y
 TENSION_SCREW: Matrix = handle([Y_AXIS.belt_x, Y_DRIVE.idler_block_y, T.screw_z], [90, 0, 0])
 
@@ -85,7 +101,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         [pad_x[0], y0, 0]
     )
     pocket_frame, pocket_cut = sk10_pocket(PocketEnd.FRONT, x1)
-    idler_tower = to_side_frame(tower(T))
+    idler_tower = to_side_frame(tower(idler_for(side)))
     screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
     screw_x = SCREW_X
     holes = [wood_screw_hole(screw_x, y) for y in screw_ys]
@@ -139,7 +155,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     board = frame_handle(
         [e.board_x0, e.board_front_y, zc], [0, 0, u_z], [0, 1, 0], [1, 0, 0]
     )  #: the endstop board's frame (the board is chiral: its u axis follows the side)
-    return set_handles(mount, axle=AXLE, tension_screw=TENSION_SCREW, board=board)
+    return set_handles(mount, axle=axle_handle(side), tension_screw=TENSION_SCREW, board=board)
 
 
 def y_idler_mount(side: Side = Side.LEFT) -> Solid:

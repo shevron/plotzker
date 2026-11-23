@@ -13,8 +13,8 @@ plotzker fem-status` (`make fem-status`), `python -m plotzker part NAME [--json]
 
 | Part | Structural? | State |
 |------|-------------|-------|
-| `x_idler_slider`, `y_idler_slider_left`, `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
-| `y_idler_slider_right`, `y_motor_mount_right` | exact mirror images | covered by the left part (`mirror_of`) |
+| `idler_slider` (X and both Y idlers), `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
+| `y_motor_mount_right` | exact mirror images | covered by the left part (`mirror_of`) |
 | `belt_clamp` | carries belt tension through two screws | to decide |
 | `zrib_hanger` | light (board weight) | to decide |
 | `loom_anchor`, `loom_rail`, `zrib_guard` | no | not structural |
@@ -51,6 +51,6 @@ mount deflections still add up.
 takes a rigid term (`rigid_mm`) for play that the FEM cannot see; none is in use now.
 
 ```
-python -m plotzker fem y_idler_slider_left y_idler_mount_left   # also runs y_idler_tensioner_left
+python -m plotzker fem idler_slider y_idler_mount_left   # also runs y_idler_tensioner_left
 python -m plotzker fem x_idler_tensioner                        # from the recorded member results
 ```

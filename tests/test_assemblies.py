@@ -321,8 +321,8 @@ def test_x_idler_slider_rides_free_over_its_whole_travel(shift):
     tower (plate and walls, a loose fit) nor the endstop mount, nor reaches into the endstop's
     plug space."""
     from plotzker.params import X_IDLER
+    from plotzker.parts.idler_slider import x_idler_slider_installed
     from plotzker.parts.x_endstop_mount import x_endstop_mount_installed
-    from plotzker.parts.x_idler_slider import x_idler_slider_installed
 
     moved = x_idler_slider_installed().translate([shift * X_IDLER.travel / 2, 0, 0])
     bracket = gantry_end_bracket_local(Side.LEFT)
@@ -340,7 +340,7 @@ def test_x_idler_axle_bolt_and_nut_clear_the_tower_walls(shift):
     from cadder.hardware import hex_nut, shcs
 
     from plotzker.params import X_BELT, X_DRIVE, X_IDLER
-    from plotzker.parts.x_idler_slider import x_idler_slider_installed
+    from plotzker.parts.idler_slider import x_idler_slider_installed
 
     t = X_IDLER
     dx = shift * t.travel / 2
@@ -366,9 +366,9 @@ def test_y_idler_slider_rides_free_over_its_whole_travel(side, shift):
 
     from plotzker.hardware import endstop_keepout
     from plotzker.params import Y_IDLER
-    from plotzker.parts.y_idler_slider import y_idler_slider_installed
+    from plotzker.parts.idler_slider import y_idler_slider_installed
 
-    moved = y_idler_slider_installed().translate([0, shift * Y_IDLER.travel / 2, 0])
+    moved = y_idler_slider_installed(side).translate([0, shift * Y_IDLER.travel / 2, 0])
     assert not touching(moved, y_idler_mount_installed(side))
     keepout = place_in_frame(
         endstop_keepout(),
@@ -386,17 +386,22 @@ def test_y_idler_axle_bolt_and_nut_clear_the_tower_walls(side, shift):
     from cadder.handles import get_handle, shift_handle
     from cadder.hardware import hex_nut, metric, shcs
 
-    from plotzker.params import Y_DRIVE, Y_IDLER
+    from plotzker.params import Y_DRIVE
+    from plotzker.parts.y_idler_mount import idler_for
 
-    t = Y_IDLER
+    t = idler_for(side)
     dy = shift * t.travel / 2
     mount = y_idler_mount_installed(side)
     axle = shift_handle(get_handle(mount, "axle"), [0, dy, 0])
     nut = (
         hex_nut(t.axle_m)
-        .rotate([0, -90, 0])
+        .rotate([0, 90 * t.head_side, 0])
         .translate(
-            [Y_AXIS.belt_x - t.width / 2 + metric(t.axle_m).nut_h, Y_DRIVE.idler_y + dy, t.axle_z]
+            [
+                Y_AXIS.belt_x + t.head_side * (t.width / 2 - metric(t.axle_m).nut_h),
+                Y_DRIVE.idler_y + dy,
+                t.axle_z,
+            ]
         )
     )
     for part in (shcs(t.axle_m, t.axle_len).align(axle), nut):

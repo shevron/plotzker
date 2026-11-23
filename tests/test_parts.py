@@ -54,3 +54,19 @@ def test_x_carriage_clamp_nuts_each_have_a_pocket_and_a_roof():
             # just above the pocket, near its far corner (the front one is under the 45° ramp)
             roof = cube([1, 1, 1]).translate([at[0] - 3, at[1] - 3, X_BELT.back_z - 3.9])
             assert volume(roof & carriage) > 0.9, "no roof above the nut"
+
+
+def test_one_slider_serves_all_three_idlers():
+    """T3.26: the X idler and both Y idlers use the same unmirrored slider: the part's shape
+    doesn't depend on where the idler is, and on both Y sides the axle bolt's head is on the
+    arm the slider has for it (the right mount's tower is flipped instead)."""
+    from plotzker.params import X_IDLER, Y_IDLER
+    from plotzker.parts.floating_idler import slider_for_print
+    from plotzker.parts.y_idler_mount import idler_for
+    from plotzker.types import Side
+
+    assert X_IDLER.head_side == Y_IDLER.head_side
+    reference = slider_for_print(X_IDLER)
+    other = slider_for_print(Y_IDLER)
+    assert volume(other - reference) < 1e-3 and volume(reference - other) < 1e-3
+    assert idler_for(Side.RIGHT).head_side == -idler_for(Side.LEFT).head_side

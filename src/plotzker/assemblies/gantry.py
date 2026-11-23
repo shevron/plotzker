@@ -36,9 +36,9 @@ from plotzker.params import (
 )
 from plotzker.parts.belt_clamp import belt_clamp
 from plotzker.parts.gantry_end_bracket import gantry_end_bracket_local
+from plotzker.parts.idler_slider import x_idler_slider_installed
 from plotzker.parts.loom_anchor import loom_anchor_installed
 from plotzker.parts.x_endstop_mount import x_endstop_mount_installed
-from plotzker.parts.x_idler_slider import x_idler_slider_installed
 from plotzker.parts.x_motor_mount import x_motor_mount_left
 from plotzker.types import Side
 

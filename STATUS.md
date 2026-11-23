@@ -118,7 +118,7 @@ any new decisions in §3, and update the status line at the top.
   - [ ] Follow-up: test-print; check wheel preload range, hook-groove fit (with the T3.6 tool
     plate) and the X belt clamp. (STL regenerated in T3.4: belt line 4 mm further back.)
 - [x] **T3.4 X motor mount and X idler** at the beam ends. → `x_motor_mount.py` (right end,
-  printed mirrored), `x_idler_slider.py` + the tower in `gantry_end_bracket.py` (left end, T3.22; `x_endstop_mount.py` is the endstop's foot),
+  printed mirrored), `idler_slider.py` (the one slider for X and both Y idlers, T3.26) + the tower in `gantry_end_bracket.py` (left end, T3.22; `x_endstop_mount.py` is the endstop's foot),
   the X− switch lies on the idler mount's foot (D34); assembled in
   `assemblies/gantry.py`. The X belt line moved 4 mm back (center 23 mm behind the beam
   center) so the motor plate fits between the bracket's rear bolt rows and 22.6 mm motor
@@ -493,6 +493,16 @@ the printed carriage, motor mount and idler mount are the test pieces.
   `assemblies/tension_idler.py`, `TensionIdler` / `TENSION_IDLER`, the dovetail play term, their
   design checks and tests, the STLs and renders `tension_idler_rail`, `tension_idler_slider`,
   `tension_idler_fit`.
+
+- [x] **T3.26 One slider for all three idlers.** The X slider and the Y sliders were the same
+  shape (checked on the STLs): `X_IDLER` and `Y_IDLER` differ only in position, and the Y left
+  slider was just the mirror image (head on the other arm). Now one part, `idler_slider` (print
+  ×3, `parts/idler_slider.py`), with the axle bolt's head on the same arm everywhere
+  (`head_side` +1). On the Y side the left mount's tower has its head pocket on one wall and
+  the right mount's on the other (`y_idler_mount.idler_for`), so the unmirrored slider fits both;
+  the head is inboard on one Y side and outboard on the other. FEM: one slider check (X frame,
+  same belt loads), mounts and assemblies re-run. Replaces `x_idler_slider`,
+  `y_idler_slider_left/right`.
 
 #### Phase 4 — Build
 

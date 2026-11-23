@@ -26,7 +26,7 @@ pen holder, servo, loom, ZRIB hangers. This guide is the first slice of T2.1–T
 | `x_carriage` | 1 | Front face down, no supports |
 | `x_motor_mount` | 1 | The STL is already the right-hand (mirrored) part |
 | `x_endstop_mount` | 1 | Foot that carries the endstop board |
-| `x_idler_slider` | 1 | Prints upside down (top on the bed) |
+| `idler_slider` | 1 (the Y idlers use the same part, ×2) | Prints upside down (top on the bed) |
 | `belt_clamp` | 2 | The X belt's two ends (Y needs 4 more later) |
 
 Do **not** print `x_idler_mount.stl`: it is left over from the old design. If you change the

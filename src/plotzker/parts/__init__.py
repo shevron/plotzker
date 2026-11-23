@@ -11,16 +11,15 @@ from cadder.part import MaterialPart, Part
 from plotzker.parts import (
     belt_clamp,
     gantry_end_bracket,
+    idler_slider,
     loom_anchor,
     loom_rail,
     pen_holder_body,
     pen_slide,
     x_carriage,
     x_endstop_mount,
-    x_idler_slider,
     x_motor_mount,
     y_idler_mount,
-    y_idler_slider,
     y_motor_mount,
     zrib_guard,
     zrib_hanger,
@@ -61,7 +60,7 @@ _PRINTED: dict[str, Part] = {
         gantry_end_bracket.PART_LEFT,
         gantry_end_bracket.PART_RIGHT,
         x_endstop_mount.PART,
-        x_idler_slider.PART,
+        idler_slider.PART,
         x_carriage.PART,
         pen_slide.PART,
         pen_holder_body.PART,
@@ -70,8 +69,6 @@ _PRINTED: dict[str, Part] = {
         y_idler_mount.PART_RIGHT,
         y_motor_mount.PART_LEFT,
         y_motor_mount.PART_RIGHT,
-        y_idler_slider.PART_LEFT,
-        y_idler_slider.PART_RIGHT,
     )
 }
 
@@ -89,12 +86,8 @@ _ORDER = [
     "zrib_guard",
     "x_motor_mount",
     "x_endstop_mount",
-    "x_idler_slider",
-] + [
-    f"{kind}_{side.value}"
-    for side in Side
-    for kind in ("y_motor_mount", "y_idler_mount", "y_idler_slider")
-]
+    "idler_slider",
+] + [f"{kind}_{side.value}" for side in Side for kind in ("y_motor_mount", "y_idler_mount")]
 
 #: Every part of the plotter, by name (= STL file name)
 PARTS: dict[str, Part] = {name: (_PRINTED | _PLAIN)[name] for name in _ORDER}

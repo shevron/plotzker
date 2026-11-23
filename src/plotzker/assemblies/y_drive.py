@@ -14,8 +14,8 @@ from pythonscad import cube, mirror, translate
 from plotzker.assemblies.gantry import gantry_assembly
 from plotzker.hardware import endstop_keepout, endstop_placed, y_shaft
 from plotzker.params import BRACKET, FRAME, TOL, Y_AXIS, Y_DRIVE, Y_IDLER
-from plotzker.parts.y_idler_mount import y_idler_mount_installed
-from plotzker.parts.y_idler_slider import y_idler_slider_installed
+from plotzker.parts.idler_slider import y_idler_slider_installed
+from plotzker.parts.y_idler_mount import idler_for, y_idler_mount_installed
 from plotzker.parts.y_motor_mount import y_motor_mount_installed
 from plotzker.types import Side
 
@@ -34,15 +34,20 @@ def y_idler_end_local(side: Side = Side.LEFT) -> list[Solid]:
     axle = get_handle(mount, "axle")
     t = Y_IDLER
     slider_rear_y = t.slider_s0
+    head = idler_for(side).head_side  # the nut is on the other arm
     return [
         mount.color("DarkOrange"),
-        y_idler_slider_installed().color("Orange"),
+        y_idler_slider_installed(side).color("Orange"),
         gt2_idler().align(_at_x(axle, Y_AXIS.belt_x)),
         shcs(t.axle_m, t.axle_len).align(axle),
         hex_nut(t.axle_m)
-        .rotate([0, -90, 0])
+        .rotate([0, 90 * head, 0])
         .translate(
-            [Y_AXIS.belt_x - t.width / 2 + metric(t.axle_m).nut_h, Y_DRIVE.idler_y, t.axle_z]
+            [
+                Y_AXIS.belt_x + head * (t.width / 2 - metric(t.axle_m).nut_h),
+                Y_DRIVE.idler_y,
+                t.axle_z,
+            ]
         ),
         shcs(t.screw_m, t.screw_len).align(get_handle(mount, "tension_screw")),
         hex_nut(t.screw_m)

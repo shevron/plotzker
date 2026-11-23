@@ -1727,7 +1727,7 @@ X_IDLER = FloatingIdler(
     head_side=1,  # the front arm's face is 3 mm from the bracket's beam face: no room for a head
 )
 #: The Y idler (T3.23): axle on the Y belt line (side frame z, baseboard top = 0), the tower on the
-#: idler mount's foot; slide direction +y, the head on the inboard arm
+#: idler mount's foot; slide direction +y
 Y_IDLER = FloatingIdler(
     axle_z=Y_AXIS.pulley_axis_z,
     axle_pos=Y_DRIVE.idler_y,
@@ -1735,7 +1735,7 @@ Y_IDLER = FloatingIdler(
     floor_z=Y_DRIVE.foot_t,
     wall_end_s=Y_DRIVE.idler_y - 2,
     travel=Y_DRIVE.idler_slot,
-    head_side=-1,
+    head_side=1,  # as the X idler: one slider for all three (the right mount's tower is flipped)
 )
 
 

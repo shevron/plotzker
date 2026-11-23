@@ -16,10 +16,10 @@ needs_solvers = pytest.mark.skipif(not tools_available(), reason="gmsh and Calcu
 def test_real_part_runs_end_to_end(tmp_path):
     """The slider's verdict depends on assumed loads; the analysis itself must be sound."""
     options = RunOptions(project="plotzker.project:PROJECT")
-    result = analyze(PARTS["x_idler_slider"], tmp_path, options, log=lambda _: None)
+    result = analyze(PARTS["idler_slider"], tmp_path, options, log=lambda _: None)
     assert all(c.ok for c in result.checks), [c.detail for c in result.checks if not c.ok]
     assert {c.case for c in result.criteria} == {"belt_preload", "belt_peak"}
-    assert (tmp_path / "x_idler_slider" / "result.json").is_file()
+    assert (tmp_path / "idler_slider" / "result.json").is_file()
 
 
 def _write_result(folder, criteria):
@@ -36,11 +36,11 @@ def test_assembly_sums_member_deflections(tmp_path):
     from plotzker.assembly_checks import tensioner_assembly
 
     assembly = tensioner_assembly(
-        "sum_test", "", "y_idler_mount_left", "y_idler_slider_left", "idler_seat"
+        "sum_test", "", "y_idler_mount_left", "idler_slider", "idler_seat"
     )
     # each part alone is within its own 0.1 mm (the slider's and mount's limit names differ)
     for part, prefix in (
-        ("y_idler_slider_left", "idler_axle"),
+        ("idler_slider", "idler_axle"),
         ("y_idler_mount_left", "idler_seat"),
     ):
         _write_result(

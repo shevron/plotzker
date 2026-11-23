@@ -92,7 +92,7 @@ def _solve_cpsk(
     this call: it is kept in the system temporary folder under a hash of its content.
     """
     sketch = cpsk.load(path, params)
-    solved = sketch.solve(strict=strict)
+    solved = cpsk.solve(sketch, strict=strict)
     for diagnostic in (*sketch.warnings, *solved.warnings):
         warnings.warn(f"{path.name}: {diagnostic}", cpsk.CpskWarning, stacklevel=3)
     svg = cpsk.to_svg(solved)

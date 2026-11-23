@@ -441,6 +441,7 @@ source .venv/bin/activate                     # or prefix commands with `uv run`
 **Shortcuts (`Makefile`):** `make develop` (set up the environment), `make check` (mypy,
 ruff lint + format check; changes nothing), `make typecheck` (mypy only), `make format`
 (re-format the code), `make lint` (ruff lint with automatic fixes), `make test` (pytest),
+`make test-cpsk-core` (the CPSK core's tests on FreeCAD's Python 3.11),
 `make stl` (all STLs), `make render` (all PNG renders; needs the PythonSCAD app),
 `make render-inspect` (every view of each part and assembly into `renders/inspect/`; `NAMES="x_carriage gantry_end_left"` limits it),
 `make freecad` (the FreeCAD assembly; needs FreeCAD 1.x),

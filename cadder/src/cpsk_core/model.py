@@ -1,19 +1,21 @@
-"""The data model of a loaded CPSK sketch: primitives, operands and constraints."""
+"""The compiled model of a CPSK sketch: primitives, operands, constraints, evaluated values."""
+
+from __future__ import annotations
 
 import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, TypeAlias
 
-from cadder.cpsk.errors import CpskSolveError, Diagnostic
-from cadder.cpsk.formula import Units
+from cpsk_core.errors import Diagnostic
+from cpsk_core.formula import Units
 
 if TYPE_CHECKING:
-    from cadder.cpsk.solver import SolvedSketch
+    from cpsk_core.document import Document
 
-type Kind = Literal["point", "line", "circle", "arc"]
-type Implicit = Literal["origin", "x_axis", "y_axis"]
-type PointName = Literal["start", "end", "center"]
+Kind: TypeAlias = Literal["point", "line", "circle", "arc"]
+Implicit: TypeAlias = Literal["origin", "x_axis", "y_axis"]
+PointName: TypeAlias = Literal["start", "end", "center"]
 
 IMPLICIT: dict[Implicit, Kind] = {"origin": "point", "x_axis": "line", "y_axis": "line"}
 
@@ -97,7 +99,7 @@ class Arc:
         return self._at(self.end_angle)
 
 
-type Geometry = Point | Line | Circle | Arc
+Geometry: TypeAlias = Point | Line | Circle | Arc
 
 KINDS: dict[type[Geometry], Kind] = {Point: "point", Line: "line", Circle: "circle", Arc: "arc"}
 POINTS: dict[Kind, tuple[PointName, ...]] = {
@@ -177,6 +179,8 @@ class Sketch:
     primitives: tuple[Primitive, ...]
     constraints: tuple[Constraint, ...]
     warnings: tuple[Diagnostic, ...] = ()
+    document: Document | None = field(default=None, compare=False, repr=False)
+    """The document the sketch was compiled from."""
 
     def primitive(self, id: str) -> Primitive:
         """The primitive with this identifier."""
@@ -184,16 +188,3 @@ class Sketch:
             if primitive.id == id:
                 return primitive
         raise KeyError(id)
-
-    def solve(self, *, strict: bool = False) -> SolvedSketch:
-        """Solve the constraints, starting from the stored coordinates.
-
-        With ``strict``, solve warnings (remaining degrees of freedom, redundant constraints)
-        are errors.
-        """
-        from cadder.cpsk.solver import solve
-
-        solved = solve(self)
-        if strict and solved.warnings:
-            raise CpskSolveError(solved.warnings)
-        return solved

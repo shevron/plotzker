@@ -1,10 +1,11 @@
 # Common development commands. Setup details: README §6.
 
 .DEFAULT_GOAL := help
-.PHONY: help develop clean check typecheck format lint test stl render render-inspect freecad fem fem-status diff
+.PHONY: help develop clean check typecheck format lint test test-cpsk-core stl render render-inspect freecad fem fem-status diff
 
 PYTHON_VERSION := $(shell cat .python-version)
 UV_RUN := uv run --extra dev --extra diff
+FREECAD_PYTHON ?= $(or $(CADDER_FREECAD_BIN_DIR),/Applications/FreeCAD.app/Contents/Resources/bin)/python
 
 help:  ## List the available commands
 	@grep -E '^[a-z-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  make %-9s %s\n", $$1, $$2}'
@@ -33,6 +34,10 @@ lint:  ## Run ruff linting and apply its automatic fixes
 
 test:  ## Run the unit tests (pytest)
 	$(UV_RUN) python -m pytest
+
+test-cpsk-core:  ## Run cpsk_core's tests on FreeCAD's Python 3.11 (FREECAD_PYTHON=...), the oldest it supports
+	PYTHONPATH=cadder/src uv run --no-project --python "$(FREECAD_PYTHON)" --with pytest \
+		python -m pytest cadder/tests/test_cpsk_core.py --noconftest -p no:cacheprovider
 
 stl:  ## Generate the STLs of all printable parts into stl/
 	$(UV_RUN) python -m plotzker stl

@@ -14,6 +14,9 @@ dependencies = [
     "typer>=0.29.2",
 ]
 
+[tool.uv.build-backend]
+module-name = ["cadder", "cpsk_core"]
+
 [project.optional-dependencies]
 diff = ["numpy>=2", "manifold3d>=3.0"]
 dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
@@ -29,6 +32,8 @@ addopts = "-ra"
 line-length = 100
 target-version = "py314"
 src = ["src", "tests"]
+# cpsk_core runs in FreeCAD's Python too (plan D1): keep it to Python 3.11 syntax
+per-file-target-version = { "src/cpsk_core/**" = "py311", "tests/test_cpsk_core.py" = "py311", "tests/cpsk_freecad/**" = "py311" }
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "RUF", "TID"]
@@ -42,13 +47,13 @@ ignore = [
 "plotzker".msg = "cadder must not depend on a project"
 
 [tool.ruff.lint.isort]
-known-first-party = ["cadder"]
+known-first-party = ["cadder", "cpsk_core"]
 known-third-party = ["pythonscad", "vtk"]
 
 [tool.mypy]
 python_version = "3.14"
 mypy_path = ["src", "stubs"]
-packages = ["cadder"]
+packages = ["cadder", "cpsk_core"]
 strict = true
 cache_dir = ".mypy_cache"
 

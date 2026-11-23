@@ -6,9 +6,9 @@ from dataclasses import dataclass, field, replace
 
 import planegcs as gcs
 
-from cadder.cpsk.errors import CpskSolveError, Diagnostic, Stage, error, warning
-from cadder.cpsk.formula import Units
-from cadder.cpsk.model import (
+from cpsk_core.errors import CpskSolveError, Diagnostic, Stage, error, warning
+from cpsk_core.formula import Units
+from cpsk_core.model import (
     Arc,
     Circle,
     Constraint,
@@ -331,11 +331,12 @@ class _Builder:
         return replace(primitive, geometry=geometry)
 
 
-def solve(sketch: Sketch) -> SolvedSketch:
+def solve(sketch: Sketch, *, strict: bool = False) -> SolvedSketch:
     """Solve a sketch's constraints, starting from its stored coordinates.
 
     Raises :class:`CpskSolveError` for conflicting constraints or when the solver does not
-    converge. Remaining degrees of freedom and redundant constraints are warnings.
+    converge. Remaining degrees of freedom and redundant constraints are warnings; with
+    ``strict`` they are errors too.
     """
     builder = _Builder(sketch)
     builder.add_geometry()
@@ -374,6 +375,8 @@ def solve(sketch: Sketch) -> SolvedSketch:
         else builder.system.get_param(param)
         for id, (param, angle) in builder.measured.items()
     }
+    if strict and warnings:
+        raise CpskSolveError(warnings)
     return SolvedSketch(
         sketch=sketch,
         primitives=tuple(builder.solved(p) for p in sketch.primitives),

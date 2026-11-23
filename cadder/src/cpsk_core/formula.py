@@ -1,12 +1,14 @@
 """CPSK formulas: units, parsing and evaluation (spec §4, §10)."""
 
+from __future__ import annotations
+
 import math
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, TypeAlias
 
-type UnitKind = Literal["length", "angle"]
+UnitKind: TypeAlias = Literal["length", "angle"]
 
 LENGTH_UNITS: dict[str, float] = {"mm": 1.0, "cm": 10.0, "m": 1000.0, "in": 25.4}
 """Length units and their size in millimeters."""
@@ -119,7 +121,7 @@ class Call:
     args: tuple[Node, ...]
 
 
-type Node = Number | Name | Unary | Binary | Call
+Node: TypeAlias = Number | Name | Unary | Binary | Call
 
 
 def parse_literal(text: str) -> Number:

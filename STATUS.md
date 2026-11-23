@@ -508,12 +508,13 @@ the printed carriage, motor mount and idler mount are the test pieces.
 
 - [x] **T3.27 CPSK sketch format: draft spec and reader.** A constraint-based parametric sketch
   format for cadder: RFC (`cadder/docs/rfc/parametric-sketch-format.md`), draft 0.1 spec, XSD
-  and example (`cadder/docs/cpsk/`). The reader `cadder.cpsk` loads a document (structure,
+  and example (`cadder/docs/cpsk/`). The format core `cpsk_core` (standard library, Python ≥ 3.11
+  for FreeCAD) parses and writes documents losslessly; `cadder.cpsk` loads a document (structure,
   references, nested constraints, formulas with units, variable overrides), solves it with
   FreeCAD's solver (`planegcs`, LGPL; on macOS it builds from source: `brew install eigen boost`)
   and exports the solved profile as SVG; `load_sketch` loads `.cpsk` files directly (with
   `params` overrides and `strict`). Follow-ups: a command-line tool; the FreeCAD import/export
-  plugin (RFC phase 3; plan and decisions D1–D7 in `cadder/docs/cpsk/freecad-plugin-plan.md`);
+  plugin (RFC phase 3; plan, decisions D1–D8, phases 0–1 done: `cadder/docs/cpsk/freecad-plugin-plan.md`);
   the spec's open issues (Appendix A). Using `.cpsk` files as plotter CAD sources would change
   D23/D24 and README §7.1 rule 3: not decided.
 

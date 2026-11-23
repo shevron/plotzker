@@ -58,7 +58,7 @@ known-third-party = ["cadder", "pythonscad", "vtk"]  # cadder: a separate packag
 [tool.mypy]
 python_version = "3.14"
 mypy_path = ["src", "cadder/src", "cadder/stubs"]
-packages = ["plotzker", "cadder"]
+packages = ["plotzker", "cadder", "cpsk_core"]
 strict = true
 cache_dir = ".mypy_cache"
 

@@ -1,4 +1,6 @@
-"""Diagnostics and errors reported by the CPSK reader and solver (spec §11.1)."""
+"""Diagnostics and errors reported by CPSK readers, solvers and exporters (spec §11.1)."""
+
+from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -55,7 +57,7 @@ def warning(
 
 
 class CpskWarning(UserWarning):
-    """A warning diagnostic issued through Python's ``warnings`` (by ``load_sketch``)."""
+    """A warning diagnostic issued through Python's ``warnings``."""
 
 
 class CpskError(Exception):

@@ -5,9 +5,7 @@
   Written in the canonical form (spec §11.4): every constraint is nested, so the top-level
   <constraints> container is empty and omitted.
 -->
-<sketch xmlns="https://github.com/shevron/plotzker/ns/cpsk" version="0.1"
-        unit-length="mm" unit-angle="deg">
-
+<sketch xmlns="https://github.com/shevron/plotzker/ns/cpsk" version="0.1" unit-length="mm" unit-angle="deg">
   <metadata>
     <title>Plate with a hole</title>
     <description>Rectangle with its lower-left corner at the origin and a centred hole.</description>
@@ -16,14 +14,11 @@
   </metadata>
 
   <variables>
-    <variable id="width" type="length" value="40" min="10" max="200"
-              description="Plate width"/>
+    <variable id="width" type="length" value="40" min="10" max="200" description="Plate width"/>
     <!-- A literal with a unit, converted to the document unit: 25 mm. -->
-    <variable id="height" type="length" value="2.5cm" min="10" max="200"
-              description="Plate height"/>
+    <variable id="height" type="length" value="2.5cm" min="10" max="200" description="Plate height"/>
     <!-- A derived variable. -->
-    <variable id="hole_d" type="length" value="min(width, height) / 3"
-              description="Hole diameter"/>
+    <variable id="hole_d" type="length" value="min(width, height) / 3" description="Hole diameter"/>
   </variables>
 
   <!-- Stored coordinates: the solver's initial values and the last solved state. -->
@@ -66,5 +61,4 @@
       <distance id="diagonal" driving="false" value="47.16990566028302"/>
     </line>
   </geometry>
-
 </sketch>

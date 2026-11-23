@@ -1,13 +1,16 @@
-"""Reading CPSK documents: XML structure, references, nesting and formulas (spec §2–§11)."""
+"""Compiling CPSK documents into sketches: structure, references, nesting, formulas."""
+
+from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal, cast
-from xml.parsers import expat
+from typing import Literal, TypeAlias, cast
 
-from cadder.cpsk.errors import CpskLoadError, Diagnostic, Severity, Stage, error, warning
-from cadder.cpsk.formula import (
+from cpsk_core.document import NAMESPACE, Document, Element
+from cpsk_core.document import parse as parse_document
+from cpsk_core.errors import CpskLoadError, Diagnostic, Severity, Stage, error, warning
+from cpsk_core.formula import (
     ANGLE_UNITS,
     CONSTANTS,
     FUNCTIONS,
@@ -25,7 +28,7 @@ from cadder.cpsk.formula import (
     parse_literal,
     unit_kind,
 )
-from cadder.cpsk.model import (
+from cpsk_core.model import (
     IMPLICIT,
     POINTS,
     Arc,
@@ -41,17 +44,14 @@ from cadder.cpsk.model import (
     Sketch,
 )
 
-NAMESPACE = "https://github.com/shevron/plotzker/ns/cpsk"
-"""The CPSK XML namespace (spec §2)."""
-
 VERSION = (0, 1)
 """The format version this reader implements."""
 
 RESERVED = frozenset(IMPLICIT) | {"self"} | frozenset(CONSTANTS) | FUNCTIONS | UNITS
 """Words that cannot be identifiers (spec §3.2)."""
 
-type Overrides = Mapping[str, float | str]
-type ValueKind = Literal["number", "length", "angle"]
+Overrides: TypeAlias = Mapping[str, float | str]
+ValueKind: TypeAlias = Literal["number", "length", "angle"]
 
 _CONTAINERS = ("metadata", "variables", "geometry", "constraints")
 _METADATA = frozenset({"title", "description", "author", "created", "modified", "tag"})
@@ -93,61 +93,6 @@ _OF_OR_PAIR = frozenset({"horizontal", "vertical", "distance", "angle"})
 """Constraints written either with ``of`` or with ``a`` and ``b``."""
 
 
-# ----- XML -----
-
-
-@dataclass
-class _Element:
-    """An XML element with its namespace, attributes and source line."""
-
-    namespace: str | None
-    name: str
-    attrs: dict[tuple[str | None, str], str]
-    line: int
-    children: list[_Element] = field(default_factory=list)
-    text: str = ""
-
-    @property
-    def ours(self) -> bool:
-        return self.namespace == NAMESPACE
-
-    def get(self, name: str) -> str | None:
-        return self.attrs.get((None, name))
-
-    def ours_children(self) -> list[_Element]:
-        return [child for child in self.children if child.ours]
-
-
-def _split(name: str) -> tuple[str | None, str]:
-    namespace, _, local = name.rpartition(" ")
-    return (namespace or None), local
-
-
-def _parse_xml(text: str | bytes) -> _Element:
-    parser = expat.ParserCreate(namespace_separator=" ")
-    stack: list[_Element] = []
-    roots: list[_Element] = []
-
-    def start(name: str, attrs: dict[str, str]) -> None:
-        namespace, local = _split(name)
-        attributes = {_split(key): value for key, value in attrs.items()}
-        element = _Element(namespace, local, attributes, parser.CurrentLineNumber)
-        (stack[-1].children if stack else roots).append(element)
-        stack.append(element)
-
-    def end(name: str) -> None:
-        stack.pop()
-
-    def data(text: str) -> None:
-        stack[-1].text += text
-
-    parser.StartElementHandler = start
-    parser.EndElementHandler = end
-    parser.CharacterDataHandler = data
-    parser.Parse(text, True)
-    return roots[0]
-
-
 # ----- Reader -----
 
 
@@ -158,14 +103,14 @@ class _Variable:
     formula: Node | None
     low: float | None
     high: float | None
-    line: int
+    line: int | None
 
 
 @dataclass
 class _RawConstraint:
     type: str
     attrs: dict[str, str]
-    line: int
+    line: int | None
     parent: int | None
     formula: Node | None = None
 
@@ -190,7 +135,7 @@ class _Reader:
     diagnostics: list[Diagnostic] = field(default_factory=list)
     version: str = ""
     units: Units = field(default_factory=Units)
-    ids: dict[str, int] = field(default_factory=dict)
+    ids: dict[str, int | None] = field(default_factory=dict)
     metadata: dict[str, list[str]] = field(default_factory=dict)
     variables: dict[str, _Variable] = field(default_factory=dict)
     primitives: list[Primitive] = field(default_factory=list)
@@ -204,22 +149,22 @@ class _Reader:
     def warn(self, code: str, message: str, line: int | None) -> None:
         self.diagnostics.append(warning(Stage.LOAD, code, message, line=line))
 
-    def unknown(self, element: _Element) -> None:
+    def unknown(self, element: Element) -> None:
         self.warn("unknown-content", f"unknown element <{element.name}> ignored", element.line)
 
-    def check_attrs(self, element: _Element, allowed: tuple[str, ...]) -> None:
+    def check_attrs(self, element: Element, allowed: tuple[str, ...]) -> None:
         for namespace, name in element.attrs:
             if namespace == NAMESPACE or (namespace is None and name not in allowed):
                 message = f"unknown attribute {name!r} on <{element.name}> ignored"
                 self.warn("unknown-content", message, element.line)
 
-    def required(self, element: _Element, name: str) -> str | None:
+    def required(self, element: Element, name: str) -> str | None:
         value = element.get(name)
         if value is None:
             self.error("structure", f"<{element.name}> needs a {name!r} attribute", element.line)
         return value
 
-    def register_id(self, id: str | None, line: int) -> str | None:
+    def register_id(self, id: str | None, line: int | None) -> str | None:
         if id is None:
             return None
         if IDENTIFIER_RE.fullmatch(id) is None:
@@ -227,15 +172,14 @@ class _Reader:
         elif id in RESERVED:
             self.error("reserved", f"{id!r} is a reserved word, not an identifier", line, (id,))
         elif id in self.ids:
-            self.error(
-                "duplicate-id", f"{id!r} is already used at line {self.ids[id]}", line, (id,)
-            )
+            where = "" if self.ids[id] is None else f" at line {self.ids[id]}"
+            self.error("duplicate-id", f"{id!r} is already used{where}", line, (id,))
         else:
             self.ids[id] = line
             return id
         return None
 
-    def boolean(self, element: _Element, name: str) -> bool | None:
+    def boolean(self, element: Element, name: str) -> bool | None:
         value = element.get(name)
         if value is not None and value not in ("true", "false"):
             self.error("structure", f"{name!r} must be 'true' or 'false'", element.line)
@@ -244,7 +188,7 @@ class _Reader:
 
     # ----- Document structure -----
 
-    def read(self, root: _Element) -> None:
+    def read(self, root: Element) -> None:
         if not root.ours or root.name != "sketch":
             self.error(
                 "structure", f"the root must be <sketch> in namespace {NAMESPACE}", root.line
@@ -263,7 +207,7 @@ class _Reader:
         self.units = Units(length, angle)
 
         position = -1
-        for child in root.ours_children():
+        for child in root.elements():
             if child.name not in _CONTAINERS:
                 self.unknown(child)
                 continue
@@ -283,7 +227,7 @@ class _Reader:
                 case _:
                     self.read_constraints(child)
 
-    def read_version(self, root: _Element) -> None:
+    def read_version(self, root: Element) -> None:
         version = self.required(root, "version")
         if version is None:
             return
@@ -300,22 +244,22 @@ class _Reader:
         else:
             self.warn("newer-version", f"version {version} is newer than this reader", root.line)
 
-    def read_metadata(self, element: _Element) -> None:
-        for child in element.ours_children():
+    def read_metadata(self, element: Element) -> None:
+        for child in element.elements():
             if child.name not in _METADATA:
                 self.unknown(child)
                 continue
             self.check_attrs(child, ())
             self.metadata.setdefault(child.name, []).append(child.text.strip())
 
-    def read_variables(self, element: _Element) -> None:
-        for child in element.ours_children():
+    def read_variables(self, element: Element) -> None:
+        for child in element.elements():
             if child.name == "variable":
                 self.read_variable(child)
             else:
                 self.unknown(child)
 
-    def read_variable(self, element: _Element) -> None:
+    def read_variable(self, element: Element) -> None:
         self.check_attrs(element, ("id", "type", "value", "min", "max", "description"))
         id = self.register_id(self.required(element, "id"), element.line)
         text = self.required(element, "value")
@@ -330,7 +274,7 @@ class _Reader:
         if id is not None:
             self.variables[id] = _Variable(id, kind, formula, low, high, element.line)
 
-    def formula(self, text: str, line: int, kind: ValueKind) -> Node | None:
+    def formula(self, text: str, line: int | None, kind: ValueKind) -> Node | None:
         try:
             node = parse(text)
         except FormulaError as e:
@@ -347,7 +291,7 @@ class _Reader:
         self.error("unit", f"unit {unit!r} where {expected} is expected", line)
         return False
 
-    def limit(self, element: _Element, name: str, kind: ValueKind) -> float | None:
+    def limit(self, element: Element, name: str, kind: ValueKind) -> float | None:
         text = element.get(name)
         if text is None:
             return None
@@ -362,14 +306,14 @@ class _Reader:
             return None
         return self.units.convert(literal.value, literal.unit)
 
-    def read_geometry(self, element: _Element) -> None:
-        for child in element.ours_children():
+    def read_geometry(self, element: Element) -> None:
+        for child in element.elements():
             if child.name in _GEOMETRY_ATTRS:
                 self.read_primitive(child)
             else:
                 self.unknown(child)
 
-    def read_primitive(self, element: _Element) -> None:
+    def read_primitive(self, element: Element) -> None:
         names = _GEOMETRY_ATTRS[element.name]
         self.check_attrs(element, (*names, "id", "construction"))
         id = self.register_id(element.get("id"), element.line)
@@ -397,14 +341,14 @@ class _Reader:
         index = len(self.primitives)
         construction = bool(self.boolean(element, "construction"))
         self.primitives.append(Primitive(index, id, geometry, construction, element.line))
-        for child in element.ours_children():
+        for child in element.elements():
             self.read_constraint(child, index)
 
-    def read_constraints(self, element: _Element) -> None:
-        for child in element.ours_children():
+    def read_constraints(self, element: Element) -> None:
+        for child in element.elements():
             self.read_constraint(child, None)
 
-    def read_constraint(self, element: _Element, parent: int | None) -> None:
+    def read_constraint(self, element: Element, parent: int | None) -> None:
         if element.name not in _OPERANDS:
             self.unknown(element)
             return
@@ -458,7 +402,7 @@ class _Reader:
         failed: set[str] = set()
         visiting: list[str] = []
 
-        def value_of(id: str, line: int) -> float:
+        def value_of(id: str, line: int | None) -> float:
             if id in values:
                 return values[id]
             if id in failed:
@@ -488,7 +432,7 @@ class _Reader:
                 visiting.pop()
             return values[id]
 
-        def resolver(line: int) -> Callable[[Name], float]:
+        def resolver(line: int | None) -> Callable[[Name], float]:
             def resolve(name: Name) -> float:
                 head = name.parts[0]
                 if len(name.parts) > 1:
@@ -536,7 +480,7 @@ class _Reader:
 
     # ----- Constraints (spec §8, §9) -----
 
-    def resolve(self, text: str, parent: int | None, line: int) -> Operand | None:
+    def resolve(self, text: str, parent: int | None, line: int | None) -> Operand | None:
         parts = text.split(".")
         if not all(IDENTIFIER_RE.fullmatch(part) for part in parts):
             self.error("reference", f"invalid reference {text!r}", line)
@@ -663,20 +607,15 @@ class _Reader:
         return ok
 
 
-def loads(text: str | bytes, overrides: Overrides | None = None) -> Sketch:
-    """Load a CPSK document from a string.
+def compile_document(document: Document, overrides: Overrides | None = None) -> Sketch:
+    """Validate a parsed document and evaluate its formulas into a :class:`Sketch`.
 
     ``overrides`` replaces variable values with a number (in the document unit) or a literal
     such as ``"5cm"``. Raises :class:`CpskLoadError` listing every load error found; warnings
     are in :attr:`Sketch.warnings`.
     """
     reader = _Reader(dict(overrides or {}))
-    try:
-        root = _parse_xml(text)
-    except expat.ExpatError as e:
-        message = f"malformed XML: {expat.errors.messages[e.code]}"
-        raise CpskLoadError([error(Stage.LOAD, "xml", message, line=e.lineno)]) from None
-    reader.read(root)
+    reader.read(document.root)
     reader.apply_overrides()
     values, anonymous = reader.evaluate_all()
     constraints: list[Constraint] = []
@@ -698,9 +637,15 @@ def loads(text: str | bytes, overrides: Overrides | None = None) -> Sketch:
         primitives=tuple(reader.primitives),
         constraints=tuple(constraints),
         warnings=tuple(reader.diagnostics),
+        document=document,
     )
 
 
+def loads(text: str | bytes, overrides: Overrides | None = None) -> Sketch:
+    """Parse and compile a CPSK document from a string (see :func:`compile_document`)."""
+    return compile_document(parse_document(text), overrides)
+
+
 def load(path: str | Path, overrides: Overrides | None = None) -> Sketch:
-    """Load a CPSK document from a file (see :func:`loads`)."""
+    """Parse and compile a CPSK document file (see :func:`compile_document`)."""
     return loads(Path(path).read_bytes(), overrides)

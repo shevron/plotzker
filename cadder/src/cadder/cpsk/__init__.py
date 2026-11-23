@@ -1,51 +1,19 @@
-"""CPSK, the constraint-based parametric sketch format: reader, solver and SVG export.
+"""CPSK parametric sketches in cadder: the core format (``cpsk_core``), solving and SVG export.
 
 The format is specified in ``cadder/docs/cpsk/spec-0.1.md``. Typical use::
 
     from cadder import cpsk
 
     sketch = cpsk.load("plate.cpsk", overrides={"width": 60})
-    solved = sketch.solve()
+    solved = cpsk.solve(sketch)
     svg = cpsk.to_svg(solved)
+
+Everything ``cpsk_core`` exports is available here too.
 """
 
-from cadder.cpsk.errors import (
-    CpskError,
-    CpskExportError,
-    CpskLoadError,
-    CpskSolveError,
-    CpskWarning,
-    Diagnostic,
-    Severity,
-    Stage,
-)
-from cadder.cpsk.model import Arc, Circle, Constraint, Line, Point, Primitive, Sketch
-from cadder.cpsk.reader import NAMESPACE, RESERVED, load, loads
 from cadder.cpsk.solver import SolvedSketch, solve
 from cadder.cpsk.svg import svg_origin, to_svg
+from cpsk_core import *
+from cpsk_core import __all__ as _core_all
 
-__all__ = [
-    "NAMESPACE",
-    "RESERVED",
-    "Arc",
-    "Circle",
-    "Constraint",
-    "CpskError",
-    "CpskExportError",
-    "CpskLoadError",
-    "CpskSolveError",
-    "CpskWarning",
-    "Diagnostic",
-    "Line",
-    "Point",
-    "Primitive",
-    "Severity",
-    "Sketch",
-    "SolvedSketch",
-    "Stage",
-    "load",
-    "loads",
-    "solve",
-    "svg_origin",
-    "to_svg",
-]
+__all__ = [*_core_all, "SolvedSketch", "solve", "svg_origin", "to_svg"]

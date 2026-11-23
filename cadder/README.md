@@ -49,7 +49,8 @@ complete small example.
 | `cadder.freecad` | `FreeCadAssembly` with `Component`s, rigid `Body`s and `Joint`s (Slider, Revolute, ...); exported with shared STLs for congruent components and built into an `.FCStd` by FreeCAD 1.x |
 | `cadder.handles` | Named 4×4 frames on solids (`set_handles`, `get_handle(s)`, `handle`, `frame_handle`, `shift_handle`, `place_in_frame`) so assemblies place parts with `.align(handle)` |
 | `cadder.geometry` | Facet settings (`FN`, `CADDER_FN`), `box`, teardrop holes, the sketch loader `load_sketch` (SVG, and CPSK files solved with `params` overrides), small vector helpers |
-| `cadder.cpsk` | CPSK parametric sketches ([spec](docs/cpsk/spec-0.1.md)): `load`/`loads` (with variable overrides), `Sketch.solve` (FreeCAD's PlaneGCS solver through `planegcs`; degrees of freedom, redundant and conflicting constraints as diagnostics), `to_svg` (a profile for `load_sketch`) |
+| `cadder.cpsk` | CPSK parametric sketches ([spec](docs/cpsk/spec-0.1.md)): everything in `cpsk_core`, plus `solve` (FreeCAD's PlaneGCS solver through `planegcs`; degrees of freedom, redundant and conflicting constraints as diagnostics; `strict`), `to_svg` (a profile for `load_sketch`) |
+| `cpsk_core` | The CPSK format without a solver, standard library only and Python ≥ 3.11 so FreeCAD's Python can use it: the lossless `Document` (parse, build, canonical `write`), `load`/`loads`/`compile_document` (validation, nesting, formulas, variable overrides) into a `Sketch` |
 | `cadder.printing` | `Tolerances` for FDM prints (clearance holes, nut traps, fits) and `nut_slot`, a hex pocket for a nut pressed in sideways |
 | `cadder.hardware` | Vendor parts with dimensions and simple models: metric fasteners, bearings, GT2 belts/pulleys/idlers, NEMA17 and a micro servo, V-slot extrusions (SVG profiles) with wheels and eccentric spacers, smooth shafts, SK10, SCS10UU |
 | `cadder.materials` | `Material`, `PrintProfile` and `MaterialLibrary`, which reads a project's materials TOML and print profiles folder |
@@ -95,6 +96,7 @@ Environment: `CADDER_FN` lowers the facet count (the FEM export uses 20);
 uv sync --extra dev --extra diff     # from the workspace root, or here
 uv run python -m pytest              # cadder's tests (tests/, on the fixture project)
 uv run mypy && uv run ruff check .   # strict types and lint; `plotzker` imports are banned (TID251)
+make test-cpsk-core                  # (workspace root) cpsk_core's tests on FreeCAD's Python 3.11
 ```
 
 The `diff` extra (numpy, manifold3d) is needed for the design diff. `planegcs` (the CPSK

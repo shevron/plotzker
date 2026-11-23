@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Plan accepted (decisions D1–D8: 2026-11-23). Phase 0 done ([results](freecad-conventions.md)); D8 decided |
+| **Status** | Plan accepted (decisions D1–D8: 2026-11-23). Phases 0 ([results](freecad-conventions.md)) and 1 done |
 | **Date** | 2026-11-23 |
 | **Implements** | [RFC](../rfc/parametric-sketch-format.md) §4 step 3 and §8; [spec 0.1](spec-0.1.md) |
 | **Target** | FreeCAD 1.1 (installed here: 1.1.3, Python 3.11.14) |
@@ -68,6 +68,13 @@ A **lossless document model** is the main new piece. Today `cadder.cpsk.Sketch` 
 values only, which is enough to solve but not to write a file back: formulas, variable limits,
 descriptions, metadata and extension content are lost. Both directions of the plugin, and any
 future CPSK editor or formatter, need it.
+
+**As built (phase 1):** `cpsk_core` lives in `cadder/src/cpsk_core/` and ships in the cadder
+distribution. The lossless model is an element tree (`Element`, `Comment`, `Document`) rather
+than typed classes per element: it keeps attribute order, comments, unknown CPSK content and
+extensions without special cases, and `cpsk_core.element()` builds elements in code. The
+writer's canonical layout is described in `cpsk_core.document.write`; the spec example is in that
+layout. Solving moved from `Sketch.solve()` to `cadder.cpsk.solve(sketch)`.
 
 ## 4. Mapping
 
@@ -171,8 +178,8 @@ D1–D7 were accepted on 2026-11-23; D8, from phase 0, was accepted the same day
 
 | Phase | Work | Done when |
 |---|---|---|
-| **0. Conventions spike** | Script in `freecadcmd`: build one sketch per constraint row in §4.2 and compare FreeCAD's solved geometry with `cadder.cpsk` solving the same constraints. Check expression units, trigonometric units, VarSet references and the tangent `Value`. | Every §4.2 row verified or marked unsupported; spec §9.3 TBD resolved |
-| **1. Core package** | Extract `cpsk_core` (D1): Python 3.11 syntax, lossless `Document` model, canonical writer; `cadder.cpsk` builds on it. | cadder tests pass; the core's tests pass under FreeCAD's Python; reading and writing the spec example gives the same file |
+| **0. Conventions spike** ✅ | Script in `freecadcmd`: build one sketch per constraint row in §4.2 and compare FreeCAD's solved geometry with `cadder.cpsk` solving the same constraints. Check expression units, trigonometric units, VarSet references and the tangent `Value`. | Every §4.2 row verified or marked unsupported; spec §9.3 TBD resolved |
+| **1. Core package** ✅ | Extract `cpsk_core` (D1): Python 3.11 syntax, lossless `Document` model, canonical writer; `cadder.cpsk` builds on it. | cadder tests pass; the core's tests pass under FreeCAD's Python (`make test-cpsk-core`); reading and writing the spec example gives the same file |
 | **2. Export** | `export_sketch` (§4), unsupported-feature report, expressions, external geometry. | A test corpus of FreeCAD sketches exports; `cadder.cpsk` solves each export to FreeCAD's geometry (within 1e-9 mm); unsupported features are refused with a list |
 | **3. Import** | `import_sketch`, VarSet creation (D2), id preservation (D4). | FreeCAD → CPSK → FreeCAD gives the same geometry, constraints, names and expressions (R5); the spec example imports fully constrained |
 | **4. GUI and install** | Import/export registration, dialogs, `make freecad-addon` (link into `Mod`), `package.xml`. | Import and export work from the File menu in FreeCAD 1.1 on macOS |

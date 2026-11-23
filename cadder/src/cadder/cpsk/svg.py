@@ -4,9 +4,9 @@ import math
 from dataclasses import dataclass
 from xml.sax.saxutils import escape
 
-from cadder.cpsk.errors import CpskExportError, Stage, error
-from cadder.cpsk.model import Arc, Circle, Line, Point, Primitive
 from cadder.cpsk.solver import SolvedSketch
+from cpsk_core.errors import CpskExportError, Stage, error
+from cpsk_core.model import Arc, Circle, Line, Point, Primitive
 
 
 @dataclass(frozen=True)

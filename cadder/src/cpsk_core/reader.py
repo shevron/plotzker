@@ -113,6 +113,7 @@ class _RawConstraint:
     attrs: dict[str, str]
     line: int | None
     parent: int | None
+    element: Element | None = None
     formula: Node | None = None
 
     @property
@@ -362,7 +363,7 @@ class _Reader:
             for (namespace, name), value in element.attrs.items()
             if namespace is None and name in allowed
         }
-        raw = _RawConstraint(element.name, attrs, element.line, parent)
+        raw = _RawConstraint(element.name, attrs, element.line, parent, element)
         self.register_id(raw.id, raw.line)
         if raw.type in _DIMENSIONS:
             self.boolean(element, "driving")
@@ -556,7 +557,9 @@ class _Reader:
         if not self.check_operands(raw, operands):
             return None
         id = raw.id if raw.id in self.ids else None
-        return Constraint(raw.type, operands, value, raw.driving, id, raw.line, raw.parent)
+        return Constraint(
+            raw.type, operands, value, raw.driving, id, raw.line, raw.parent, raw.element
+        )
 
     def check_operands(self, raw: _RawConstraint, ops: Mapping[str, Operand]) -> bool:
         def kinds(*names: str) -> tuple[Kind, ...] | None:

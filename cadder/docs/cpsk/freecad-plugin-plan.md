@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | Plan accepted (decisions D1–D8: 2026-11-23). Phases 0 ([results](freecad-conventions.md)), 1 and 2 done |
+| **Status** | Plan accepted (decisions D1–D9: 2026-11-23). Phases 0 ([results](freecad-conventions.md)) to 3 done |
 | **Date** | 2026-11-23 |
 | **Implements** | [RFC](../rfc/parametric-sketch-format.md) §4 step 3 and §8; [spec 0.1](spec-0.1.md) |
 | **Target** | FreeCAD 1.1 (installed here: 1.1.3, Python 3.11.14) |
@@ -100,7 +100,7 @@ Details settled while building it:
   `<freecad:inactive>` element (namespace `https://github.com/shevron/plotzker/ns/cpsk-freecad`)
   in `<constraints>`, which CPSK readers skip. Label positions are not exported yet (phase 3,
   with D4).
-- D4 (keeping ids from an earlier import) is phase 3 work: export always generates ids.
+- D4 (keeping ids from an earlier import) came in phase 3, below.
 - The sketch's label becomes the metadata `<title>`.
 - Angle constraint values are written to 12 significant digits (FreeCAD stores radians, so
   30° reads back as 29.999999999999996°); lengths and stored coordinates are written exactly.
@@ -112,6 +112,38 @@ Details settled while building it:
 - Found for phase 3: FreeCAD reads some identifiers as units in expressions (a constraint named
   `h`, hours, cannot be referenced: "Failed to parse expression"). CPSK ids that are FreeCAD unit
   names need a decision on import.
+
+**As built (phase 3):** `import_sketch.py`: `from_document(document)` maps a CPSK document to
+the same plain data the exporter reads (so both directions are tested without FreeCAD), and
+`import_sketch(doc, path)` creates the sketch and its VarSet.
+
+- Constraints are added in one batch (FreeCAD solves only on recompute), then made non-driving,
+  deactivated (from `<freecad:inactive>`) and given their expressions, so stored coordinates are
+  not disturbed by intermediate solves. Non-driving constraints take their written value.
+- D4: a hidden `CpskData` string property on the sketch holds JSON with the primitive ids (keyed
+  by FreeCAD's GeometryId, which survives deleting and adding geometry; `""` for primitives
+  without an id), D9 renames, the generated names of anonymous constraints that carry a formula
+  (`cpsk_1`, …: FreeCAD needs a name for an expression), variable limits and order (FreeCAD
+  lists VarSet properties alphabetically), the metadata and the VarSet's name. Export uses it:
+  kept ids (generated ones avoid them), names, limits, variable order and metadata (`title`
+  follows the sketch label); ids of primitives that had none are dropped again when nothing
+  references them.
+- VarSet: one per imported sketch, `<Sketch>Variables`, labelled "`<title>` variables"; variable
+  expressions use bare property names, sketch expressions `<VarSet>.<name>` and
+  `Constraints.<name>`. A variable that uses a constraint value while constraints use
+  variables is refused: FreeCAD marks the circular VarSet–sketch dependency invalid.
+- Expressions are written with FreeCAD's precedence and syntax (`-2^2` → `-(2 ^ 2)`,
+  `2^3^2` → `2 ^ (3 ^ 2)`, `deg` → `°`, `;` between arguments). FreeCAD rewrites expression
+  text (`,` → `;`, `1e1` → `10`); the exporter accepts its forms.
+- Export now writes arc angles with the start in [−180°, 180°) and the end at start + sweep:
+  FreeCAD keeps angles in [0°, 360°), and this keeps both round trips stable.
+- External geometry from a FreeCAD export comes back as ordinary blocked construction geometry
+  (the link to the other object is not part of CPSK); the re-export is the same file.
+- Comments and extension content other than FreeCAD's are not kept in FreeCAD.
+- Tests: every FreeCAD case exported, imported into FreeCAD and exported again gives the same
+  file (R5); the spec example and `cadder/tests/cpsk_freecad/import/units-as-names.cpsk` (D9,
+  an anonymous primitive, precedence, a deactivated constraint) import fully constrained and
+  export to the same file without its comments (D4).
 
 ## 4. Mapping
 
@@ -186,7 +218,7 @@ VarSet property types: `length` variables become `App::PropertyDistance` (signed
 
 ## 5. Decisions
 
-D1–D7 were accepted on 2026-11-23; D8, from phase 0, was accepted the same day.
+D1–D7 were accepted on 2026-11-23; D8 (from phase 0) and D9 (from phase 3) were accepted the same day.
 
 | # | Question | Options | Decision |
 |---|---|---|---|
@@ -197,6 +229,7 @@ D1–D7 were accepted on 2026-11-23; D8, from phase 0, was accepted the same day
 | D5 | FreeCAD constraint names that are not valid CPSK identifiers (spaces, reserved words) | (a) Refuse export and list them. (b) Rename them (e.g. spaces to `_`) and warn. | **(a)**: renaming would break R5 and expressions that reference the name |
 | D6 | Deactivated constraints (`IsActive = False`), label positions and similar FreeCAD-only state | (a) Unsupported: refuse. (b) Dropped with a warning. (c) Kept in a FreeCAD extension namespace (spec §11.3, RFC §8 TBD). | **(c)**: this is what the extension namespace is for, and it keeps R5 |
 | D7 | Expressions FreeCAD can't convert (spreadsheet references, conditionals) | (a) Refuse (R3, R4). (b) Optionally freeze them as literal values. | **(a)**, with (b) as an explicit option later if needed |
+| D9 | CPSK ids that FreeCAD's expressions read as units or constants (`t`, `h`, `s`, `g`, `e`, `l`, `m`, `min`, `in`, capital letters such as `N` or `T`, …): FreeCAD cannot give such a constraint or variable an expression or reference it | (a) Rename on import (`t` → `t_`) with a warning, and keep the original id so export writes it back. (b) Refuse the import and list them. (c) Import the value without the expression. | **(a)**: files stay importable (`t` for a thickness is common) and round trips stay lossless. Only ids that carry a formula or are referenced are renamed; FreeCAD itself decides what is a unit (`App.Units.Quantity`) |
 | D8 | Import of documents whose units are not mm and degrees (FreeCAD reads unitless numbers as mm and degrees) | (a) Refuse them in the first version; export always writes mm and degrees. (b) Convert: variables become unitless VarSet floats in document units, and each constraint expression is rewritten to work in document units (`(<formula>) * 1 cm`, constraint references divided by `1 cm`, trigonometric arguments multiplied by `1 rad`). | **(a)** now, (b) when a non-mm document is needed |
 
 ## 6. User interface
@@ -218,7 +251,7 @@ D1–D7 were accepted on 2026-11-23; D8, from phase 0, was accepted the same day
 | **0. Conventions spike** ✅ | Script in `freecadcmd`: build one sketch per constraint row in §4.2 and compare FreeCAD's solved geometry with `cadder.cpsk` solving the same constraints. Check expression units, trigonometric units, VarSet references and the tangent `Value`. | Every §4.2 row verified or marked unsupported; spec §9.3 TBD resolved |
 | **1. Core package** ✅ | Extract `cpsk_core` (D1): Python 3.11 syntax, lossless `Document` model, canonical writer; `cadder.cpsk` builds on it. | cadder tests pass; the core's tests pass under FreeCAD's Python (`make test-cpsk-core`); reading and writing the spec example gives the same file |
 | **2. Export** ✅ | `export_sketch` (§4), unsupported-feature report, expressions, external geometry. | A test corpus of FreeCAD sketches exports; `cadder.cpsk` solves each export to FreeCAD's geometry (within 1e-9 mm); unsupported features are refused with a list |
-| **3. Import** | `import_sketch`, VarSet creation (D2), id preservation (D4). | FreeCAD → CPSK → FreeCAD gives the same geometry, constraints, names and expressions (R5); the spec example imports fully constrained |
+| **3. Import** ✅ | `import_sketch`, VarSet creation (D2), id preservation (D4). | FreeCAD → CPSK → FreeCAD gives the same geometry, constraints, names and expressions (R5); the spec example imports fully constrained |
 | **4. GUI and install** | Import/export registration, dialogs, `make freecad-addon` (link into `Mod`), `package.xml`. | Import and export work from the File menu in FreeCAD 1.1 on macOS |
 | **5. Docs** | Addon README, cadder docs, spec updates from phase 0, STATUS tasks. | Docs describe install and use; open spec issues updated |
 
@@ -239,6 +272,6 @@ D1–D7 were accepted on 2026-11-23; D8, from phase 0, was accepted the same day
 |---|---|
 | Sign and direction conventions differ between FreeCAD's constraint operands and the spec | Phase 0, before any mapping code |
 | FreeCAD's unit-aware expressions differ from unitless CPSK formulas | Phase 0: lenient in practice (§4.3); import reports any expression FreeCAD rejects; revisit with spec A6 |
-| CPSK ids that FreeCAD reads as units (`h`, `s`, …) cannot be referenced in FreeCAD expressions | Phase 3: list them and refuse or rename on import (found in phase 2) |
+| CPSK ids that FreeCAD reads as units (`h`, `s`, …) cannot be referenced in FreeCAD expressions | D9: renamed on import, restored on export |
 | FreeCAD internals change between releases (constraint fields, VarSet API) | Only public Python API; pin the tested FreeCAD version in `package.xml`; the cross-solver tests catch drift |
 | Two Python versions to support (3.11 core, 3.14 cadder) | Core tested under both; ruff `target-version = "py311"` for the core |

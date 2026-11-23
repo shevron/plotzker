@@ -514,8 +514,8 @@ the printed carriage, motor mount and idler mount are the test pieces.
   FreeCAD's solver (`planegcs`, LGPL; on macOS it builds from source: `brew install eigen boost`)
   and exports the solved profile as SVG; `load_sketch` loads `.cpsk` files directly (with
   `params` overrides and `strict`). Follow-ups: a command-line tool; the FreeCAD import/export
-  plugin (RFC phase 3; plan, decisions D1–D8, phases 0–2 done: `cadder/docs/cpsk/freecad-plugin-plan.md`;
-  the exporter is in `cadder/freecad-addon/CPSK/`);
+  plugin (RFC phase 3; plan, decisions D1–D9, phases 0–3 done: `cadder/docs/cpsk/freecad-plugin-plan.md`;
+  export and import are in `cadder/freecad-addon/CPSK/`; next: phase 4, File menu and install);
   the spec's open issues (Appendix A). Using `.cpsk` files as plotter CAD sources would change
   D23/D24 and README §7.1 rule 3: not decided.
 

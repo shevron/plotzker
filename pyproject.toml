@@ -69,5 +69,5 @@ ignore_errors = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "manifold3d"  # no type stubs
+module = ["manifold3d", "FreeCAD", "Part", "Sketcher"]  # no type stubs (FreeCAD's: the CPSK addon)
 ignore_missing_imports = true

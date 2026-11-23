@@ -11,7 +11,7 @@ from cpsk_core.errors import Diagnostic
 from cpsk_core.formula import Units
 
 if TYPE_CHECKING:
-    from cpsk_core.document import Document
+    from cpsk_core.document import Document, Element
 
 Kind: TypeAlias = Literal["point", "line", "circle", "arc"]
 Implicit: TypeAlias = Literal["origin", "x_axis", "y_axis"]
@@ -159,6 +159,8 @@ class Constraint:
     id: str | None = None
     line: int | None = None
     parent: int | None = None
+    element: Element | None = field(default=None, compare=False, repr=False)
+    """The source element (its ``value`` keeps the formula as written); ``None`` if built."""
 
     @property
     def label(self) -> str:

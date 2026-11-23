@@ -3,9 +3,13 @@
 :func:`to_document` maps a :class:`~cpsk_freecad.sketch_data.SketchData` snapshot, so it runs
 without FreeCAD; :func:`export_sketch` snapshots a live sketch and writes the file.
 
-- Primitive ids come from FreeCAD's GeoIds: ``point<n>`` for points, ``edge<n>`` for curves
+- Primitive ids are those kept from an import (D4, :class:`~cpsk_freecad.sketch_data.Kept`),
+  otherwise generated from FreeCAD's GeoIds: ``point<n>`` for points, ``edge<n>`` for curves
   (``n`` = GeoId + 1, FreeCAD's ``Edge<n>``), ``external<n>`` for external geometry (GeoId
   ``-2 - n``), which is written as construction geometry with a nested ``<block/>`` (R2).
+  Constraint and variable names renamed on import get their CPSK ids back (D9); kept metadata,
+  variable limits and variable order are written back too.
+- Arc angles are written with the start in [-180°, 180°) and the end at start + sweep.
 - Constraints follow plan §4.2 and are placed canonically (spec §11.4). FreeCAD names become
   constraint ids; names that are not valid CPSK identifiers are refused (D5).
 - Expressions are translated (:mod:`cpsk_freecad.expressions`); variables come from the VarSets
@@ -28,6 +32,7 @@ from pathlib import Path as FilePath
 from typing import Any
 
 from cpsk_core import (
+    OPERANDS,
     RESERVED,
     CpskError,
     CpskExportError,
@@ -104,21 +109,34 @@ class _Exporter:
     def __init__(self, data: SketchData) -> None:
         self.data = data
         self.problems: list[Diagnostic] = []
+        self.kept = data.kept
         self.primitives: dict[int, tuple[str, str]] = {}  # GeoId → (id, kind)
-        self.names = {c.name for c in data.constraints if c.name}
-        self.varsets: list[VarSet] = []  # referenced, in discovery order
+        self.anonymous: set[str] = set()  # generated ids of primitives that had none (D4)
+        self.names = {self._cpsk(c.name) for c in data.constraints if c.name}
+        self.referenced: set[str] = set()  # FreeCAD names of constraints used in expressions
+        self.ids: list[tuple[Element, str]] = []  # constraint elements, FreeCAD names
+        kept = [v for v in data.varsets if v.name == self.kept.varset]
+        self.varsets: list[VarSet] = kept  # the imported VarSet, then referenced ones
         self.variable_names: dict[str, str] = {}  # variable → VarSet name
+
+    def _cpsk(self, name: str) -> str:
+        """The CPSK id for a FreeCAD constraint or variable name (D9; ``""``: anonymous)."""
+        return self.kept.names.get(name, name)
 
     def run(self) -> tuple[Document, list[Diagnostic]]:
         document = Document.new(unit_length="mm", unit_angle="deg")
         document.prefixes[FREECAD_NAMESPACE] = FREECAD_PREFIX
-        if self.data.label:
-            metadata = document.container("metadata", create=True)
-            assert metadata is not None
-            metadata.append(_text("title", self.data.label))
+        metadata = self._metadata()
+        if metadata:
+            holder = document.container("metadata", create=True)
+            assert holder is not None
+            holder.children += metadata
         geometry = self._geometry()
         constraints, inactive = self._constraints()
         variables = self._variables()
+        for created, name in self.ids:
+            cpsk = self._cpsk(name)
+            created.set("id", cpsk or (name if name in self.referenced else None))
         if self.problems:
             raise CpskExportError(self.problems)
         for container, children in (
@@ -137,23 +155,43 @@ class _Exporter:
             parent = document.container("constraints", create=True)
             assert parent is not None
             parent.append(wrapper)
+        self._drop_anonymous_ids(document)
         try:
             compile_document(document)
         except CpskError as e:  # a mapping gap: report it rather than write a broken file
             raise CpskExportError(e.diagnostics) from None
         return document, self._warnings()
 
+    def _metadata(self) -> list[Element]:
+        items = list(self.kept.metadata)
+        if not any(name == "title" for name, _ in items):
+            items.insert(0, ("title", self.data.label))
+        return [
+            _text(name, self.data.label if name == "title" else text)
+            for name, text in items
+            if text or name != "title"
+        ]
+
     # ----- Geometry -----
 
     def _geometry(self) -> list[Element]:
         primitives = []
+        taken = set(self.kept.ids.values())
         for index, geometry in enumerate(self.data.geometry):
-            prefix = "point" if geometry.kind == "point" else "edge"
-            created = self._primitive(index, f"{prefix}{index + 1}", geometry)
+            identifier = self.kept.ids.get(index)
+            if not identifier:
+                prefix = "point" if geometry.kind == "point" else "edge"
+                identifier = _unique(f"{prefix}{index + 1}", taken)
+                taken.add(identifier)
+                if index in self.kept.ids:
+                    self.anonymous.add(identifier)
+            created = self._primitive(index, identifier, geometry)
             if created is not None:
                 primitives.append(created)
         for index, geometry in enumerate(self.data.external):
-            created = self._primitive(-3 - index, f"external{index + 1}", geometry)
+            identifier = _unique(f"external{index + 1}", taken)
+            taken.add(identifier)
+            created = self._primitive(-3 - index, identifier, geometry)
             if created is not None:
                 created.set("construction", "true")
                 created.append(element("block"))
@@ -174,8 +212,32 @@ class _Exporter:
         attrs: dict[str, str | float | bool | None] = {"id": identifier}
         if geometry.construction:
             attrs["construction"] = True
-        attrs.update(zip(names, geometry.coords, strict=True))
+        coords = geometry.coords
+        if geometry.kind == "arc":  # start in [-180°, 180°), end = start + sweep (0°, 360°]
+            sweep = (coords[4] - coords[3]) % 360 or 360.0
+            start = (coords[3] + 180) % 360 - 180
+            coords = (*coords[:3], start, start + sweep)
+        attrs.update(zip(names, coords, strict=True))
         return element(geometry.kind, **attrs)
+
+    def _drop_anonymous_ids(self, document: Document) -> None:
+        """Remove generated ids of primitives that had none, where nothing references them."""
+        if not self.anonymous:
+            return
+        used: set[str] = set()
+
+        def walk(parent: Element) -> None:
+            for child in parent.children:
+                if isinstance(child, Element):
+                    if child.name in OPERANDS:
+                        used.update(v.split(".")[0] for k, v in child.attrs.items() if k[0] is None)
+                    walk(child)
+
+        walk(document.root)
+        geometry = document.container("geometry")
+        for primitive in geometry.elements() if geometry is not None else ():
+            if primitive.get("id") in self.anonymous - used:
+                primitive.set("id", None)
 
     # ----- Constraints -----
 
@@ -193,12 +255,9 @@ class _Exporter:
         return active, inactive
 
     def _constraint(self, constraint: Constraint) -> Element:
-        if constraint.name and (
-            not IDENTIFIER_RE.fullmatch(constraint.name) or constraint.name in RESERVED
-        ):
-            raise _UnsupportedError(
-                f"the name {constraint.name!r} is not a valid CPSK identifier (spec §3)"
-            )
+        cpsk = self._cpsk(constraint.name)
+        if cpsk and (not IDENTIFIER_RE.fullmatch(cpsk) or cpsk in RESERVED):
+            raise _UnsupportedError(f"the name {cpsk!r} is not a valid CPSK identifier (spec §3)")
         name, operands = self._map(constraint)
         attrs: dict[str, str | float | bool | None] = {"id": constraint.name or None}
         attrs.update(operands)
@@ -206,7 +265,10 @@ class _Exporter:
             if not constraint.driving:
                 attrs["driving"] = False
             attrs["value"] = self._value(constraint)
-        return element(name, **attrs)
+        created = element(name, **attrs)
+        if constraint.name:
+            self.ids.append((created, constraint.name))  # the id is set once references are known
+        return created
 
     def _value(self, constraint: Constraint) -> str:
         expression = self.data.expressions.get(constraint.name) if constraint.driving else None
@@ -310,6 +372,8 @@ class _Exporter:
 
     def _sketch_resolver(self, path: Path) -> str:
         parts = path.parts
+        if len(parts) == 2 and parts[0] == "Constraints" and not path.label:
+            parts = ("", *parts)  # the sketch's own property, as FreeCAD writes it
         if parts[0] == "" or self._is_sketch(path):
             if len(parts) == 3 and parts[1] == "Constraints":
                 return self._constraint_reference(parts[2])
@@ -336,7 +400,8 @@ class _Exporter:
                     raise UnsupportedExpressionError(f"{name!r} is a reference constraint")
                 if not constraint.active:
                     raise UnsupportedExpressionError(f"{name!r} is deactivated")
-                return name
+                self.referenced.add(name)
+                return self._cpsk(name) or name
         raise UnsupportedExpressionError(f"there is no constraint {name!r}")
 
     def _varset_reference(self, path: Path) -> str:
@@ -351,7 +416,7 @@ class _Exporter:
             raise UnsupportedExpressionError(f"reference {path}: no such VarSet property")
         if varset not in self.varsets:
             self.varsets.append(varset)
-        return name
+        return self._cpsk(name)
 
     def _variables(self) -> list[Element]:
         created: list[Element] = []
@@ -359,15 +424,16 @@ class _Exporter:
         while index < len(self.varsets):  # translating may reference more VarSets
             varset = self.varsets[index]
             index += 1
-            for variable in varset.variables:
+            for variable in self._in_order(varset):
                 label = f"{varset.label}.{variable.name}"
-                owner = self.variable_names.setdefault(variable.name, varset.name)
+                cpsk = self._cpsk(variable.name)
+                owner = self.variable_names.setdefault(cpsk, varset.name)
                 problem = None
                 if owner != varset.name:
                     problem = f"another referenced VarSet ({owner}) has a property of that name"
-                elif variable.name in self.names:
+                elif cpsk in self.names:
                     problem = "a sketch constraint has the same name"
-                elif not IDENTIFIER_RE.fullmatch(variable.name) or variable.name in RESERVED:
+                elif not IDENTIFIER_RE.fullmatch(cpsk) or cpsk in RESERVED:
                     problem = "the name is not a valid CPSK identifier (spec §3)"
                 elif variable.type not in _VARIABLE_TYPES:
                     problem = f"property type {variable.type} is not supported"
@@ -380,16 +446,26 @@ class _Exporter:
                     self._problem(f"variable {label}: {problem}", label)
         return created
 
+    def _in_order(self, varset: VarSet) -> list[Any]:
+        """The variables, in the imported document's order for the imported VarSet (D4)."""
+        if varset.name != self.kept.varset:
+            return list(varset.variables)
+        rank = {name: i for i, name in enumerate(self.kept.order)}
+        return sorted(varset.variables, key=lambda v: rank.get(v.name, len(rank)))
+
     def _variable_element(self, varset: VarSet, variable: Any) -> Element:
         if variable.expression is not None:
             value = translate(variable.expression, self._varset_resolver(varset))
         else:
             value = format_number(variable.value)
+        low, high = self.kept.limits.get(variable.name, (None, None))
         return element(
             "variable",
-            id=variable.name,
+            id=self._cpsk(variable.name),
             type=_VARIABLE_TYPES[variable.type],
             value=value,
+            min=low,
+            max=high,
             description=variable.description or None,
         )
 
@@ -430,6 +506,14 @@ class _Exporter:
 def _label(index: int, constraint: Constraint) -> str:
     """How FreeCAD shows a constraint: its name, or ``Constraint<n>``."""
     return constraint.name or f"Constraint{index + 1}"
+
+
+def _unique(identifier: str, taken: set[str]) -> str:
+    candidate, n = identifier, 1
+    while candidate in taken:
+        n += 1
+        candidate = f"{identifier}_{n}"
+    return candidate
 
 
 def _text(name: str, text: str) -> Element:

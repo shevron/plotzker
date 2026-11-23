@@ -1,9 +1,10 @@
-"""The CPSK FreeCAD plugin's exporter (plan phase 2).
+"""The CPSK FreeCAD plugin: export (plan phase 2) and import (phase 3).
 
-Without FreeCAD: expression translation, and the mapping of every case in ``cpsk_freecad/``
-from plain data. With FreeCAD (``freecadcmd``; skipped otherwise): every case is built and solved
-in FreeCAD and exported by the plugin, and ``cadder.cpsk`` must solve each export to FreeCAD's
-geometry (plan §8, cross-solver check).
+Without FreeCAD: expression translation both ways, the mapping of every case in
+``cpsk_freecad/`` from plain data, and round trips through the plugin's plain data. With FreeCAD
+(``freecadcmd``; skipped otherwise): every case is built and solved in FreeCAD and exported, and
+``cadder.cpsk`` must solve each export to FreeCAD's geometry (plan §8, cross-solver check); each
+export is imported into FreeCAD and exported again, which must give the same file (R5, D4).
 """
 
 import json
@@ -18,11 +19,12 @@ import pytest
 
 from cadder import cpsk
 from cadder.tools import find_tool
-from cpsk_core import CpskExportError, Document
-from cpsk_core.document import write
-from cpsk_freecad import FREECAD_NAMESPACE, to_document
+from cpsk_core import Comment, CpskExportError, CpskLoadError, Document, Element
+from cpsk_core.document import parse, read, write
+from cpsk_core.formula import parse as parse_formula
+from cpsk_freecad import FREECAD_NAMESPACE, from_document, to_document
 from cpsk_freecad.expressions import Path as FcPath
-from cpsk_freecad.expressions import UnsupportedExpressionError, translate
+from cpsk_freecad.expressions import UnsupportedExpressionError, to_freecad, translate
 from cpsk_freecad.sketch_data import Constraint, Geometry, SketchData, Variable, VarSet
 
 CASES_DIR = Path(__file__).parent / "cpsk_freecad"
@@ -31,6 +33,12 @@ from cases import C  # noqa: E402
 from export_cases import X  # noqa: E402
 
 ALL = C + X
+SAMPLES = [
+    Path(__file__).parents[1] / "docs" / "cpsk" / "examples" / "plate-with-hole.cpsk",
+    CASES_DIR / "import" / "units-as-names.cpsk",
+]
+FREECAD_UNITS = {"t", "h", "s", "g", "e", "m", "min", "l"}
+"""Some names FreeCAD's expressions read as units or constants (for tests without FreeCAD)."""
 EXPORTED = [c for c in ALL if not c.get("refused")]
 DIMENSIONAL = {"Distance", "DistanceX", "DistanceY", "Radius", "Diameter", "Angle"}
 
@@ -75,6 +83,8 @@ def _resolve(path: FcPath) -> str:
         ("Constraints.w / 2", "w / 2"),
         ("<<My vars>>.ratio", "ratio"),
         ("min(Vars.width, 3 mm) + atan2(1, 2)", "min(width, 3mm) + atan2(1, 2)"),
+        ("min(Vars.width; 3 mm) / 3", "min(width, 3mm) / 3"),  # as FreeCAD stores it
+        ("2 ^ -1", "2^-1"),
         ("10 mm * sin(30)", "10mm * sin(30)"),
         ("pi / 6", "pi / 6"),
     ],
@@ -215,29 +225,39 @@ def _freecadcmd() -> Path | None:
         return None
 
 
-@pytest.fixture(scope="module")
-def freecad_results(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+def _run_freecad(script: str, out: Path, **env: str) -> dict[str, Any]:
     freecadcmd = _freecadcmd()
     if freecadcmd is None:
         pytest.skip("FreeCAD not installed")
-    out = tmp_path_factory.mktemp("cpsk_export")
     root = Path(__file__).parents[1]
     paths = [root / "src", root / "freecad-addon" / "CPSK", CASES_DIR]
-    env = {
-        **os.environ,
-        "CPSK_EXPORT_OUT": str(out),
-        "CPSK_PATHS": os.pathsep.join(map(str, paths)),
-    }
     run = subprocess.run(
-        [str(freecadcmd), str(CASES_DIR / "run_export.py")],
+        [str(freecadcmd), str(CASES_DIR / script)],
         capture_output=True,
         text=True,
-        env=env,
+        env={**os.environ, **env, "CPSK_PATHS": os.pathsep.join(map(str, paths))},
         check=False,
     )
     results = out / "results.json"
     assert results.is_file(), run.stdout + run.stderr
     return json.loads(results.read_text())  # type: ignore[no-any-return]
+
+
+@pytest.fixture(scope="module")
+def freecad_results(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
+    out = tmp_path_factory.mktemp("cpsk_export")
+    return _run_freecad("run_export.py", out, CPSK_EXPORT_OUT=str(out))
+
+
+@pytest.fixture(scope="module")
+def imported_results(
+    tmp_path_factory: pytest.TempPathFactory, freecad_results: dict[str, Any]
+) -> dict[str, Any]:
+    out = tmp_path_factory.mktemp("cpsk_import")
+    files = [r["file"] for r in freecad_results.values() if "file" in r] + list(map(str, SAMPLES))
+    return _run_freecad(
+        "run_import.py", out, CPSK_IMPORT_IN=os.pathsep.join(files), CPSK_IMPORT_OUT=str(out)
+    )
 
 
 def _dump(geometry: Any) -> list[Any]:
@@ -280,3 +300,122 @@ def test_freecad_export_solves_to_freecads_geometry(
     assert len(ours) == len(result["geometry"])
     for mine, theirs in zip(ours, result["geometry"], strict=True):
         _assert_same(mine, theirs)
+
+
+@pytest.mark.parametrize("case", EXPORTED, ids=[c["name"] for c in EXPORTED])
+def test_freecad_round_trip_writes_the_same_file(
+    case: dict[str, Any], freecad_results: dict[str, Any], imported_results: dict[str, Any]
+) -> None:
+    """FreeCAD → CPSK → FreeCAD → CPSK (R5): same geometry, constraints, names, expressions."""
+    result = imported_results[case["name"]]
+    assert set(result) >= {"file", "dof"}, result
+    assert result["dof"] == 0
+    first = Path(freecad_results[case["name"]]["file"]).read_text()
+    assert Path(result["file"]).read_text() == first
+
+
+@pytest.mark.parametrize("path", SAMPLES, ids=[p.stem for p in SAMPLES])
+def test_freecad_imports_documents_fully_constrained(
+    path: Path, imported_results: dict[str, Any]
+) -> None:
+    """CPSK → FreeCAD → CPSK (D4): fully constrained in FreeCAD, and the same file back."""
+    result = imported_results[path.stem]
+    assert set(result) >= {"file", "dof"}, result
+    assert result["dof"] == 0
+    assert all(code == "renamed" for code, _ in result["import_warnings"])
+    assert Path(result["file"]).read_text() == _without_comments(read(path))
+
+
+def test_freecad_renames_unit_names_and_export_restores_them(
+    imported_results: dict[str, Any],
+) -> None:
+    result = imported_results["units-as-names"]
+    assert sorted(ids[0] for _, ids in result["import_warnings"]) == ["e", "g", "s", "t"]
+    properties = dict(result["varsets"][0][1])
+    assert {"t_", "e_", "span", "tilt"} <= set(properties)
+    assert properties["tilt"] == pytest.approx(-18)  # -(2^2) * 5 + 2^(3^0), FreeCAD's precedence
+    assert ["Distance", "", True, False] in result["constraints"]  # the deactivated one
+
+
+# ----- Import, without FreeCAD -----
+
+
+def _without_comments(document: Document) -> str:
+    def strip(element: Element) -> None:
+        element.children = [c for c in element.children if not isinstance(c, Comment)]
+        for child in element.children:
+            if isinstance(child, Element):
+                strip(child)
+
+    document.prolog = []
+    strip(document.root)
+    return write(document)
+
+
+@pytest.mark.parametrize(
+    ("cpsk_formula", "expected"),
+    [
+        ("width * 2", "Vars.width * 2"),
+        ("-2^2", "-(2 ^ 2)"),
+        ("2^3^2", "2 ^ (3 ^ 2)"),
+        ("(-2)^2", "-2 ^ 2"),
+        ("2^-1", "2 ^ -1"),
+        ("min(width, 3mm) / 3", "min(Vars.width; 3 mm) / 3"),
+        ("2.5cm + 1in", "2.5 cm + 1 in"),
+        ("30deg", "30 °"),
+        ("pi / 6", "pi / 6"),
+        ("1 - (2 - 3)", "1 - (2 - 3)"),
+    ],
+)
+def test_formulas_translate_to_freecad(cpsk_formula: str, expected: str) -> None:
+    assert to_freecad(cpsk_formula, lambda name: f"Vars.{name}") == expected
+    back = translate(expected, lambda path: path.parts[-1])
+    assert parse_formula(back) == parse_formula(cpsk_formula)
+
+
+@pytest.mark.parametrize("path", SAMPLES, ids=[p.stem for p in SAMPLES])
+def test_documents_round_trip_without_freecad(path: Path) -> None:
+    data, _ = from_document(read(path), is_unit=FREECAD_UNITS.__contains__)
+    document, _ = to_document(data)
+    assert write(document) == _without_comments(read(path))
+
+
+@pytest.mark.parametrize("case", EXPORTED, ids=[c["name"] for c in EXPORTED])
+def test_freecad_cases_round_trip_without_freecad(case: dict[str, Any]) -> None:
+    first, _ = to_document(_data(case))
+    data, _ = from_document(parse(write(first)), is_unit=FREECAD_UNITS.__contains__)
+    second, _ = to_document(data)
+    assert write(second) == write(first)
+
+
+def test_import_renames_unit_names_where_freecad_needs_them() -> None:
+    data, warnings = from_document(
+        read(CASES_DIR / "import" / "units-as-names.cpsk"), is_unit=FREECAD_UNITS.__contains__
+    )
+    assert sorted(w.ids[0] for w in warnings if w.code == "renamed") == ["e", "g", "s", "t"]
+    assert [v.name for v in data.varsets[0].variables] == ["t_", "e_", "span", "tilt"]
+    assert data.varsets[0].variables[2].expression == "t_ * e_ + 1 cm"
+    assert data.expressions["cpsk_3"] == "Constraints.s_ - 6"  # an anonymous constraint
+    assert data.kept.names == {"t_": "t", "e_": "e", "s_": "s", "g_": "g"} | {
+        f"cpsk_{n}": "" for n in (1, 2, 3)
+    }
+
+
+def _document(body: str, units: str = "") -> Document:
+    return parse(f'<sketch xmlns="{cpsk.NAMESPACE}" version="0.1"{units}>{body}</sketch>'.encode())
+
+
+def test_import_needs_millimetres_and_degrees() -> None:
+    with pytest.raises(CpskLoadError, match="only mm documents"):
+        from_document(_document("", ' unit-length="cm"'))
+
+
+def test_import_refuses_variables_and_constraints_that_use_each_other() -> None:
+    body = """
+      <variables><variable id="half" type="length" value="w / 2"/>
+        <variable id="len" type="length" value="10"/></variables>
+      <geometry><line x1="0" y1="0" x2="10" y2="0"><distance id="w" value="len"/></line>
+      </geometry>"""
+    with pytest.raises(CpskLoadError, match="circular dependency") as raised:
+        from_document(_document(body))
+    assert [d.ids for d in raised.value.diagnostics] == [("half",)]

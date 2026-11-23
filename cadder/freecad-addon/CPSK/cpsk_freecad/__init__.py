@@ -5,5 +5,6 @@ FreeCAD themselves: they read sketches through their Python attributes.
 """
 
 from cpsk_freecad.export_sketch import FREECAD_NAMESPACE, export_sketch, to_document
+from cpsk_freecad.import_sketch import from_document, import_sketch
 
-__all__ = ["FREECAD_NAMESPACE", "export_sketch", "to_document"]
+__all__ = ["FREECAD_NAMESPACE", "export_sketch", "from_document", "import_sketch", "to_document"]

@@ -1,4 +1,4 @@
-"""FreeCAD expressions → CPSK formulas (plugin plan §4.3).
+"""FreeCAD expressions ↔ CPSK formulas (plugin plan §4.3).
 
 FreeCAD and CPSK 0.1 differ in precedence: in FreeCAD unary minus binds tighter than ``^`` and
 ``^`` is left-associative (``-2^2`` is 4, ``2^3^2`` is 64); in CPSK ``^`` binds tighter and is
@@ -12,10 +12,14 @@ Anything CPSK 0.1 cannot express raises :class:`UnsupportedExpressionError`.
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TypeAlias
+
+from cpsk_core import formula as cpsk_formula
+from cpsk_core.document import format_number
 
 UNITS = {"mm": "mm", "cm": "cm", "m": "m", "in": "in", "deg": "deg", "°": "deg", "rad": "rad"}
 """FreeCAD unit → CPSK unit."""
@@ -31,7 +35,7 @@ _TOKEN_RE = re.compile(
     | (?P<label><<[^>]*>>)
     | (?P<name>[A-Za-z_][A-Za-z0-9_]*)
     | (?P<degree>°)
-    | (?P<op>[-+*/^(),.])
+    | (?P<op>[-+*/^(),;.])
     )""",
     re.VERBOSE,
 )
@@ -184,7 +188,7 @@ class _Parser:
             raise UnsupportedExpressionError(f"function {name!r} is not supported")
         self.take("(")
         args = [self.sum()]
-        while self.peek() == ",":
+        while self.peek() in (",", ";"):  # FreeCAD stores ";" between arguments
             self.take()
             args.append(self.sum())
         self.take(")")
@@ -234,3 +238,58 @@ def _wrap(node: object, level: int) -> str:
     assert isinstance(node, tuple)
     text, own = _write(node)
     return text if own >= level else f"({text})"
+
+
+# ----- CPSK → FreeCAD -----
+
+FREECAD_UNITS = {"mm": "mm", "cm": "cm", "m": "m", "in": "in", "deg": "°", "rad": "rad"}
+"""CPSK unit → FreeCAD unit."""
+
+
+def to_freecad(formula: str, resolve: Callable[[str], str]) -> str:
+    """The FreeCAD expression for a CPSK formula; ``resolve`` turns an identifier into a
+    FreeCAD reference (e.g. ``width`` → ``Vars.width``).
+
+    Written with FreeCAD's precedence (``-2^2`` → ``-(2 ^ 2)``, ``2^3^2`` → ``2 ^ (3 ^ 2)``).
+    """
+    return _freecad(cpsk_formula.parse(formula), resolve)[0]
+
+
+# FreeCAD levels: 1 sum, 2 product, 3 power (left-associative), 4 unary, 5 primary.
+
+
+def _freecad(node: cpsk_formula.Node, resolve: Callable[[str], str]) -> tuple[str, int]:
+    match node:
+        case cpsk_formula.Number(value=value, unit=None) if value == math.pi:
+            return "pi", 5  # the parser folds the constant into a number
+        case cpsk_formula.Number(value=value, unit=unit):
+            text = format_number(value)
+            return (f"{text} {FREECAD_UNITS[unit]}" if unit else text), 5
+        case cpsk_formula.Name(parts=parts):
+            if parts[0] in CONSTANTS and len(parts) == 1:
+                return parts[0], 5
+            return resolve(".".join(parts)), 5
+        case cpsk_formula.Call(function=function, args=args):
+            return f"{function}({'; '.join(_freecad(a, resolve)[0] for a in args)})", 5
+        case cpsk_formula.Unary(op=op, operand=operand):
+            return f"{op}{_freecad_wrap(operand, 4, resolve)}", 4
+        case cpsk_formula.Binary(op="^", left=left, right=right):
+            return f"{_freecad_wrap(left, 3, resolve)} ^ {_freecad_wrap(right, 4, resolve)}", 3
+        case cpsk_formula.Binary(op=op, left=left, right=right) if op in ("*", "/"):
+            return f"{_freecad_wrap(left, 2, resolve)} {op} {_freecad_wrap(right, 3, resolve)}", 2
+        case cpsk_formula.Binary(op=op, left=left, right=right):
+            return f"{_freecad_wrap(left, 1, resolve)} {op} {_freecad_wrap(right, 2, resolve)}", 1
+    raise AssertionError(node)
+
+
+def _freecad_wrap(node: cpsk_formula.Node, level: int, resolve: Callable[[str], str]) -> str:
+    text, own = _freecad(node, resolve)
+    return text if own >= level else f"({text})"
+
+
+def is_plain_number(formula: str) -> bool:
+    """Whether a formula is a number without a unit, optionally negated (no expression needed)."""
+    node = cpsk_formula.parse(formula)
+    if isinstance(node, cpsk_formula.Unary):
+        node = node.operand
+    return isinstance(node, cpsk_formula.Number) and node.unit is None

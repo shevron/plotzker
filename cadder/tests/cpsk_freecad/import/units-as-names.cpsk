@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sketch xmlns="https://github.com/shevron/plotzker/ns/cpsk" version="0.1" unit-length="mm" unit-angle="deg">
+  <metadata>
+    <title>Names FreeCAD reads as units</title>
+    <author>cadder tests</author>
+  </metadata>
+
+  <variables>
+    <variable id="t" type="length" value="3" min="1" description="Thickness"/>
+    <variable id="e" type="number" value="2"/>
+    <variable id="span" type="length" value="t * e + 1cm"/>
+    <variable id="tilt" type="angle" value="-2^2 * 5 + 2^3^0"/>
+  </variables>
+
+  <geometry>
+    <line id="base" x1="0" y1="0" x2="16" y2="0">
+      <coincident a="self.start" b="origin"/>
+      <horizontal/>
+      <distance id="s" value="span"/>
+      <coincident a="self.end" b="riser.start"/>
+      <tangent a="self.end" b="bend.start"/>
+    </line>
+
+    <line id="riser" x1="16" y1="0" x2="16" y2="3">
+      <vertical/>
+      <distance value="t"/>
+    </line>
+
+    <line x1="0" y1="0" x2="9.510565162951535" y2="-3.090169943749474">
+      <coincident a="self.start" b="origin"/>
+      <angle a="x_axis" value="tilt"/>
+      <distance value="s - 6"/>
+    </line>
+
+    <arc id="bend" cx="16" cy="3" r="3" start-angle="-90" end-angle="0">
+      <radius id="g" value="t"/>
+      <angle value="90"/>
+    </arc>
+  </geometry>
+
+  <constraints>
+    <freecad:inactive xmlns:freecad="https://github.com/shevron/plotzker/ns/cpsk-freecad">
+      <distance of="base" value="99"/>
+    </freecad:inactive>
+  </constraints>
+</sketch>

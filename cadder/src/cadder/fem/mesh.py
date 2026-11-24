@@ -184,7 +184,10 @@ def _merge_coincident_nodes(
     nodes: dict[int, Vec3], tets: list[tuple[int, ...]], tris: list[tuple[int, ...]]
 ) -> tuple[dict[int, Vec3], list[tuple[int, ...]], list[tuple[int, ...]]]:
     """Merge nodes at the same place and drop the elements that collapse (gmsh leaves such
-    zero-length edges in a few meshes; CalculiX rejects them as non-positive Jacobians)."""
+    zero-length edges in a few meshes; CalculiX rejects them as non-positive Jacobians).
+
+    Nodes left in no tetrahedron (those of a dropped element, or gmsh's own strays) are removed:
+    the solver reports no result for them."""
     cell = 2 * MERGE_TOL
     grid: dict[tuple[int, int, int], list[int]] = {}
     remap: dict[int, int] = {}
@@ -203,7 +206,6 @@ def _merge_coincident_nodes(
         remap[n] = target
         if target == n:
             grid.setdefault(key, []).append(n)
-    kept = {n: p for n, p in nodes.items() if remap[n] == n}
 
     def fix(elements: list[tuple[int, ...]], corners: int) -> list[tuple[int, ...]]:
         out = []
@@ -213,7 +215,10 @@ def _merge_coincident_nodes(
                 out.append(mapped)
         return out
 
-    return kept, fix(tets, 4), fix(tris, 3)
+    merged_tets = fix(tets, 4)
+    used = {n for tet in merged_tets for n in tet}
+    kept = {n: p for n, p in nodes.items() if remap[n] == n and n in used}
+    return kept, merged_tets, [t for t in fix(tris, 3) if all(n in kept for n in t)]
 
 
 def _oriented_faces(

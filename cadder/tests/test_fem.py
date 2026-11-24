@@ -15,7 +15,7 @@ from cadder.fem.evaluate import (
     status_for,
     worst,
 )
-from cadder.fem.mesh import Mesh, TriFace, cover_region, covered_weights
+from cadder.fem.mesh import Mesh, TriFace, cover_region, covered_weights, read_msh
 from cadder.fem.report import spec_hash, status_lines
 from cadder.fem.runner import RunOptions, analyze
 from cadder.fem.solve import proportional
@@ -107,6 +107,28 @@ def test_cantilever_matches_timoshenko(tmp_path, build, modulus):
     tip = next(c for c in result.criteria if c.name == "tip")
     assert tip.value == pytest.approx(expected, rel=0.03)
     assert all(c.ok for c in result.checks), [c.detail for c in result.checks if not c.ok]
+
+
+def test_read_msh_drops_nodes_left_in_no_element(tmp_path):
+    """A collapsed element is dropped with its nodes; every node left belongs to a tetrahedron."""
+    corners = [(0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1)]
+    mids = [(0.5, 0, 0), (0, 0.5, 0), (0, 0, 0.5), (0.5, 0.5, 0), (0, 0.5, 0.5), (0.5, 0, 0.5)]
+    points = corners + mids + [(0, 0, 0)] + [(5, 5, 5)] * 3 + [(7, 7, 7)]
+    nodes = "".join(f"{i} {x} {y} {z}\n" for i, (x, y, z) in enumerate(points, start=1))
+    # Tet 1 is sound; tet 2 uses node 11, a copy of node 1 that also lies on its edge to
+    # node 12 (a copy of node 13): it collapses once the copies are merged.
+    tet1 = "1 11 2 0 0 " + " ".join(str(n) for n in range(1, 11))
+    tet2 = "2 11 2 0 0 11 12 13 14 12 13 14 13 14 12"
+    msh = tmp_path / "m.msh"
+    msh.write_text(
+        f"$MeshFormat\n2.2 0 8\n$EndMeshFormat\n$Nodes\n{len(points)}\n{nodes}$EndNodes\n"
+        f"$Elements\n2\n{tet1}\n{tet2}\n$EndElements\n"
+    )
+
+    mesh = read_msh(msh, 1.0)
+
+    assert len(mesh.tets) == 1
+    assert set(mesh.nodes) == {n for tet in mesh.tets for n in tet}
 
 
 def test_clean_stl_drops_slivers_and_makes_normals_outward(tmp_path):

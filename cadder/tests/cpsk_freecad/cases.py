@@ -296,6 +296,47 @@ case(
     "joint at the arc's end; arc below the line",
 )
 
+case(
+    "perpendicular_line_arc",
+    [("arc", 10, 3, 4, 90, 200, "block"), ("line", 0.1, -0.1, 8, 1)],
+    [
+        ("Coincident", [1, 1, -1, 1], None, True),
+        ("Distance", [1], 5, True),
+        ("Perpendicular", [1, 0], None, True),
+    ],
+    "edge to edge: the line passes through the arc's centre",
+)
+case(
+    "perpendicular_circle_line",
+    [("circle", 10, 3, 4, "block"), ("line", 0.1, -0.1, 8, 1)],
+    [
+        ("Coincident", [1, 1, -1, 1], None, True),
+        ("Distance", [1], 5, True),
+        ("Perpendicular", [0, 1], None, True),
+    ],
+    "edge to edge, circle first",
+)
+case(
+    "perpendicular_endpoints_line_arc",
+    [("line", 0, 0, 10, 0, "block"), ("arc", 13.2, 0.3, 3.1, 175, 265)],
+    [
+        ("Perpendicular", [0, 2, 1, 1], None, True),
+        ("Radius", [1], 3, True),
+        ("Angle", [1], 90, True),
+    ],
+    "joint at the line's end and the arc's start; the arc turns down",
+)
+case(
+    "perpendicular_endpoints_arc_line_reverse",
+    [("line", 0, 0, 10, 0, "block"), ("arc", -3.2, 0.2, 3.1, -95, 5)],
+    [
+        ("Perpendicular", [1, 2, 0, 1], None, True),
+        ("Radius", [1], 3, True),
+        ("Angle", [1], 90, True),
+    ],
+    "joint at the arc's end and the line's start; the arc comes up",
+)
+
 # ----- symmetric, block, measured -----
 case(
     "symmetric_line",

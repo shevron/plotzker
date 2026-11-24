@@ -561,6 +561,12 @@ class _Reader:
             raw.type, operands, value, raw.driving, id, raw.line, raw.parent, raw.element
         )
 
+    def parent_kind(self, operand: Operand) -> Kind | None:
+        """The kind of primitive a point operand belongs to (``None`` for implicit references)."""
+        if isinstance(operand.target, int):
+            return self.primitives[operand.target].kind
+        return None
+
     def check_operands(self, raw: _RawConstraint, ops: Mapping[str, Operand]) -> bool:
         def kinds(*names: str) -> tuple[Kind, ...] | None:
             return tuple(ops[n].kind for n in names) if set(ops) == set(names) else None
@@ -577,8 +583,18 @@ class _Reader:
                 ok = found is not None and found[0] == "point" and found[1] != "point"
             case "horizontal" | "vertical":
                 ok = kinds("of") == ("line",) or pair == ("point", "point")
-            case "parallel" | "perpendicular":
+            case "parallel":
                 ok = pair == ("line", "line")
+            case "perpendicular":
+                if pair == ("point", "point"):  # end points of a line and an arc
+                    ends = on_curve_end(ops["a"]) and on_curve_end(ops["b"])
+                    ok = ends and {self.parent_kind(o) for o in ops.values()} == {"arc", "line"}
+                else:  # two lines, or a line and a circle or arc (through its centre)
+                    ok = pair is not None and sorted(pair) in (
+                        ["line", "line"],
+                        ["circle", "line"],
+                        ["arc", "line"],
+                    )
             case "tangent":
                 if pair == ("point", "point"):
                     ok = on_curve_end(ops["a"]) and on_curve_end(ops["b"])

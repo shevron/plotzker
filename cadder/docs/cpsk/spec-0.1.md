@@ -346,6 +346,8 @@ Operand attributes: `of` for a single operand; `a` and `b` for two; `about`, `po
 | `vertical` | `of`: L, or `a`, `b`: P | | Line is vertical, or points have equal x. | Vertical |
 | `parallel` | `a`, `b`: L | | Lines are parallel. | Parallel |
 | `perpendicular` | `a`, `b`: L | | Lines are perpendicular. | Perpendicular |
+| `perpendicular` | `a`, `b`: one L and one C or A, in either order | | The line's supporting line passes through the centre: it is normal to the curve. | Perpendicular (edge to edge) |
+| `perpendicular` | `a`, `b`: end points (`.start`/`.end`) of one L and one A, in either order | | End points coincide and the curves are perpendicular there. | Perpendicular (endpoint to endpoint) |
 | `tangent` | `a`, `b`: L, C, A (not both L) | | Curves are tangent. | Tangent |
 | `tangent` | `a`, `b`: end points (`.start`/`.end`) of L or A | | End points coincide and the curves are tangent there. | Tangent (endpoint to endpoint) |
 | `equal` | `a`, `b`: both L, or both C/A | | Equal length, or equal radius. | Equal |
@@ -378,7 +380,8 @@ Weight) are unsupported features (RFC §8).
 These conventions match FreeCAD 1.1.3 and PlaneGCS for every constraint form above
 ([freecad-conventions.md](freecad-conventions.md)). Tangency between curves is external or
 internal, and tangency between end points keeps the relative direction, as in the stored
-coordinates (§7.3).
+coordinates (§7.3). Likewise, perpendicularity between end points keeps the side the curve turns
+to, as in the stored coordinates.
 
 Top-level form:
 
@@ -434,7 +437,8 @@ constraint cannot be nested in that primitive.
 | `coincident` | `<coincident b="q"/>` | `<coincident a="self.end" b="q"/>` | `<coincident a="self.center" b="q"/>` | `a="self.start"`, `self.end` or `self.center` |
 | `point-on` | `<point-on object="l"/>`: self lies on `l` | `<point-on point="p"/>`: `p` lies on self | `<point-on point="p"/>`, or `<point-on point="self.center" object="l"/>` | as `circle` |
 | `horizontal`, `vertical` | `<horizontal b="q"/>` | `<horizontal/>` | `<horizontal a="self.center" b="q"/>` | as `circle`, or with `self.start`/`self.end` |
-| `parallel`, `perpendicular` | — | `<parallel b="l"/>` | — | — |
+| `parallel` | — | `<parallel b="l"/>` | — | — |
+| `perpendicular` | — | `<perpendicular b="l"/>`, `<perpendicular b="c"/>`: through the centre; `<perpendicular a="self.end" b="k.start"/>` | `<perpendicular b="l"/>` | `<perpendicular b="l"/>`; `<perpendicular a="self.end" b="l.start"/>` |
 | `tangent` (curves) | — | `<tangent b="c"/>` | `<tangent b="l"/>` | `<tangent b="l"/>` |
 | `tangent` (end points) | — | `<tangent a="self.end" b="k.start"/>` | — | `<tangent a="self.end" b="l.start"/>` |
 | `equal` | — | `<equal b="l"/>`: length | `<equal b="c"/>`: radius | `<equal b="k"/>`: radius |
@@ -575,7 +579,7 @@ Choices this draft makes where the RFC is open or differs from it. Each needs co
 | A9 | Formula property names | Underscores (`start_angle`), since names in formulas cannot contain `-`. XML names use hyphens (decided). | Single-word property names only (e.g. `begin`, `finish`), so XML and formula names are identical. |
 | A10 | Shared end points | Each line or arc owns its end points; connections are `coincident` constraints (as FreeCAD). | Shared `point` elements referenced by lines. |
 | A11 | Foreign namespaces (RFC §6.3 TBD) | Extensions, not unknown content (§11.3). The FreeCAD addon uses one for deactivated constraints (`<freecad:inactive>`). | |
-| A12 | Constraint coverage | The FreeCAD subset in §9.3. Distances between circles and lines, perpendicular curves and arc length are left for later; the FreeCAD addon refuses to export them and lists them. | Include them in 0.1. |
+| A12 | Constraint coverage | The FreeCAD subset in §9.3. Perpendicular between a line and a circle or arc (edge to edge, and arc and line end points) was added on 2026-11-23. Distances between circles and lines, other perpendicular forms (via a point, end point to edge, between curves) and arc length are left for later; the FreeCAD addon refuses to export them and lists them. | Include them in 0.1. |
 | A13 | Namespace URI | Placeholder under the plotzker repository. | A URI under a domain owned by the project. |
 | A14 | `^` precedence and associativity (§10.2) | **Decided (2026-11-23).** Mathematical convention: `^` binds tighter than unary minus (`-2^2` = −4) and is right-associative (`2^3^2` = 512), as in Python. FreeCAD differs (4 and 64), so the plugin adds parentheses when translating. | FreeCAD's convention, so formulas translate unchanged. |
 | A15 | Identifiers that FreeCAD reads as units or constants (`t`, `h`, `s`, `g`, `l`, `e`, `N`, …), found in plugin phase 3 | Allowed. The FreeCAD addon renames them on import (`t` → `t_`) and restores them on export (plan D9). | Reserve FreeCAD's unit names too (§3.2), so documents import unchanged; this would forbid common names such as `t` and `h`. |

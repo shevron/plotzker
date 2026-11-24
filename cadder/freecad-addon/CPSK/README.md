@@ -58,14 +58,14 @@ mapping on plain data, without FreeCAD (`cpsk_freecad.sketch_data`).
 |---|---|
 | Points, line segments, circles, arcs of circles; construction geometry | `point`, `line`, `circle`, `arc`; `construction="true"` |
 | External geometry | Blocked construction geometry (`external1`, …); imported back as ordinary geometry |
-| Coincident, point on object, horizontal, vertical, parallel, perpendicular, tangent (curves, end points), equal, symmetric, block, lock | The constraints of spec §9.3 |
+| Coincident, point on object, horizontal, vertical, parallel, perpendicular (two lines; a line and a circle or arc; end points of a line and an arc), tangent (curves, end points), equal, symmetric, block, lock | The constraints of spec §9.3 |
 | Distance, DistanceX/Y, radius, diameter, angle (line, arc sweep, two lines); reference (non-driving) dimensions | Dimensional constraints, `driving="false"` |
 | Constraint names | Constraint ids |
 | Expressions with `+ - * / ^`, `abs sqrt min max sin cos tan asin acos atan atan2`, `pi`, units `mm cm m in ° deg rad`, references to the sketch's constraints and to VarSet properties | Formulas and variables |
 | Deactivated constraints | Kept in `<freecad:inactive>` (namespace `https://github.com/shevron/plotzker/ns/cpsk-freecad`), ignored by CPSK readers |
 
 Export refuses, and lists, anything else: ellipses, B-splines and other curves; other constraint
-forms (tangent or perpendicular via a point, distances to circles, angles at end points, arc
+forms (tangent or perpendicular via a point, perpendicular between two curves, distances to circles, angles at end points, arc
 length, Snell's law, internal alignment, …); constraint names that are not CPSK identifiers or
 are reserved words; expressions with other functions, conditionals, spreadsheet or other
 objects' references, or other units.

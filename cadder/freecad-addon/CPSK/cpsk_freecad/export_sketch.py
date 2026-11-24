@@ -309,6 +309,14 @@ class _Exporter:
             return t.lower(), named("a", "b")
         if t in ("Parallel", "Perpendicular") and kinds == ["line", "line"]:
             return t.lower(), named("a", "b")
+        if t == "Perpendicular" and sorted(kinds) in (["circle", "line"], ["arc", "line"]):
+            return "perpendicular", named("a", "b")  # the line through the centre
+        if (
+            t == "Perpendicular"
+            and kinds == ["point", "point"]
+            and self._line_and_arc_ends(operands)
+        ):
+            return "perpendicular", named("a", "b")
         if t == "Tangent" and len(kinds) == 2 and set(kinds) <= _CURVES and kinds != ["line"] * 2:
             return "tangent", named("a", "b")
         if t == "Tangent" and kinds == ["point", "point"] and self._end_points(operands):
@@ -345,6 +353,12 @@ class _Exporter:
         if t == "Angle" and kinds == ["line", "line"]:
             return "angle", named("a", "b")
         raise _UnsupportedError(f"this form ({', '.join(kinds)}) is not supported in CPSK 0.1")
+
+    def _line_and_arc_ends(self, operands: list[tuple[int, int]]) -> bool:
+        """Whether the operands are end points of a line and of an arc."""
+        if not self._end_points(operands):
+            return False
+        return {self.primitives[geo][1] for geo, _ in operands} == {"line", "arc"}
 
     def _end_points(self, operands: list[tuple[int, int]]) -> bool:
         """Whether every operand is the start or end point of a line or an arc."""

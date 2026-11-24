@@ -189,7 +189,7 @@ class _Builder:
             case "parallel":
                 return [s.parallel(self.ln(ops["a"]), self.ln(ops["b"]))]
             case "perpendicular":
-                return [s.perpendicular(self.ln(ops["a"]), self.ln(ops["b"]))]
+                return self.perpendicular(ops["a"], ops["b"])
             case "tangent":
                 return self.tangent(ops["a"], ops["b"])
             case "equal":
@@ -229,6 +229,26 @@ class _Builder:
             return self.system.point_on_circle(p, entity.circle)
         assert entity.arc is not None
         return self.system.point_on_arc(p, entity.arc)
+
+    def perpendicular(self, a: Operand, b: Operand) -> list[gcs.ConstraintTag]:
+        s = self.system
+        if a.is_point:
+            # End points of a line and an arc: coincident, and the curves are perpendicular at
+            # the joint. Like FreeCAD, keep the side (+90° or -90°) the stored shape has.
+            curve_a = self.curve(replace(a, point=None))
+            curve_b = self.curve(replace(b, point=None))
+            joint = self.pt(a)
+            angle = s.calculate_angle_via_point(curve_a, curve_b, joint)
+            locked = math.pi / 2 if math.sin(angle) >= 0 else -math.pi / 2
+            return [
+                s.coincident(joint, self.pt(b)),
+                s.set_angle_via_point(curve_a, curve_b, joint, locked),
+            ]
+        if a.kind == "line" and b.kind == "line":
+            return [s.perpendicular(self.ln(a), self.ln(b))]
+        line, curve = (a, b) if a.kind == "line" else (b, a)
+        center = self.pt(replace(curve, point="center", kind="point"))
+        return [s.point_on_line(center, self.ln(line))]  # normal to the curve
 
     def tangent(self, a: Operand, b: Operand) -> list[gcs.ConstraintTag]:
         s = self.system

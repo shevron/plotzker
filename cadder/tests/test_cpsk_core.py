@@ -304,3 +304,45 @@ def test_constraints_are_nested_canonically():
     nested = cpsk_core.compile_document(parsed).constraints
     top = cpsk_core.loads(text).constraints
     assert sorted((c.type, c.value) for c in nested) == sorted((c.type, c.value) for c in top)
+
+
+_PERPENDICULAR_GEOMETRY = """<geometry>
+  <line id="l" x1="0" y1="0" x2="10" y2="0"/><line id="n" x1="10" y1="0" x2="10" y2="5"/>
+  <arc id="k" cx="13" cy="0" r="3" start-angle="180" end-angle="270"/>
+  <arc id="j" cx="0" cy="5" r="2" start-angle="0" end-angle="90"/>
+  <circle id="c" cx="20" cy="0" r="2"/><point id="p" x="1" y="1"/>
+</geometry>"""
+
+
+@pytest.mark.parametrize(
+    ("constraint", "ok"),
+    [
+        ('<perpendicular a="l" b="n"/>', True),
+        ('<perpendicular a="l" b="k"/>', True),  # the line through the arc's centre
+        ('<perpendicular a="c" b="l"/>', True),
+        ('<perpendicular a="l.end" b="k.start"/>', True),  # end points of a line and an arc
+        ('<perpendicular a="k.start" b="l.end"/>', True),
+        ('<perpendicular a="l.end" b="n.start"/>', False),  # two lines' end points
+        ('<perpendicular a="k.end" b="j.start"/>', False),  # two arcs' end points
+        ('<perpendicular a="k" b="c"/>', False),  # two curves
+        ('<perpendicular a="l.end" b="k.center"/>', False),
+        ('<perpendicular a="l" b="p"/>', False),
+    ],
+)
+def test_perpendicular_forms(constraint, ok):
+    text = doc(f"{_PERPENDICULAR_GEOMETRY}<constraints>{constraint}</constraints>")
+    if ok:
+        assert cpsk_core.loads(text).constraints[0].type == "perpendicular"
+    else:
+        assert load_error(text) == {"operand"}
+
+
+def test_perpendicular_nests_in_arcs_and_circles():
+    body = """<geometry><line id="l" x1="0" y1="0" x2="10" y2="0"/>
+      <arc cx="13" cy="0" r="3" start-angle="180" end-angle="270">
+        <perpendicular a="self.start" b="l.end"/></arc>
+      <circle cx="20" cy="0" r="2"><perpendicular b="l"/></circle></geometry>"""
+    kinds = [
+        tuple(op.kind for op in c.operands.values()) for c in cpsk_core.loads(doc(body)).constraints
+    ]
+    assert [sorted(k) for k in kinds] == [["point", "point"], ["circle", "line"]]

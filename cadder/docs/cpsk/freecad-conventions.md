@@ -82,10 +82,14 @@ Later phases found more FreeCAD behaviour (details in the
 - With a `package.xml`, FreeCAD 1.1 runs an addon's `Init.py` only for `<workbench>` items.
 - `addConstraint` does not solve: constraints can be added, then made non-driving or
   deactivated, before the next recompute.
+- Perpendicular between a line and a circle or arc, edge to edge, makes the line pass through
+  the centre; between end points of a line and an arc it stores a locked angle (±π/2) in `Value`,
+  set from the geometry when the constraint is added, like the end-point tangent. Four more cases
+  in `cases.py` check both forms against `cadder.cpsk`.
 - A wrong `Sketcher.Constraint` signature (e.g. `Block` with a PosId) crashes FreeCAD instead of
   raising an error.
 
-The 39 cases are kept as plain data in
+The cases (39 from phase 0 and 4 for perpendicular added later) are kept as plain data in
 [`cadder/tests/cpsk_freecad/cases.py`](../../tests/cpsk_freecad/cases.py), the corpus for the
 plugin's tests (phase 2). The probe scripts (FreeCAD and CPSK runners, expression probes) were
 throwaway; phase 2 turns them into tests.

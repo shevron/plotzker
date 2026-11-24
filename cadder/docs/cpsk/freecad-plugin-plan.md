@@ -201,6 +201,8 @@ unless an id was kept from an earlier import (decision D4).
 | `Horizontal` / `Vertical` (E: line) | `horizontal` / `vertical` with `of` |
 | `Horizontal` / `Vertical` (P, P) | `horizontal` / `vertical` with `a`, `b` |
 | `Parallel`, `Perpendicular` (E: line, E: line) | `parallel`, `perpendicular` |
+| `Perpendicular` (E: line, E: circle or arc, either order) | `perpendicular a b`: the line through the centre (added 2026-11-23) |
+| `Perpendicular` (P end point of a line, P end point of an arc, either order) | `perpendicular a b` (end points; added 2026-11-23) |
 | `Tangent` (E, E) | `tangent` (curves) |
 | `Tangent` (P end point, P end point) | `tangent` (end points) |
 | `Equal` (two lines, or circles/arcs) | `equal` |
@@ -218,7 +220,7 @@ unless an id was kept from an earlier import (decision D4).
 | `Driving = False` | `driving="false"` |
 | `Name` | `id` (decision D5 for names that are not valid identifiers) |
 | `IsActive = False` | Decision D6 |
-| `Tangent` / `Perpendicular` via a point (P, E) or (E, E, P), `Angle` via a point or with PosIds, `Distance` with circles or arcs (FreeCAD 1.x), arc length, `InternalAlignment`, `SnellsLaw`, `Weight` | Unsupported in 0.1 (spec Appendix A, A12) |
+| `Tangent` / `Perpendicular` via a point (P, E) or (E, E, P), `Perpendicular` between two curves or at the end points of two lines or two arcs, `Angle` via a point or with PosIds, `Distance` with circles or arcs (FreeCAD 1.x), arc length, `InternalAlignment`, `SnellsLaw`, `Weight` | Unsupported in 0.1 (spec Appendix A, A12) |
 
 Phase 0 verified every row: FreeCAD 1.1.3 and `cadder.cpsk` solve all 39 test cases to the same
 geometry, and the signs and directions match spec §9.3 ([results](freecad-conventions.md)).

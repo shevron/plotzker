@@ -207,6 +207,7 @@
       <xs:element name="point-on" type="cpsk:NestedPointOn"/>
       <xs:element name="horizontal" type="cpsk:NestedPair"/>
       <xs:element name="vertical" type="cpsk:NestedPair"/>
+      <xs:element name="perpendicular" type="cpsk:NestedPair"/>
       <xs:element name="tangent" type="cpsk:NestedPair"/>
       <xs:element name="equal" type="cpsk:NestedPair"/>
       <xs:element name="symmetric" type="cpsk:NestedSymmetric"/>

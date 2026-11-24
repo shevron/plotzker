@@ -30,8 +30,9 @@ Tools: run `uv run --extra photo cadder photo COMMAND ...` from the repository r
 ChArUco target, solve the camera pose, write a square-on `*.rect.png` in mm with its
 `.rect.json`), `crop` (enlarged region with a labeled mm or px grid), `edges` (sub-pixel
 edges along a line), `holes` (circles/ellipses: center, diameters, fit quality), `point`
-(parallax: where a feature at a given height really is), `triangulate` (a feature's height
-from two photos taken from different places), `overlay` and `table` (from
+(parallax: where a feature at a given height really is), `outline` (rotated rectangle of a
+part's outline: the part frame), `height` (a flat face's height from several photos, plane
+sweep), `triangulate` (a point's height from two or more photos), `overlay` and `table` (from
 `features.json`). Write a script in `work/` only for what they do not cover.
 
 1. **Look at every photo** (`info`, then the Read tool; images are shown to you). Decide
@@ -59,8 +60,10 @@ from two photos taken from different places), `overlay` and `table` (from
      the reprojection error in mm is then a floor for your bands. For
      features on a face above the paper (a PCB top, a PSU lid), rectify again with
      `--height H` so that face is the rectified plane, or correct single points with `point`.
-     If a height is unknown (a board lifted by its solder joints), find it with `triangulate`
-     on a sharp feature seen in two photos from different camera positions. It needs the
+     If a height is unknown (a board lifted by its solder joints), find it with `height`
+     (a box on print on that face, several photos) or `triangulate` (a sharp point seen in
+     two or more photos). Then `outline` on the rectification at that height gives the
+     part's center, size and angle (use `--avoid` where components overhang an edge). It needs the
      part unmoved between the photos: check that features on the paper's plane (the part's
      corners as they touch it, or `holes` centers at the right height) agree between the two
      rectifications first; if the part moved, say so and fall back to stated assumptions.
@@ -77,8 +80,8 @@ from two photos taken from different places), `overlay` and `table` (from
      several (the wall, the mask ring). Pick by looking at the overlay.
 4. **Record and check by overlay.** Put every feature in `photos/<object>/features.json`
    (format: `cadder/docs/photo.md`; the part frame's origin and angle on the target go in
-   `frame`), then `overlay features.json` (on the photo; `--on rectified` too) and read the
-   result. Fix what does not sit on the real edges. Check against independent evidence: the same dimension
+   `frame`, from `outline`), then `overlay features.json --crop 3` on the main photo and on
+   at least one other (`--rect OTHER.rect.json`), and read the results. Fix what does not sit on the real edges. Check against independent evidence: the same dimension
    from two photos, a known part in the image, symmetry, standard pitches (2.54, 3.5, 5.0,
    5.08, 7.62 mm). An overlay you have not looked at does not count as checked.
 5. **Decide: spec or NEEDS INPUT.** Ask for input when a number the user said matters (or

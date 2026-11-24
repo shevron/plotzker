@@ -198,6 +198,76 @@ def test_calibrate_from_several_views(tmp_path: Path) -> None:
     assert np.allclose(rect.camera_center, CAMERA + np.array([60.0, -40.0, -60.0]), atol=1.0)
 
 
+def test_outline_fits_a_rotated_board_despite_an_overhang() -> None:
+    from cadder.photo.measure import outline
+
+    image = np.full((900, 1200, 3), 235, np.uint8)  # pixel mode: 1 unit = 1 px
+    center, size, angle = (600.0, 450.0), (500.0, 380.0), 7.0
+    corners = cv2.boxPoints((center, size, angle))
+    cv2.fillPoly(image, [np.round(corners * 16).astype(np.int32)], (25, 25, 25), cv2.LINE_AA, 4)
+    # a component hanging over one long side, and print on the board
+    cv2.rectangle(image, (480, 180), (700, 300), (30, 30, 30), -1)
+    cv2.putText(image, "11 22", (450, 500), cv2.FONT_HERSHEY_SIMPLEX, 3, (230, 230, 230), 6)
+    o, used = outline(image, Scale(), (0, 0, 1200, 900), avoid=[(470, 170, 710, 310)])
+    assert (o.x, o.y) == pytest.approx(center, abs=1.0)
+    assert (o.length, o.width) == pytest.approx(size, abs=1.5)
+    assert abs(o.angle_deg) == pytest.approx(angle, abs=0.3)  # y down in pixel mode
+    assert o.rms < 0.5 and all(n >= 3 for n in o.points.values())
+    assert set(used) == {"+a", "-a", "+b", "-b"}
+
+
+def test_height_scan_finds_a_raised_face(tmp_path: Path) -> None:
+    from cadder.photo.stereo import height_scan
+
+    rng = np.random.default_rng(1)
+    texture = cv2.GaussianBlur(rng.integers(0, 255, (300, 300)).astype(np.uint8), (0, 0), 2)
+    texture = cv2.cvtColor(texture, cv2.COLOR_GRAY2BGR)
+    lift, face = 6.0, (60.0, 90.0, 90.0, 120.0)  # a textured square 6 mm above the paper
+    views = []
+    for name, center, angles in (
+        ("a", CAMERA, (12, -5, 0)),
+        ("b", CAMERA + np.array([70.0, -30.0, -80.0]), (25, 12, 0.2)),
+        ("c", CAMERA + np.array([-50.0, 10.0, -60.0]), (6, -12, -0.05)),
+    ):
+        path = _render(tmp_path / f"{name}.png", center, angles)
+        k = np.array([[FOCAL, 0, SIZE[0] / 2], [0, FOCAL, SIZE[1] / 2], [0, 0, 1]])
+        r, _ = cv2.Rodrigues(np.radians(np.array(angles)))
+        rvec, _ = cv2.Rodrigues(r)
+        tvec = -r @ _to_cv(BOARD, center[None, :])[0]
+        x0, y0, x1, y1 = face
+        quad = np.array([[x0, y1, lift], [x1, y1, lift], [x1, y0, lift], [x0, y0, lift]])
+        px, _ = cv2.projectPoints(_to_cv(BOARD, quad), rvec, tvec, k, np.zeros(5))
+        h = cv2.getPerspectiveTransform(
+            np.array([[0, 0], [300, 0], [300, 300], [0, 300]], np.float32) - 0.5,
+            px.reshape(-1, 2).astype(np.float32),
+        )
+        photo = cv2.imread(str(path))
+        warped = cv2.warpPerspective(texture, h, SIZE)
+        mask = cv2.warpPerspective(np.full((300, 300), 255, np.uint8), h, SIZE) > 0
+        photo[mask] = warped[mask]
+        cv2.imwrite(str(path), photo)
+        views.append((rectify(path, tmp_path, BOARD, px_per_mm=4, focal_px=FOCAL), tmp_path))
+    result = height_scan(views[0], views[1:], (66, 96, 84, 114), (0, 12), 0.5, px_per_mm=12)
+    assert result.z == pytest.approx(lift, abs=0.15)
+    assert all(v.z is not None and v.score >= 0.5 for v in result.views), result.views
+
+
+def test_overlay_on_another_photo_cropped(photo: Path, rect: Rectification) -> None:
+    from cadder.photo.features import FeatureFile
+
+    ff = FeatureFile(
+        path=photo.parent / "f.json",
+        features=[
+            {"name": "hole", "kind": "circle", "center": [*HOLE, 0], "d": 6, "source": "photo"}
+        ],
+        rect=None,
+        image=photo,
+    )
+    image, legend = overlay(ff, labels="numbers", rect=photo.parent / "part.rect.json", crop=5)
+    assert legend == ["1 hole"]
+    assert max(image.shape[:2]) < 300  # cropped to the hole plus 5 mm (photo ~7.9 px/mm)
+
+
 def test_measured_square_scales_the_board() -> None:
     board = with_square(BOARD, 14.85)
     assert board.square_mm == 14.85
@@ -277,6 +347,6 @@ def test_feature_file_overlay_and_table(photo: Path, rect: Rectification) -> Non
     assert any("bad" in e for e in ff.errors)
     assert np.allclose(ff.to_target(np.array([[1.0, 0, 0]]))[0], [HOLE[0], HOLE[1] + 1, 0])
     for on in ("photo", "rectified"):
-        assert overlay(ff, on).ndim == 3
+        assert overlay(ff, on)[0].ndim == 3
     text = table(ff)
     assert "| hole | circle | (0, 0, 0) | Ø6 | photo | 0.05 |" in text

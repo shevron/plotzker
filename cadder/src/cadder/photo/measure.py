@@ -7,6 +7,7 @@ them directly; the crop is for looking, the others are for numbers.
 
 import math
 from dataclasses import dataclass, replace
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -436,3 +437,287 @@ def holes(
             )
         )
     return out
+
+
+@dataclass(frozen=True)
+class Outline:
+    """A rectangular outline fitted to a part's edges (a rotated rectangle)."""
+
+    x: float  #: center
+    y: float
+    length: float  #: along ``angle_deg``
+    width: float  #: across it
+    angle_deg: float  #: direction of the length side, counterclockwise from x
+    rms: float  #: scatter of the edge points about the rectangle's sides
+    points: dict[str, int]  #: edge points used per side (+L, -L along the length; +W, -W)
+    corners: list[tuple[float, float]]  #: counterclockwise, starting at (-L/2, -W/2)
+
+
+def _initial_rect(
+    gray: npt.NDArray[np.uint8], dark: bool, open_px: int = 9
+) -> tuple[tuple[float, float], tuple[float, float], float, npt.NDArray[np.float64]]:
+    """The largest dark (or light) blob near the middle of ``gray``: cv2.minAreaRect and its
+    outline points; thin things (a lever, shadow slivers) are opened away first."""
+    import cv2
+
+    blur = cv2.GaussianBlur(gray, (0, 0), 2)
+    mode = cv2.THRESH_BINARY_INV if dark else cv2.THRESH_BINARY
+    _, mask = cv2.threshold(blur, 0, 255, mode + cv2.THRESH_OTSU)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+    filled = np.zeros_like(mask)  # fill holes (print, pads) so the part is one blob
+    cs, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(filled, cs, -1, 255, -1)
+    k = np.ones((open_px, open_px), np.uint8)
+    mask = cv2.morphologyEx(filled, cv2.MORPH_OPEN, k)
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        raise ValueError("no part found in the box (try --light for a light part)")
+    h, w = gray.shape
+    center = np.array([w / 2, h / 2])
+
+    def score(c: Any) -> float:
+        m = cv2.moments(c)
+        if not m["m00"]:
+            return -1.0
+        c_xy = np.array([m["m10"] / m["m00"], m["m01"] / m["m00"]])
+        area = float(m["m00"])
+        return area / (1.0 + float(np.hypot(*(c_xy - center))) / float(max(w, h)))
+
+    best = max(contours, key=score)
+    (cx, cy), (rw, rh), ang = cv2.minAreaRect(best)
+    dense, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    pts = max(dense, key=lambda c: cv2.pointPolygonTest(c, (cx, cy), False)).reshape(-1, 2)
+    return (float(cx), float(cy)), (float(rw), float(rh)), float(ang), pts.astype(np.float64)
+
+
+def fit_rectangle(
+    sides: dict[str, list[npt.NDArray[np.float64]]], theta: float, tol: float = 0.0
+) -> tuple[float, dict[str, float], npt.NDArray[np.float64], dict[str, int]]:
+    """One rectangle through edge points grouped by side: ``+a``/``-a`` (normals ±n1) and
+    ``+b``/``-b`` (normals ±n2), with n1 = (cos θ, sin θ), n2 = (−sin θ, cos θ).
+
+    Each side is the line n·p = d. Alternately fits the four offsets d (means) and a small
+    rotation (linearized: turning by dθ changes a point's residual by (dn/dθ)·p, with
+    dn1/dθ = n2 and dn2/dθ = −n1), dropping points beyond 3 RMS. Returns θ, the offsets, the
+    kept residuals and the points kept per side. With ``tol``, each side starts from the
+    points within ``tol`` of its most common offset (where a component overhangs part of a
+    side, those points are dropped) and later never keeps a point beyond 2 × ``tol``.
+    """
+    names = list(sides)
+    pts = [(name, np.asarray(p, dtype=np.float64)) for name in names for p in sides[name]]
+    keep = np.ones(len(pts), bool)
+    if tol:  # keep, per side, the points near the most common offset (drop overhangs)
+        th = theta
+        n1 = np.array([math.cos(th), math.sin(th)])
+        n2 = np.array([-math.sin(th), math.cos(th)])
+        nrm = {"+a": n1, "-a": -n1, "+b": n2, "-b": -n2}
+        proj = np.array([nrm[tag] @ p for tag, p in pts])
+        tags = np.array([tag for tag, _ in pts])
+        for name in names:
+            sel = tags == name
+            if not sel.any():
+                continue
+            v = proj[sel]
+            counts_near = [(np.abs(v - x) <= tol).sum() for x in v]
+            mode = v[int(np.argmax(counts_near))]
+            keep[sel] = np.abs(v - mode) <= tol
+
+    def normals(th: float) -> dict[str, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]]:
+        n1 = np.array([math.cos(th), math.sin(th)])
+        n2 = np.array([-math.sin(th), math.cos(th)])
+        return {"+a": (n1, n2), "-a": (-n1, -n2), "+b": (n2, -n1), "-b": (-n2, n1)}  # n, dn/dθ
+
+    for _ in range(8):
+        nn = normals(theta)
+        offsets = {
+            name: float(
+                np.mean(
+                    [
+                        nn[name][0] @ p
+                        for (tag, p), ok in zip(pts, keep, strict=True)
+                        if tag == name and ok
+                    ]
+                )
+            )
+            for name in names
+        }
+        resid = np.array([nn[tag][0] @ p - offsets[tag] for tag, p in pts])
+        grad = np.array([nn[tag][1] @ p for tag, p in pts])
+        for name in names:  # the offsets absorb a side's mean: center the gradient per side
+            sel = np.array([tag == name for tag, _ in pts]) & keep
+            if sel.any():
+                grad[np.array([tag == name for tag, _ in pts])] -= grad[sel].mean()
+        g, r = grad[keep], resid[keep]
+        d_theta = -float(np.sum(r * g) / np.sum(g * g)) if np.sum(g * g) > 0 else 0.0
+        theta += d_theta
+        sigma = float(np.sqrt(np.mean(r**2))) if len(r) else 0.0
+        keep = np.abs(resid) <= max(3 * sigma, 0.75)
+        if tol:
+            keep &= np.abs(resid) <= 2 * tol
+        if abs(d_theta) < 1e-7:
+            break
+    nn = normals(theta)
+    offsets = {
+        name: float(
+            np.mean(
+                [
+                    nn[name][0] @ p
+                    for (tag, p), ok in zip(pts, keep, strict=True)
+                    if tag == name and ok
+                ]
+            )
+        )
+        for name in names
+    }
+    resid = np.array(
+        [nn[tag][0] @ p - offsets[tag] for (tag, p), ok in zip(pts, keep, strict=True) if ok]
+    )
+    counts = {
+        name: int(sum(1 for (tag, _), ok in zip(pts, keep, strict=True) if tag == name and ok))
+        for name in names
+    }
+    return theta, offsets, resid, counts
+
+
+def outline(
+    image: BGR,
+    scale: Scale,
+    box: tuple[float, float, float, float],
+    dark: bool = True,
+    per_side: int = 16,
+    min_strength: float = 8,
+    band: float = 7,
+    guess: tuple[float, float, float, float, float] | None = None,
+    avoid: list[tuple[float, float, float, float]] | None = None,
+    search: tuple[float, float] = (0.6, 1.0),
+    span: float = 0.7,
+) -> tuple[Outline, dict[str, list[tuple[float, float]]]]:
+    """Fit a rotated rectangle to the outline of the part inside ``box`` (user units).
+
+    The part is thresholded (the largest dark blob, or light with ``dark=False``; holes
+    filled, thin parts such as a lever opened away) and a rectangle is fitted to its outline,
+    each side taking the points near its most common offset, so a component or a shadow that
+    overhangs part of a side is dropped. Then ``per_side`` short lines cross each side away
+    from the corners (chamfers), from just outside, and take the first background-to-part
+    edge to sub-pixel; one rectangle (common angle) is fitted to those the same way.
+
+    ``guess`` (center x, y, length, width, angle of the length side in degrees) replaces the
+    thresholding; ``avoid`` boxes (x0, y0, x1, y1) keep measuring lines away from components
+    that overhang a side; ``search`` is how far outside and inside the first fit each line
+    reaches; ``span`` is the share of each side the lines cover (the rest: corners). Returns
+    the outline and the edge points used, per side (user units).
+    """
+    import cv2
+
+    u0, v0, u1, v1 = _box_px(scale, box, image.shape)
+    gray = cv2.cvtColor(image[v0:v1, u0:u1], cv2.COLOR_BGR2GRAY)
+    unit = scale.px_per_unit  # px per user unit
+    open_px = max(3, round(3.0 * unit)) if scale.rect else 15  # ~3 mm: drops levers, shadows
+    tol = max(2.0, 0.3 * unit)  # ~0.3 mm
+    if guess:
+        gx, gy, glen, gwid, gang = guess
+        (gcx, gcy), tip = scale.to_px(
+            np.array(
+                [[gx, gy], [gx + math.cos(math.radians(gang)), gy + math.sin(math.radians(gang))]]
+            )
+        )
+        theta = math.atan2(tip[1] - gcy, tip[0] - gcx)
+        n1 = np.array([math.cos(theta), math.sin(theta)])
+        n2 = np.array([-math.sin(theta), math.cos(theta)])
+        c0 = np.array([gcx, gcy])
+        ha, hb = glen * unit / 2, gwid * unit / 2
+        fitted = {
+            "+a": n1 @ c0 + ha,
+            "-a": -(n1 @ c0) + ha,
+            "+b": n2 @ c0 + hb,
+            "-b": -(n2 @ c0) + hb,
+        }
+    else:
+        (cx, cy), (rw, rh), ang, contour = _initial_rect(np.asarray(gray, np.uint8), dark, open_px)
+        theta = math.radians(ang)
+        c0 = np.array([cx + u0, cy + v0])
+        n1 = np.array([math.cos(theta), math.sin(theta)])
+        n2 = np.array([-math.sin(theta), math.cos(theta)])
+        # 1) the blob's outline points, by side of the first guess, away from the corners
+        sides: dict[str, list[npt.NDArray[np.float64]]] = {"+a": [], "-a": [], "+b": [], "-b": []}
+        for q in contour + np.array([u0, v0]):
+            d = q - c0
+            a_, b_ = d @ n1 / (rw / 2), d @ n2 / (rh / 2)
+            if abs(a_) >= abs(b_) and abs(b_) < 0.7:
+                sides["+a" if a_ > 0 else "-a"].append(q.astype(np.float64))
+            elif abs(b_) > abs(a_) and abs(a_) < 0.7:
+                sides["+b" if b_ > 0 else "-b"].append(q.astype(np.float64))
+        if any(len(v) < 3 for v in sides.values()):
+            raise ValueError("the part's outline was not found; check the box and --light/--dark")
+        theta, fitted, _, _ = fit_rectangle(sides, theta, tol)
+    # 2) sub-pixel: short lines across each fitted side, from outside, first part edge
+    polarity = "falling" if dark else "rising"  # background → part
+    n1 = np.array([math.cos(theta), math.sin(theta)])
+    n2 = np.array([-math.sin(theta), math.cos(theta)])
+    center = n1 * (fitted["+a"] - fitted["-a"]) / 2 + n2 * (fitted["+b"] - fitted["-b"]) / 2
+    half = {"+a": (fitted["+a"] + fitted["-a"]) / 2, "+b": (fitted["+b"] + fitted["-b"]) / 2}
+    half["-a"], half["-b"] = half["+a"], half["+b"]
+    out_px, in_px = max(4.0, search[0] * unit), max(6.0, search[1] * unit)
+    avoid_px = [
+        (min(a[0], a[2]), min(a[1], a[3]), max(a[0], a[2]), max(a[1], a[3]))
+        for a in (
+            tuple(scale.to_px(np.array([[b[0], b[1]], [b[2], b[3]]])).ravel()) for b in avoid or []
+        )
+    ]
+
+    def avoided(q: npt.NDArray[np.float64]) -> bool:
+        return any(x0 <= q[0] <= x1 and y0 <= q[1] <= y1 for x0, y0, x1, y1 in avoid_px)
+
+    fine: dict[str, list[npt.NDArray[np.float64]]] = {}
+    for name, normal, along, half_along in (
+        ("+a", n1, n2, half["+b"]),
+        ("-a", -n1, n2, half["+b"]),
+        ("+b", n2, n1, half["+a"]),
+        ("-b", -n2, n1, half["+a"]),
+    ):
+        pts = []
+        for f in np.linspace(-span, span, per_side):
+            base = center + along * f * half_along + normal * half[name]
+            if avoided(base):
+                continue
+            s_user, e_user = scale.from_px(
+                np.array([base + normal * out_px, base - normal * in_px])
+            )
+            found = edges(
+                image, scale, tuple(s_user), tuple(e_user), band, 1, min_strength, True, polarity
+            )
+            if found:
+                pts.append(scale.to_px(np.array([[found[0].x, found[0].y]]))[0])
+        fine[name] = pts
+    sides = fine
+    if any(len(v) < 3 for v in sides.values()):
+        raise ValueError("too few edge points on a side; check the box and --light/--dark")
+    theta, offsets, resid, counts = fit_rectangle(sides, theta, tol)
+    n1 = np.array([math.cos(theta), math.sin(theta)])
+    n2 = np.array([-math.sin(theta), math.cos(theta)])
+    len_a = offsets["+a"] + offsets["-a"]  # extent along n1
+    len_b = offsets["+b"] + offsets["-b"]  # extent along n2
+    center_px = n1 * (offsets["+a"] - offsets["-a"]) / 2 + n2 * (offsets["+b"] - offsets["-b"]) / 2
+    corners_px = [
+        center_px + n1 * sa * len_a / 2 + n2 * sb * len_b / 2
+        for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))
+    ]
+    k = scale.px_per_unit
+    center = scale.from_px(center_px[None, :])[0]
+    corners = [(float(a), float(b)) for a, b in scale.from_px(np.array(corners_px))]
+    # the length side and its angle in user coordinates (y up on rectified images)
+    if len_a >= len_b:
+        length, width, axis = len_a, len_b, n1
+    else:
+        length, width, axis = len_b, len_a, n2
+    p0, p1 = scale.from_px(np.array([center_px, center_px + axis]))
+    angle = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
+    angle = (angle + 90) % 180 - 90  # a side direction: −90…90
+    used: dict[str, list[tuple[float, float]]] = {}
+    for name, pts in sides.items():
+        xy = scale.from_px(np.array(pts)) if pts else np.zeros((0, 2))
+        used[name] = [(float(a), float(b)) for a, b in xy]
+    return Outline(
+        float(center[0]), float(center[1]), length / k, width / k, angle,
+        float(np.sqrt(np.mean(resid**2))) / k, counts, corners,
+    ), used  # fmt: skip

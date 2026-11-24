@@ -356,18 +356,136 @@ def triangulate_command(
 def overlay_command(
     features: Path,
     on: Annotated[str, typer.Option(help="photo or rectified.")] = "photo",
+    rect: Annotated[
+        Path | None,
+        typer.Option(help="Draw on this photo's rectification instead (another photo of the set)."),
+    ] = None,
+    crop: Annotated[
+        float | None, typer.Option(help="Crop to the features plus this margin (mm).")
+    ] = None,
+    labels: Annotated[str, typer.Option(help="names, numbers (with a legend) or none.")] = "names",
     out: Annotated[Path | None, typer.Option(help="Output image.")] = None,
 ) -> None:
-    """Draw a feature file onto the photo (colors by source) to check it by eye."""
+    """Draw a feature file onto a photo (colors by source) to check it by eye."""
     from cadder.photo.features import overlay, read
     from cadder.photo.image import save
 
     ff = read(features)
     for e in ff.errors:
         typer.secho(f"warning: {e}", fg=typer.colors.YELLOW, err=True)
-    image = overlay(ff, on)
-    target = out or features.parent / "overlays" / f"{features.stem}_{on}.jpg"
+    image, legend = overlay(ff, on, labels, rect, crop)
+    which = f"_{rect.name.split('.')[0]}" if rect else ""
+    target = out or features.parent / "overlays" / f"{features.stem}{which}_{on}.jpg"
     typer.echo(f"wrote {save(image, target)}")
+    if labels == "numbers":
+        typer.echo("\n".join(legend))
+
+
+@app.command("height")
+@plain_errors
+def height_command(
+    reference: Annotated[Path, typer.Argument(help="The reference photo's .rect.json.")],
+    others: Annotated[list[Path], typer.Argument(help="Other photos' .rect.json (same set).")],
+    box: Annotated[str, typer.Option(help="x0,y0,x1,y1 (target mm): a flat, textured patch.")],
+    zmin: Annotated[float, typer.Option(help="Lowest height tried, mm.")] = 0.0,
+    zmax: Annotated[float, typer.Option(help="Highest height tried, mm.")] = 20.0,
+    step: Annotated[float, typer.Option(help="Height step, mm.")] = 0.25,
+    search: Annotated[float, typer.Option(help="How far a match may shift, mm.")] = 2.0,
+    curve: Annotated[bool, typer.Option("--curve", help="Print the sweep.")] = False,
+    as_json: Json = False,
+) -> None:
+    """The height of a flat face above the paper, from several photos (a plane sweep).
+
+    Put the box on print or texture that lies on one face (silkscreen on a PCB, a label);
+    the photos must show the part unmoved. Each other photo gives a height where its view of
+    the patch stops shifting against the reference; they are combined by how much parallax
+    each sees.
+    """
+    from cadder.photo.stereo import height_scan
+    from cadder.photo.target import Rectification
+
+    x0, y0, x1, y1 = (float(v) for v in box.split(","))
+    ref = (Rectification.load(reference), reference.parent)
+    views = [(Rectification.load(o), o.parent) for o in others]
+    result = height_scan(ref, views, (x0, y0, x1, y1), (zmin, zmax), step, search)
+    if as_json:
+        _echo_json(asdict(result))
+        return
+    if result.z is None:
+        typer.echo("no height: no photo matched the patch well (move the box onto texture)")
+    else:
+        typer.echo(f"height {result.z:.2f} mm above the paper (spread {result.spread:.2f} mm)")
+    for v in result.views:
+        z = "-" if v.z is None else f"{v.z:.2f}"
+        typer.echo(
+            f"  {v.photo}: z {z}, match {v.score:.2f}, parallax {v.sensitivity:.2f} mm/mm"
+            + ("" if v.score >= 0.5 else " (weak match: not used)")
+        )
+    if curve:
+        for zz, sc, dx, dy in result.curve:
+            typer.echo(f"  z {zz:6.2f}: match {sc:.2f}, shift ({dx:+.2f}, {dy:+.2f})")
+
+
+@app.command("outline")
+@plain_errors
+def outline_command(
+    image: Path,
+    x0: float,
+    y0: float,
+    x1: float,
+    y1: float,
+    light: Annotated[
+        bool, typer.Option("--light", help="A light part on a dark background.")
+    ] = False,
+    guess: Annotated[
+        str | None, typer.Option(help="x,y,length,width,angle: skip the threshold first guess.")
+    ] = None,
+    avoid: Annotated[
+        list[str] | None,
+        typer.Option(help="x0,y0,x1,y1: no measuring lines here (overhanging parts); repeatable."),
+    ] = None,
+    lines: Annotated[int, typer.Option(help="Measuring lines per side.")] = 16,
+    span: Annotated[float, typer.Option(help="Share of each side measured (corners left).")] = 0.7,
+    out: Annotated[Path | None, typer.Option(help="Check image (default: crops/).")] = None,
+    as_json: Json = False,
+) -> None:
+    """Fit a rotated rectangle to a part's outline (a board, a plate) in the box.
+
+    Prints the center, length, width and angle (the part frame for a feature file), the fit's
+    RMS and the edge points used per side, and writes a crop with them drawn to check.
+    """
+    import numpy as np
+
+    from cadder.photo.image import load, save
+    from cadder.photo.measure import crop, outline
+
+    scale = _scale(image)
+    g = tuple(float(v) for v in guess.split(",")) if guess else None
+    av = [tuple(float(v) for v in a.split(",")) for a in avoid or []]
+    img = load(image)
+    o, used = outline(
+        img, scale, (x0, y0, x1, y1), not light, lines, guess=g, avoid=av, span=span,  # type: ignore[arg-type]
+    )  # fmt: skip
+    if as_json:
+        _echo_json({**asdict(o), "edge_points": used})
+    else:
+        typer.echo(
+            f"center ({o.x:.3f}, {o.y:.3f}) {scale.unit}, length {o.length:.3f} x width "
+            f"{o.width:.3f}, angle {o.angle_deg:.2f}°, fit RMS {o.rms:.3f}; "
+            f"edge points per side {o.points}"
+        )
+    import cv2
+
+    marked = img.copy()
+    k = scale.px_per_unit
+    corners = scale.to_px(np.array(o.corners)).round().astype(np.int32)
+    cv2.polylines(marked, [corners], True, (0, 0, 255), max(1, round(k / 20)), cv2.LINE_AA)
+    for pts in used.values():
+        for q in scale.to_px(np.array(pts)) if pts else []:
+            cv2.circle(marked, (round(q[0]), round(q[1])), max(2, round(k / 10)), (0, 200, 0), -1)
+    view = crop(marked, scale, (x0, y0, x1, y1))
+    target = out or image.parent / "crops" / f"{image.stem}_outline.png"
+    typer.echo(f"wrote {save(view, target)}")
 
 
 @app.command("table")

@@ -552,8 +552,10 @@ the printed carriage, motor mount and idler mount are the test pieces.
   widens its margin until it has corners, quieter focal note. **Trial 3** (flat target at
   100 %, white field, part unmoved, 7 photos, new `calibrate` + `rectify --camera`; detection
   accepts corners next to one marker): **14 of 17 within bands**, holes, outline and footprints
-  within 0.3 mm; misses: connector height +0.8, switch overhang +0.35, lever rest −0.6. Possible
-  next tools (doc §7): height scan, rotated-rectangle fit, `overlay --rect`.
+  within 0.3 mm; misses: connector height +0.8, switch overhang +0.35, lever rest −0.6. Then the
+  three tools the agent asked for: `height` (plane sweep; endstop PCB top 3.0 ±0.2 vs caliper
+  3.3), `outline` (rotated rectangle, robust to overhangs, `--avoid`/`--guess`, check crop) and
+  `overlay --rect/--crop/--labels numbers`.
   **Done when:** the trial on the endstop board, without the agent seeing the caliper numbers, lands within its own error bands (doc §7). Phase 2
   (`cadder.photo`: rectify, hole detection, overlays, CAD render vs photo) only if the trial
   shows the need.

@@ -138,12 +138,25 @@ def _outline(f: dict[str, Any]) -> list[Points]:
     return [np.array([_xyz(f["center"])], dtype=np.float64)]
 
 
-def overlay(ff: FeatureFile, on: str = "photo", label: bool = True) -> BGR:
+def overlay(
+    ff: FeatureFile,
+    on: str = "photo",
+    labels: str = "names",
+    rect: Path | None = None,
+    crop: float | None = None,
+) -> tuple[BGR, list[str]]:
     """Draw the features on the photo (``on="photo"``) or its rectified image (``"rectified"``).
 
     Colors by source: green measured, blue datasheet, yellow photo, magenta assumed.
+    ``rect`` draws on another photo of the same set (its ``.rect.json``) instead of the one the
+    file names; ``crop`` (mm) cuts the image down to the features plus that margin;
+    ``labels`` is ``names``, ``numbers`` (with a legend, for small parts) or ``none``. Returns
+    the image and the legend lines.
     """
     import cv2
+
+    if rect is not None:
+        ff.rect, ff.rect_dir = Rectification.load(rect), rect.parent
 
     def same(p: Points) -> Points:
         return p
@@ -159,28 +172,48 @@ def overlay(ff: FeatureFile, on: str = "photo", label: bool = True) -> BGR:
     else:
         assert ff.rect_dir is not None
         image = load(ff.rect_dir / ff.rect.source)
-    scale = max(image.shape[:2]) / 1500
-    thick, font_scale = max(1, round(1.5 * scale)), 0.5 * scale
+    drawn: list[tuple[str, tuple[int, int, int], list[Points]]] = []
     for f in ff.features:
         if f.get("kind") not in KINDS:
             continue
         color = COLORS.get(str(f.get("source", "")).split()[0], (255, 255, 255))
-        last = None
-        for line in _outline(f):
-            px = to_img(ff.to_photo(line))
-            pts = np.round(px).astype(np.int32).reshape(-1, 2)
+        drawn.append(
+            (str(f.get("name", "")), color, [to_img(ff.to_photo(line)) for line in _outline(f)])
+        )
+    x0 = y0 = 0
+    if crop is not None and drawn:
+        allp = np.vstack([p for _, _, lines in drawn for p in lines])
+        px_per_mm = 1.0
+        if ff.rect is not None:  # the image's scale near the features
+            c = np.mean(ff.to_target(np.array([[0.0, 0, 0], [1, 0, 0]])), axis=0)
+            pair = to_img(ff.rect.project(np.array([c, c + np.array([1.0, 0.0, 0.0])])))
+            px_per_mm = float(np.hypot(*(pair[1] - pair[0])))
+        m = crop * px_per_mm
+        h, w = image.shape[:2]
+        x0, y0 = max(0, int(allp[:, 0].min() - m)), max(0, int(allp[:, 1].min() - m))
+        x1, y1 = min(w, int(allp[:, 0].max() + m)), min(h, int(allp[:, 1].max() + m))
+        image = np.ascontiguousarray(image[y0:y1, x0:x1])
+    scale = max(image.shape[:2]) / 1500
+    thick, font_scale = max(1, round(1.5 * scale)), 0.7 * scale
+    legend = []
+    for n, (name, color, lines) in enumerate(drawn, 1):
+        first = None
+        for line in lines:
+            pts = np.round(line - [x0, y0]).astype(np.int32).reshape(-1, 2)
             if len(pts) == 1:
                 at = (int(pts[0, 0]), int(pts[0, 1]))
                 cv2.drawMarker(image, at, color, cv2.MARKER_CROSS, round(14 * scale), thick)
             else:
                 cv2.polylines(image, [pts], False, color, thick, cv2.LINE_AA)
-            last = (int(pts[0, 0]), int(pts[0, 1]))
-        if label and last is not None:
+            first = first or (int(pts[0, 0]), int(pts[0, 1]))
+        text = {"names": name, "numbers": str(n)}.get(labels)
+        if text and first is not None:
             cv2.putText(
-                image, str(f.get("name", "")), (int(last[0]) + 4, int(last[1]) - 4),
+                image, text, (first[0] + 4, first[1] - 4),
                 cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, thick, cv2.LINE_AA,
             )  # fmt: skip
-    return image
+        legend.append(f"{n} {name}")
+    return image, legend
 
 
 def _fmt(v: object) -> str:

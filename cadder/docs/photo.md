@@ -48,12 +48,28 @@ pillow-heif): `uv sync --extra photo`. Run as `cadder photo COMMAND` (in a proje
      best-supported hole), so the same edge has the same label in every photo.
    - `point SIDECAR U V --height H`: where a feature seen at (U, V) on the rectified plane
      really is if it is at height H (parallax); `--photo` for a photo pixel instead.
+   - `outline IMG X0 Y0 X1 Y1`: a rotated rectangle fitted to a part's outline (a board,
+     a plate): center, length, width, angle (the part frame for the feature file) and RMS,
+     plus a check crop with the edge points. Each side keeps the points near its most
+     common offset, so a component hanging over part of a side is dropped; where one
+     covers most of a side, keep lines away with `--avoid X0,Y0,X1,Y1` (repeatable) and give
+     `--guess x,y,length,width,angle`. `--lines`, `--span` (share of each side measured,
+     the rest are corners/chamfers), `--light` for a light part. Rectify at the part's top
+     height first.
+   - `height REF.rect.json OTHER.rect.json... --box X0,Y0,X1,Y1`: a flat face's **height**
+     above the paper from several photos of the unmoved part (a plane sweep): the box (on
+     print or texture on that face) is matched between the reference and each other photo
+     at a range of heights; where the match stops shifting is the height, per photo and
+     combined by the parallax each photo sees. On the endstop's PCB top: 3.0 ±0.2 mm
+     (caliper 3.3), in a few seconds.
    - `triangulate A.rect.json:X,Y B.rect.json:X,Y`: a feature's x, y and **height** from two
      (or more) photos taken from different places (the further apart, the better), given
      where it appears on each rectified image; also how closely the camera rays meet.
 6. **Record** the features in a feature file and **check** it: `overlay FEATURES.json`
-   (on the photo, or `--on rectified`) draws them, colored by source; `table FEATURES.json`
-   prints the Markdown table for the report.
+   (on the photo, or `--on rectified`) draws them, colored by source; `--rect OTHER.rect.json`
+   draws them on another photo of the set (a check from another angle), `--crop MM` cuts the
+   image down to the features, `--labels numbers` keeps small parts legible (with a legend).
+   `table FEATURES.json` prints the Markdown table for the report.
 
 Without a target, `info`, `crop`, `edges`, `holes` and pixel-mode feature files still work on
 the photo in pixels; the scale then has to come from something else in the picture.

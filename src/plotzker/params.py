@@ -35,7 +35,7 @@ from cadder.hardware import (
 )
 from cadder.printing import Tolerances
 
-from plotzker.hardware import ENDSTOP, Y_SHAFT, ZRIB
+from plotzker.hardware import C14_INLET, ENDSTOP, PSU, XT60, Y_SHAFT, ZRIB
 
 # -----------------------------------------------------------------------------
 # Print tolerances (tune after a test print; defaults from README.md §7.4)
@@ -611,6 +611,177 @@ class ZribMount:
 
 
 ZMOUNT = ZribMount()
+
+
+# -----------------------------------------------------------------------------
+# PSU beside the baseboard (T3.31, D38)
+# -----------------------------------------------------------------------------
+# The supply stands on edge beside the board's right edge, off the table (D30: free air to
+# its fan, mains off the plywood): bottom face (M4 holes) toward the board, fan face out,
+# label wall up, switch wall (115/230 V selector) down, terminal end toward the front. Two
+# brackets hang it from the board's underside; a printed hood closes the terminal end and
+# carries the C14 inlet (fuse + switch) and the XT60.
+#
+#   seen from the front (machine x →, z ↑)       ▒ bracket  ░ PSU  ═ board
+#
+#                       ▒▒░░░░░░░░░░░░   ← label wall up, z = top_z
+#   ════════════════════▒▒░░░░░░░░░░░░   board top z = 0
+#   ════════════════════▒▒░░░░PSU░░░░░   M4 into the bottom face (holes 50 apart)
+#             ▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░░░░░░░   flange under the board: 2 wood screws up
+#                         ░░░░░░░░░░░░   fan face → (free air)
+#                                         switch wall down, clear of the table
+#
+# Parts are designed in the PSU frame (hardware/psu.py); ``placement`` takes it to the machine.
+
+
+@dataclass(frozen=True)
+class PsuMount:
+    """PSU brackets and terminal hood."""
+
+    # Placement (machine frame)
+    #: DESIGN (T3.31): bottom face to the board edge = bracket upright (15: FEM found 10 and 12
+    #: too flexible when the PSU is leant on)
+    edge_gap: float = 15
+    #: DESIGN (T3.31): machine z of the label wall (the PSU's top). The lower M4 holes then sit
+    #: in front of the board's edge, and the hood stays well clear of the table
+    top_z: float = 69
+    # Brackets (PSU frame)
+    bracket_w: float = 28  #: along y, centered on a hole line
+    hole_margin: float = 8  #: the upright reaches this far past the upper M4 hole
+    flange_reach: float = 40  #: flange under the board, from the board edge inward
+    wood_screw_in: tuple[float, float] = (9, 31)  #: wood screws, inward from the board edge
+    psu_screw_len: float = 15  #: M4 ISO 4762 into the bottom face
+    #: DESIGN (T3.31, FEM): above the board the upright grows inward and rests on the board's
+    #: top, so the PSU's pull can't bend it about the corner alone
+    brace_t: float = 4
+    #: DESIGN (T3.31, FEM): fillet in the upright/flange corner; the board's underside edge on
+    #: the right side is eased (45°) by the same amount to make room for it. 1, not 3: the lower
+    #: M4's head counterbore reaches to 1.6 mm from the corner
+    corner_r: float = 1
+    # Hood (PSU frame)
+    clearance: float = 0.5  #: hood inside to the PSU case, each side
+    wall_t: float = 2.5
+    depth: float = 53  #: DESIGN (T3.31): in front of the wall ends (room for the inlet)
+    #: DESIGN (T3.31): in front of the PSU the hood stands this far out past the fan face, so
+    #: the DC channel along the board side and the inlet's body both fit
+    front_bulge: float = 13
+    sleeve_fan: float = 24  #: over the fan face: covers the open strip (cover setback 18.4)
+    sleeve_side: float = 40  #: over the label and switch walls, past the y = 32 holes
+    sleeve_bottom: float = 12  #: over the bottom face, short of the bracket
+    hood_screw_len: float = 6  #: M4 ISO 4762 through a sleeve into the case
+    barrier_t: float = 1.6  #: DC/mains partition
+    #: in front of the lugs, the PE/N/L column ends here (the mains side's step into the front)
+    barrier_step_y: float = 12
+    #: the partition's floor (PSU z), from the wall ends to the front wall, above the wire lugs:
+    #: DC below it (the board side), mains above
+    dc_channel_z: float = 22
+    barrier_front_gap: float = 0.3  #: partition tip to the wall ends' plane
+    inlet_x: float = 88.5  #: inlet cutout center (mains side)
+    inlet_y: float = -28.25  #: the screw bosses fit just inside the front zone
+    inlet_boss_t: float = 3.5  #: boss inside the wall for the inlet's M3 nuts
+    #: DESIGN (T3.31): XT60 in the board-side wall, low (under the board), in line with the ZRIB
+    xt60_x: float = 100
+    xt60_y: float = -30
+    xt60_sleeve: float = 6  #: grip sleeve inside the board-side wall
+    tie_bar: tuple[float, float] = (4, 3)  #: zip-tie post beside the XT60's wires: x, y size
+    #: the male plug's shroud stands out round the female body by about this much (ASSUMED)
+    xt60_plug_margin: float = 5
+    xt60_fit: float = 0.2  #: per side
+
+    @property
+    def terminal_y(self) -> float:
+        """Machine y of the terminal end: the XT60 lines up with the ZRIB's center."""
+        return BASEBOARD.zrib_center[1] - self.xt60_y
+
+    @property
+    def origin(self) -> tuple[float, float, float]:
+        """Machine position of the PSU frame's origin (the frame turns +90° about y)."""
+        return (FRAME.board_size[0] + self.edge_gap, self.terminal_y, self.top_z)
+
+    @property
+    def low_z(self) -> float:
+        """Machine z of the switch wall (the PSU's underside)."""
+        return self.top_z - PSU.size[0]
+
+    @property
+    def board_x(self) -> tuple[float, float]:
+        """The baseboard's top and underside in PSU x (x runs downward)."""
+        return self.top_z, self.top_z + FRAME.board_size[2]
+
+    @property
+    def edge_z(self) -> float:
+        """The board edge in PSU z (the board lies at z below this)."""
+        return -self.edge_gap
+
+    @property
+    def upright_x(self) -> tuple[float, float]:
+        """The bracket upright's extent in PSU x: past the upper hole down to the flange."""
+        return PSU.bottom_hole_x[0] - self.hole_margin, self.board_x[1] + WOOD_SCREW.boss_t
+
+    @property
+    def wood_screw_z(self) -> tuple[float, ...]:
+        """The flange's wood screws in PSU z."""
+        return tuple(self.edge_z - d for d in self.wood_screw_in)
+
+    @property
+    def counterbore(self) -> tuple[float, float]:
+        """M4 head counterbore in the upright: diameter, depth."""
+        m4 = metric(4)
+        return m4.head_d + 2 * TOL.bolt, m4.head_h + TOL.bolt
+
+    @property
+    def psu_screw_depth(self) -> float:
+        """How far the bracket's M4 enters the case."""
+        return self.psu_screw_len - (self.edge_gap - self.counterbore[1])
+
+    @property
+    def hood_screw_depth(self) -> float:
+        """How far a hood screw enters the case (head on the sleeve)."""
+        return self.hood_screw_len - self.wall_t - self.clearance
+
+    @property
+    def hood_x(self) -> tuple[float, float, float, float]:
+        """Hood in PSU x: outer and inner faces (outer0, inner0, inner1, outer1)."""
+        c, t = self.clearance, self.wall_t
+        return -c - t, -c, PSU.size[0] + c, PSU.size[0] + c + t
+
+    @property
+    def hood_z(self) -> tuple[float, float, float, float]:
+        """Hood in PSU z: outer and inner faces (outer0, inner0, inner1, outer1)."""
+        c, t = self.clearance, self.wall_t
+        return -c - t, -c, PSU.size[2] + c, PSU.size[2] + c + t
+
+    @property
+    def barrier_x_near(self) -> float:
+        """Partition midway between the last -V terminal and PE (in front of the lugs): it
+        clears a lug on either side, even if the third -V terminal gets a wire."""
+        return PSU.dc_mains_gap_x
+
+    @property
+    def front_z(self) -> tuple[float, float]:
+        """In front of the PSU the hood bulges out: its fan-side wall's inner and outer face."""
+        inner = self.hood_z[2] + self.front_bulge
+        return inner, inner + self.wall_t
+
+    @property
+    def front_zone_y(self) -> tuple[float, float]:
+        """Inside the hood in front of the PE/N/L column (PSU y): DC channel below the floor,
+        mains above."""
+        return -self.depth + self.wall_t, -self.barrier_step_y - self.barrier_t
+
+    @property
+    def brace_z(self) -> float:
+        """The brace's inner face over the board's top (PSU z)."""
+        return self.edge_z - self.brace_t
+
+    @property
+    def pilot_xy(self) -> tuple[tuple[float, float], ...]:
+        """Pilot holes for the brackets' wood screws, in the machine frame (from below)."""
+        ox, oy, _ = self.origin
+        return tuple((ox + z, oy + y) for y in PSU.hole_y for z in self.wood_screw_z)
+
+
+PSU_MOUNT = PsuMount()
 
 
 # -----------------------------------------------------------------------------
@@ -1928,6 +2099,97 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield (
         WOOD_SCREW.boss_t > zm.rail_t and -zm.board_z - WOOD_SCREW.boss_t >= 1,
         "ZRIB mount boss hits the board",
+    )
+    # --- PSU mount (T3.31)
+    pm = PSU_MOUNT
+    table_z = -FRAME.board_size[2] - BASEBOARD.runner_h
+    yield (
+        3 <= pm.psu_screw_depth <= PSU.max_screw_depth
+        and 2.5 <= pm.hood_screw_depth <= PSU.max_screw_depth,
+        f"PSU screws enter the case {pm.psu_screw_depth:g} (bracket) and "
+        f"{pm.hood_screw_depth:g} mm (hood): too shallow to hold, or deeper than "
+        f"{PSU.max_screw_depth:g}",
+    )
+    yield (
+        pm.low_z - pm.clearance - pm.wall_t - table_z >= 5,
+        "The PSU's hood hangs less than 5 mm above the table",
+    )
+    yield (
+        PSU.bottom_hole_x[1] + pm.counterbore[0] / 2 <= pm.board_x[1]
+        and pm.board_x[0] > PSU.bottom_hole_x[0] + pm.counterbore[0] / 2,
+        "PSU bracket: the lower M4's counterbore runs into the flange, or the upper one is not "
+        "above the board",
+    )
+    yield (
+        pm.origin[0] + pm.edge_z - pm.flange_reach > BASEBOARD.runner_x[1] + 5
+        and all(
+            math.hypot(x - LOOM.hole_x, y - LOOM.hole_y)
+            >= (LOOM.hole_d + WOOD_SCREW.boss_d) / 2 + 2
+            for x, y in pm.pilot_xy
+        ),
+        "PSU bracket flange reaches a runner, or a wood screw lands on the loom hole",
+    )
+    yield (
+        pm.origin[0] + pm.brace_z - (LOOM.hole_x + LOOM.d / 2) >= 1.5,
+        "PSU bracket: the brace over the board's top comes within 1.5 mm of the Y loom",
+    )
+    xs = PSU.terminal_xs
+    near_lo, near_hi = pm.barrier_x_near - pm.barrier_t / 2, pm.barrier_x_near + pm.barrier_t / 2
+    yield (
+        near_lo - (xs[5] + PSU.lug_w / 2) >= 0.5
+        and xs[6] - PSU.lug_w / 2 - near_hi >= 0.5
+        and pm.barrier_step_y >= PSU.crimp_reach + 2
+        and pm.dc_channel_z >= PSU.crimp_z[1] + 1.5,
+        "PSU hood: the DC/mains partition hits a wire lug, the mains column ends before its "
+        "lugs do, or the floor sits on the lugs",
+    )
+    cw, ch = C14_INLET.cutout
+    zone_y0, zone_y1 = pm.front_zone_y
+    _, ix0, ix1, _ = pm.hood_x
+    yield (
+        ix0 + 0.5 <= pm.inlet_x - cw / 2
+        and pm.inlet_x + cw / 2 <= ix1 - 0.5
+        and zone_y0 + 0.5 <= pm.inlet_y - ch / 2
+        and pm.inlet_y + ch / 2 <= zone_y1 - 0.5,
+        "PSU hood: the inlet's cutout is not inside the mains side in front of the PSU",
+    )
+    yield (
+        pm.front_z[1] - C14_INLET.depth - C14_INLET.connector_room
+        >= pm.dc_channel_z + pm.barrier_t + 1,
+        "PSU hood: no room behind the inlet for its connectors and wires above the floor",
+    )
+    yield (
+        all(
+            -pm.depth <= pm.inlet_y + dy - C14_INLET.ear_d / 2
+            and pm.inlet_y + dy + C14_INLET.ear_d / 2 <= 0
+            for _, dy in C14_INLET.hole_xy
+        ),
+        "PSU hood: an inlet screw hole is off the outer wall in front of the PSU",
+    )
+    xt_w, xt_h = XT60.body
+    grow = pm.xt60_fit + pm.wall_t
+    post_x0 = pm.xt60_x - xt_h / 2 - grow - 4 - pm.tie_bar[0]
+    yield (
+        ix0 <= post_x0
+        and pm.xt60_x + xt_h / 2 + grow <= ix1
+        and zone_y0 <= pm.xt60_y - xt_w / 2 - grow
+        and pm.xt60_y + xt_w / 2 + grow <= zone_y1
+        and pm.hood_z[0] - XT60.protrude + XT60.length + 10 <= pm.dc_channel_z,
+        "PSU hood: the XT60 or its tie post is not inside the DC channel, or no room for its "
+        "wires behind it",
+    )
+    yield (
+        pm.xt60_x - xt_h / 2 - pm.xt60_plug_margin >= pm.board_x[1] + 2
+        and pm.low_z - pm.clearance - pm.wall_t - table_z
+        >= 0,  # the plug stays above the table (the hood's underside is lower)
+        "PSU hood: the XT60's plug would hit the board's underside",
+    )
+    yield (
+        pm.sleeve_bottom <= PSU.hole_y[0] - pm.bracket_w / 2 - 1
+        and PSU.hole_y[0] + 5 <= pm.sleeve_side < PSU.selector_y[0]
+        and pm.sleeve_fan >= PSU.cover_setback + 3,
+        "PSU hood sleeves: one reaches a bracket or the 115/230 V selector, misses the M4 "
+        "holes, or leaves the open strip in front of the cover",
     )
     # --- baseboard layout (T3.7)
     bb = BASEBOARD

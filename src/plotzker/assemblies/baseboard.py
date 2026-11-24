@@ -1,9 +1,11 @@
 """Baseboard with its fixings (T3.7, D31): drilled board, runners, SK10 bolts, shafts, bed
-panel on its posts, steel sheet and the ZRIB mount. Everything that does not move.
+panel on its posts, steel sheet, the ZRIB mount and the PSU mount. Everything that does not
+move.
 
 Machine frame (``params``): the board's top face is z = 0. Not printable.
 """
 
+import math
 from typing import TYPE_CHECKING
 
 from cadder.geometry import FN_HOLE
@@ -21,10 +23,11 @@ from cadder.hardware import (
 )
 from pythonscad import cube, cylinder
 
+from plotzker.assemblies.psu_mount import psu_mount_assembly
 from plotzker.assemblies.zrib_mount import zrib_mount_assembly
 from plotzker.hardware import y_shaft
 from plotzker.layout import SIDE_UNDER, Hole, board_holes
-from plotzker.params import BASEBOARD, FRAME, Y_AXIS
+from plotzker.params import BASEBOARD, FRAME, PSU_MOUNT, Y_AXIS
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -48,11 +51,15 @@ def _drill(hole: Hole) -> Solid:
 
 
 def baseboard() -> Solid:
-    """The plywood with every hole of the drilling layout."""
+    """The plywood with every hole of the drilling layout, and the right edge's underside eased
+    45° for the PSU brackets' corner fillet (T3.31)."""
     bx, by, t = FRAME.board_size
     board = cube([bx, by, t]).translate([0, 0, -t])
     for hole in board_holes():
         board = board - _drill(hole)
+    a = PSU_MOUNT.corner_r * math.sqrt(2)
+    ease = cube([a, by + 2, a]).translate([-a / 2, -1, -a / 2]).rotate([0, 45, 0])
+    board = board - ease.translate([bx, 0, -t])
     return board.color("BurlyWood", 0.5)
 
 
@@ -136,5 +143,5 @@ def zrib() -> list[Solid]:
 
 
 def fixed_assembly() -> list[Solid]:
-    """Everything that stays put: board, runners, shafts and supports, bed, ZRIB."""
-    return [baseboard(), *runners(), *shafts_and_supports(), *bed(), *zrib()]
+    """Everything that stays put: board, runners, shafts and supports, bed, ZRIB, PSU."""
+    return [baseboard(), *runners(), *shafts_and_supports(), *bed(), *zrib(), *psu_mount_assembly()]

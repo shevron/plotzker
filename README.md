@@ -264,8 +264,10 @@ Not needed for v1.
 
 - Re-use the printer PSU: a **24 V, 15 A** unit (Cheng Liang P360W24V, 215 × 113 × 50 mm; the board
   accepts 12–24 V). With no heaters, three to four steppers draw far below its rating.
-  The PSU stands **off the baseboard** on its own base (D30): its fan inlet is on the bottom
-  face and needs free air, and the mains terminals stay off the machine's plywood.
+  The PSU stays **off the baseboard** (D30): it hangs on edge beside the board's right edge on
+  two printed brackets, its fan face out in free air and clear of the table (D38). A printed hood
+  closes its terminal end, carries the fused, switched C14 inlet and the XT60 DC output, and keeps
+  the mains and 24 V wiring apart.
 - The servo runs from the ZRIB's buck 5 V regulator. Check during bring-up that the board
   doesn't reset when the servo stalls. If it does, add a separate 5 V buck converter
   (common GND).
@@ -293,7 +295,7 @@ with gravity.
   to the shafts. They stop the board bowing, act as feet, and leave space underneath for
   the ZRIB and wiring.
 - Electronics: the bare ZRIB on two printed hangers under the board between the runners (D30); the
-  PSU beside the machine (§3.6). Driver cooling fan.
+  PSU hanging beside the board's right edge (§3.6, D38). Driver cooling fan.
 - Cables moving with the gantry (X motor, X endstop, tool head): printed drag chain or a
   loose loom.
 

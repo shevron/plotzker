@@ -19,6 +19,7 @@ from plotzker.params import (
     BASEBOARD,
     FRAME,
     LOOM,
+    PSU_MOUNT,
     REQ,
     TOL,
     WOOD_SCREW,
@@ -86,6 +87,18 @@ def board_holes() -> list[Hole]:
         holes.append(
             Hole(
                 "ZRIB hanger screws",
+                x,
+                y,
+                bb.pilot_d,
+                side=SIDE_UNDER,
+                depth=WOOD_SCREW.length - WOOD_SCREW.boss_t,
+                note="pilot for a 4 × 25 wood screw, blind: do not break through the top",
+            )
+        )
+    for x, y in PSU_MOUNT.pilot_xy:
+        holes.append(
+            Hole(
+                "PSU bracket screws",
                 x,
                 y,
                 bb.pilot_d,

@@ -137,3 +137,46 @@ Design rules: mounts are face-mounted, so body length only matters for clearance
 | M3 hex nut | measured: 5.4 across flats, 2.25 thick; pressed into printed slots (hex-profile slot, `cadder.printing.nut_slot`: AF + 0.3 designed, thickness + 0.1; the print comes out ~0.1 narrower and ~0.1 thicker); no heat-set inserts (D29) |
 | Fasteners | ISO 4762 / ISO 4032 / ISO 7089 standard dimensions (`cadder/hardware/fasteners.py`) |
 
+### Power supply: Cheng Liang P360W24V
+
+A generic "S-360" style enclosed supply, 24 V 15 A. There is no manufacturer drawing; the
+values come from the user's caliper (**measured**) and from photos measured by the
+`photo-metrologist` agent (*photo ±x*, `photos/psu/report.md` and `features.json`, git-ignored).
+
+**Frame:** origin at the corner where the terminal end, the **label wall** and the **bottom
+face** meet. x runs across toward the **switch wall**, y from the terminal end to the fan end,
+z from the bottom face to the fan face.
+- **Bottom face** (z = 0): the face without the fan; it has the vent slots and mounting holes.
+- **Fan face** (z = 50): the fan sits at the end away from the terminals.
+- **Label wall** (x = 0): the side with the label, the output-adjust pot and the LED. It is on
+  your left when you look at the terminals with the fan face up.
+- **Switch wall** (x = 113): the side with the 115/230 V selector, behind the PE/N/L terminals.
+- **Fan end** (y = 215): solid, with 5 case screws and no vents.
+
+| Item | Value |
+|------|-------|
+| Size | **215 × 113 × 50** (measured); photo: 112.5 ±0.7 wide, 49.7 ±0.5 high |
+| Mounting holes | All **M4** (measured) |
+| Bottom face (z = 0) | **4 × M4 in a 150 × 50 rectangle**, centered: y **32 / 182**, x **31.5 / 81.5** (measured). Also, photo ±2, probably M3: a center hole at about (63.5, 120) and pressed-in hex nuts near the side edges at about y 8 and y 185–207 |
+| Switch wall (x = 113) | **4 × M4**: y **32 / 182**, z **11.5 / 36.5** (measured: 25 apart, the top one 13.5 below the fan face) |
+| Label wall (x = 0) | **2 × M4**: y **32 / 182**, z **10.5** (measured) |
+| 115/230 V selector | On the switch wall: opening **15** (along y) × **8** (along z), bottom edge at z **11**, nearer edge **78 from the fan end**, so y 122–137 (measured; the photo shows which end, and that the 15 runs along the length). Must stay set to **230 V**; keep it covered or hidden from accidental flipping |
+| Vents (keep open) | Bottom face: a row of 22 slots about 3 × 20 at 7.0 pitch along the label-wall edge (x 0–20, y 35–188.5, running round the bend), and a similar row along the switch-wall edge (extent not measured). Label wall near the terminal end: 3 tall slots at y about 7, 15 and 22 (z 9–35) and 2 short ones at y about 26 and 39 (z 9.5–17). The fan face: the fan, plus 2 × 5 slots near the terminal end. *photo ±1.5–2* |
+| Terminal end: case | U-shaped case: the bottom plate and both walls run to y = 0. The fan-face cover stops **18.4 ±0.7** short (a stamped label lip, z 25.8–50), so the **top is open for y 0–18.4**. Inside width 110.5 ±0.8 (1.0 wall *assumed*). *photo* |
+| Terminal block | 9-way barrier block: from the label wall, +V ×3, −V ×3, PE, N, L. Pitch **9.6 ±0.2** (probably the standard 9.5); screw centers at x 27.4 + 9.6·i (L at 104.2); block x 21.5–108.5, y 2.5–15.5, z 6–20 (±1.5). **The screws point toward the fan face (+z)**; the lugs go in sideways from the end, under a clear flap (front-bottom edge y 2.7, z 20.5). The screw heads stay inside the case; their tops are **~32 below the fan face** (z ~18; measured, matching the photo). They can be loose and stand proud, so leave several mm above them. The walls stick out **1.6** past the block front (measured; the photo said 2.5–4). The clear flap's top is about **26.5 below the fan face** (z ~23.5, measured). *photo except where marked* |
+| Output-adjust pot / LED | Pot at about (13, 8.5, 18), adjusted from above; LED at (4, 17, 15). *photo ±3* |
+| Wiring keep-out | The fork crimps reach x 22–110, z 5–20, up to **8.5** past the wall ends (y −8.5), and the wires continue from there. *photo ±2* |
+| Mass | **770 g** with the C14 inlet and its wires (weighed) |
+
+### C14 inlet (fused, switched; screw-mounted)
+
+Measured by the user (T3.31). Model: `C14_INLET` in `src/plotzker/hardware/psu.py`.
+
+| Item | Value |
+|------|-------|
+| Body (= panel cutout) | **47.3 × 27.3**; **16.7** deep behind the flange. At its bottom the side walls turn diagonal (the C14 socket's shape) and narrow to **15.2** |
+| Push-on tabs | behind the body; length not measured (9 *assumed*) |
+| Flange | elongated hexagon with rounded corners, **2.2** thick: **58.8** across the flats (the flat ends, along the body's long side) × **49.5** across the points (along its short side); flat ends 32 long *assumed* |
+| Screw holes | **2 × Ø4**, **40 apart**, at the flange's points (across the body's short side): M3 screws |
+| Fuse | fit a T3.15 A slow-blow (the PSU draws under 2 A at 230 V) |
+

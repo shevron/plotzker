@@ -12,6 +12,7 @@ from plotzker.assemblies import (
     hardware_gallery,
     machine,
     pen_holder,
+    psu_mount,
     skeleton,
     y_drive,
     zrib_mount,
@@ -55,6 +56,11 @@ ASSEMBLIES: dict[str, Assembly] = {
             name="pen_holder",
             description="The carriage with its pen holder on a piece of the beam, pen up",
             build=pen_holder.pen_holder_fit_check,
+        ),
+        Assembly(
+            name="psu_mount",
+            description="The PSU on its brackets beside a piece of the baseboard, hood and inlet",
+            build=psu_mount.psu_mount_fit_check,
         ),
         Assembly(
             name="skeleton",

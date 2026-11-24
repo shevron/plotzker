@@ -576,6 +576,41 @@ the printed carriage, motor mount and idler mount are the test pieces.
   the venv's site-packages to the driver's path and treats a traceback as a failed render; the
   CPSK solver is imported only when a `.cpsk` sketch is loaded (`cadder/tests/test_render.py`).
 
+- [ ] **T3.31 PSU mount and terminal hood** (D38). The 24 V supply hangs on edge beside the
+  board's right edge, its terminal end at y 330 so the XT60 lines up with the ZRIB (y 300):
+  `parts/psu_bracket.py` ×2 (L brackets 28 wide, 15 mm upright: 2 × M4×15 into the PSU's bottom face, 2 × 4×25
+  wood screws up into the board's underside, pilot holes 30–33 in the drilling layout; above the
+  board the upright grows 4 mm inward and rests on the board's top, 2 mm from the Y loom; 1 mm
+  fillet in the inside corner), `parts/psu_hood.py` (closes the terminal end and the open strip
+  in front of the cover; a floor at z 22 above the wire lugs keeps the DC channel along the board
+  side and the mains above, with a wall between -V and PE closing the PE/N/L column; the C14
+  inlet faces out in the outer wall, which stands 13 mm proud of the fan face; the XT60 female sits
+  low in the board-side wall, under the board, with a zip-tie post; held by 3 × M4×6 into the
+  case), `hardware/psu.py` (PSU, C14 inlet, XT60 models), `assemblies/psu_mount.py`,
+  `params.PSU_MOUNT`, design checks, tests and the FreeCAD export; the PSU is part of the machine
+  assembly. PSU and inlet are measured (`docs/hardware.md`).
+  - [ ] **Ease the baseboard's right edge underneath** 1 mm × 45° (at least at the two
+    brackets, y 348–376 and 498–526): the bracket's corner fillet sits in it.
+  - [x] FEM check of `psu_bracket` (fem-analyst); **accepted by the user, print as is** (round 5). Round 2 (20 → 28 wide, 10 → 12 upright): FAIL on
+    the abuse case (0.95 mm vs 0.5; corner stress singular). Round 3 (brace + 1 mm fillet,
+    770 g): INCONCLUSIVE, abuse 0.44 mm but only because the model's brace pulls (it can only
+    push), real estimate 0.5–0.8. Round 4 (15 mm upright): the brace lifts off the board
+    (diagnostic without it: abuse 0.69 mm); the corner's rotation (flange bending, screw)
+    dominates. **Agreed with the user:** the 0.5 mm limit applies to the PSU's weight; leant on
+    (abuse) it may move up to 1 mm. `board_top` support removed (it can only push). Round 5:
+    official INCONCLUSIVE (mesh convergence 5.6–5.8 % vs 5 %); weight 0.18 / 0.07 mm, abuse
+    0.69–0.71 mm (limit 1.0) PASS, abuse strength 0.93–1.09 (1 mm fillet at the flange root;
+    hand check agrees, ~0.9–1.05). fem-analyst judges it fit to print. Margin if wanted: flange
+    9 → 11 mm with 4×30 wood screws (~0.7). `--viz` crashes (KeyError in cadder fem viz).
+  - [ ] Measure the XT60 female after soldering: body width × height × length, the grey cap
+    (if XT60H), wire exit; then finish its retention (window + zip tie for now, *assumed*).
+  - [ ] Measure the inlet's push-on tabs behind the body (9 mm *assumed*) and the flange's
+    flat ends (32 *assumed*).
+  - [ ] Before closing the hood: set the output voltage (the ADJ pot is covered), check the
+    115/230 V selector is on 230 V, fit a T3.15 A slow-blow fuse in the inlet.
+  - [ ] Test print the hood and a bracket; check the fit on the case, the partition between
+    the lugs and the bridges (inlet cutout top, the mains column's front).
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.
@@ -658,6 +693,7 @@ update the log once it is agreed (README §7.1).
 | D34 | **X belt attached at the bottom of the carriage (merged to master after the prototype; revert point: git tag `pre-x-belt-bottom` = the design with the belt at the top, `git checkout pre-x-belt-bottom`):** bridge under the beam, rear block behind it with the lower belt run clamped on its flat top (cap above); motor/idler axis lowered from z 93.8 to **70.7** (motor body 1 mm above the unclamped rear bolt heads: the motor mount clamps only the front bolt row, the idler mount only the rear row, so the endstop plug space is free); belt 3 mm further back (y 26) so the clamp nuts stay under a full roof on the block's 45° ramp; X− endstop board lies directly on the idler mount's foot (no pad part, no ±4 mm pad slots; trigger nut slot from the underside). Gantry height and brackets unchanged. Plastic: motor + idler mounts + pad 57.7 → 31.3 cm³, carriage +1.3 → net **−25 cm³** (−17 %) | 🟡 | T3.3, T3.4 |
 | D35 | **Shelf under the X idler mount (T3.19):** the left bracket's base extends 10 mm outboard (`BRACKET.shelf_x` = −48, over the mount's footprint, y 16…62.5) so the mount's foot and end block rest on the bracket instead of hanging past its edge. Chosen over a thicker end block, gussets or a different print orientation, which barely helped while the overhang governed (plan §21). Costs 4.7 cm³ and 10 mm of bracket width; clearances checked in the assembly (nearest part: Y belt, ~5 mm) | ✅ | T3.19, plan §21 |
 | D36 | **CAD split into `cadder` (generic framework) and `plotzker` (the plotter)** (T3.24). One repo for now; cadder is a uv workspace member (`cadder/`, its own `pyproject.toml`) and moves to its own repo later. cadder never imports a project; it has the whole generic vendor-hardware catalog; firmware stays in plotzker (the Marlin config script edits `#define`s, not CAD). A project registers parts, assemblies, assembly checks, FreeCAD assemblies, design checks and its own commands on a `Project`. Part classes: `Part` (any part), `MaterialPart` (material, optional FEM; plates, purchased parts), `PrintedPart` (print profile, build direction). cadder's docs are in `cadder/docs/` (FEM method, design diff, FreeCAD assemblies, sketch formats); the plotter keeps `docs/fem.md` (its parts and data) and `fem-subagent-plan.md` (its FEM history). Candidates to move with cadder later: the generic half of README §7, the `fem-analyst` agent, the generic Makefile targets | ✅ | T3.24, README §5 |
+| D38 | **PSU mount (T3.31):** the PSU hangs on edge beside the board's **right** edge with its XT60 in line with the ZRIB (terminal end at y 330), bottom face toward the board on two printed L brackets (M4 into the PSU's bottom face, wood screws up into the board's underside; a brace rests on the board's top, so the board's edge is clamped; the Y loom lies on the board's top there, so nothing screws down into it), fan face out, label wall up, the 115/230 V selector down, terminal end toward the front; clear of the table. A printed hood closes the terminal end: C14 inlet with fuse and switch facing out, XT60 **female** on the PSU side (the male moves to the ZRIB lead) low in the board-side wall so its cable runs under the board to the ZRIB; a floor and wall keep the mains and DC wiring apart; it comes off only with a tool. Refines D30 (off the board, free air) | 🟡 | T3.31, README §3.6 |
 | D37 | **v1 pen holder (T3.6; numbered D29 until T3.24, an ID already taken):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
 
 ---
@@ -686,7 +722,7 @@ hard to get, we adjust.
 | **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers; **95 × 110 × 22 mm**, 4 × Ø3 holes 80 × 100 mm, out of its case ([`docs/controller.md`](docs/controller.md)) | X, Y, Z drivers: red A4988-type clones (photos); E0 to E2: white boards with M0–M2 pins (DRV8825 clone or LV8729-type, chip unread); red drivers' sense resistors unread; pin map (bench) |
 | Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
-| Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm** (user) | Mounting holes, terminal side |
+| Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm**, **770 g with the inlet** (user); M4 mounting holes, terminal end and switch measured (`docs/hardware.md`) | Cover-edge setback (photo only, optional) |
 | Endstop switches | ≥ 3 | Creality-type boards: 20 × 20.3 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |
 | Wood screws | many | **4 × 25 mm, countersunk** (the shortest on hand); printed parts use 9 mm bosses so they don't reach through the 18 mm plywood | Head diameter (assumed 8 mm) |
 | M5 hardware for the baseboard | to buy | 12 × M5×30 countersunk + 12 drop-in T-nuts (runners); 8 × M5×35 + nuts + washers (SK10s); 4 × M5×45 + washers, nuts and springs Ø9 × 12 (bed posts); common sizes | T-nut thickness and slot lip (*assumed* 4 / 1.8) |

@@ -16,6 +16,7 @@ from plotzker.assemblies.gantry import (
 )
 from plotzker.assemblies.machine import pen_holder_at
 from plotzker.assemblies.pen_holder import pen_holder_assembly, pen_holder_items
+from plotzker.assemblies.psu_mount import psu_mount_assembly, psu_mount_fit_check, psu_mount_local
 from plotzker.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_parts
 from plotzker.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotzker.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
@@ -43,6 +44,7 @@ def test_assembly_builds(name):
         lambda: gantry_end_local(Side.RIGHT),
         gantry_fit_check,
         zrib_mount_fit_check,
+        psu_mount_fit_check,
         lambda: y_drive_fit_check(0),
         lambda: y_drive_fit_check(1),
     ],
@@ -52,6 +54,7 @@ def test_assembly_builds(name):
         "right gantry end",
         "gantry on the shafts",
         "ZRIB under the baseboard",
+        "PSU beside the baseboard",
         "Y drive, gantry at the front",
         "Y drive, gantry at the back",
     ],
@@ -161,6 +164,28 @@ def test_zrib_mount_parts_do_not_collide():
     for i, a in enumerate(items):
         for b in items[i + 1 :]:
             assert volume(a & b) < 0.5  # a screw and its nut meet in their facets
+
+
+def test_psu_mount_parts_do_not_collide():
+    """PSU, brackets, hood, inlet, XT60 and screws clear each other (the screws sit in the
+    PSU's holes; the partition passes between the wire lugs)."""
+    items = list(psu_mount_local())
+    for i, a in enumerate(items):
+        for b in items[i + 1 :]:
+            assert volume(a & b) < 0.05
+
+
+def test_psu_mount_clears_the_board_runners_and_loom():
+    """Nothing of the PSU mount but the wood screws enters the baseboard, and it stays clear
+    of the runners and the Y loom (gantry at the front, where the loom lies nearest)."""
+    board = baseboard.baseboard()
+    others = union(*flatten([*baseboard.runners(), *loom.rails(), *loom.y_loom(y_gantry_y_at(0))]))
+    for item in psu_mount_assembly():
+        lo, hi = bounding_box(item)
+        is_wood_screw = hi[2] - lo[2] > 20 and hi[0] - lo[0] < 10 and hi[1] - lo[1] < 10
+        if not is_wood_screw:
+            assert volume(item & board) < 0.05
+        assert volume(item & others) < 0.05
 
 
 # --- the whole machine (T3.7)

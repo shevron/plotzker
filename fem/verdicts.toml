@@ -30,6 +30,12 @@ date = "2026-11-20"
 geometry = "71e3e974667f5031"
 spec = "379a728b4ead2147"
 
+[psu_bracket]
+verdict = "INCONCLUSIVE"
+date = "2026-11-24"
+geometry = "f1e84e1b347d8f44"
+spec = "53b7350c6624364f"
+
 [x_carriage]
 verdict = "PASS"
 date = "2026-11-23"

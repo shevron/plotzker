@@ -19,6 +19,7 @@ from plotzker.assemblies import baseboard
 from plotzker.assemblies.carriage import carriage_assembly
 from plotzker.assemblies.gantry import gantry_end_local
 from plotzker.assemblies.pen_holder import pen_holder_items
+from plotzker.assemblies.psu_mount import brackets_local, hood_local, placed
 from plotzker.assemblies.skeleton import carriage_x_at, gantry_y_at
 from plotzker.assemblies.y_drive import (
     y_belt_runs,
@@ -26,6 +27,7 @@ from plotzker.assemblies.y_drive import (
     y_idler_end_local,
     y_motor_end_local,
 )
+from plotzker.hardware import C14_INLET, PSU, psu
 from plotzker.params import (
     BEAM,
     BRACKET,
@@ -125,7 +127,33 @@ def _fixed_parts(ex: Components) -> None:
         "base",
         FASTENER,
     )
-    assert len(items) == 1 + len(runners) + len(shafts) + len(bed) + len(zrib)
+    n_psu = _psu_parts(ex)
+    assert len(items) == 1 + len(runners) + len(shafts) + len(bed) + len(zrib) + n_psu
+
+
+def _psu_parts(ex: Components) -> int:
+    """The PSU, its brackets and its hood with the inlet and the XT60; returns the number of
+    solids (as in ``psu_mount.psu_mount_assembly``)."""
+    ex.add("psu", placed(psu()), "base", SILVER)
+    brackets = [placed(item) for item in brackets_local()]
+    per_bracket = 1 + len(PSU.bottom_hole_x) + len(params.PSU_MOUNT.wood_screw_z)
+    assert len(brackets) == per_bracket * len(PSU.hole_y)
+    for i in range(len(PSU.hole_y)):
+        ex.add(f"psu_bracket_{i}", brackets[i * per_bracket], "base", PRINTED_PEN)
+    # hood_local: hood, inlet, inlet screws, inlet nuts, XT60, hood screws
+    hood = [placed(item) for item in hood_local()]
+    xt60 = 2 + 2 * len(C14_INLET.hole_xy)
+    ex.add("psu_hood", hood[0], "base", PRINTED)
+    ex.add("c14_inlet", hood[1], "base", DARK)
+    ex.add("xt60", hood[xt60], "base", GOLD)
+    ex.add(
+        "psu_fasteners",
+        [s for i, s in enumerate(brackets) if i % per_bracket]
+        + [s for i, s in enumerate(hood) if i not in (0, 1, xt60)],
+        "base",
+        FASTENER,
+    )
+    return 1 + len(brackets) + len(hood)
 
 
 def _y_drive_parts(ex: Components, gantry_y: float) -> None:

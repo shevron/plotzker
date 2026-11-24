@@ -13,3 +13,5 @@ freecad/*/
 freecad/*.FCStd
 freecad/*.FCBak
 build/
+# Photos of parts for measurement (docs/photo-measurement.md); results go to hardware docs
+photos/

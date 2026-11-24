@@ -13,6 +13,7 @@ Usage (from the project's repository; the project is ``[tool.cadder] project`` i
     cadder fem NAME...           # FEM check of parts → fem/results/, fem/verdicts.toml
     cadder diff [A [B]]          # parts changed between git revisions
     cadder all                   # check, stl, the project's extra outputs, render
+    cadder photo COMMAND         # measure parts from photos (docs/photo.md; the photo extra)
 
 A project adds its own commands (``Project.commands``). The CLI is a Typer app.
 """
@@ -356,6 +357,10 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
         for step in project.all_steps:
             step()
         render_pngs(project, binary=pythonscad, log=typer.echo)
+
+    from cadder.photo.cli import app as photo_app  # imports OpenCV only when a command runs
+
+    app.add_typer(photo_app, name="photo")
 
     if project.commands is not None:
         project.commands(app)

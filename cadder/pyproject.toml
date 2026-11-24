@@ -19,6 +19,7 @@ module-name = ["cadder", "cpsk_core"]
 
 [project.optional-dependencies]
 diff = ["numpy>=2", "manifold3d>=3.0"]
+photo = ["numpy>=2", "opencv-python-headless>=4.10", "pillow>=11", "pillow-heif>=0.20"]  # cadder.photo
 dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
@@ -64,5 +65,5 @@ ignore_errors = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["manifold3d", "FreeCAD", "Part", "Sketcher"]  # no type stubs (FreeCAD's: the CPSK addon)
+module = ["manifold3d", "FreeCAD", "Part", "Sketcher", "pillow_heif"]  # no type stubs (FreeCAD's: the CPSK addon)
 ignore_missing_imports = true

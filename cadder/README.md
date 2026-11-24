@@ -61,6 +61,7 @@ complete small example.
 | `cadder.fem` | The FEM check (needs FreeCAD's gmsh and CalculiX): STL cleaning, meshing, CalculiX, failure index, verdicts with spec and geometry hashes, reports and pictures |
 | `cadder.diff` | The design diff between git revisions: per-revision snapshots, part and assembly comparison, a self-contained HTML report with a 3D viewer |
 | `cadder.render` | STL export and PythonSCAD renders (normal and all-sides inspection views) |
+| `cadder.photo` | Measuring parts from photos: a printed ChArUco target, rectification (camera pose, scale, perspective), sub-pixel edges and holes in mm, parallax correction, a feature file drawn back onto the photo (`photo` extra) |
 | `cadder.testing` | Measurements on solids for a project's tests: volume, bounding box, shells, touching, connected groups |
 | `cadder.cli` | The command line, and `make_app` / `run` for a project's own entry point |
 
@@ -79,8 +80,9 @@ complete small example.
 | `diff [A [B]]` | What changed between two git revisions (default `HEAD` → working tree) |
 | `freecad [NAMES] [--export-only]` | Build the project's FreeCAD assemblies into `freecad/<name>.FCStd` |
 | `all` | `check`, `stl`, the project's extra outputs (`Project.all_steps`), `render` |
+| `photo COMMAND` | Measure parts from photos: `target`, `info`, `convert`, `rectify`, `crop`, `edges`, `holes`, `point`, `overlay`, `table` (also `python -m cadder.photo`; needs the `photo` extra) |
 
-Guides: [FEM checks](docs/fem.md), [design diff](docs/diff.md),
+Guides: [FEM checks](docs/fem.md), [design diff](docs/diff.md), [photos](docs/photo.md),
 [FreeCAD assemblies](docs/freecad.md), [CPSK sketch format](docs/cpsk/spec-0.1.md) (draft),
 [CPSK FreeCAD addon](freecad-addon/CPSK/README.md); background:
 [parametric sketch formats](docs/sketch-formats.md), [CPSK RFC](docs/rfc/parametric-sketch-format.md).
@@ -95,14 +97,15 @@ Environment: `CADDER_FN` lowers the facet count (the FEM export uses 20);
 ## Development
 
 ```bash
-uv sync --extra dev --extra diff     # from the workspace root, or here
+uv sync --extra dev --extra diff --extra photo   # from the workspace root, or here
 uv run python -m pytest              # cadder's tests (tests/, on the fixture project)
 uv run mypy && uv run ruff check .   # strict types and lint; `plotzker` imports are banned (TID251)
 make test-cpsk-core                  # (workspace root) cpsk_core's tests on FreeCAD's Python 3.11
 make freecad-addon                   # (workspace root) link the CPSK addon into FreeCAD's Mod folder
 ```
 
-The `diff` extra (numpy, manifold3d) is needed for the design diff. `planegcs` (the CPSK
+The `diff` extra (numpy, manifold3d) is needed for the design diff, the `photo` extra (OpenCV,
+Pillow, pillow-heif) for `cadder photo`. `planegcs` (the CPSK
 solver) has no macOS wheels; it builds from source with Eigen and Boost (`brew install eigen boost`). Conventions (code style,
 typing, testing) are those of the plotzker repository's README §7 for now; they move here with
 cadder.

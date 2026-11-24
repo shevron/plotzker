@@ -16,6 +16,7 @@ dependencies = [
 
 [project.optional-dependencies]
 diff = ["cadder[diff]"]
+photo = ["cadder[photo]"]  # measuring parts from photos (docs/photo-measurement.md)
 dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
 
 [project.scripts]
@@ -69,5 +70,5 @@ ignore_errors = true
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["manifold3d", "FreeCAD", "Part", "Sketcher"]  # no type stubs (FreeCAD's: the CPSK addon)
+module = ["manifold3d", "FreeCAD", "Part", "Sketcher", "pillow_heif"]  # no type stubs (FreeCAD's: the CPSK addon)
 ignore_missing_imports = true

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(uv run --extra photo cadder photo:*)",
+      "Bash(uv run cadder photo:*)",
+      "Edit(/photos/**)"
+    ]
+  }
+}

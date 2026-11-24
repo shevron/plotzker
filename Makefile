@@ -4,7 +4,7 @@
 .PHONY: help develop clean check typecheck format lint test test-cpsk-core freecad-addon stl render render-inspect freecad fem fem-status diff
 
 PYTHON_VERSION := $(shell cat .python-version)
-UV_RUN := uv run --extra dev --extra diff
+UV_RUN := uv run --extra dev --extra diff --extra photo
 FREECAD_PYTHON ?= $(or $(CADDER_FREECAD_BIN_DIR),/Applications/FreeCAD.app/Contents/Resources/bin)/python
 FREECAD_MOD ?= $(HOME)/Library/Application Support/FreeCAD/v1-1/Mod
 
@@ -14,7 +14,7 @@ help:  ## List the available commands
 develop:  ## Set up the development environment (.venv on pyenv's Python, all dependencies)
 	pyenv install --skip-existing $(PYTHON_VERSION)
 	test -d .venv || uv venv --python "$$(pyenv which python)"
-	uv sync --extra dev --extra diff
+	uv sync --extra dev --extra diff --extra photo
 
 clean:  ## Remove all generated files (STLs, renders, FreeCAD assembly, caches, build output); keeps .venv
 	rm -rf stl renders fem/results freecad/*/ freecad/*.FCStd freecad/*.FCBak build dist .pytest_cache .ruff_cache .mypy_cache

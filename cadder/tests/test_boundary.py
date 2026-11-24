@@ -6,8 +6,13 @@ import sys
 
 import cadder
 
-#: run inside FreeCAD's Python, not importable here
-FREECAD_ONLY = {"cadder.freecad.build", "cadder.fem.viz_render", "cadder.__main__"}
+#: run inside FreeCAD's Python, or entry points that run on import
+FREECAD_ONLY = {
+    "cadder.freecad.build",
+    "cadder.fem.viz_render",
+    "cadder.__main__",
+    "cadder.photo.__main__",
+}
 
 
 def test_every_module_imports_without_any_project() -> None:

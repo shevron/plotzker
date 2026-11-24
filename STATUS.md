@@ -527,6 +527,22 @@ the printed carriage, motor mount and idler mount are the test pieces.
   FreeCAD → CPSK → FreeCAD and CPSK → FreeCAD → CPSK give the same files (tested in FreeCAD,
   with a cross-solver check against `cadder.cpsk`). Follow-ups: a licence (`package.xml`: TBD),
   an Addon Manager release (needs its own copy of `cpsk_core`), ellipses and B-splines.
+- [x] **T3.30 Endstop board length and blank renders.** The endstop board's PCB is **20.3 long**
+  × 20 wide (caliper; the 19 recorded in T3.5 was wrong). `ENDSTOP.pcb` length 19 → 20.3: the
+  board grows toward its connector, so the holes, connector and plug space sit 1.3 mm further
+  from the switch. The plug space then ran ~1 mm into the X idler tower's walls on the left
+  bracket. Shortening the walls was tried and rejected: FEM made the bracket ~10 % worse
+  (vertical at belt peak 0.163 vs 0.147 mm). Instead, agreed with the user, the plug space behind
+  each endstop connector is 13.5 mm instead of 15 (`ENDSTOP.plug_len`); the bracket is unchanged.
+  Net effect: the Y idlers sit 0.2 mm further back and both Y idler mounts are 0.2 mm shorter (Y
+  travel and the baseboard drill holes unchanged). Changed STLs: `x_endstop_mount`,
+  `y_idler_mount_left/right`; reprint any already printed. Y idler mounts FEM re-checked: PASS
+  (45 %, as before). **Renders fixed:** every render had been blank since the cadder split
+  (T3.24): the driver PythonSCAD runs could not import `cadder`, and since CPSK (T3.27)
+  `cadder.geometry` also loaded the planegcs extension, which the signed app refuses; PythonSCAD
+  exits 0 with an empty image, so it went unnoticed. `cadder.render` now adds cadder's folder and
+  the venv's site-packages to the driver's path and treats a traceback as a failed render; the
+  CPSK solver is imported only when a `.cpsk` sketch is loaded (`cadder/tests/test_render.py`).
 
 #### Phase 4 — Build
 
@@ -639,7 +655,7 @@ hard to get, we adjust.
 | Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm** (user) | Mounting holes, terminal side |
-| Endstop switches | ≥ 3 | Creality-type boards: 20 × 19 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |
+| Endstop switches | ≥ 3 | Creality-type boards: 20 × 20.3 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |
 | Wood screws | many | **4 × 25 mm, countersunk** (the shortest on hand); printed parts use 9 mm bosses so they don't reach through the 18 mm plywood | Head diameter (assumed 8 mm) |
 | M5 hardware for the baseboard | to buy | 12 × M5×30 countersunk + 12 drop-in T-nuts (runners); 8 × M5×35 + nuts + washers (SK10s); 4 × M5×45 + washers, nuts and springs Ø9 × 12 (bed posts); common sizes | T-nut thickness and slot lip (*assumed* 4 / 1.8) |
 | Plywood, steel sheet, magnets | to buy/cut | Baseboard, bed panel, work holding (README §3.8) | — |

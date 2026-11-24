@@ -49,25 +49,25 @@ spec = "a4108eede4c1c67a"
 
 [y_idler_mount_left]
 verdict = "PASS"
-date = "2026-11-23"
-geometry = "af042b3e45a7853b"
-spec = "785f5fee747f2666"
+date = "2026-11-24"
+geometry = "90b853438bfb7e43"
+spec = "7bd9e074379a5b51"
 
 [y_idler_mount_right]
 verdict = "PASS"
-date = "2026-11-23"
-geometry = "02c21901ca557b3d"
-spec = "2c8717f70652aa81"
+date = "2026-11-24"
+geometry = "01c5f4d395f2bbda"
+spec = "9a278db9af9fa9c6"
 
 [y_idler_tensioner_left]
 verdict = "PASS"
-date = "2026-11-23"
-spec = "ac65ac758726f8b6"
+date = "2026-11-24"
+spec = "36d84d5956952400"
 
 [y_idler_tensioner_right]
 verdict = "PASS"
-date = "2026-11-23"
-spec = "dd2563b000d80e96"
+date = "2026-11-24"
+spec = "8f5bc7cc8c5e1e6a"
 
 [y_motor_mount_left]
 verdict = "FAIL"

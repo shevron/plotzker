@@ -7,12 +7,14 @@ has no image export.
 
 import os
 import shutil
+import site
 import subprocess
 import tempfile
 import textwrap
 from collections.abc import Callable, Collection, Iterable
 from pathlib import Path
 
+import cadder
 from cadder.project import Project
 
 #: Image size and camera options passed to PythonSCAD for every render.
@@ -93,6 +95,27 @@ def find_pythonscad(explicit: str | None = None) -> str:
     )
 
 
+def driver_paths(project: Project) -> tuple[list[str], list[str]]:
+    """Import paths for the render driver run by PythonSCAD's own Python.
+
+    Returns the paths to put first (the project's source folders and the folder holding
+    ``cadder``, which is not always one of them) and the ones to put last (this environment's
+    site-packages, for the project's other dependencies; after PythonSCAD's own modules, so
+    its built-in ``pythonscad`` wins).
+    """
+    cadder_root = str(Path(cadder.__file__).resolve().parent.parent)
+    first = [str(project.root / d) for d in project.source_dirs]
+    if cadder_root not in first:
+        first.append(cadder_root)
+    return first, site.getsitepackages()
+
+
+def render_failed(returncode: int, path: Path, output: str) -> bool:
+    """Whether a PythonSCAD run failed. It exits 0 and writes an empty image when the
+    driver raises, so a Python traceback in its output also counts as a failure."""
+    return returncode != 0 or not path.exists() or "Traceback (most recent call last)" in output
+
+
 def render_pngs(
     project: Project,
     names: Iterable[str] | None = None,
@@ -117,7 +140,7 @@ def render_pngs(
     else:
         views = {"": None}
     out_dir.mkdir(parents=True, exist_ok=True)
-    paths = [str(project.root / d) for d in project.source_dirs]
+    first, last = driver_paths(project)
     written = []
     with tempfile.TemporaryDirectory() as tmp:
         for name in select(names, targets):
@@ -126,7 +149,8 @@ def render_pngs(
                 textwrap.dedent(
                     f"""\
                     import sys
-                    sys.path[0:0] = {paths!r}
+                    sys.path[0:0] = {first!r}
+                    sys.path.extend({last!r})
                     from pythonscad import show
                     from cadder.project import load_project
                     project = load_project({project.spec!r})
@@ -141,7 +165,7 @@ def render_pngs(
                     cmd.append(f"--camera=0,0,0,{','.join(f'{a:g}' for a in rotation)},500")
                 cmd.append(str(driver))
                 result = subprocess.run(cmd, capture_output=True, text=True, check=False)
-                if result.returncode != 0 or not path.exists():
+                if render_failed(result.returncode, path, result.stdout + result.stderr):
                     raise RuntimeError(
                         f"Render of {name} {view} failed:\n{result.stdout}\n{result.stderr}"
                     )

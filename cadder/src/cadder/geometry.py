@@ -14,8 +14,6 @@ from typing import TYPE_CHECKING
 
 from pythonscad import circle, cube, linear_extrude, osimport, square
 
-from cadder import cpsk
-
 if TYPE_CHECKING:
     from pythonscad import Solid
 
@@ -91,6 +89,11 @@ def _solve_cpsk(
     The importer reads its file only when the geometry is evaluated, so the SVG must outlive
     this call: it is kept in the system temporary folder under a hash of its content.
     """
+    # Imported here, not at module level: the solver loads a native extension (planegcs) that
+    # the signed PythonSCAD app refuses to load, so importing it on every use of this module
+    # would break rendering of all parts, not only those built from a .cpsk sketch.
+    from cadder import cpsk
+
     sketch = cpsk.load(path, params)
     solved = cpsk.solve(sketch, strict=strict)
     for diagnostic in (*sketch.warnings, *solved.warnings):

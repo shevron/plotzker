@@ -1,8 +1,9 @@
 """Creality-type mechanical endstop board (user's, from a Creality printer). Dimensions in mm.
 
-Measured by the user (T3.5, with photos): board 20 wide × 19 long × 1.5 thick; two M3
-mounting holes 15 apart, across the width at the rear (connector) end, hole edges 1 mm
-from the sides and 1.5 mm from the rear edge. The connector, on the component side at
+Measured by the user (T3.5, with photos): board 20 wide × 20.3 long × 1.5 thick (length
+re-measured with the caliper in T3.30; T3.5 had 19); two M3 mounting holes 15 apart,
+across the width at the rear (connector) end, hole edges 1 mm from the sides and 1.5 mm
+from the rear edge. The connector, on the component side at
 the rear, is 10 wide × 7.2 long × 5.6 high (normal to the board), 2 mm of it past the rear
 edge; a plug slides onto it from the rear, so the space behind it must stay free.
 
@@ -34,7 +35,8 @@ if TYPE_CHECKING:
 class EndstopSpec:
     """Endstop board, switch and lever dimensions."""
 
-    pcb: tuple[float, float, float] = (19, 20, 1.5)  #: length (front-rear) × width × thickness
+    #: length (front-rear, measured T3.30) × width × thickness
+    pcb: tuple[float, float, float] = (20.3, 20, 1.5)
     hole_pitch: float = 15  #: across the width (measured)
     hole_m: float = 3
     hole_d: float = 3.0  #: = 20 - 15 - 2 × 1 mm edge distance
@@ -58,7 +60,7 @@ class EndstopSpec:
     connector_overhang: float = 2  #: connector past the rear edge (measured)
     #: DESIGN: free space behind the connector for a plug and the bend of its wires, and the
     #: clearance around the plug's sides and top
-    plug_len: float = 15
+    plug_len: float = 13.5  #: 15 until T3.30; shortened so the X idler tower keeps its walls
     plug_clearance: float = 2
 
     @property

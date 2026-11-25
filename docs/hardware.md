@@ -180,3 +180,17 @@ Measured by the user (T3.31). Model: `C14_INLET` in `src/plotzker/hardware/psu.p
 | Screw holes | **2 × Ø4**, **40 apart**, at the flange's points (across the body's short side): M3 screws |
 | Fuse | fit a T3.15 A slow-blow (the PSU draws under 2 A at 230 V) |
 
+### XT60H-F (female DC connector, PSU side)
+
+Amass XT60H-F. Cross-sections **measured by the user** (caliper); lengths and the rim from
+photos measured by the `photo-metrologist` (`photos/xt60/report.md`, git-ignored) and the Amass
+drawing. Distances are from the mating face toward the wires; width = long side.
+
+| Section | From the face | Width × height | Source |
+|---------|---------------|----------------|--------|
+| Front (mating) section; 45° chamfers 2.2 on one short side (2.0 flat between them) | 0 to **8.0** | **13.9 × 6.4** | measured; length from the test piece (7.2 proud of a 0.8 lip) |
+| Collar (lettered); ~1.5 radius on its two corners on the chamfered side | 8.0 to 12.1 | **15.5 × 8.1** | measured; length *photo* |
+| Rim (flange) | 12.1 to 12.9 | **16.4 × 9.2** | Amass drawing |
+| Black cap | 13.5 to **23.4** | 15.6 × 6.5 (±1) | *photo* |
+
+Model: `XT60` in `src/plotzker/hardware/psu.py`.

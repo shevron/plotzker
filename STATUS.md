@@ -550,20 +550,22 @@ the printed carriage, motor mount and idler mount are the test pieces.
   CPSK solver is imported only when a `.cpsk` sketch is loaded (`cadder/tests/test_render.py`).
 
 - [ ] **T3.31 PSU mount and terminal hood** (D38). The 24 V supply hangs on edge beside the
-  board's right edge, its terminal end at y 330 so the XT60 lines up with the ZRIB (y 300):
+  board's right edge, its terminal end at y 322 so the XT60 lines up with the ZRIB (y 300):
   `parts/psu_bracket.py` ×2 (L brackets 28 wide, 15 mm upright: 2 × M4×15 into the PSU's bottom face, 2 × 4×25
   wood screws up into the board's underside, pilot holes 30–33 in the drilling layout; above the
   board the upright grows 4 mm inward and rests on the board's top, 2 mm from the Y loom; 1 mm
-  fillet in the inside corner), `parts/psu_hood.py` (closes the terminal end and the open strip
-  in front of the cover; a floor at z 22 above the wire lugs keeps the DC channel along the board
-  side and the mains above, with a wall between -V and PE closing the PE/N/L column; the C14
-  inlet faces out in the outer wall, which stands 13 mm proud of the fan face; the XT60 female sits
-  low in the board-side wall, under the board, with a zip-tie post; held by 3 × M4×6 into the
-  case), `hardware/psu.py` (PSU, C14 inlet, XT60 models), `assemblies/psu_mount.py`,
+  fillet in the inside corner), `parts/psu_hood.py` (closes the terminal end and the open strip in front of the cover; 42 deep,
+  2 mm walls, snug on the case (0 clearance); no mains/DC partition (removed after the first print);
+  C14 inlet facing out in the flat outer wall, long side across the case, beside the XT60;
+  XT60H-F female low in the board-side wall, under the board, pushed in from the open end onto a
+  0.8 lip (front section 7.3 proud, keyed window: chamfers toward the PSU, lettering up); narrow screw tabs,
+  3 × M4×6 into the case; prints front wall down, no supports, longest bridge the 48 mm inlet
+  cutout top; ~49 cm³, down from 103),
+  `hardware/psu.py` (PSU, C14 inlet, XT60 models), `assemblies/psu_mount.py`,
   `params.PSU_MOUNT`, design checks, tests and the FreeCAD export; the PSU is part of the machine
   assembly. PSU and inlet are measured (`docs/hardware.md`).
   - [ ] **Ease the baseboard's right edge underneath** 1 mm × 45° (at least at the two
-    brackets, y 348–376 and 498–526): the bracket's corner fillet sits in it.
+    brackets, y 340–368 and 490–518): the bracket's corner fillet sits in it.
   - [x] FEM check of `psu_bracket` (fem-analyst); **accepted by the user, print as is** (round 5). Round 2 (20 → 28 wide, 10 → 12 upright): FAIL on
     the abuse case (0.95 mm vs 0.5; corner stress singular). Round 3 (brace + 1 mm fillet,
     770 g): INCONCLUSIVE, abuse 0.44 mm but only because the model's brace pulls (it can only
@@ -575,14 +577,24 @@ the printed carriage, motor mount and idler mount are the test pieces.
     0.69–0.71 mm (limit 1.0) PASS, abuse strength 0.93–1.09 (1 mm fillet at the flange root;
     hand check agrees, ~0.9–1.05). fem-analyst judges it fit to print. Margin if wanted: flange
     9 → 11 mm with 4×30 wood screws (~0.7). `--viz` crashes (KeyError in cadder fem viz).
-  - [ ] Measure the XT60 female after soldering: body width × height × length, the grey cap
-    (if XT60H), wire exit; then finish its retention (window + zip tie for now, *assumed*).
   - [ ] Measure the inlet's push-on tabs behind the body (9 mm *assumed*) and the flange's
     flat ends (32 *assumed*).
   - [ ] Before closing the hood: set the output voltage (the ADJ pot is covered), check the
     115/230 V selector is on 230 V, fit a T3.15 A slow-blow fuse in the inlet.
-  - [ ] Test print the hood and a bracket; check the fit on the case, the partition between
-    the lugs and the bridges (inlet cutout top, the mains column's front).
+  - [x] First hood print (feedback): the XT60 couldn't be inserted (floor and 45° front over
+    it), the opening came out 51 (loose), too much plastic. Redesigned: partition removed, XT60
+    near the open end, 0 clearance, inlet turned back (flat outer wall, no bulge), 2 mm walls.
+  - [x] XT60H-F measured from photos (`docs/hardware.md`): the previous window let the collar
+    through, so the plug stood only ~4 mm out. Pocket redesigned (lip stop, keyed window); the
+    inlet moved 20 mm toward the label wall to clear the longer connector.
+  - [x] First XT60 test piece (`stl/xt60_test.stl`, a one-off): fits, male plug seats and
+    contacts well, collar holds when unplugging, keyed; 7.2 proud; loose. User measured the
+    front and collar; window and collar pocket now a press fit (0 clearance).
+  - [ ] Print the second test piece (press fit).
+  - [ ] Reprint the hood; check the fit (0 clearance; tighten to −0.05 if loose), the XT60 push-in
+    and the 48 mm inlet bridge. XT60 has no stop against being pushed back in when plugging: add a
+    drop of hot glue.
+  - [ ] Test print a bracket.
 
 #### Phase 4 — Build
 

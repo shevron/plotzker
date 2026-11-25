@@ -1,7 +1,7 @@
 """Assemblies build, and their parts actually meet: nothing floats in mid-air."""
 
 import pytest
-from cadder.handles import get_handles, shift_handle
+from cadder.handles import get_handle, get_handles, shift_handle
 from cadder.hardware import shcs, sk10, vslot_x
 from cadder.testing import bounding_box, connected_groups, flatten, touching, volume
 from pythonscad import union
@@ -21,9 +21,10 @@ from plotzker.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_part
 from plotzker.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotzker.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
 from plotzker.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
-from plotzker.hardware import y_shaft
+from plotzker.hardware import xt60_female, y_shaft
 from plotzker.params import BEAM, CARRIAGE, FRAME, X_DRIVE, Y_AXIS
 from plotzker.parts.gantry_end_bracket import Side, gantry_end_bracket_local
+from plotzker.parts.psu_hood import psu_hood_installed
 from plotzker.parts.x_motor_mount import x_motor_mount_left
 from plotzker.parts.y_idler_mount import y_idler_mount_installed
 from plotzker.parts.y_motor_mount import y_motor_mount_installed
@@ -186,6 +187,17 @@ def test_psu_mount_clears_the_board_runners_and_loom():
         if not is_wood_screw:
             assert volume(item & board) < 0.05
         assert volume(item & others) < 0.05
+
+
+def test_xt60_stops_on_the_lip_and_goes_in_one_way_only():
+    """Seated, the XT60 clears the hood; pulled out (-z, as when unplugging) its collar meets
+    the lip; turned over (180° about its axis) its square corners meet the keyed window."""
+    hood = psu_hood_installed()
+    seat = get_handle(hood, "xt60")
+    plug = xt60_female().align(seat)
+    assert volume(plug & hood) < 0.05
+    assert volume(plug.translate([0, 0, -0.5]) & hood) > 1
+    assert volume(xt60_female().rotate([0, 180, 0]).align(seat) & hood) > 0.5
 
 
 # --- the whole machine (T3.7)

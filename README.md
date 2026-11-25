@@ -266,8 +266,8 @@ Not needed for v1.
   accepts 12–24 V). With no heaters, three to four steppers draw far below its rating.
   The PSU stays **off the baseboard** (D30): it hangs on edge beside the board's right edge on
   two printed brackets, its fan face out in free air and clear of the table (D38). A printed hood
-  closes its terminal end, carries the fused, switched C14 inlet and the XT60 DC output, and keeps
-  the mains and 24 V wiring apart.
+  closes its terminal end, carries the fused, switched C14 inlet and the XT60 DC output (no
+  internal partition: wiring must be insulated).
 - The servo runs from the ZRIB's buck 5 V regulator. Check during bring-up that the board
   doesn't reset when the servo stalls. If it does, add a separate 5 V buck converter
   (common GND).

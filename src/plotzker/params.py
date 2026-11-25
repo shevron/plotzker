@@ -659,34 +659,62 @@ class PsuMount:
     #: M4's head counterbore reaches to 1.6 mm from the corner
     corner_r: float = 1
     # Hood (PSU frame)
-    clearance: float = 0.5  #: hood inside to the PSU case, each side
-    wall_t: float = 2.5
-    depth: float = 53  #: DESIGN (T3.31): in front of the wall ends (room for the inlet)
-    #: DESIGN (T3.31): in front of the PSU the hood stands this far out past the fan face, so
-    #: the DC channel along the board side and the inlet's body both fit
-    front_bulge: float = 13
+    #: DESIGN (T3.31): hood inside to the PSU case, each side. 0: the first print, at 0.5, came
+    #: out 51 across the 50 mm case and was loose
+    clearance: float = 0.0
+    wall_t: float = 2.0
+    #: DESIGN (T3.31): in front of the wall ends: the inlet's flange (49.5 across its points)
+    #: lies along it and over the start of the fan-side sleeve
+    depth: float = 42
     sleeve_fan: float = 24  #: over the fan face: covers the open strip (cover setback 18.4)
-    sleeve_side: float = 40  #: over the label and switch walls, past the y = 32 holes
-    sleeve_bottom: float = 12  #: over the bottom face, short of the bracket
-    hood_screw_len: float = 6  #: M4 ISO 4762 through a sleeve into the case
-    barrier_t: float = 1.6  #: DC/mains partition
-    #: in front of the lugs, the PE/N/L column ends here (the mains side's step into the front)
-    barrier_step_y: float = 12
-    #: the partition's floor (PSU z), from the wall ends to the front wall, above the wire lugs:
-    #: DC below it (the board side), mains above
-    dc_channel_z: float = 22
-    barrier_front_gap: float = 0.3  #: partition tip to the wall ends' plane
-    inlet_x: float = 88.5  #: inlet cutout center (mains side)
-    inlet_y: float = -28.25  #: the screw bosses fit just inside the front zone
+    sleeve_side: float = 40  #: screw tabs over the label and switch walls, past the y = 32 holes
+    tab_margin: float = 7  #: the tabs reach this far past their holes (in z)
+    sleeve_bottom: float = 8  #: over the bottom face, short of the bracket
+    hood_screw_len: float = 6  #: M4 ISO 4762 through a tab into the case
+    #: DESIGN (T3.31): inlet cutout center; its long side runs along x (across the print, a
+    #: 48 mm bridge), clear of the XT60 behind it
+    inlet_x: float = 64
+    inlet_y: float = -16
     inlet_boss_t: float = 3.5  #: boss inside the wall for the inlet's M3 nuts
-    #: DESIGN (T3.31): XT60 in the board-side wall, low (under the board), in line with the ZRIB
+    #: DESIGN (T3.31): XT60 in the board-side wall, low (under the board), in line with the ZRIB,
+    #: close to the open end so it can be pushed in by hand from inside
     xt60_x: float = 100
-    xt60_y: float = -30
-    xt60_sleeve: float = 6  #: grip sleeve inside the board-side wall
-    tie_bar: tuple[float, float] = (4, 3)  #: zip-tie post beside the XT60's wires: x, y size
-    #: the male plug's shroud stands out round the female body by about this much (ASSUMED)
+    xt60_y: float = -22
+    #: lip round the front section's window: the collar stops on it when the plug is pulled
+    xt60_lip: float = 0.8
+    #: the window's corner chamfers on one side, a little under the connector's: keys the
+    #: polarity
+    xt60_key: float = 2.0
+    #: the pocket's rounded corners on that side, a little under the collar's
+    xt60_pocket_r: float = 1.2
+    #: DESIGN (T3.31): press fit, per side (the first test piece, at 0.25 round the front and
+    #: 0.5+ round the collar, was loose)
+    xt60_fit: float = 0.0  #: front section in the lip's window
+    xt60_pocket_fit: float = 0.0  #: collar in the pocket behind the lip
+    #: the male plug stands out round the female's front section by about this much (ASSUMED)
     xt60_plug_margin: float = 5
-    xt60_fit: float = 0.2  #: per side
+
+    @property
+    def xt60_sleeve(self) -> float:
+        """Sleeve inside the board-side wall: just short of the XT60's rim, which stays free."""
+        return self.xt60_lip + XT60.collar_len - 0.1 - self.wall_t
+
+    @property
+    def xt60_protrude(self) -> float:
+        """How far the mating face stands out of the wall."""
+        return XT60.front_len - self.xt60_lip
+
+    @property
+    def xt60_window(self) -> tuple[float, float]:
+        """The lip's window: along x (the connector's height) and along y (its width)."""
+        w, h = XT60.front
+        return h + 2 * self.xt60_fit, w + 2 * self.xt60_fit
+
+    @property
+    def xt60_pocket(self) -> tuple[float, float]:
+        """The pocket gripping the collar behind the lip: along x and along y."""
+        w, h = XT60.collar
+        return h + 2 * self.xt60_pocket_fit, w + 2 * self.xt60_pocket_fit
 
     @property
     def terminal_y(self) -> float:
@@ -750,24 +778,6 @@ class PsuMount:
         """Hood in PSU z: outer and inner faces (outer0, inner0, inner1, outer1)."""
         c, t = self.clearance, self.wall_t
         return -c - t, -c, PSU.size[2] + c, PSU.size[2] + c + t
-
-    @property
-    def barrier_x_near(self) -> float:
-        """Partition midway between the last -V terminal and PE (in front of the lugs): it
-        clears a lug on either side, even if the third -V terminal gets a wire."""
-        return PSU.dc_mains_gap_x
-
-    @property
-    def front_z(self) -> tuple[float, float]:
-        """In front of the PSU the hood bulges out: its fan-side wall's inner and outer face."""
-        inner = self.hood_z[2] + self.front_bulge
-        return inner, inner + self.wall_t
-
-    @property
-    def front_zone_y(self) -> tuple[float, float]:
-        """Inside the hood in front of the PE/N/L column (PSU y): DC channel below the floor,
-        mains above."""
-        return -self.depth + self.wall_t, -self.barrier_step_y - self.barrier_t
 
     @property
     def brace_z(self) -> float:
@@ -2133,55 +2143,49 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         pm.origin[0] + pm.brace_z - (LOOM.hole_x + LOOM.d / 2) >= 1.5,
         "PSU bracket: the brace over the board's top comes within 1.5 mm of the Y loom",
     )
-    xs = PSU.terminal_xs
-    near_lo, near_hi = pm.barrier_x_near - pm.barrier_t / 2, pm.barrier_x_near + pm.barrier_t / 2
+    cl, cs = C14_INLET.cutout  # long side along x, short along y
+    flange_l, flange_w = C14_INLET.flange  # across the flats (x), across the points (y)
+    ox0, ix0, ix1, ox1 = pm.hood_x
     yield (
-        near_lo - (xs[5] + PSU.lug_w / 2) >= 0.5
-        and xs[6] - PSU.lug_w / 2 - near_hi >= 0.5
-        and pm.barrier_step_y >= PSU.crimp_reach + 2
-        and pm.dc_channel_z >= PSU.crimp_z[1] + 1.5,
-        "PSU hood: the DC/mains partition hits a wire lug, the mains column ends before its "
-        "lugs do, or the floor sits on the lugs",
-    )
-    cw, ch = C14_INLET.cutout
-    zone_y0, zone_y1 = pm.front_zone_y
-    _, ix0, ix1, _ = pm.hood_x
-    yield (
-        ix0 + 0.5 <= pm.inlet_x - cw / 2
-        and pm.inlet_x + cw / 2 <= ix1 - 0.5
-        and zone_y0 + 0.5 <= pm.inlet_y - ch / 2
-        and pm.inlet_y + ch / 2 <= zone_y1 - 0.5,
-        "PSU hood: the inlet's cutout is not inside the mains side in front of the PSU",
+        ix0 + 0.5 <= pm.inlet_x - cl / 2
+        and pm.inlet_x + cl / 2 <= ix1 - 0.5
+        and -pm.depth + pm.wall_t + 0.5 <= pm.inlet_y - cs / 2
+        and pm.inlet_y + cs / 2 <= -0.5,
+        "PSU hood: the inlet's cutout is not inside the hood in front of the PSU",
     )
     yield (
-        pm.front_z[1] - C14_INLET.depth - C14_INLET.connector_room
-        >= pm.dc_channel_z + pm.barrier_t + 1,
-        "PSU hood: no room behind the inlet for its connectors and wires above the floor",
+        ox0 <= pm.inlet_x - flange_l / 2
+        and pm.inlet_x + flange_l / 2 <= ox1
+        and -pm.depth <= pm.inlet_y - flange_w / 2
+        and pm.inlet_y + flange_w / 2 <= pm.sleeve_fan,
+        "PSU hood: the inlet's flange runs off the outer wall",
+    )
+    pocket_x, pocket_y = pm.xt60_pocket
+    window_x, window_y = pm.xt60_window
+    xt_x0 = pm.xt60_x - pocket_x / 2 - pm.wall_t
+    xt_x1 = pm.xt60_x + pocket_x / 2 + pm.wall_t
+    xt_y0 = pm.xt60_y - pocket_y / 2 - pm.wall_t - pm.xt60_sleeve
+    xt_y1 = pm.xt60_y + pocket_y / 2 + pm.wall_t
+    yield (
+        pm.inlet_x + cl / 2 + 2 <= xt_x0,
+        "PSU hood: the inlet is over the XT60, which reaches far into the hood",
     )
     yield (
-        all(
-            -pm.depth <= pm.inlet_y + dy - C14_INLET.ear_d / 2
-            and pm.inlet_y + dy + C14_INLET.ear_d / 2 <= 0
-            for _, dy in C14_INLET.hole_xy
-        ),
-        "PSU hood: an inlet screw hole is off the outer wall in front of the PSU",
-    )
-    xt_w, xt_h = XT60.body
-    grow = pm.xt60_fit + pm.wall_t
-    post_x0 = pm.xt60_x - xt_h / 2 - grow - 4 - pm.tie_bar[0]
-    yield (
-        ix0 <= post_x0
-        and pm.xt60_x + xt_h / 2 + grow <= ix1
-        and zone_y0 <= pm.xt60_y - xt_w / 2 - grow
-        and pm.xt60_y + xt_w / 2 + grow <= zone_y1
-        and pm.hood_z[0] - XT60.protrude + XT60.length + 10 <= pm.dc_channel_z,
-        "PSU hood: the XT60 or its tie post is not inside the DC channel, or no room for its "
-        "wires behind it",
+        ix0 <= xt_x0
+        and xt_x1 <= ix1
+        and -pm.depth + pm.wall_t <= xt_y0
+        and xt_y1 <= -(PSU.crimp_reach + 2),
+        "PSU hood: the XT60's sleeve runs into a wall or the wire lugs",
     )
     yield (
-        pm.xt60_x - xt_h / 2 - pm.xt60_plug_margin >= pm.board_x[1] + 2
-        and pm.low_z - pm.clearance - pm.wall_t - table_z
-        >= 0,  # the plug stays above the table (the hood's underside is lower)
+        (XT60.collar[0] - window_y) / 2 >= 0.5
+        and (XT60.collar[1] - window_x) / 2 >= 0.5
+        and pm.xt60_sleeve > 0,
+        "PSU hood: the XT60's collar does not stop on the lip",
+    )
+    yield (
+        pm.xt60_x - XT60.front[1] / 2 - pm.xt60_plug_margin >= pm.board_x[1] + 2
+        and pm.low_z - pm.clearance - pm.wall_t - table_z >= 0,  # the plug clears the table
         "PSU hood: the XT60's plug would hit the board's underside",
     )
     yield (

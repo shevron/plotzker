@@ -2,7 +2,7 @@
 
 Source of values: docs/hardware.md (PSU: the user's caliper readings, the rest from photos by
 the photo-metrologist, ``photos/psu/report.md``). The inlet is measured (its push-on tabs are
-ASSUMED); the XT60 is not measured yet (ASSUMED nominal size): check it before printing.
+ASSUMED); the XT60H-F's cross-sections are measured.
 
 PSU frame (as in docs/hardware.md): origin at the corner where the terminal end, the label
 wall and the bottom face meet; ``x`` across toward the switch wall (0..113), ``y`` from the
@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from cadder.geometry import box
-from pythonscad import cube, cylinder, linear_extrude, polygon, union
+from pythonscad import circle, cube, cylinder, hull, linear_extrude, polygon, square, union
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -115,13 +115,23 @@ C14_INLET = C14InletSpec()
 
 @dataclass(frozen=True)
 class Xt60Spec:
-    """XT60 female (the PSU side). ASSUMED: nominal XT60 size, not measured."""
+    """Amass XT60H-F, the female on the PSU side. Cross-sections measured by the user (caliper,
+    after the first test piece); lengths and the rim from photos (photos/xt60/report.md) and the
+    Amass drawing. Sizes are width (across the long side) × height; positions run from the
+    mating face back toward the wires.
+    """
 
-    body: tuple[float, float] = (15.5, 8.2)  #: across × high at the mating face
-    chamfer: float = 1.5  #: two corners of one long side are cut at 45° (the polarity key)
-    length: float = 16  #: mating face to the solder cups
-    protrude: float = 8  #: stands out of the panel so the male's shroud can slide over it
-    wire_d: float = 4.5  #: 12 AWG silicone wire, outer diameter
+    front: tuple[float, float] = (13.9, 6.4)  #: the mating section (measured)
+    front_len: float = 8.0  #: to the collar's shoulder (7.2 proud of a 0.8 lip, measured)
+    chamfer: float = 2.2  #: 45°, both corners of one short side (2.0 flat between, measured)
+    collar: tuple[float, float] = (15.5, 8.1)  #: the lettered collar (measured)
+    collar_r: float = 1.5  #: its two corners on the chamfered side (measured, roughly)
+    collar_len: float = 4.1  #: photo
+    flange: tuple[float, float] = (16.4, 9.2)  #: the rim behind the collar (Amass drawing)
+    flange_len: float = 0.8
+    cap: tuple[float, float] = (15.6, 6.5)  #: black rear cap (photo, ±1)
+    length: float = 23.4  #: mating face to the back of the cap
+    wire_room: float = 10  #: straight wire behind the cap before it may bend
 
 
 XT60 = Xt60Spec()
@@ -178,7 +188,44 @@ def c14_inlet() -> Solid:
 
 
 def xt60_female() -> Solid:
-    """The XT60 female in its own frame: mating face at y = 0, body toward -y."""
+    """The XT60H-F in its own frame: mating face at y = 0, body toward -y, width along x (the
+    chamfered short side toward +x), height along z."""
     x = XT60
-    w, h = x.body
-    return cube([w, x.length, h]).translate([-w / 2, -x.length, -h / 2]).color("Gold")
+    w, h, c = *x.front, x.chamfer
+    outline = polygon(
+        [
+            [-w / 2, -h / 2],
+            [w / 2 - c, -h / 2],
+            [w / 2, -h / 2 + c],
+            [w / 2, h / 2 - c],
+            [w / 2 - c, h / 2],
+            [-w / 2, h / 2],
+        ]
+    )
+    front = linear_extrude(outline, height=x.front_len).rotate([90, 0, 0])
+
+    def section(size: tuple[float, float], start: float, length: float) -> Solid:
+        return cube([size[0], length, size[1]]).translate(
+            [-size[0] / 2, -start - length, -size[1] / 2]
+        )
+
+    # the collar, its two corners on the chamfered (+x) side rounded
+    cw, ch, r = *x.collar, x.collar_r
+    corners = union(
+        *(circle(r=r, fn=32).translate([cw / 2 - r, sz * (ch / 2 - r)]) for sz in (-1, 1))
+    )
+    collar_2d = hull(union(square([cw - r, ch]).translate([-cw / 2, -ch / 2]), corners))
+    collar = (
+        linear_extrude(collar_2d, height=x.collar_len)
+        .rotate([90, 0, 0])
+        .translate([0, -x.front_len, 0])
+    )
+
+    collar_end = x.front_len + x.collar_len
+    rear = collar_end + x.flange_len
+    return union(
+        front,
+        collar,
+        section(x.flange, collar_end, x.flange_len),
+        section(x.cap, rear, x.length - rear),
+    ).color("Gold")

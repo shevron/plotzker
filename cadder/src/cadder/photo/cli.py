@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 app = typer.Typer(
     name="photo",
-    help="Measure parts from photos: target, rectify, crop, edges, holes, point, overlay.",
+    help="Measure parts from photos: target, check, rectify, crop, edges, holes, overlay.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -486,6 +486,36 @@ def outline_command(
     view = crop(marked, scale, (x0, y0, x1, y1))
     target = out or image.parent / "crops" / f"{image.stem}_outline.png"
     typer.echo(f"wrote {save(view, target)}")
+
+
+@app.command("check")
+@plain_errors
+def check_command(
+    photos: list[Path],
+    square: Annotated[
+        float | None, typer.Option(help="Printed square size as measured, mm (default: nominal).")
+    ] = None,
+    camera: Annotated[Path | None, typer.Option(help="A camera file from `calibrate`.")] = None,
+) -> None:
+    """Are these photos good enough to measure on? A verdict per photo, in seconds."""
+    from cadder.photo.check import check
+    from cadder.photo.target import DEFAULT_BOARD, Camera, with_square
+
+    cam = Camera.load(camera) if camera else None
+    result = check(photos, with_square(DEFAULT_BOARD, square), cam)
+    for p in result.photos:
+        fit = "-" if p.fit_mm is None else f"{p.fit_mm:.2f} mm"
+        tilt = "-" if p.tilt_deg is None else f"{p.tilt_deg:.0f}°"
+        typer.echo(
+            f"{p.verdict.upper():4} {p.photo}: {p.corners} corners, fit {fit}, tilt {tilt}"
+            + "".join(f"; {r}" for r in p.reasons)
+        )
+    if len(photos) > 1:
+        typer.echo(f"widest angle between usable views: {result.angle_deg:.0f}°")
+    for n in result.notes:
+        typer.echo(f"note: {n}")
+    if not result.ok:
+        raise typer.Exit(1)
 
 
 @app.command("table")

@@ -21,8 +21,7 @@ duplicate their content here.
    `docs/hardware.md` for part dimensions).
 3. Work on **one task at a time**, unless the user asks otherwise.
 4. Before designing around an unknown dimension or fact, ask the user to measure or check
-   it (photos welcome) rather than guessing. To read dimensions from photos, ask the
-   **`photo-metrologist`** sub-agent (`README.md` §7.9, `docs/photo-measurement.md`).
+   it with the caliper rather than guessing (photos only as in `README.md` §7.9).
 
 ## Finishing a session
 

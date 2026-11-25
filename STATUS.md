@@ -527,38 +527,11 @@ the printed carriage, motor mount and idler mount are the test pieces.
   FreeCAD → CPSK → FreeCAD and CPSK → FreeCAD → CPSK give the same files (tested in FreeCAD,
   with a cross-solver check against `cadder.cpsk`). Follow-ups: a licence (`package.xml`: TBD),
   an Addon Manager release (needs its own copy of `cpsk_core`), ellipses and B-splines.
-- [ ] **T3.29 Photo measurement sub-agent.** A `photo-metrologist` sub-agent turns photos of a
-  part into dimensions for the CAD (outline, holes, connectors, vents, keep-out zones), each
-  with a source tag and error band, or asks for caliper readings and photos through the main
-  session. Plan, protocol and report format: [`docs/photo-measurement.md`](docs/photo-measurement.md).
-  Phase 1 (agent definition, protocol, README §7.9; no project code; image libraries pulled in
-  per run with `uv run --with`); photos are shared as a Drive folder and downloaded into the
-  git-ignored `photos/`. **Trial (endstop, blind, doc §7):** without a ruler, 11 of 16 dimensions
-  within the agent's bands; with a ruler photo, component positions all fit, but the board
-  outline came out ~3 % small. The caliper settled it: the PCB is **20.3 long** × 20 wide, so the
-  recorded 19 was wrong and round 1's outline was right; the CAD was corrected in T3.30.
-  **Phase 2 done:** `cadder photo` (`cadder.photo`, the `photo` extra; guide
-  `cadder/docs/photo.md`): a printable ChArUco target, `rectify` (camera pose, scale and
-  perspective from one photo; `--height` for a face above the paper), `crop` with a mm grid,
-  sub-pixel `edges`, `holes` (RANSAC-seeded ellipse fits; concentric rings separate), `point`
-  (parallax), and a feature file drawn back onto the photo (`overlay`) and into the report
-  (`table`). Synthetic test: pose to 0.5 mm, a 6 mm hole to 0.02 mm. The agent uses them;
-  `.claude/settings.json` allows its commands and writes under `photos/`. Next: print the target,
-  photograph the endstop on it, and rerun the blind trial. **Trial 2 (target, blind):** 63 tool
-  calls instead of 133, 8 of 12 dimensions within bands; misses from placing the black PCB's
-  edges over the black target squares, a curled print (~0.2 mm) and the board moving between
-  photos (no triangulation). **Fixed after trial 2:** the target has a white field for the part
-  (`--field`), `edges --first --polarity`, `holes` groups a hole's rings inside out, `--region`
-  widens its margin until it has corners, quieter focal note. **Trial 3** (flat target at
-  100 %, white field, part unmoved, 7 photos, new `calibrate` + `rectify --camera`; detection
-  accepts corners next to one marker): **14 of 17 within bands**, holes, outline and footprints
-  within 0.3 mm; misses: connector height +0.8, switch overhang +0.35, lever rest −0.6. Then the
-  three tools the agent asked for: `height` (plane sweep; endstop PCB top 3.0 ±0.2 vs caliper
-  3.3), `outline` (rotated rectangle, robust to overhangs, `--avoid`/`--guess`, check crop) and
-  `overlay --rect/--crop/--labels numbers`.
-  **Done when:** the trial on the endstop board, without the agent seeing the caliper numbers, lands within its own error bands (doc §7). Phase 2
-  (`cadder.photo`: rectify, hole detection, overlays, CAD render vs photo) only if the trial
-  shows the need.
+- [x] **T3.29 Photo measurement.** Tried a `photo-metrologist` sub-agent (15–26 min a run) and
+  a click-to-measure page (33 min of clicking, 10 of 16 within ±0.5 mm); neither beats the
+  caliper, so both were removed (D39). Kept: the `cadder photo` tools, now with
+  `cadder photo check` (is a photo good enough, in seconds) and `calibrate` dropping misplaced
+  target corners. Results: [`docs/photo-measurement.md`](docs/photo-measurement.md) §3.
 - [x] **T3.30 Endstop board length and blank renders.** The endstop board's PCB is **20.3 long**
   × 20 wide (caliper; the 19 recorded in T3.5 was wrong). `ENDSTOP.pcb` length 19 → 20.3: the
   board grows toward its connector, so the holes, connector and plug space sit 1.3 mm further
@@ -695,6 +668,7 @@ update the log once it is agreed (README §7.1).
 | D36 | **CAD split into `cadder` (generic framework) and `plotzker` (the plotter)** (T3.24). One repo for now; cadder is a uv workspace member (`cadder/`, its own `pyproject.toml`) and moves to its own repo later. cadder never imports a project; it has the whole generic vendor-hardware catalog; firmware stays in plotzker (the Marlin config script edits `#define`s, not CAD). A project registers parts, assemblies, assembly checks, FreeCAD assemblies, design checks and its own commands on a `Project`. Part classes: `Part` (any part), `MaterialPart` (material, optional FEM; plates, purchased parts), `PrintedPart` (print profile, build direction). cadder's docs are in `cadder/docs/` (FEM method, design diff, FreeCAD assemblies, sketch formats); the plotter keeps `docs/fem.md` (its parts and data) and `fem-subagent-plan.md` (its FEM history). Candidates to move with cadder later: the generic half of README §7, the `fem-analyst` agent, the generic Makefile targets | ✅ | T3.24, README §5 |
 | D38 | **PSU mount (T3.31):** the PSU hangs on edge beside the board's **right** edge with its XT60 in line with the ZRIB (terminal end at y 330), bottom face toward the board on two printed L brackets (M4 into the PSU's bottom face, wood screws up into the board's underside; a brace rests on the board's top, so the board's edge is clamped; the Y loom lies on the board's top there, so nothing screws down into it), fan face out, label wall up, the 115/230 V selector down, terminal end toward the front; clear of the table. A printed hood closes the terminal end: C14 inlet with fuse and switch facing out, XT60 **female** on the PSU side (the male moves to the ZRIB lead) low in the board-side wall so its cable runs under the board to the ZRIB; a floor and wall keep the mains and DC wiring apart; it comes off only with a tool. Refines D30 (off the board, free air) | 🟡 | T3.31, README §3.6 |
 | D37 | **v1 pen holder (T3.6; numbered D29 until T3.24, an ID already taken):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
+| D39 | **Measure with the caliper, not from photos.** Photos only for flat hole patterns and positions on one flat face, measured in the main session with `cadder photo`; the `photo-metrologist` sub-agent and the click-to-measure trial are dropped (too slow, not accurate enough) | ✅ | README §7.9, `docs/photo-measurement.md` |
 
 ---
 

@@ -9,6 +9,7 @@ import pytest
 
 cv2 = pytest.importorskip("cv2")
 
+from cadder.photo.check import camera_pose, check  # noqa: E402
 from cadder.photo.features import overlay, read, table  # noqa: E402
 from cadder.photo.image import info  # noqa: E402
 from cadder.photo.measure import Scale, crop, edges, holes  # noqa: E402
@@ -350,3 +351,16 @@ def test_feature_file_overlay_and_table(photo: Path, rect: Rectification) -> Non
         assert overlay(ff, on)[0].ndim == 3
     text = table(ff)
     assert "| hole | circle | (0, 0, 0) | Ø6 | photo | 0.05 |" in text
+
+
+def test_check_fails_a_photo_without_target(tmp_path: Path) -> None:
+    blank = tmp_path / "blank.png"
+    cv2.imwrite(str(blank), np.full((600, 800), 255, np.uint8))
+    result = check([blank])
+    assert not result.ok
+    assert result.photos[0].verdict == "fail"
+
+
+def test_camera_pose_needs_a_focal_length(photo: Path) -> None:
+    with pytest.raises(ValueError, match="focal length"):
+        camera_pose(photo, BOARD)

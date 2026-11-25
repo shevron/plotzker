@@ -61,7 +61,7 @@ complete small example.
 | `cadder.fem` | The FEM check (needs FreeCAD's gmsh and CalculiX): STL cleaning, meshing, CalculiX, failure index, verdicts with spec and geometry hashes, reports and pictures |
 | `cadder.diff` | The design diff between git revisions: per-revision snapshots, part and assembly comparison, a self-contained HTML report with a 3D viewer |
 | `cadder.render` | STL export and PythonSCAD renders (normal and all-sides inspection views) |
-| `cadder.photo` | Measuring parts from photos: a printed ChArUco target, rectification (camera pose, scale, perspective), sub-pixel edges and holes in mm, parallax correction, a feature file drawn back onto the photo (`photo` extra) |
+| `cadder.photo` | Measuring parts from photos: a printed ChArUco target, rectification (camera pose, scale, perspective), sub-pixel edges and holes in mm, parallax correction, a photo quality check, a feature file drawn back onto the photo (`photo` extra) |
 | `cadder.testing` | Measurements on solids for a project's tests: volume, bounding box, shells, touching, connected groups |
 | `cadder.cli` | The command line, and `make_app` / `run` for a project's own entry point |
 

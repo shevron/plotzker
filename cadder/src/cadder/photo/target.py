@@ -551,7 +551,20 @@ def calibrate(photos: list[Path], board: Board = DEFAULT_BOARD) -> Camera:
     flags = cv2.CALIB_USE_INTRINSIC_GUESS | cv2.CALIB_FIX_ASPECT_RATIO | cv2.CALIB_ZERO_TANGENT_DIST
     if sum(len(o) for o in objs) < 150:
         flags |= cv2.CALIB_FIX_K3
-    rms, k, dist, rvecs, tvecs = cv2.calibrateCamera(objs, imgs, size, k0, np.zeros(5), flags=flags)
+    for _ in range(4):  # drop misplaced corners (found next to the part) and fit again
+        rms, k, dist, rvecs, tvecs = cv2.calibrateCamera(
+            objs, imgs, size, k0.copy(), np.zeros(5), flags=flags
+        )
+        errors = []
+        for o, i, rv, tv in zip(objs, imgs, rvecs, tvecs, strict=True):
+            proj, _ = cv2.projectPoints(o, rv, tv, k, dist)
+            errors.append(np.linalg.norm(proj.reshape(-1, 2) - i.reshape(-1, 2), axis=1))
+        limit = max(3 * float(np.median(np.concatenate(errors))), 3.0)
+        keep = [e <= limit if (e <= limit).sum() >= 6 else e >= 0 for e in errors]
+        if all(m.all() for m in keep):
+            break
+        objs = [o[m] for o, m in zip(objs, keep, strict=True)]
+        imgs = [i[m] for i, m in zip(imgs, keep, strict=True)]
     views = []
     for name, o, i, rv, tv in zip(names, objs, imgs, rvecs, tvecs, strict=True):
         proj, _ = cv2.projectPoints(o, rv, tv, k, dist)

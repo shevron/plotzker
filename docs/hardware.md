@@ -141,7 +141,7 @@ Design rules: mounts are face-mounted, so body length only matters for clearance
 
 A generic "S-360" style enclosed supply, 24 V 15 A. There is no manufacturer drawing; the
 values come from the user's caliper (**measured**) and from photos measured by the
-`photo-metrologist` agent (*photo ±x*, `photos/psu/report.md` and `features.json`, git-ignored).
+former `photo-metrologist` agent (*photo ±x*, `photos/psu/report.md` and `features.json`, git-ignored).
 
 **Frame:** origin at the corner where the terminal end, the **label wall** and the **bottom
 face** meet. x runs across toward the **switch wall**, y from the terminal end to the fan end,

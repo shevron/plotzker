@@ -74,6 +74,13 @@ pillow-heif): `uv sync --extra photo`. Run as `cadder photo COMMAND` (in a proje
 Without a target, `info`, `crop`, `edges`, `holes` and pixel-mode feature files still work on
 the photo in pixels; the scale then has to come from something else in the picture.
 
+## Check the photos first
+
+`cadder photo check PHOTOS... [--square S] [--camera camera.json]` gives a verdict per photo
+(target corners found, how well the target fits in mm, tilt) and the widest angle between
+views, in seconds. It drops target corners found in the wrong place. Exit code 1 if fewer than
+two photos are usable (or the only photo given is not).
+
 ## Frames
 
 - **Target frame** (mm): origin at the board's bottom-left corner as printed (the label is

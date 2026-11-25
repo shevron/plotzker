@@ -23,8 +23,9 @@ Restart FreeCAD. The addon uses `cpsk_core` from the repository (`cadder/src`), 
 repository where it is; changes to the code take effect at the next FreeCAD start. To remove it,
 delete the `CPSK` link from the `Mod` folder.
 
-There is no Addon Manager release yet: a release would ship its own copy of `cpsk_core`, and
-the licence is still to be decided (`package.xml`).
+There is no Addon Manager release yet: a release would ship its own copy of `cpsk_core`.
+
+License: LGPL-3.0-or-later, as the rest of cadder ([`LICENSE`](../../LICENSE)).
 
 ## Use
 

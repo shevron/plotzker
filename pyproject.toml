@@ -7,6 +7,8 @@ name = "plotzker"
 version = "0.1.0"
 description = "Parametric CAD (PythonSCAD) for the DIY pen plotter"
 readme = "README.md"
+license = "CC-BY-SA-4.0"  # the plotter's designs; README §8 has the whole repository's map
+license-files = ["LICENSE", "LICENSES/CC-BY-SA-4.0.txt"]
 requires-python = ">=3.14"
 dependencies = [
     "cadder",

@@ -5,7 +5,7 @@
   <version>0.1.0-dev</version>
   <date>2026-11-23</date>
   <maintainer email="shahar.evron@gmail.com">Shahar Evron</maintainer>
-  <license>TBD</license>
+  <license>LGPL-3.0-or-later</license>
   <freecadmin>1.1.0</freecadmin>
   <content>
     <!-- A "workbench" item although the addon has no workbench: FreeCAD 1.1 runs Init.py (which

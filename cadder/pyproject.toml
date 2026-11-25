@@ -7,6 +7,8 @@ name = "cadder"
 version = "0.1.0"
 description = "Framework for software-driven CAD projects on PythonSCAD: parts, assemblies, FEM, diff, FreeCAD"
 readme = "README.md"
+license = "LGPL-3.0-or-later"
+license-files = ["LICENSE", "LICENSES/*.txt"]
 requires-python = ">=3.14"
 dependencies = [
     "planegcs>=0.9.6",  # FreeCAD's sketch solver (CPSK); macOS builds it from source: brew install eigen boost

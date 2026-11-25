@@ -18,9 +18,12 @@ humans and AI agents alike.
 | [`cadder/README.md`](cadder/README.md) | cadder, the generic CAD-project framework the plotter's CAD is built on |
 | [`docs/`](docs) | Longer research and reference: [`controller.md`](docs/controller.md) (board, pin map, firmware plan), [`hardware.md`](docs/hardware.md) (vendor part dimensions for CAD), [`fem.md`](docs/fem.md) (the plotter's FEM parts and data). cadder's own docs (FEM method, design diff, FreeCAD assemblies, sketch formats) are in [`cadder/docs/`](cadder/docs) |
 
+**License:** designs and documentation CC BY-SA 4.0, software LGPL-3.0-or-later (§8).
+© 2026 Shahar Evron and the plotzker project contributors.
+
 **Contents:** 1 Goals · 2 Requirements and constraints · 3 Design · 4 Design decisions ·
 5 Repository layout · 6 Development setup and workflow · 7 Contribution guidelines and
-coding standards
+coding standards · 8 License and copyright
 
 ---
 
@@ -370,6 +373,8 @@ and newer) are in the decision log in [`STATUS.md`](STATUS.md).
 ```
 Plotter/
 ├── README.md            ← overview, design, standards, contribution guidelines (this file)
+├── LICENSE              ← which license covers what (§8); full texts in LICENSES/
+├── LICENSES/            ← CC-BY-SA-4.0, LGPL-3.0-or-later, GPL-3.0-or-later
 ├── STATUS.md            ← ongoing development: work plan, decisions, open questions
 ├── CLAUDE.md            ← instructions specific to AI agents
 ├── pyproject.toml       ← the plotzker project: deps, [tool.cadder], uv workspace, pytest/ruff/mypy config
@@ -526,6 +531,9 @@ These apply to everyone working on the project, human or AI agent.
   changed decisions and open questions there, update its inventory, key numbers and
   as-built notes (and `docs/`) with any new facts or measurements, and update its status
   line.
+- Contributions are accepted under the license that covers the files they change (§8).
+  Don't add third-party code or models without checking that their license is compatible.
+  No license headers in source files.
 
 **Hard rules**
 
@@ -758,3 +766,33 @@ are *assumed* until checked with a caliper (§7.1).
 - Marlin 2.1.x, `BOARD_ZRIB_V53`. Keep the configuration under `firmware/` (full files or
   a diff against a stated Marlin version) with build and flash notes.
 - Never enable heaters or thermal outputs.
+
+---
+
+## 8. License and copyright
+
+Copyright © 2026 Shahar Evron and the plotzker project contributors.
+
+| What | License |
+|------|---------|
+| The plotter's designs (`src/plotzker/`) and the STL, drawing, FreeCAD and render files generated from them; the plotter's documentation (`docs/`, `README.md`, `STATUS.md`, `freecad/README.md`); `fem/verdicts.toml` | [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt) |
+| Software: all of `cadder/` (including its hardware models, 2D sketches, docs, the CPSK format and the FreeCAD addon), `tests/`, `firmware/`, `preview.py`, build and tool configuration, and anything not listed above | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) (with [GPL-3.0](LICENSES/GPL-3.0-or-later.txt), which it builds on) |
+
+[`LICENSE`](LICENSE) has the same map with the license notices. Source files carry no headers.
+
+**Using the designs:** you may build, change and share them, also commercially, if you give
+credit and share your changes under the same license. Suggested credit: "plotzker pen plotter
+by Shahar Evron and the plotzker project contributors,
+<https://github.com/shevron/plotzker>, CC BY-SA 4.0", saying what you changed.
+
+**Third-party software** is not included in the repository; it is installed separately and
+keeps its own license.
+
+- **PythonSCAD** is GPL-2.0-or-later, and both packages import it. Our sources keep the
+  licenses above, but distributing them *bundled with PythonSCAD* as one work means meeting
+  the GPL (version 3) for that distribution; LGPL-3.0-or-later and CC BY-SA 4.0 both allow it.
+- STL files, drawings and renders are program output: PythonSCAD's GPL doesn't cover them.
+- **Marlin** is GPL-3.0. `firmware/apply_config.py` only edits your own checkout. Any Marlin
+  file or diff added under `firmware/` stays under Marlin's license.
+- The other Python dependencies use MIT, BSD, Apache-2.0, MPL-2.0 or LGPL licenses. gmsh and
+  CalculiX (GPL) run as separate programs.

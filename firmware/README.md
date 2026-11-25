@@ -2,6 +2,7 @@
 
 Marlin 2.1.x for the ZRIB v5.8 (`BOARD_ZRIB_V53`). We keep a script that applies our settings
 to a stock Marlin checkout instead of a copy of Marlin's files.
+Marlin is GPL-3.0: any Marlin file or diff added here stays under that license (README §8).
 
 **Tested:** tag `2.1.2.5` with `apply_config.py`, A4988 and DRV8825 variants: `pio run -e mega2560`
 compiles (flash 18.8 %, RAM 27.6 %). Not yet flashed to the board (T2.7).

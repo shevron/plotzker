@@ -1,0 +1,18 @@
+cadder
+Copyright (c) 2026 Shahar Evron and the plotzker project contributors
+
+SPDX: LGPL-3.0-or-later
+
+cadder, including its documentation, the CPSK format and the CPSK FreeCAD addon, is free
+software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+Public License as published by the Free Software Foundation, either version 3 of the License,
+or (at your option) any later version. It is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
+A PARTICULAR PURPOSE.
+
+The license text is in LICENSES/LGPL-3.0-or-later.txt. It adds permissions to the GNU General
+Public License, whose text is in LICENSES/GPL-3.0-or-later.txt.
+
+Dependencies are installed separately and keep their own licenses. In particular, PythonSCAD
+is licensed under GPL-2.0-or-later: if you distribute cadder bundled with PythonSCAD as one
+work, the terms of the GPL (version 3) apply to that distribution.

@@ -109,3 +109,9 @@ Pillow, pillow-heif) for `cadder photo`. `planegcs` (the CPSK
 solver) has no macOS wheels; it builds from source with Eigen and Boost (`brew install eigen boost`). Conventions (code style,
 typing, testing) are those of the plotzker repository's README §7 for now; they move here with
 cadder.
+
+## License
+
+Copyright © 2026 Shahar Evron and the plotzker project contributors.
+[LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt), for all of cadder: code, hardware models,
+documentation, the CPSK format and the FreeCAD addon. See [`LICENSE`](LICENSE).

@@ -154,7 +154,7 @@ the same plain data the exporter reads (so both directions are tested without Fr
   There is no `InitGui.py`: File menu types need none.
 - `package.xml` declares the addon as a `<workbench>` item although it has no workbench:
   FreeCAD 1.1 runs `Init.py` only for workbench items when `package.xml` is present (an
-  `<other>` item is never loaded). Its licence is TBD, as the RFC's.
+  `<other>` item is never loaded). Its license is LGPL-3.0-or-later, as the RFC's.
 - `make freecad-addon` links `cadder/freecad-addon/CPSK` into FreeCAD's user `Mod` folder
   (`FREECAD_MOD`, default `~/Library/Application Support/FreeCAD/v1-1/Mod`; it refuses to replace
   anything there that is not a link). `cpsk_freecad` then finds `cpsk_core` in the repository's
@@ -289,7 +289,7 @@ installation, use, coverage and round-trip behaviour; the spec's open issues hav
 (A6, A11, A12) and two new issues for confirmation (A15: FreeCAD unit names as identifiers,
 A16: canonical arc angles); the RFC's §8 TBD is resolved.
 
-Follow-ups, not in this plan: a licence (`package.xml` says TBD, as the RFC §7.3); an Addon
+Follow-ups, not in this plan: an Addon
 Manager release, which needs its own copy of `cpsk_core` in the addon; ellipses and B-splines
 (R1); the constraint forms of spec A12.
 

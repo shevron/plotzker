@@ -345,8 +345,8 @@ Consequence: on macOS, cadder users need Eigen and Boost installed until `planeg
 wheels. TBD: document this in cadder's setup instructions, or contribute macOS wheels to
 `planegcs`.
 
-The licence of the format and the reference library is TBD; a permissive (non-copyleft)
-open-source licence is the likely choice.
+The format and the reference library are licensed under LGPL-3.0-or-later, as the rest of
+cadder.
 
 ## 8. FreeCAD plugin
 

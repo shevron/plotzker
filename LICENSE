@@ -1,0 +1,47 @@
+plotzker, a DIY pen plotter
+Copyright (c) 2026 Shahar Evron and the plotzker project contributors
+
+The project uses two licenses: Creative Commons Attribution-ShareAlike for the plotter's
+designs and documentation, and the GNU Lesser General Public License for software.
+
+
+CC BY-SA 4.0 (SPDX: CC-BY-SA-4.0), text in LICENSES/CC-BY-SA-4.0.txt
+--------------------------------------------------------------------
+
+  src/plotzker/               the plotter's CAD designs (PythonSCAD sources and their data)
+  docs/                       the plotter's documentation and drawings
+  README.md, STATUS.md        project documentation
+  freecad/README.md
+  fem/verdicts.toml
+
+  Also the files generated from these designs: STL, FreeCAD, drawing and render files.
+
+These are licensed under the Creative Commons Attribution-ShareAlike 4.0 International
+License: https://creativecommons.org/licenses/by-sa/4.0/
+
+
+LGPL 3.0 or later (SPDX: LGPL-3.0-or-later), text in LICENSES/LGPL-3.0-or-later.txt
+-----------------------------------------------------------------------------------
+
+  cadder/                     the CAD framework, including its hardware models, 2D sketches,
+                              documentation, the CPSK format and the FreeCAD addon
+  tests/, firmware/           tests and firmware configuration tools
+  preview.py, Makefile        and build and tool configuration
+  everything else             any file not listed under CC BY-SA 4.0 above
+
+These are free software: you can redistribute them and/or modify them under the terms of the
+GNU Lesser General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version. They are distributed in the
+hope that they will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. The GNU Lesser General Public License
+adds permissions to the GNU General Public License, whose text is in
+LICENSES/GPL-3.0-or-later.txt.
+
+
+Third-party software
+--------------------
+
+No third-party source code is included in this repository. Dependencies are installed
+separately and keep their own licenses. In particular, PythonSCAD is licensed under
+GPL-2.0-or-later: if you distribute this project bundled with PythonSCAD as one work, the
+terms of the GPL (version 3) apply to that distribution. See README.md section 8.

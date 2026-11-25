@@ -1,29 +1,25 @@
 """Apply the plotter's Marlin settings to a Marlin checkout (tested on tag 2.1.2.5).
 
-Phase 2 first milestone: X axis only (docs/x-axis-bringup.md). Dual Y, servo and SD come later.
-``X_MIN_ENDSTOP_INVERTING`` and ``INVERT_X_DIR`` are left at their defaults: set them from the
-bench tests (guide section 5).
+For the Creality V4.2.2 board (GD32F303, HR4988 drivers). Phase 2 first milestone: X axis only
+(docs/x-axis-bringup.md). Dual Y, servo and SD come later. ``X_MIN_ENDSTOP_INVERTING`` and
+``INVERT_X_DIR`` are left at their defaults: set them from the bench tests (guide section 5).
 
-Usage: ``uv run firmware/apply_config.py /path/to/Marlin [A4988|DRV8825]``
+Usage: ``uv run firmware/apply_config.py [MARLIN_DIR]``; the default is ``vendor/Marlin`` in this
+project (git-ignored).
 """
 
 import re
-from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-
-class Driver(StrEnum):
-    """The X stepper driver chip."""
-
-    A4988 = "A4988"
-    DRV8825 = "DRV8825"
-
-
-#: Steps/mm of X for GT2, 20T, 1.8° with all MS jumpers fitted (1/16 resp. 1/32)
-X_STEPS = {Driver.A4988: 80, Driver.DRV8825: 160}
+#: Where the Marlin checkout lives (git-ignored)
+MARLIN_DIR = Path(__file__).resolve().parents[1] / "vendor/Marlin"
+#: Marlin has no HR4988 type; it is driven like an A4988
+DRIVER = "A4988"
+#: PlatformIO environment; the GD32F303 runs the STM32F103RE build
+BUILD_ENV = "STM32F103RE_creality"
 
 
 def apply(path: Path, settings: dict[str, str]) -> None:
@@ -49,20 +45,27 @@ def apply(path: Path, settings: dict[str, str]) -> None:
 
 
 def main(
-    marlin: Annotated[Path, typer.Argument(help="Path to the Marlin checkout.", exists=True)],
-    driver: Annotated[Driver, typer.Argument(help="X driver chip.")] = Driver.A4988,
+    marlin: Annotated[
+        Path, typer.Argument(help="Path to the Marlin checkout.", exists=True)
+    ] = MARLIN_DIR,
 ) -> None:
     """Apply the plotter's Marlin settings (X-axis bring-up) to a Marlin checkout."""
     apply(
         marlin / "Marlin/Configuration.h",
         {
-            "MOTHERBOARD": "BOARD_ZRIB_V53",
+            "MOTHERBOARD": "BOARD_CREALITY_V422",
+            "SERIAL_PORT": "1",  # the CH340 USB port
+            "BAUDRATE": "115200",
             "EXTRUDERS": "0",  # heaters stay disabled (README 7.1)
             "TEMP_SENSOR_0": "0",
             "TEMP_SENSOR_BED": "0",
-            "X_DRIVER_TYPE": driver.value,
+            "X_DRIVER_TYPE": DRIVER,
+            "Y_DRIVER_TYPE": DRIVER,
+            "Z_DRIVER_TYPE": DRIVER,
+            "FAN_SOFT_PWM": "",  # required by this board's pin definition
+            "EEPROM_SETTINGS": "",  # M500 saves to the board's I2C EEPROM
             # EXTRUDERS 0: three axes only (a fourth value fails Marlin's sanity checks)
-            "DEFAULT_AXIS_STEPS_PER_UNIT": f"{{ {X_STEPS[driver]}, 80, 400 }}",
+            "DEFAULT_AXIS_STEPS_PER_UNIT": "{ 80, 80, 400 }",
             "DEFAULT_MAX_FEEDRATE": "{ 100, 100, 5 }",
             "DEFAULT_MAX_ACCELERATION": "{ 500, 500, 100 }",
             "HOMING_FEEDRATE_MM_M": "{ (20*60), (20*60), (4*60) }",
@@ -76,7 +79,7 @@ def main(
         marlin / "Marlin/Configuration_adv.h",
         {"PINS_DEBUGGING": "", "AXIS_RELATIVE_MODES": "{ false, false, false }"},
     )
-    typer.secho(f"Applied. Build: cd {marlin} && pio run -e mega2560", fg=typer.colors.GREEN)
+    typer.secho(f"Applied. Build: pio run -d {marlin} -e {BUILD_ENV}", fg=typer.colors.GREEN)
 
 
 if __name__ == "__main__":

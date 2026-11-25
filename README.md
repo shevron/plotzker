@@ -120,7 +120,7 @@ Also considered: *H-bot* (racking torque on the gantry; rejected), *polargraph*
   gantry end bracket). The X belt is a vertical loop behind the beam, its lower run cut and
   clamped on top of the carriage's rear block (D34). The X motor sits at one beam end and the idler
   with its belt tensioner at the other. Lead screws only for an optional pen-Z experiment.
-- **Gantry drive:** a motor on each Y side (second motor on the ZRIB's E0 driver,
+- **Gantry drive:** a motor on each Y side (second motor on the controller's E0 driver,
   `Y_DUAL_STEPPER_DRIVERS`) and **one endstop per side** (`Y_DUAL_ENDSTOPS`), so the
   gantry is re-squared at every homing. Essential with closed linear bushings, which
   bind if the gantry is pushed from one end.
@@ -192,13 +192,13 @@ vertical slide whose lift actuator can be swapped. Candidates are compared on re
 - **Fast, repeatable up/down** (aim < 100 ms), with no bounce or drag marks on touchdown.
 - **~20 mm manual height adjustment** for 0–15 mm media.
 
-| Mechanism | How pressure is set | Drive from the ZRIB | Notes |
+| Mechanism | How pressure is set | Drive from the controller | Notes |
 |-----------|---------------------|---------------------|-------|
-| **Gravity + servo** (first) | Weight of the pen slide (add weights to tune) | SERVO0 (pin 65), `M280 P0 S<angle>` | Simplest; pressure constant across the float range |
+| **Gravity + servo** (first) | Weight of the pen slide (add weights to tune) | SERVO0 (`BL_T` header), `M280 P0 S<angle>` | Simplest; pressure constant across the float range |
 | Spring + servo | Long, soft spring pushes down; servo lifts against it | SERVO0 | Tunable; spring rate must be low |
-| Solenoid / electromagnet | Gravity or spring presses; solenoid lifts | Spare MOSFET output (Fan1 D6 or Heater1 D7) via `M42`; flyback diode | Fast, quiet, binary; pen-down = de-energized (coil stays cool) |
+| Solenoid / electromagnet | Gravity or spring presses; solenoid lifts | A fan or heater MOSFET output via `M42`; flyback diode | Fast, quiet, binary; pen-down = de-energized (coil stays cool) |
 | Permanent-magnet assisted | Magnets soften the landing or latch "up" | As above | Experimental |
-| Stepper Z (lead screw) | Spring in the holder; Z position sets compression | Z driver + Z− endstop | Slow lifts; fallback |
+| Stepper Z (lead screw) | Spring in the holder; Z position sets compression | Z driver; its endstop on `BL_T` IN | Slow lifts; fallback |
 
 ### 3.4 Tool head and modularity (D8)
 
@@ -226,20 +226,19 @@ printed part. Start simple and evolve; the tool head is expected to be replaced.
   the beam.
 - Exact dimensions live in `params.py`.
 
-### 3.5 Controller and firmware (D9, D19)
+### 3.5 Controller and firmware (D19, D41)
 
-**Board: Zonestar ZRIB v5.8** (ATmega2560, 6 socketed StepStick drivers, min and max
-endstops on every axis, servo header, EXP1/EXP2, microSD, buck 5 V regulator).
-Full analysis, pin map and bench checklist: [`docs/controller.md`](docs/controller.md).
+**Board: Creality V4.2.2** (GD32F303, 4 soldered HR4988 drivers, X−/Y−/Z− endstop inputs,
+`BL_T` header with the servo signal, microSD, 24 V). The Zonestar ZRIB v5.8 used before failed
+on the bench and is set aside (D41; last state with it: git tag `pre-creality-board`).
+Pin map and bench notes: [`docs/controller.md`](docs/controller.md).
 
-**Firmware: Marlin 2.1.x** with `MOTHERBOARD BOARD_ZRIB_V53`. There is no v5.8
-definition; V5.3 matches the 6 drivers (incl. E2) and the XS1 header. The pin map gets
-verified on the bench with `M43` before we rely on it.
+**Firmware: Marlin 2.1.x** with `MOTHERBOARD BOARD_CREALITY_V422`, built with the
+`STM32F103RE_creality` environment and flashed from the microSD card.
 
 Why Marlin: it supports this board directly, plus servos (`M280`), dual Y steppers with
-dual endstops, SD printing and the TFT35. The alternatives don't fit: GRBL/grbl-Mega would
-need a custom pin map for this board, grblHAL targets 32-bit boards, and Klipper needs a
-host computer.
+dual endstops, SD printing and the TFT35. The alternatives don't fit: GRBL needs a custom port
+for this board, and Klipper needs a host computer.
 
 **Allocation:**
 
@@ -248,30 +247,28 @@ host computer.
 | X motor | X driver |
 | Y motor (left) | Y driver |
 | Y2 motor (right) | E0 driver |
-| X / Y / Y2 home | X− / Y− / Y+ input (as Y2 endstop) |
-| Pen servo | SERVO0 (pin 65) |
-| Pen-lift experiments | Z driver + Z− (stepper Z); Fan1/Heater1 MOSFET (solenoid) |
-| Future pen changer | E1, E2 drivers; X+, Z+ inputs; XS1 pins |
+| X / Y / Y2 home | X− / Y− / Z− input (as Y2 endstop) |
+| Pen servo | SERVO0 (`BL_T` header, PB0) |
+| Pen-lift experiments | Z driver (stepper Z); a fan or heater MOSFET (solenoid) |
+| Future pen changer | No spare drivers: needs its own electronics or another board |
 
 **Heaters disabled:** `EXTRUDERS 0`, all `TEMP_SENSOR_*` set to 0, heater outputs left
 unconnected (D19).
 
-**Fallback:** the Creality board, if found and needed.
-
 **BTT TFT35-E3 (optional):** in touch mode it talks to Marlin over serial and runs G-code
-from its own SD/USB, so the plotter runs without a PC. Candidate port: Serial2 on EXP1
-pins 3/4, or the AUX connector if that turns out to be serial (see `docs/controller.md`).
+from its own SD/USB, so the plotter runs without a PC. Candidate port: UART3 on the board's LCD
+connector, with an adapter cable (see `docs/controller.md`).
 Not needed for v1.
 
 ### 3.6 Power
 
-- Re-use the printer PSU: a **24 V, 15 A** unit (Cheng Liang P360W24V, 215 × 113 × 50 mm; the board
-  accepts 12–24 V). With no heaters, three to four steppers draw far below its rating.
+- Re-use the printer PSU: a **24 V, 15 A** unit (Cheng Liang P360W24V, 215 × 113 × 50 mm; the
+  controller takes 24 V). With no heaters, three to four steppers draw far below its rating.
   The PSU stays **off the baseboard** (D30): it hangs on edge beside the board's right edge on
   two printed brackets, its fan face out in free air and clear of the table (D38). A printed hood
   closes its terminal end, carries the fused, switched C14 inlet and the XT60 DC output (no
   internal partition: wiring must be insulated).
-- The servo runs from the ZRIB's buck 5 V regulator. Check during bring-up that the board
+- The servo runs from the controller's 5 V rail. Check during bring-up that the board
   doesn't reset when the servo stalls. If it does, add a separate 5 V buck converter
   (common GND).
 - Mains: enclosed terminals, earthed PSU and frame, strain relief, switched inlet.
@@ -296,8 +293,9 @@ with gravity.
   electronics.
 - **Extrusion runners** (2040/2020 offcuts) screwed across the underside, perpendicular
   to the shafts. They stop the board bowing, act as feet, and leave space underneath for
-  the ZRIB and wiring.
-- Electronics: the bare ZRIB on two printed hangers under the board between the runners (D30); the
+  the controller and wiring.
+- Electronics: the bare controller on two printed hangers under the board between the runners (D30;
+  the hangers fit the old ZRIB and are to be redone for the Creality board, T3.32); the
   PSU hanging beside the board's right edge (§3.6, D38). Driver cooling fan.
 - Cables moving with the gantry (X motor, X endstop, tool head): printed drag chain or a
   loose loom.
@@ -356,7 +354,7 @@ and newer) are in the decision log in [`STATUS.md`](STATUS.md).
 | D6 | Y = 2 × Ø10 × 700 mm shafts on SK10 supports, 2 SCS10UU blocks per side | §3.2; replaces an earlier SBR12 plan (none on hand) |
 | D7 | GT2 belt drive on X and Y; lead screws only for an optional pen-Z experiment | §3.2 |
 | D8 | Printed X carriage with a hook + 2 × M3 tool-plate interface and a tool-head connector; tool heads are separate printed parts; no extrusion spine in v1 | §3.4 |
-| D9 | Controller: ZRIB v5.8 with Marlin `BOARD_ZRIB_V53`; Y2 on E0; servo on SERVO0 | §3.5; pin map verified on the bench |
+| D9 | Controller: ZRIB v5.8 (replaced by D41); Y2 on E0; servo on SERVO0 | §3.5 |
 | D10 | Target media A3 and smaller; A3 short side across X | R3, §3.2 |
 | D12 | X beam: 520 mm 4020 V-slot mounted upright (~426 mm X travel) | §3.2 |
 | D13 | Dual Y motors with one endstop per side (auto-squaring) | §3.2 |
@@ -381,8 +379,9 @@ Plotter/
 ├── Makefile             ← shortcuts: make develop / check / typecheck / format / lint / test / stl / render / render-inspect / freecad / clean
 ├── uv.lock              ← locked dependency versions (uv, whole workspace)
 ├── .python-version      ← Python version for pyenv and uv (3.14)
+├── vendor/              ← third-party checkouts (Marlin); git-ignored
 ├── docs/
-│   ├── controller.md    ← ZRIB v5.8 analysis, pin map, bring-up checklist
+│   ├── controller.md    ← controller board, pin map, bring-up checklist
 │   ├── x-axis-bringup.md ← first bench bring-up: assemble the gantry, wire the X motor and endstop, flash, home X
 │   ├── hardware.md      ← vendor part dimensions for CAD
 │   ├── fem.md           ← the plotter's FEM checks: which parts, data, modeling choices
@@ -763,7 +762,7 @@ are *assumed* until checked with a caliper (§7.1).
 
 ### 7.7 Firmware
 
-- Marlin 2.1.x, `BOARD_ZRIB_V53`. Keep the configuration under `firmware/` (full files or
+- Marlin 2.1.x, `BOARD_CREALITY_V422`. Keep the configuration under `firmware/` (full files or
   a diff against a stated Marlin version) with build and flash notes.
 - Never enable heaters or thermal outputs.
 

@@ -16,7 +16,7 @@ requirements, the high-level design and the coding standards are in
 > (draft spec, reader, solver) and a FreeCAD import/export addon (T3.27, T3.28).
 >
 > **Next:** Phase 2 starts with **T2.7** (X-axis bench bring-up: print and assemble the gantry
-> and carriage, wire the X motor and endstop, flash Marlin, home X; guide in
+> and carriage, wire the X motor and endstop to the Creality board (D41), flash Marlin, home X; guide in
 > [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md)). T3.8 X cable (the ribbon festoon mock-up
 > decides; the Y loom is modeled) can run in parallel; the baseboard drilling (T4.1) is unblocked.
 
@@ -50,33 +50,33 @@ any new decisions in §3, and update the status line at the top.
 
 #### Phase 2 — Electronics bench bring-up (see `docs/controller.md`)
 
-- [ ] **T2.1 Read the hardware facts.** PSU label (voltage, current); chip markings on all
-  6 drivers (A4988/DRV8825/other); microstepping jumpers under each socket; servo model.
-  Also, for the Creality V4.2.2 fallback: MCU and driver chip markings, bootloader present
-  (`docs/controller.md`). The final controller choice (Q1) is made after Phase 2.
+- [ ] **T2.1 Read the hardware facts.** PSU label (voltage, current); Creality board: MCU and
+  driver markings, factory Vref; servo model. (MCU GD32F303, driver sticker `H8` and 35 V
+  capacitors recorded in `docs/controller.md`.)
   *Done when:* recorded in §4 and `docs/controller.md`.
 - [ ] **T2.2 Configure Marlin.** Marlin 2.1.x; store config in `firmware/` (full
   `Configuration.h` / `Configuration_adv.h` or a diff, plus build notes). Key settings:
-  `BOARD_ZRIB_V53`, `EXTRUDERS 0`, `TEMP_SENSOR_* 0`, `Y_DUAL_STEPPER_DRIVERS`,
-  `Y_DUAL_ENDSTOPS` (+ `Y2_USE_ENDSTOP _YMAX_`), `NUM_SERVOS 1`, driver types, 80 steps/mm
+  `BOARD_CREALITY_V422`, `EXTRUDERS 0`, `TEMP_SENSOR_* 0`, `Y_DUAL_STEPPER_DRIVERS`,
+  `Y_DUAL_ENDSTOPS` (+ `Y2_USE_ENDSTOP` on Z−), `NUM_SERVOS 1`, driver types, 80 steps/mm
   for X/Y, travel limits (~410 × 540), `PINS_DEBUGGING` (for `M43`), SD card support.
-  *Done when:* it compiles (PlatformIO, `mega2560` env).
-- [ ] **T2.3 Flash and verify the pin map.** Flash over USB. Check every endstop with
+  *Done when:* it compiles (PlatformIO, `STM32F103RE_creality` env).
+- [ ] **T2.3 Flash and verify the pin map.** Flash from the microSD card. Check every endstop with
   `M43 W` / `M119`. Jog each driver socket with one motor attached; confirm E0 drives Y2.
   *Done when:* the pin map in `docs/controller.md` is marked verified, or corrected.
-- [ ] **T2.4 Servo and 5 V test.** Find the servo header (likely XS2). Check `M280 P0 S<angle>`
+- [ ] **T2.4 Servo and 5 V test.** Servo on the `BL_T` header (G, V, OUT). Check `M280 P0 S<angle>`
   sweeps, and that the board doesn't reset with the servo stalled.
   *Done when:* header and angle range recorded; decision on a separate 5 V supply.
 - [ ] **T2.5 Driver current (Vref).** Set Vref for the motors in use; both Y drivers identical.
-- [ ] **T2.6 (Optional) TFT35-E3.** Identify the AUX connector pins; connect the TFT in touch
-  mode (Serial2 on EXP1 or AUX).
+- [ ] **T2.6 (Optional) TFT35-E3.** Make an adapter from the board's LCD connector (UART3) and
+  connect the TFT in touch mode.
 - [ ] **T2.7 X-axis bench bring-up (first milestone, user's choice).** Print and assemble the
   gantry and X carriage on four SCS blocks (no Y axis, baseboard or servo), wire the X motor and
-  X− endstop to the ZRIB and the 24 V PSU, flash a minimal Marlin, and check that the carriage
+  X− endstop to the Creality board and the 24 V PSU, flash a minimal Marlin, and check that the carriage
   moves, stops at the endstop and homes (`G28 X`). Guide: [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md).
   It covers the X part of T2.1 to T2.3 and T2.5; T2.2's full configuration (dual Y, servo, SD) and
   `firmware/` follow it. `firmware/apply_config.py` applies the X-axis settings to Marlin 2.1.2.5
-  (compiles with `pio run -e mega2560`; not flashed yet). *Done when:* the success criteria at the end of the guide's §5 are met,
+  (built with `pio run -e STM32F103RE_creality` and flashed, 2026-11-26). 2026-11-26: the X motor holds and moves in the right direction and
+  `G28 X` homes; still open: ten-homing repeatability, travel and soft limits, steps/mm. *Done when:* the success criteria at the end of the guide's §5 are met,
   the user's readings (§7 of the guide) are recorded in §4 and `docs/controller.md`, and the
   endstop and direction settings found on the bench are recorded in `firmware/README.md`.
 
@@ -605,6 +605,11 @@ the printed carriage, motor mount and idler mount are the test pieces.
     if plugging in pushes it back.
   - [ ] Test print a bracket.
 
+- [ ] **T3.32 Controller mount for the Creality board** (D41). `parts/zrib_hanger.py`,
+  `zrib_guard.py`, `hardware/zrib.py`, `assemblies/zrib_mount.py`, the loom run and the PSU's
+  XT60 position (D38) were designed around the ZRIB. Measure the Creality board (outline, holes,
+  height, connector positions) first. Don't print the ZRIB hangers or guards.
+
 #### Phase 4 — Build
 
 - [ ] **T4.1** Cut the baseboard and bed panel; fit the runners; drill from the T3.7 layout.
@@ -644,19 +649,19 @@ the printed carriage, motor mount and idler mount are the test pieces.
 
 | ID | Question | Status |
 |----|----------|--------|
-| Q1 | Controller boards | 🔬 ZRIB v5.8 primary; Creality Ender 3 V4.2.2 fallback (compared in `docs/controller.md`); **final decision after T2.x**. TFT35-E3 is a screen/SD sender |
+| Q1 | Controller boards | ✅ Creality V4.2.2 (D41); the ZRIB v5.8 is set aside after a bench failure. TFT35-E3 is a screen/SD sender |
 | Q2 | Parts inventory | ✅ Enough to proceed; remaining measurements listed in the tasks (T2.1, T3.1) |
 | Q3 | Work area, rail length, media thickness | ✅ A3; ~540 mm Y travel; 0–15 mm media |
 | Q4 | Cartesian vs CoreXY | ✅ Cartesian |
 | Q5 | Gantry drive and squaring | ✅ Dual Y motors + dual endstops |
 | Q6 | Pen lift and thickness handling | 🔬 Approach decided; mechanism chosen by experiment (T6.2) |
-| Q7 | Firmware and board mapping | ✅ Marlin `BOARD_ZRIB_V53`; verified in T2.3 |
+| Q7 | Firmware and board mapping | ✅ Marlin `BOARD_CREALITY_V422`; verified in T2.3 |
 | Q8 | Tool-plate interface and v1 pen holder | ✅ README §3.4 |
 | Q9 | Frame, baseboard and work holding | ✅ README §3.8 (bed material finalized at build) |
 | Q10 | SVG/PDF → G-code toolchain | ⏸ Deferred to phase 7 |
 | Q11 | X-carriage wheel preload | ✅ D21: 2 eccentric spacers on the bottom pair (available; no fallback) |
 | Q12 | Are the 4020 beam ends tapped M5 (gantry brackets bolt into the end bores)? | ✅ Yes: all beam end bores are tapped M5 (done by the user) |
-| Q13 | Under-board space for the ZRIB | ✅ Board 95 × 110 mm, 22 mm from its bottom to the heat sink tops, 4 × Ø3 holes 100 × 80 mm; mounted under the baseboard with its components down (D30, `parts/zrib_hanger.py`) |
+| Q13 | Under-board space for the controller | 🔬 To redo for the Creality board (T3.32). ZRIB: ✅ board 95 × 110 mm, 22 mm from its bottom to the heat sink tops, 4 × Ø3 holes 100 × 80 mm; mounted under the baseboard with its components down (D30, `parts/zrib_hanger.py`) |
 
 ---
 
@@ -691,6 +696,7 @@ update the log once it is agreed (README §7.1).
 | D37 | **v1 pen holder (T3.6; numbered D29 until T3.24, an ID already taken):** one Ø6 rod (on hand) held by two printed arms; the pen slide rides on it in two printed sleeves (LM6UU is the later upgrade; the bores are laid out for it); a key rib on the plate, in a groove of the slide's lug, stops it turning. The FT90M (metal gears; chosen over the FS90) lies with its output facing the plate and the single-sided horn swinging in the gap behind its wall; the horn's M2 pin sits in a vertical slot of the lug, whose ceiling lifts the slide (pin down: the slide drops until the pen touches, the slot clearance is the float). Pen: 90° V-block with a yoke and an M5 thumbscrew; pen axis 16–22 mm in front of the carriage face. Rejected: flexure/four-bar (pressure not constant, long reach), plastic dovetail (stick-slip). Alternate if the sleeves stick: 625-bearing roller guide | ✅ | T3.6, §6 |
 | D39 | **Measure with the caliper, not from photos.** Photos only for flat hole patterns and positions on one flat face, measured in the main session with `cadder photo`; the `photo-metrologist` sub-agent and the click-to-measure trial are dropped (too slow, not accurate enough) | ✅ | README §7.9, `docs/photo-measurement.md` |
 | D40 | **Licensing:** CC BY-SA 4.0 for the plotter's designs (`src/plotzker/`, generated files) and plotter documentation; LGPL-3.0-or-later for software, which is all of `cadder/` (hardware models, docs, the CPSK format and FreeCAD addon included), tests, firmware tools and configuration. Split by package, so cadder keeps one license when it moves out. © 2026 Shahar Evron and the plotzker project contributors; no source headers | ✅ | README §8, `LICENSE` |
+| D41 | **Controller: Creality V4.2.2 instead of the ZRIB v5.8** (user). On the bench the ZRIB smoked: a 25 V motor supply capacitor under E1 is burnt, the E1 driver ran hot with no motor and the X socket's `RST`/`SLP` read 1.7 V. The Creality board has 35 V capacitors, is made for 24 V and has an exact Marlin target. Given up: spare drivers and endstop inputs (pen changer), swappable drivers. Last ZRIB state: git tag `pre-creality-board`. Follow-up: board mount (T3.32) | ✅ |
 
 ---
 
@@ -715,8 +721,8 @@ hard to get, we adjust.
 | Lead screws, linear bearings, misc. bearings | assorted | No LM6UU/LM8UU found yet | Only needed for a stepper Z experiment or the pen slide upgrade |
 | Ø6 rod | 1 | ~200 mm, cuttable; the pen holder's rod needs 63 mm | — |
 | Hobby servos | 2+ | **FeeTech FT90M** (metal gears, digital; used for the pen lift) and FS90 (spare); measured in `docs/hardware.md` | Horn thickness, spline height |
-| **Controller: Zonestar ZRIB v5.8** | 1 | ATmega2560, 6 socketed StepStick drivers; **95 × 110 × 22 mm**, 4 × Ø3 holes 80 × 100 mm, out of its case ([`docs/controller.md`](docs/controller.md)) | X, Y, Z drivers: red A4988-type clones (photos); E0 to E2: white boards with M0–M2 pins (DRV8825 clone or LV8729-type, chip unread); red drivers' sense resistors unread; pin map (bench) |
-| Controller: Creality Ender 3 V4.2.2 | 1 | STM32F103, 4 soldered drivers (X, Y, Z, E0), 3 endstop inputs + probe pin, 24 V; fallback ([`docs/controller.md`](docs/controller.md)) | MCU and driver chip markings; bootloader; PSU voltage |
+| Controller: Zonestar ZRIB v5.8 (set aside, D41) | 1 | Burnt 25 V capacitor under E1; 95 × 110 × 22 mm ([`docs/controller.md`](docs/controller.md)) | Don't power from 24 V |
+| **Controller: Creality V4.2.2** | 1 | GD32F303, 4 soldered HR4988 drivers (sticker `H8`), 0.15 Ω sense resistors, 35 V capacitors, CH340 USB, X−/Y−/Z− inputs, `BL_T` header, 24 V ([`docs/controller.md`](docs/controller.md)) | Outline and holes (T3.32); factory Vref |
 | BigTreeTech TFT35-E3 | 1 | Touch screen with its own MCU; **not a motion controller**. Optional UI and SD/USB G-code sender | Hardware version |
 | Power supply | 1 | **Cheng Liang P360W24V: 24 V, 15 A max (360 W)**; **215 × 113 × 50 mm**, **770 g with the inlet** (user); M4 mounting holes, terminal end and switch measured (`docs/hardware.md`) | Cover-edge setback (photo only, optional) |
 | Endstop switches | ≥ 3 | Creality-type boards: 20 × 20.3 × 1.5 mm, M3 holes 15 mm apart at the rear, switch across the front edge, lever 5 mm out at rest / 1.5 mm pressed, connector 10 × 7.2 × 5.6 mm with 2 mm past the rear edge (`docs/hardware.md`) | Click point, lever length |

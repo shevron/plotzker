@@ -1,15 +1,15 @@
 # X-axis bring-up guide (Phase 2, first milestone)
 
 **Goal:** the printed gantry and X carriage are assembled, the X motor and X− endstop are
-wired to the ZRIB and the 24 V supply, Marlin is flashed, and `G28 X` moves the carriage to
+wired to the Creality V4.2.2 board and the 24 V supply, Marlin is flashed, and `G28 X` moves the carriage to
 the endstop, stops, and sets X = 0.
 
 **Not needed yet:** Y axis (shafts, SK10s, Y belts, Y motors and endstops), baseboard, bed,
-pen holder, servo, loom, ZRIB hangers. This guide is the first slice of T2.1–T2.5
+pen holder, servo, loom, board mount. This guide is the first slice of T2.1–T2.5
 (`STATUS.md` T2.7). Pin facts: [`controller.md`](controller.md); part sizes:
 [`hardware.md`](hardware.md).
 
-> **Rules for the whole session.** (1) Never plug or unplug a motor, driver or endstop with
+> **Rules for the whole session.** (1) Never plug or unplug a motor or endstop with
 > 24 V on: it kills drivers. (2) Wire mains only with the plug out of the wall. (3) Keep a
 > hand near the PSU switch (or the plug) whenever the carriage moves. (4) Heaters stay
 > disconnected and disabled (README §7.1 rule 4).
@@ -60,9 +60,10 @@ The bolt counts follow the assembly model (`assemblies/gantry.py`); verify when 
 
 ### Electronics and tools
 
-ZRIB v5.8, one StepStick driver (A4988 on hand), the 24 V PSU, mains cable and plug,
-USB-B cable (data, not charge-only), multimeter, small ceramic or plastic screwdriver (Vref
-pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
+Creality V4.2.2 board (drivers soldered on), the 24 V PSU, mains cable and plug, micro-USB cable
+(data, not charge-only), microSD card (FAT32, to flash) and a way to write it from the Mac,
+multimeter, small ceramic or plastic screwdriver (Vref pot), hex keys, ruler or calipers, a flat
+table, a non-slip mat.
 
 ---
 
@@ -111,73 +112,100 @@ pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
 ## 3. Electronics
 
 ```
- wall ─► [fuse/switch] ─► PSU 24 V ─ V+ / V− ─► ZRIB DC input (+ / −)
-                                                 ├─ X-MOT  ◄── NEMA17 (4 wires)
-                                                 ├─ X−     ◄── endstop (S, G)
- Mac ──── USB-B ───────────────────────────────► ZRIB USB
+ wall ─► [fuse/switch] ─► PSU 24 V ─ V+ / V− ─► board power plug (+ / −)
+                                                 ├─ X motor connector ◄── NEMA17 (4 wires)
+                                                 ├─ X− connector      ◄── endstop board
+ Mac ──── micro-USB ───────────────────────────► board USB
 ```
+
+Board facts: [`controller.md`](controller.md). Leave every heater, fan and thermistor
+connector empty.
 
 1. **PSU.** Plug out of the wall. Wire L, N and earth to the PSU's mains terminals with a
    proper cable; cover the terminals; check the earth pin is connected to the PSU's earth
    terminal. This is the only dangerous step: if you are not sure, stop and ask. Set the
    PSU's 115/230 V switch (if any) for your mains.
-2. **Drivers.** Read the chip markings (note them for T2.1). Put the driver in the **X**
-   socket only, the right way round (match the board's silkscreen: reversed drivers
-   die). Leave the other sockets empty for now. Check the MS1–MS3 jumpers under the X
-   socket: all three fitted gives 1/16 on an A4988 (80 steps/mm) and 1/32 on a DRV8825 (160
-   steps/mm).
-3. **Vref.** Our X driver is a red A4988 clone (pins `EN MS1 MS2 MS3 RST SLP STP DIR`); the chip
-   is under the heatsink and the sense resistors are not readable, so start at **Vref = 0.4 V**:
-   about 1.0 A with 0.05 Ω sense resistors, 0.7 A with 0.068 Ω, 0.5 A with 0.1 Ω (A4988:
-   I = Vref / (8 × R)), all safe for a NEMA17. With the motor unplugged and the board powered,
-   measure between the pot's metal screw and GND and adjust slowly with a ceramic or plastic
-   screwdriver. Raise it only if the motor skips, in 0.05 V steps, and **not above 0.6 V** (1.2 A
-   at worst, 0.05 Ω) while the sense resistors are unread. They are probably R1/R2 next to the chip,
-   under the heatsink's edge; the glued heatsink is left in place. (R4 = 103 and R5 = 104 are 10 kΩ
-   and 100 kΩ, not sense resistors.) (For a DRV8825: I = Vref / (5 × 0.1 Ω).)
-4. **Motor.** **Always check the coil pairs first, keyed plug or not:** motor cables are not
+2. **PSU to board.** The power input is the **2-pin pluggable terminal at the corner, beside the
+   blade fuse**. The larger green block next to it holds the heater and fan outputs: nothing goes
+   there. Connect V+ to +, V− to − as printed on the board, polarity checked twice.
+   Strain-relieve the wires. Put the board on something that doesn't conduct.
+3. **First power, nothing else connected.** USB, then 24 V. For a minute, watch and carefully feel:
+   no smell, nothing getting hot. Otherwise switch off and stop.
+4. **Vref (X driver, trim pot `RP1`, marked X).** The drivers are HR4988 (sticker `H8`) with
+   0.15 Ω sense resistors (`R150`), so **I = Vref / 1.2**. With 24 V on and no motor, measure from
+   the pot's metal screw to GND (the power input's −). Note the factory value. For the first tests
+   use **about 0.8 V** (0.67 A); don't exceed 1.2 V (1 A) without the motor's rated current. Turn
+   in small steps with the ceramic screwdriver, then switch off.
+5. **Motor.** **Always check the coil pairs first, keyed plug or not:** motor cables are not
    all wired alike. At the board end of the unplugged cable, pins **1–2** and **3–4** must each
    read a few ohms (equal), and be open between the pairs and to the motor case. If the pairs
    read on 1–3 and 2–4 instead, swap the two middle wires (pins 2 and 3) in one plug and
-   measure again. Then plug it into X-MOT with power off.
-5. **Endstop.** Plug it into the **X−** header. **Check the pin order first:** the board's
-   switch must connect signal (S) and ground (G); with the carriage away from it, find the
-   pins that have continuity at rest (normally closed) or when pressed (normally open).
-   Those two go to S and G of the X− header. A plug in the wrong order can put 5 V across
-   the switch: confirm with the multimeter, not by trying.
-6. **PSU to board.** Connect V+ to +, V− to −, polarity checked twice; the board does not
-   survive reversed polarity. Strain-relieve the wires.
-7. **Power-up order:** USB only first (Marlin talks, nothing moves; see §4), then the 24 V
-   with the carriage resting mid-beam.
+   measure again. Then plug it into the **X** motor connector with power off.
+6. **Endstop.** Plug the Ender 3 endstop cable into **X−**, in the row of connectors on the opposite
+   edge from the motors (check which one the `X−` label belongs to). The board end of the cable and
+   the X− connector have **2 pins**; the endstop board end has 3 positions, 2 of them wired: they
+   must be the two outer ones, marked **V** and **S** (**G** stays empty). That is the normally
+   closed contact. §5 checks it with `M119`; do that with USB only.
+7. **Power-up order:** USB first, then 24 V with the carriage resting mid-beam.
 
 ---
 
 ## 4. Firmware (Marlin 2.1.x)
 
-**Tools and build (once):**
+Run all commands from the project folder. Marlin is checked out into `vendor/Marlin`, which git
+ignores (`make clean` leaves it alone).
+
+**Tools (once):**
 
 ```bash
 uv tool install platformio
-git clone --branch 2.1.2.5 https://github.com/MarlinFirmware/Marlin.git ~/Marlin
-uv run firmware/apply_config.py ~/Marlin A4988      # or DRV8825: the chip in the X socket
+```
+
+```bash
+git clone --branch 2.1.2.5 https://github.com/MarlinFirmware/Marlin.git vendor/Marlin
+```
+
+**Configure and build:**
+
+```bash
+uv run firmware/apply_config.py
+```
+
+```bash
+pio run -d vendor/Marlin -e STM32F103RE_creality
+```
+
+To start again from stock Marlin (this drops your bench edits too):
+
+```bash
+git -C vendor/Marlin checkout -- .
 ```
 
 `firmware/apply_config.py` sets everything in [`firmware/README.md`](../firmware/README.md)
-(board `BOARD_ZRIB_V53`, no extruders or temperature sensors, driver type, steps/mm, gentle
-speeds and acceleration, slow homing, 410 × 540 travel, `PINS_DEBUGGING`). It leaves two
-settings for the bench: `X_MIN_ENDSTOP_INVERTING` (from the `M119` test) and `INVERT_X_DIR`
-(from the direction test); edit them in `~/Marlin/Marlin/Configuration.h`. On macOS the board
-shows up as `/dev/cu.usbserial-*` (CP210x); install the Silicon Labs driver only if it doesn't.
+(board `BOARD_CREALITY_V422`, no extruders or temperature sensors, steps/mm, gentle speeds and
+acceleration, slow homing, 410 × 540 travel, EEPROM, `PINS_DEBUGGING`). It leaves two settings
+for the bench: `X_MIN_ENDSTOP_INVERTING` (from the `M119` test) and `INVERT_X_DIR` (from the
+direction test); edit them in `vendor/Marlin/Marlin/Configuration.h`. The warnings about the driver
+sticker and "no method to acquire user feedback" are expected.
+
+**Flash from the microSD card** (this board is not flashed over USB):
+
+1. Format the card FAT32.
+2. Copy the newest `vendor/Marlin/.pio/build/STM32F103RE_creality/firmware-….bin` to its top folder, as
+   the only `.bin` there. The bootloader ignores a file with the same name as the last one it
+   flashed; each build gets a new name.
+3. Power off (24 V and USB), insert the card, power on with 24 V, motor unplugged. Wait 30 s.
+4. Connect USB and open the monitor (it appears as `/dev/cu.usbserial-*` or `/dev/cu.wchusbserial*`):
 
 ```bash
-cd ~/Marlin
-pio run -e mega2560                  # compiles
-pio run -e mega2560 -t upload        # board on USB, 24 V off
-pio device monitor -b 250000         # Marlin's default baud rate
+pio device monitor -b 115200 --echo --filter send_on_enter
 ```
 
-If the upload fails: wrong or busy port, charge-only cable, or the Mac needs the driver.
-The build was checked with tag 2.1.2.5 (it compiles); it has not been flashed to the board yet.
+5. `M115` must report Marlin 2.1.2.5. Then `M502` and `M500`, to replace the stock settings in
+   the EEPROM.
+
+The board's processor is a GD32F303, which runs the STM32F103 build: flashed and answering
+`M115` with tag 2.1.2.5 (2026-11-26).
 
 ---
 
@@ -188,9 +216,9 @@ the real one.
 
 | # | Do | Expect |
 |---|----|--------|
-| 1 | USB only, `M115` | Firmware info |
-| 2 | `M119` | All endstops `open` (or per your wiring) |
-| 3 | Power on 24 V, `M17` | Motor holds the shaft (hard to turn by hand), driver warm not hot |
+| 1 | USB only, `M115` | Marlin 2.1.2.5 |
+| 2 | `M119`, then again with the X lever pressed | `x_min: open`, then `TRIGGERED` (empty inputs read `TRIGGERED`) |
+| 3 | Power on 24 V, `M17`, try the shaft at once (motors release after 2 min idle) | Motor holds (hard to turn by hand), driver warm not hot |
 | 4 | `M211 S0` (soft limits off, since nothing is homed), `G91`, `G1 X10 F1200` | Carriage moves 10 mm **toward the motor (right)** |
 | 5 | `G1 X100 F3000`, measure; then `G1 X-110 F3000`, `G90`, `M211 S1` | Moves 100 mm (±1); if not, `M92 X<80 × 100/measured>`, `M500` |
 | 6 | Endstop and homing: see below | |
@@ -223,14 +251,16 @@ at least 10 times in a row at the same spot (±0.1 mm), and it stays within the 
 
 | Symptom | Likely cause |
 |---------|--------------|
-| Monitor shows nothing | Wrong baud rate (250000), wrong port, charge-only cable |
-| Motor buzzes, doesn't turn | Coils not paired on the plug; Vref too low; driver in backwards |
+| Monitor shows nothing | Wrong baud rate (115200), wrong port, charge-only cable, a bad USB port |
+| `M115` still shows the old firmware | Card not FAT32; more than one `.bin`; same file name as the last flash |
+| Motor doesn't hold after `M17` | 24 V off; more than 2 min since `M17`; motor cable or coil pairs |
+| Motor buzzes, doesn't turn | Coils not paired on the plug; Vref too low |
 | Motor stalls or skips | Vref too low; wheels preloaded too tight; belt too tight; acceleration too high; belt rubbing |
 | Wrong direction | `INVERT_X_DIR` (§5, "Direction") |
 | Homing goes away from the endstop | Direction wrong (as above); `X_HOME_DIR` not −1 |
-| `x_min` always TRIGGERED | Wrong logic setting; pin order; cable not on X− |
+| `x_min` always TRIGGERED | Wrong logic setting; cable not on X− |
 | Board resets when the motor moves | Loose 24 V connection; reversed polarity is a different, serious failure: stop |
-| Driver very hot | Vref too high; no heat sink or airflow |
+| Driver very hot | Vref too high; no airflow |
 
 ---
 
@@ -238,7 +268,7 @@ at least 10 times in a row at the same spot (±0.1 mm), and it stays within the 
 
 So that T2.1–T2.3 can be closed from this session, write down:
 
-- the PSU label, the driver chip markings and sense resistors, the MS jumper state, the Marlin tag;
+- the PSU label, the factory and final Vref, the motor's label, the Marlin tag;
 - what worked and what didn't (with photos of any failure);
 - the measured steps/mm, the trip point (mm of carriage travel from click to the bracket), and the repeatability;
-- which endstop logic setting was right, and the X− header's pin labels.
+- which endstop logic setting was right, and which connector is X−.

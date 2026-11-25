@@ -13,5 +13,7 @@ freecad/*/
 freecad/*.FCStd
 freecad/*.FCBak
 build/
+# Third-party checkouts (Marlin, firmware/README.md); not under build/, which `make clean` removes
+vendor/
 # Photos of parts for measurement (docs/photo-measurement.md); results go to hardware docs
 photos/

@@ -1,156 +1,88 @@
-# Controller: Zonestar ZRIB v5.8
+# Controller: Creality V4.2.2
 
-Notes on the controller board, how we plan to use it, and how to verify the pin map
-before building. Based on photos of the board (2026-11-10) and Marlin's
-`pins_ZRIB_V53.h` (bugfix-2.1.x).
+The plotter's controller (STATUS D41). Facts from the user's photo of the board (2026-11-25) and
+Marlin 2.1.2.5's `pins_CREALITY_V422.h`. The pin map is not yet verified on the bench.
 
-## What the board has (from photos)
+## What the board has
 
-| Feature | Observed on v5.8 | Notes |
-|---------|------------------|-------|
-| MCU | Atmel **ATmega2560-16AU**, 16 MHz crystal | Same MCU as RAMPS/MKS Base |
-| USB | USB-B, Silabs USB-serial chip (CP210x) | Appears as a serial port; needs the CP210x driver on macOS only if not auto-detected |
-| Stepper drivers | **6 socketed StepStick-format drivers**: X, Y, Z, E0, E1, E2 | Removable, so they can be swapped/upgraded (e.g. TMC2208/2209 in standalone mode for quieter motion) |
-| Driver types | Mix: 3 white boards, 3 red boards | Probably A4988 clones, possibly mixed types. **Check chip markings under the heatsinks.** Both Y motors must use the same driver type |
-| Motor connectors | E2-MOT, X-MOT, Y-MOT, E0-MOT (top); E1-MOT, ZMOT1/ZMOT2 (right) | ZMOT1/ZMOT2 + jumper = two Z motors on one driver (printer dual-Z) |
-| Endstops | X−, Y−, Z− (top/right, 3-pin); X+, Y+, Z+ (S/G/V row near EXP1) | 6 inputs, min and max per axis |
-| Expansion headers | XS1 (2×4), XS2 (2×3), a 2×3 header with pin-1 marker left of the MCU, AUX (5-pin JST, right edge) | See pin map and to-verify below |
-| LCD | EXP1 + EXP2 (10-pin boxed) | Standard RepRap 12864 layout per Marlin pin file |
-| SD | microSD (TF) slot with 74HC4050 level shifter | Can plot from SD card without a PC |
-| 5 V supply | **Switching (buck) regulator** (large inductor) + small linear regulator; USB/VREG power-select jumper | Buck regulator should be good for a small servo; confirm under load |
-| Power / outputs | Screw terminals: power in (12–24 V), heated bed, hotend(s), AUX-12V; JST fan and thermistor (E0TEMP, BTEMP) connectors | Heater outputs unused for heating; MOSFET outputs could drive a solenoid |
+| Feature | Observed | Notes |
+|---------|----------|-------|
+| MCU | GigaDevice **GD32F303** | STM32F103 compatible; the `STM32F103RE_creality` build runs on it (flashed 2026-11-26) |
+| USB | micro-USB, CH340 serial chip | 115200 baud |
+| Drivers | 4 soldered (X, Y, Z, E), sticker on the SD slot **`H8`** | HR4988 per Marlin's key (chips under heatsinks, unread); `X_DRIVER_TYPE A4988`; 1/16 microstepping |
+| Current setting | trim pots RP1 (X), RP2 (Y), RP3 (Z), RP4 (E) | sense resistors `R150` (0.15 Ω): I = Vref / 1.2 |
+| Motor supply | 100 µF **35 V** capacitors, TVS diodes, blade fuse | input marked 24 V DC |
+| Endstops | X−, Y−, Z−: **2-pin** (user) | Ender 3 cable: 2 pins at the board; at the endstop module wire **V** and **S** (G empty): normally closed |
+| `BL_T` header | `G V IN G OUT` | `OUT` = SERVO0 (PB0), `IN` = probe input (PB1) |
+| Other | microSD (flashing and files), I²C EEPROM, 10-pin LCD connector | heater, fan and thermistor connectors stay empty |
 
-## Dimensions (measured by the user)
+Board outline, holes and height: not measured yet (T3.32).
 
-| Item | Value |
-|------|-------|
-| Board (not in a case) | **95 × 110 mm** |
-| Tallest part | **22 mm** above the board: the heat sinks on the motor drivers (keep clear of any case) |
-| Mounting holes | 4 × **Ø3**, in the corners, **80 × 100 mm** apart (80 across the 95 mm side, 100 along the 110 mm side) |
-| Rear edge (the 110 mm side) | **USB-B** and the **DC input terminal** at the right, the **microSD slot** in the middle: this edge must stay accessible |
+## Pins (`BOARD_CREALITY_V422`)
 
-## Marlin board definition
+| Function | Pins |
+|----------|------|
+| X step / dir | PC2 / PB9 |
+| Y step / dir | PB8 / PB7 |
+| Z step / dir | PB6 / PB5 |
+| E0 step / dir | PB4 / PB3 |
+| Enable (all drivers share it) | PC3 |
+| X−, Y−, Z− | PA5, PA6, PA7 |
+| SERVO0 / probe input | PB0 / PB1 |
+| Heater, bed, fan | PA1, PA2, PA0 |
+| UART3 TX / RX (LCD connector) | PB10 / PB11 |
 
-Marlin has three ZRIB definitions: `BOARD_ZRIB_V20`, `BOARD_ZRIB_V52`, `BOARD_ZRIB_V53`.
-There is none for v5.8. **`BOARD_ZRIB_V53` is the best match:**
-
-- It defines **6 stepper drivers including E2** (V5.2 supports only 2 E steppers). This
-  matches the 6 sockets on v5.8.
-- It defines an **XS1 2×4 header** (`5V GND NC 47 / 42 43 44 45`), matching the 2×4 XS1 on v5.8.
-- Same min/max endstop layout, EXP1/EXP2 layout, and MKS-Base heritage.
-
-Key pins from `pins_ZRIB_V53.h` (to be verified on the v5.8, see below):
-
-| Function | Arduino pin | Notes |
-|----------|-------------|-------|
-| X step/dir/en | 54 / 55 / 38 | |
-| Y step/dir/en | 60 / 61 / 56 | |
-| Z step/dir/en | 46 / 48 / 62 | |
-| E0 step/dir/en | 26 / 28 / 24 | **Y2 motor** (see allocation) |
-| E1 step/dir/en | 36 / 34 / 30 | spare |
-| E2 step/dir/en | 4 / 5 / 22 | spare |
-| X−, X+ | 3, 2 | |
-| Y−, Y+ | 14, 15 | |
-| Z−, Z+ | 18, 19 | |
-| SERVO0, SERVO1 | 65 (A11), 66 (A12) | 2×3 "Servos / XS3" header: `signal GND 5V` × 2. Probably the **XS2** header on v5.8, to verify |
-| Heater 0 / Heater 1 / Bed | 10 / 7 / 8 | MOSFET outputs |
-| Fan 0 / Fan 1 | 9 / 6 | MOSFET outputs |
-| EXP1 pins 3 / 4 | 17 (RX2) / 16 (TX2) | Hardware **Serial2**: a candidate port for the TFT35-E3 |
-| SD card CS | 53 | |
-
-## Planned allocation for the plotter
+## Planned allocation
 
 | Function | Driver / pin | Marlin setting |
 |----------|-------------|----------------|
 | X motor | X driver | — |
 | Y motor (left) | Y driver | — |
-| Y2 motor (right) | **E0 driver** (first free E driver when `EXTRUDERS 0`) | `Y_DUAL_STEPPER_DRIVERS`, Y2 driver type set |
+| Y2 motor (right) | E0 driver | `Y_DUAL_STEPPER_DRIVERS` |
 | X home | X− | `X_HOME_DIR -1` |
 | Y home (left) | Y− | `Y_DUAL_ENDSTOPS` |
-| Y2 home (right) | Y+ input (pin 15) used as the Y2 endstop | `Y2_USE_ENDSTOP _YMAX_` |
-| Pen lift servo | SERVO0 (pin 65) | `NUM_SERVOS 1`, `M280 P0 S<angle>` |
-| Optional stepper Z (pen experiments) | Z driver + Z− endstop | |
-| Optional solenoid (pen experiments) | Fan 1 (D6) or Heater 1 (D7) MOSFET output | `M42` / custom G-code; flyback diode |
-| Future pen changer | E1, E2 drivers; X+, Z+ inputs; XS1 pins | spare |
+| Y2 home (right) | Z− input | `Y2_USE_ENDSTOP` on Z min (check at T2.2) |
+| Pen lift servo | `BL_T` OUT | `NUM_SERVOS 1`, `M280 P0 S<angle>` |
+| Optional stepper Z | Z driver; endstop on `BL_T` IN | |
+| Optional solenoid | fan or heater MOSFET | `M42`; flyback diode |
 | Heaters | **disabled**: `EXTRUDERS 0`, `TEMP_SENSOR_* 0`; nothing connected | |
 
-## Things to verify on the bench (before relying on the pin map)
+All motors share one enable line: they hold and release together. There are no spare drivers
+for a pen changer.
 
-Marlin's `M43` pin-debugging command (`PINS_DEBUGGING`) makes this quick and safe:
+## Bench results (X axis, 2026-11-26)
 
-1. **Driver chips:** read the markings (A4988 / DRV8825 / other) on all 6 drivers.
-   *Found (photos, 2026-11-22):* X, Y and Z are **red A4988-type clones** (pin labels `EN MS1 MS2 MS3
-   RST SLP STP DIR`, VR1 pot, heatsink over the chip, so the chip and sense resistors are unread);
-   R4 = 103 (10 kΩ) and R5 = 104 (100 kΩ) are not the sense resistors; those are probably R1/R2 beside the chip,
-   hidden by the glued heatsink (left on): work with Vref 0.4 V, max 0.6 V.
-   E0 to E2 are **white boards with a different pinout** (`EN M2 M1 M0 RST SLP STP DIR`,
-   `VM GND 2B 1B 1A 2A VDD GND`, two sense resistors that look like R100): a DRV8825 clone or an
-   LV8729-type board; the chip is under the heatsink, so unconfirmed. Not interchangeable with the red
-   A4988s: use two red ones for Y and Y2 (move Z's red driver into E0).
-   Put two **identical** drivers in the Y and E0 sockets. Set Vref for the motors (A4988
-   and DRV8825 use different formulas).
-2. **Microstepping jumpers:** check the jumpers under each driver socket (MS1–MS3);
-   use 1/16 for A4988 (1/32 for DRV8825).
-3. **Endstops:** with Marlin flashed, `M43 W` (watch pins) while pressing each switch, and
-   confirm X−=3, X+=2, Y−=14, Y+=15, Z−=18, Z+=19.
-4. **Steppers:** jog each axis with only one motor attached; confirm each socket drives
-   the expected axis (especially E0 → Y2).
-5. **Servo header:** confirm which 2×3 header is the servo port: XS2, or the marked
-   header left of the MCU (this one is more likely ICSP). With the board on USB, measure
-   5 V/GND on the header, then `M280 P0 S90` and watch a servo or a scope/LED on the signal pin.
-6. **5 V capacity:** run the servo against a stall briefly and check that the board doesn't
-   brown out. If it resets, power the servo from a separate 5 V buck converter (common GND).
-7. **AUX connector (right edge, 5-pin):** identify its pins with a multimeter. It may be
-   a serial port, which would be convenient for the TFT35-E3.
-8. **PSU voltage:** ✅ Cheng Liang P360W24V, **24 V, 15 A max**, 215 × 113 × 50 mm (user). The board is
-   listed for 12–24 V, but see item 9.
-9. **Motor supply capacitors: do not power from 24 V until resolved.** Found on the bench
-   (2026-11-25), after smoke at an earlier power-up: the electrolytic under the **E1** socket,
-   marked **100 25V VT** (100 µF, 25 V), has burn marks. 25 V leaves almost no margin at 24 V.
-   The other sockets' capacitors are not yet read. The white E1 driver above it also ran very hot
-   with no motor; treat it as faulty. Also seen on the X socket: `RST`/`SLP` at about 1.7 V, so the
-   driver stays disabled (cause not found).
+- Flashed from microSD; X motor on the X driver holds and moves; direction right
+  (`INVERT_X_DIR false`).
+- X driver Vref **0.88 V** (0.73 A).
+- X endstop on X−: reads `open` released, `TRIGGERED` pressed once wired to V and S on the
+  module (`X_MIN_ENDSTOP_INVERTING false`). With the cable's wires as delivered it read inverted.
+- `G28 X` homes.
 
-## TFT35-E3 connection options
+## To verify on the bench
 
-- **Serial (touch mode, preferred):** TFT's RS232 header (5V, GND, TX, RX) → a hardware
-  UART on the ZRIB. Candidates: EXP1 pins 3/4 (Serial2, D17 RX2 / D16 TX2) with a custom
-  cable, or the AUX connector if it turns out to be serial. Marlin: `SERIAL_PORT_2 2`.
-- **12864 emulation mode:** EXP1/EXP2 ribbon cables, Marlin
-  `REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER`. Simpler wiring, but you get only the
-  classic menu UI.
-- Both together is possible (EXP for the encoder-style UI, serial for touch mode) as long
-  as Serial2 isn't also used by EXP1 for the LCD. Decide during bring-up.
+1. Factory Vref of the four drivers; set X as in the [bring-up guide](x-axis-bringup.md) §3.
+2. Which edge connector is X−, Y−, Z−; endstop logic (`M119`, `M43 W`).
+3. Each driver drives the expected motor (E0 as Y2).
+4. Servo on `BL_T`: 5 V holds with the servo stalled; if the board resets, use a separate 5 V
+   buck converter (common GND).
+5. PSU: ✅ Cheng Liang P360W24V, 24 V, 15 A max, 215 × 113 × 50 mm (user).
 
-## Alternative: Creality Ender 3 board V4.2.2 (fallback)
+## TFT35-E3 (optional)
 
-A second board is on hand. Compared on paper (not yet inspected; items marked *check* need
-confirming on the board). **Status: ZRIB v5.8 stays primary; the final choice is made after
-the Phase 2 bench bring-up (T2.x).**
+Touch mode talks serial: UART3 on the LCD connector (`SERIAL_PORT_2 3`), through an adapter
+cable. The connector's 5 V and GND positions are to be checked first.
 
-| Need | ZRIB v5.8 | Ender 3 V4.2.2 | Better |
-|------|-----------|----------------|--------|
-| Drivers | 6 sockets (X, Y, Z, E0, E1, E2), swappable (e.g. TMC2208/2209) | 4 **soldered** (X, Y, Z, E0); *check* chip marking (silent types are common) | ZRIB flexibility; Creality stock quietness |
-| Dual Y (D25) | E0 drives Y2; E1, E2 spare | E0 drives Y2; only Z spare | ZRIB |
-| Endstops | 6 inputs (min/max per axis); 3 spare after X, Y, Y2 | 3 endstop connectors + probe (BLTouch) pin + filament-sensor pin; Y2 would use the Z connector | ZRIB |
-| Pen servo | 2×3 servo header, pin 65 (header to verify) | BLTouch 5-pin header (5 V, GND, servo-capable signal); needs a cable; *check* pin map | ZRIB (slightly) |
-| Extra outputs (solenoid) | Fan 1, Heater 1, bed MOSFETs free | Fewer free MOSFETs | ZRIB |
-| MCU | 8-bit ATmega2560, 16 MHz (enough for a plotter) | 32-bit STM32F103, 72 MHz; more headroom | Creality |
-| Marlin target | No v5.8 definition; `BOARD_ZRIB_V53` close match, pin map to verify | Exact `BOARD_CREALITY_V422`, widely used | Creality |
-| Flashing | USB directly | Bootloader + SD-card flashing with a uniquely named `.bin`; *check* the board has the bootloader | ZRIB |
-| Display / TFT35-E3 | Standard 12864 EXP1/EXP2; Serial2 free for the TFT | Proprietary LCD connector; TFT needs an adapter cable; *check* | ZRIB |
-| SD plotting | microSD | microSD | Tie |
-| Power | 12–24 V | Built for 24 V; *check* PSU | ZRIB |
+## Set aside: Zonestar ZRIB v5.8
 
-**Why ZRIB stays primary:** spare drivers/endstops/outputs (the pen-changer plan does not fit
-the Creality board), socketed drivers, EXP/TFT options, 12–24 V input.
-**Why keep Creality as fallback:** known-good Marlin target, 32-bit MCU, and it already covers
-X, Y, Y2 and the servo.
+Primary until 2026-11-25; the full notes (pin map, allocation, drivers) are in this file at git tag
+`pre-creality-board`. **Do not power it from 24 V:**
 
-**Switch to the Creality board only if** the ZRIB's 5 V rail browns out under the servo
-(step 6 above), its drivers are unusable, or its pin map can't be verified. Then the pen
-changer and extra endstops are dropped. Creality allocation if used: X, Y, E0 (= Y2, `EXTRUDERS 0`)
-drivers; X−, Y−, Z− connector (= Y2 endstop); servo on the BLTouch header; `BOARD_CREALITY_V422`.
+- After smoke at a power-up, the electrolytic capacitor under the **E1** socket, marked
+  **100 25V VT** (100 µF, 25 V), has burn marks. 25 V leaves almost no margin at 24 V.
+- The white E1 driver above it ran very hot with no motor: treat it as faulty.
+- The X socket's `RST`/`SLP` read about 1.7 V, so the driver stayed disabled (cause not found).
+- The first motor had its coils on pins 1–3 and 2–4: a likely contributor.
 
-**To record at T2.1 for this board:** MCU marking (STM32F103 vs a clone), driver chip
-markings, bootloader presence, PSU voltage.
+Its board is 95 × 110 mm, 22 mm to the heat sink tops, with 4 × Ø3 holes 80 × 100 mm apart; the
+CAD's controller mount still uses these (T3.32).

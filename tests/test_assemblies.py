@@ -16,12 +16,17 @@ from plotzker.assemblies.gantry import (
 )
 from plotzker.assemblies.machine import pen_holder_at
 from plotzker.assemblies.pen_holder import pen_holder_assembly, pen_holder_items
-from plotzker.assemblies.psu_mount import psu_mount_assembly, psu_mount_fit_check, psu_mount_local
+from plotzker.assemblies.psu_mount import (
+    brackets_local,
+    psu_mount_assembly,
+    psu_mount_fit_check,
+    psu_mount_local,
+)
 from plotzker.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_parts
 from plotzker.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotzker.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
 from plotzker.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
-from plotzker.hardware import xt60_female, y_shaft
+from plotzker.hardware import C14_INLET, xt60_female, y_shaft
 from plotzker.params import BEAM, CARRIAGE, FRAME, X_DRIVE, Y_AXIS
 from plotzker.parts.gantry_end_bracket import Side, gantry_end_bracket_local
 from plotzker.parts.psu_hood import psu_hood_installed
@@ -167,13 +172,20 @@ def test_zrib_mount_parts_do_not_collide():
             assert volume(a & b) < 0.5  # a screw and its nut meet in their facets
 
 
+#: the XT60 is a press fit in the hood: this much of it overlaps the window and pocket
+XT60_PRESS_MM3 = 15
+
+
 def test_psu_mount_parts_do_not_collide():
     """PSU, brackets, hood, inlet, XT60 and screws clear each other (the screws sit in the
-    PSU's holes; the partition passes between the wire lugs)."""
+    PSU's holes), except the XT60's press fit in the hood."""
     items = list(psu_mount_local())
+    hood = 1 + len(brackets_local())
+    xt60 = hood + 2 + 2 * len(C14_INLET.hole_xy)  # after the inlet, its screws and nuts
     for i, a in enumerate(items):
-        for b in items[i + 1 :]:
-            assert volume(a & b) < 0.05
+        for j in range(i + 1, len(items)):
+            limit = XT60_PRESS_MM3 if (i, j) == (hood, xt60) else 0.05
+            assert volume(a & items[j]) < limit, (i, j)
 
 
 def test_psu_mount_clears_the_board_runners_and_loom():
@@ -195,9 +207,10 @@ def test_xt60_stops_on_the_lip_and_goes_in_one_way_only():
     hood = psu_hood_installed()
     seat = get_handle(hood, "xt60")
     plug = xt60_female().align(seat)
-    assert volume(plug & hood) < 0.05
-    assert volume(plug.translate([0, 0, -0.5]) & hood) > 1
-    assert volume(xt60_female().rotate([0, 180, 0]).align(seat) & hood) > 0.5
+    press = volume(plug & hood)
+    assert press < XT60_PRESS_MM3  # only the press fit's interference
+    assert volume(plug.translate([0, 0, -0.5]) & hood) > press + 1
+    assert volume(xt60_female().rotate([0, 180, 0]).align(seat) & hood) > press + 2
 
 
 # --- the whole machine (T3.7)

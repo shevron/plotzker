@@ -126,7 +126,7 @@ class Xt60Spec:
     chamfer: float = 2.2  #: 45°, both corners of one short side (2.0 flat between, measured)
     collar: tuple[float, float] = (15.5, 8.1)  #: the lettered collar (measured)
     collar_r: float = 1.5  #: its two corners on the chamfered side (measured, roughly)
-    collar_len: float = 4.1  #: photo
+    collar_len: float = 3.8  #: its front shoulder to the rim (measured)
     flange: tuple[float, float] = (16.4, 9.2)  #: the rim behind the collar (Amass drawing)
     flange_len: float = 0.8
     cap: tuple[float, float] = (15.6, 6.5)  #: black rear cap (photo, ±1)

@@ -590,10 +590,19 @@ the printed carriage, motor mount and idler mount are the test pieces.
   - [x] First XT60 test piece (`stl/xt60_test.stl`, a one-off): fits, male plug seats and
     contacts well, collar holds when unplugging, keyed; 7.2 proud; loose. User measured the
     front and collar; window and collar pocket now a press fit (0 clearance).
-  - [ ] Print the second test piece (press fit).
-  - [ ] Reprint the hood; check the fit (0 clearance; tighten to −0.05 if loose), the XT60 push-in
-    and the 48 mm inlet bridge. XT60 has no stop against being pushed back in when plugging: add a
-    drop of hot glue.
+  - [x] Second test piece: fits firmly by hand, but only 6.3 proud (collar 0.9 short of the lip):
+    the rim behind the collar most likely hit the sleeve's end. Sleeve shortened to grip 2.5.
+  - [x] Third test piece: tilted, 6.3 proud on the chamfered (top-printed) side, 7.0 on the
+    other. Not the rim (measured 3.8 behind the shoulder): the bridge's sag at the top and the
+    pocket printing 0.1 to 0.2 under size (15.4 × 7.9). Added 0.3 / 0.5 relief at the window's /
+    pocket's top, pocket +0.05 per side, grip 3.0.
+  - [x] Fourth test piece: 7.4 proud, but loose across the short side (pocket printed exactly
+    8.2). Narrowed: window 6.4 → 6.0 (prints ~0.2 wide), pocket 8.2 → 8.0, key chamfers 2.2.
+  - [x] Fifth test piece **approved**: tight enough, 7.4 proud. The hood has the same window and
+    pocket.
+  - [ ] Reprint the hood: check the fit on the case (0 clearance; −0.05 if loose), the 48 mm
+    inlet bridge and the wire room behind the XT60 and the inlet; hot glue behind the XT60 only
+    if plugging in pushes it back.
   - [ ] Test print a bracket.
 
 #### Phase 4 — Build

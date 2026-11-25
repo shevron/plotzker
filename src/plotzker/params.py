@@ -682,22 +682,31 @@ class PsuMount:
     xt60_y: float = -22
     #: lip round the front section's window: the collar stops on it when the plug is pulled
     xt60_lip: float = 0.8
-    #: the window's corner chamfers on one side, a little under the connector's: keys the
-    #: polarity
-    xt60_key: float = 2.0
+    #: the window's corner chamfers on one side, the connector's 2.2: keys the polarity
+    xt60_key: float = 2.2
     #: the pocket's rounded corners on that side, a little under the collar's
     xt60_pocket_r: float = 1.2
-    #: DESIGN (T3.31): press fit, per side (the first test piece, at 0.25 round the front and
-    #: 0.5+ round the collar, was loose)
-    xt60_fit: float = 0.0  #: front section in the lip's window
-    xt60_pocket_fit: float = 0.0  #: collar in the pocket behind the lip
+    #: DESIGN (T3.31): press fit, per side, tuned on test pieces. Negative: interference.
+    #: Across the connector's short side (its width), where the fit grips:
+    xt60_window_fit: float = -0.2  #: window 6.0 on the 6.4 front (it prints ~0.2 wide)
+    xt60_pocket_fit: float = -0.05  #: pocket 8.0 on the 8.1 collar (it prints to size)
+    #: along its long side:
+    xt60_window_long_fit: float = 0.0
+    xt60_pocket_long_fit: float = 0.05
+    #: extra room at the top of the print (+y) for the window's and pocket's bridges to sag
+    #: into; without it the collar stopped 0.9 short of the lip on that side
+    xt60_window_relief: float = 0.3
+    xt60_pocket_relief: float = 0.5
+    #: DESIGN (T3.31): how far behind the lip the pocket grips the collar: short of the rim
+    xt60_grip: float = 3.0
     #: the male plug stands out round the female's front section by about this much (ASSUMED)
     xt60_plug_margin: float = 5
 
     @property
     def xt60_sleeve(self) -> float:
-        """Sleeve inside the board-side wall: just short of the XT60's rim, which stays free."""
-        return self.xt60_lip + XT60.collar_len - 0.1 - self.wall_t
+        """Sleeve inside the board-side wall: ends within the collar, so nothing reaches the
+        rim behind it."""
+        return self.xt60_lip + self.xt60_grip - self.wall_t
 
     @property
     def xt60_protrude(self) -> float:
@@ -708,13 +717,13 @@ class PsuMount:
     def xt60_window(self) -> tuple[float, float]:
         """The lip's window: along x (the connector's height) and along y (its width)."""
         w, h = XT60.front
-        return h + 2 * self.xt60_fit, w + 2 * self.xt60_fit
+        return h + 2 * self.xt60_window_fit, w + 2 * self.xt60_window_long_fit
 
     @property
     def xt60_pocket(self) -> tuple[float, float]:
         """The pocket gripping the collar behind the lip: along x and along y."""
         w, h = XT60.collar
-        return h + 2 * self.xt60_pocket_fit, w + 2 * self.xt60_pocket_fit
+        return h + 2 * self.xt60_pocket_fit, w + 2 * self.xt60_pocket_long_fit
 
     @property
     def terminal_y(self) -> float:
@@ -2165,7 +2174,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     xt_x0 = pm.xt60_x - pocket_x / 2 - pm.wall_t
     xt_x1 = pm.xt60_x + pocket_x / 2 + pm.wall_t
     xt_y0 = pm.xt60_y - pocket_y / 2 - pm.wall_t - pm.xt60_sleeve
-    xt_y1 = pm.xt60_y + pocket_y / 2 + pm.wall_t
+    xt_y1 = pm.xt60_y + pocket_y / 2 + pm.xt60_pocket_relief + pm.wall_t
     yield (
         pm.inlet_x + cl / 2 + 2 <= xt_x0,
         "PSU hood: the inlet is over the XT60, which reaches far into the hood",
@@ -2178,10 +2187,11 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "PSU hood: the XT60's sleeve runs into a wall or the wire lugs",
     )
     yield (
-        (XT60.collar[0] - window_y) / 2 >= 0.5
+        (XT60.collar[0] - window_y) / 2 - pm.xt60_window_relief >= 0.4
         and (XT60.collar[1] - window_x) / 2 >= 0.5
-        and pm.xt60_sleeve > 0,
-        "PSU hood: the XT60's collar does not stop on the lip",
+        and pm.xt60_sleeve > 0
+        and pm.xt60_grip <= XT60.collar_len - 0.5,
+        "PSU hood: the XT60's collar does not stop on the lip, or the pocket reaches its rim",
     )
     yield (
         pm.xt60_x - XT60.front[1] / 2 - pm.xt60_plug_margin >= pm.board_x[1] + 2

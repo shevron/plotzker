@@ -14,10 +14,9 @@ The C14 inlet (fuse, lighted switch) sits in the outer wall, facing out from the
 long side across the case, clear of the XT60 behind it; its flange reaches onto the fan-side
 sleeve. The XT60H-F female sits low in the board-side wall, below the board's underside, so its
 plug and cable run under the board straight to the ZRIB. It is pushed in from inside the open
-hood until its collar stops on a 0.8 lip, press-fit in its window and pocket, its front section
-standing 7.2 out (keyed: its
-chamfered side goes toward the PSU). A drop of hot glue behind it keeps plugging in from
-pushing it back.
+hood, chamfered side toward the PSU (the window is keyed), until its collar stops on a 0.8 lip;
+its front section then stands 7.4 out (measured). It is a press fit in the window and pocket,
+tuned on test pieces; add a drop of hot glue behind it if plugging in pushes it back.
 
   section in front of the PSU (PSU frame: x down the PSU from the label wall, z out of the
   bottom face; the board is to the left)
@@ -80,47 +79,35 @@ def _inlet_holes() -> list[tuple[float, float]]:
     return [(m.inlet_x + long, m.inlet_y + short) for long, short in C14_INLET.hole_xy]
 
 
-def _xt60_box(size: tuple[float, float], grow: float, z0: float, z1: float) -> Solid:
-    """A box of ``size`` (along x, along y) plus ``grow`` per side round the XT60's axis."""
-    m = PSU_MOUNT
-    sx, sy = size
-    return box(
-        m.xt60_x - sx / 2 - grow,
-        m.xt60_y - sy / 2 - grow,
-        z0,
-        m.xt60_x + sx / 2 + grow,
-        m.xt60_y + sy / 2 + grow,
-        z1,
-    )
-
-
 def _xt60_window(z0: float, z1: float) -> Solid:
-    """The lip's window: the front section's outline, its +y corners chamfered (the key)."""
+    """The lip's window: the front section's outline, its +y corners chamfered (the key); the
+    top (+y, up in the print) raised by the sag relief."""
     m = PSU_MOUNT
     sx, sy = m.xt60_window
     k = m.xt60_key
+    top = sy / 2 + m.xt60_window_relief
     outline = polygon(
         [
             [-sx / 2, -sy / 2],
             [sx / 2, -sy / 2],
-            [sx / 2, sy / 2 - k],
-            [sx / 2 - k, sy / 2],
-            [-sx / 2 + k, sy / 2],
-            [-sx / 2, sy / 2 - k],
+            [sx / 2, top - k],
+            [sx / 2 - k, top],
+            [-sx / 2 + k, top],
+            [-sx / 2, top - k],
         ]
     )
     return linear_extrude(outline, height=z1 - z0).translate([m.xt60_x, m.xt60_y, z0])
 
 
 def _xt60_collar_pocket(z0: float, z1: float) -> Solid:
-    """The pocket gripping the collar: its +y corners rounded, as the collar's."""
+    """The pocket gripping the collar: its +y corners rounded, as the collar's; the top (+y)
+    raised by the sag relief."""
     m = PSU_MOUNT
     sx, sy = m.xt60_pocket
     r = m.xt60_pocket_r
-    corners = union(
-        *(circle(r=r, fn=32).translate([s * (sx / 2 - r), sy / 2 - r]) for s in (-1, 1))
-    )
-    outline = hull(union(square([sx, sy - r]).translate([-sx / 2, -sy / 2]), corners))
+    top = sy / 2 + m.xt60_pocket_relief
+    corners = union(*(circle(r=r, fn=32).translate([s * (sx / 2 - r), top - r]) for s in (-1, 1)))
+    outline = hull(union(square([sx, top - r + sy / 2]).translate([-sx / 2, -sy / 2]), corners))
     return linear_extrude(outline, height=z1 - z0).translate([m.xt60_x, m.xt60_y, z0])
 
 
@@ -165,7 +152,10 @@ def _xt60_sleeve() -> Solid:
     iz0 = m.hood_z[1]
     s, t = m.xt60_sleeve, m.wall_t
     sx, sy = m.xt60_pocket
-    sleeve = _xt60_box((sx, sy), t, iz0 - EPS, iz0 + s)
+    top = m.xt60_y + sy / 2 + m.xt60_pocket_relief + t
+    sleeve = box(
+        m.xt60_x - sx / 2 - t, m.xt60_y - sy / 2 - t, iz0 - EPS, m.xt60_x + sx / 2 + t, top, iz0 + s
+    )
     y0 = m.xt60_y - sy / 2 - t
     wedge = (
         linear_extrude(

@@ -102,7 +102,14 @@ Marlin's `M43` pin-debugging command (`PINS_DEBUGGING`) makes this quick and saf
    brown out. If it resets, power the servo from a separate 5 V buck converter (common GND).
 7. **AUX connector (right edge, 5-pin):** identify its pins with a multimeter. It may be
    a serial port, which would be convenient for the TFT35-E3.
-8. **PSU voltage:** ✅ Cheng Liang P360W24V, **24 V, 15 A max**, 215 × 113 × 50 mm (user). The board accepts 12–24 V.
+8. **PSU voltage:** ✅ Cheng Liang P360W24V, **24 V, 15 A max**, 215 × 113 × 50 mm (user). The board is
+   listed for 12–24 V, but see item 9.
+9. **Motor supply capacitors: do not power from 24 V until resolved.** Found on the bench
+   (2026-11-25), after smoke at an earlier power-up: the electrolytic under the **E1** socket,
+   marked **100 25V VT** (100 µF, 25 V), has burn marks. 25 V leaves almost no margin at 24 V.
+   The other sockets' capacitors are not yet read. The white E1 driver above it also ran very hot
+   with no motor; treat it as faulty. Also seen on the X socket: `RST`/`SLP` at about 1.7 V, so the
+   driver stays disabled (cause not found).
 
 ## TFT35-E3 connection options
 

@@ -135,8 +135,11 @@ pot), hex keys, ruler or calipers, a flat table, a non-slip mat.
    at worst, 0.05 Ω) while the sense resistors are unread. They are probably R1/R2 next to the chip,
    under the heatsink's edge; the glued heatsink is left in place. (R4 = 103 and R5 = 104 are 10 kΩ
    and 100 kΩ, not sense resistors.) (For a DRV8825: I = Vref / (5 × 0.1 Ω).)
-4. **Motor.** Plug it into X-MOT with power off. Find the two coil pairs with the
-   multimeter if the plug isn't keyed (low resistance within a pair, open between pairs).
+4. **Motor.** **Always check the coil pairs first, keyed plug or not:** motor cables are not
+   all wired alike. At the board end of the unplugged cable, pins **1–2** and **3–4** must each
+   read a few ohms (equal), and be open between the pairs and to the motor case. If the pairs
+   read on 1–3 and 2–4 instead, swap the two middle wires (pins 2 and 3) in one plug and
+   measure again. Then plug it into X-MOT with power off.
 5. **Endstop.** Plug it into the **X−** header. **Check the pin order first:** the board's
    switch must connect signal (S) and ground (G); with the carriage away from it, find the
    pins that have continuity at rest (normally closed) or when pressed (normally open).

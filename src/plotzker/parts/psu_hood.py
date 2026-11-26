@@ -13,7 +13,7 @@ that rests on the insulated fork lugs, push-on sleeves and wire insulation.
 The C14 inlet (fuse, lighted switch) sits in the outer wall, facing out from the machine, its
 long side across the case, clear of the XT60 behind it; its flange reaches onto the fan-side
 sleeve. The XT60H-F female sits low in the board-side wall, below the board's underside, so its
-plug and cable run under the board straight to the ZRIB. It is pushed in from inside the open
+plug and cable run under the board straight to the controller. It is pushed in from inside the open
 hood, chamfered side toward the PSU (the window is keyed), until its collar stops on a 0.8 lip;
 its front section then stands 7.4 out (measured). It is a press fit in the window and pocket,
 tuned on test pieces; add a drop of hot glue behind it if plugging in pushes it back.

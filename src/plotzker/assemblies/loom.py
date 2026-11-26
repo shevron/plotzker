@@ -1,7 +1,7 @@
 """Y loom (T3.8, D32): the loom as a chain of capsules, and the rail segments beside the belt.
 
 The loom runs from the anchor on the right bracket, out and down to the baseboard, along the
-moving leg to the U fold, back along the static leg and through the baseboard hole to the ZRIB.
+moving leg to the U fold, back along the static leg and through the baseboard hole to the controller.
 Machine frame (``params``). Not printable.
 """
 

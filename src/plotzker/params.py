@@ -35,7 +35,7 @@ from cadder.hardware import (
 )
 from cadder.printing import Tolerances
 
-from plotzker.hardware import C14_INLET_SPEC, ENDSTOP_SPEC, PSU_SPEC, XT60_SPEC, Y_SHAFT, ZRIB_SPEC
+from plotzker.hardware import C14_INLET_SPEC, ENDSTOP_SPEC, PSU_SPEC, XT60_SPEC, Y_SHAFT
 
 # -----------------------------------------------------------------------------
 # Print tolerances (tune after a test print; defaults from README.md §7.4)
@@ -516,104 +516,6 @@ class PenHolder:
 PEN = PenHolder()
 
 # -----------------------------------------------------------------------------
-# ZRIB mount under the baseboard (T3.7, D30)
-# -----------------------------------------------------------------------------
-# Two identical hangers (mirror images) screwed to the underside of the baseboard, one on
-# each long side of the board; four posts carry the ZRIB with its components pointing down
-# (heat sinks in free air), and two light straps under the legs guard the board's edges.
-#
-# Mount frame: u along the board's 110 mm (rear) edge = machine X, v toward the rear = machine
-# Y, z up with 0 at the underside of the baseboard (the mount hangs at negative z).
-#
-#   side view along v (one hanger)            ▒▒ rail     ░ board  ▓ strap
-#   baseboard ════════════════════════════
-#   rail      ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒    ← wood screws at u = ±60 (outside the board)
-#   post                ┃  ░░░░░░░░░░░  ┃            posts at the board's holes (u = ±50)
-#   leg  ▒             board with parts ↓           ▒ leg
-#        ▒                                        ▒
-#   strap ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-
-
-@dataclass(frozen=True)
-class ZribMount:
-    """ZRIB hangers and guard straps."""
-
-    rail_thickness: float = 6  #: DESIGN (T3.7): hanger rail thickness (z)
-    plate_thickness: float = 5  #: hanger rail thickness (v)
-    post_dia: float = 9
-    post_height: float = 5  #: board's solder side to the rail underside (room for the pin tails)
-    leg_width: float = 8  #: along u (an M3 nut fits)
-    leg_thickness: float = 9  #: along v (a nut slot reaches past the screw axis, with a wall)
-    leg_gap: float = 11  #: board edge to the leg's inner face
-    wood_screw_gap: float = 4  #: board edge to the screw center, along u
-    wood_screw_v: float = 5  #: from the post row inward (v), clear of the strap for a driver
-    boss_dia: float = 11.5  #: round boss that takes the screw head
-    strap_thickness: float = 3
-    strap_gap: float = 3  #: heat sink tops to the strap
-    strap_screw_length: float = 12  #: M3
-
-    @property
-    def board_z(self) -> float:
-        """Solder-side face of the board (negative z)."""
-        return -(self.rail_thickness + self.post_height)
-
-    @property
-    def sink_bottom_z(self) -> float:
-        """Lowest point of the heat sinks."""
-        return self.board_z - ZRIB_SPEC.height
-
-    @property
-    def strap_top_z(self) -> float:
-        """Top face of the strap."""
-        return self.sink_bottom_z - self.strap_gap
-
-    @property
-    def strap_bottom_z(self) -> float:
-        """Underside of the strap = the mount's total drop below the baseboard."""
-        return self.strap_top_z - self.strap_thickness
-
-    @property
-    def leg_u(self) -> tuple[float, float]:
-        """Leg extent along u (positive side)."""
-        inner = ZRIB_SPEC.width / 2 + self.leg_gap
-        return inner, inner + self.leg_width
-
-    @property
-    def wood_screw_u(self) -> float:
-        """Wood screw position along u (positive side)."""
-        return ZRIB_SPEC.width / 2 + self.wood_screw_gap
-
-    @property
-    def post_v(self) -> float:
-        """Post row (negative-v side hanger): -hole pitch / 2."""
-        return -ZRIB_SPEC.hole_pitch[1] / 2
-
-    @property
-    def plate_v(self) -> tuple[float, float]:
-        """Plate extent along v (negative-v hanger): the outer face is flush with the posts'."""
-        outer = self.post_v - self.post_dia / 2
-        return outer, outer + self.plate_thickness
-
-    @property
-    def strap_screw_u(self) -> float:
-        """Strap screw position along u (positive side): the leg's center."""
-        return sum(self.leg_u) / 2
-
-    @property
-    def strap_screw_v(self) -> float:
-        """Strap screw position along v (negative-v hanger): the leg's center."""
-        return self.plate_v[0] + self.leg_thickness / 2
-
-    @property
-    def strap_nut_z(self) -> float:
-        """Bottom of the strap screw's nut slot (the leg's end wall below it is 2 mm)."""
-        return self.strap_top_z + 2
-
-
-ZMOUNT = ZribMount()
-
-
-# -----------------------------------------------------------------------------
 # PSU beside the baseboard (T3.31, D38)
 # -----------------------------------------------------------------------------
 # The supply stands on edge beside the board's right edge, off the table (D30: free air to
@@ -676,7 +578,7 @@ class PsuMount:
     inlet_x: float = 64
     inlet_y: float = -16
     inlet_boss_thickness: float = 3.5  #: boss inside the wall for the inlet's M3 nuts
-    #: DESIGN (T3.31): XT60 in the board-side wall, low (under the board), in line with the ZRIB,
+    #: DESIGN (T3.31): XT60 in the board-side wall, low (under the board), in line with the controller,
     #: close to the open end so it can be pushed in by hand from inside
     xt60_x: float = 100
     xt60_y: float = -22
@@ -727,8 +629,8 @@ class PsuMount:
 
     @property
     def terminal_y(self) -> float:
-        """Machine y of the terminal end: the XT60 lines up with the ZRIB's center."""
-        return BASEBOARD.zrib_center[1] - self.xt60_y
+        """Machine y of the terminal end: the XT60 lines up with the controller's position."""
+        return BASEBOARD.controller_center[1] - self.xt60_y
 
     @property
     def origin(self) -> tuple[float, float, float]:
@@ -1488,7 +1390,7 @@ Y_ENDSTOP = YEndstopMount()
 
 # -----------------------------------------------------------------------------
 # Y loom (T3.8, D32): one round loom from the gantry's right bracket, folded in a U on the
-# baseboard beside the right Y belt, through a hole in the baseboard to the ZRIB
+# baseboard beside the right Y belt, through a hole in the baseboard to the controller
 # -----------------------------------------------------------------------------
 # Top view of the strip right of the right shaft (x from the shaft; ▒ = inner rail segments):
 #
@@ -1524,7 +1426,7 @@ class Loom:
     rail_count: int = 6
     rail_y0: float = 200  #: first segment's start
     foot_width: float = 14  #: rail foot, on the belt side
-    hole_dia: float = 12  #: baseboard hole to the ZRIB
+    hole_dia: float = 12  #: baseboard hole to the controller
     hole_y: float = 150  #: static anchor: the hole's y (the loom ends there)
     exit_dy: float = 27  #: anchor groove axis behind the gantry center
 
@@ -1605,7 +1507,7 @@ class Loom:
 LOOM = Loom()
 
 # -----------------------------------------------------------------------------
-# Baseboard layout (T3.7, D31): runners underneath, SK10 holes, bed posts, ZRIB position
+# Baseboard layout (T3.7, D31): runners underneath, SK10 holes, bed posts, controller position
 # -----------------------------------------------------------------------------
 # Machine frame, seen from above (x across, y front to back); ▒ = runner on the underside:
 #
@@ -1614,7 +1516,7 @@ LOOM = Loom()
 #   y 750 │   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ runner 3 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒    │
 #         │      ◎ post                       ◎ post     │  bed posts (M5 stud from below)
 #   y 450 │   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ runner 2 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒    │
-#         │              ZRIB under here →  [ZRIB]       │  between runners 1 and 2
+#         │              controller under here → [ ]     │  between runners 1 and 2
 #   y 150 │   ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ runner 1 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒    │
 #         │  SK10 ▪▪                             ▪▪ SK10 │
 #   y   0 └──────────────────────────────────────────────┘
@@ -1622,7 +1524,7 @@ LOOM = Loom()
 
 @dataclass(frozen=True)
 class Baseboard:
-    """Runners, bed posts and the ZRIB position on the baseboard."""
+    """Runners, bed posts and the controller position on the baseboard."""
 
     # Runners: 2040 offcuts on edge (20 wide along y, 40 tall), along X under the board
     runner_length: float = 520
@@ -1647,9 +1549,10 @@ class Baseboard:
     spring_outer_dia: float = 9
     spring_id: float = 6
     spring_length: float = 12  #: free length
-    # ZRIB: centered between the first two runners, toward the right (its USB side faces +y)
-    zrib_from_right: float = 180
-    pilot_dia: float = 2.5  #: DESIGN: pilot hole for the 4 mm wood screws (hangers)
+    #: controller position under the board: centered between the first two runners, toward the
+    #: right. The PSU's XT60 lines up with it. To be revisited with the Creality mount (T3.32)
+    controller_from_right: float = 180
+    pilot_dia: float = 2.5  #: DESIGN: pilot hole for the 4 mm wood screws
 
     @property
     def runner_x(self) -> tuple[float, float]:
@@ -1684,20 +1587,12 @@ class Baseboard:
         return tuple((x, y) for x in (x0 + i, x0 + bed_x - i) for y in (y0 + i, y0 + bed_y - i))
 
     @property
-    def zrib_center(self) -> tuple[float, float]:
-        """ZRIB mount origin (the board's center) in the machine frame."""
+    def controller_center(self) -> tuple[float, float]:
+        """Where the controller sits under the board, in the machine frame."""
         return (
-            FRAME.board_size[0] - self.zrib_from_right,
+            FRAME.board_size[0] - self.controller_from_right,
             (self.runner_y[0] + self.runner_y[1]) / 2,
         )
-
-    @property
-    def zrib_pilot_xy(self) -> tuple[tuple[float, float], ...]:
-        """Pilot holes for the hangers' wood screws (mount frame u → x, v → y)."""
-        center_x, center_y = self.zrib_center
-        offset_u = ZMOUNT.wood_screw_u
-        offset_v = abs(ZMOUNT.post_v + ZMOUNT.wood_screw_v)
-        return tuple((center_x + su * offset_u, center_y + sv * offset_v) for sv in (-1, 1) for su in (-1, 1))
 
     @property
     def post_stud_z(self) -> float:
@@ -2113,24 +2008,6 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "the slider reaches the endstop plug's keep-out",
     )
     pen_lo, pen_hi = REQ.pen_dia_range
-    # --- ZRIB mount (T3.7)
-    yield (
-        -ZMOUNT.strap_bottom_z <= 40,
-        f"ZRIB mount hangs {-ZMOUNT.strap_bottom_z:g} mm below the baseboard (2040 on edge: 40)",
-    )
-    yield (
-        ZMOUNT.wood_screw_u + ZMOUNT.boss_dia / 2 <= ZMOUNT.leg_u[0] - 1
-        and ZMOUNT.wood_screw_u - WOOD_SCREW.head_dia / 2 >= ZRIB_SPEC.width / 2,
-        "ZRIB mount wood screw boss hits the leg, or its head is not reachable beside the board",
-    )
-    yield (
-        WOOD_SCREW.length - WOOD_SCREW.boss_thickness <= FRAME.board_size[2] - 2,
-        "ZRIB mount wood screws would reach through the baseboard",
-    )
-    yield (
-        WOOD_SCREW.boss_thickness > ZMOUNT.rail_thickness and -ZMOUNT.board_z - WOOD_SCREW.boss_thickness >= 1,
-        "ZRIB mount boss hits the board",
-    )
     # --- PSU mount (T3.31)
     table_z = -FRAME.board_size[2] - BASEBOARD.runner_height
     yield (
@@ -2224,14 +2101,6 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         and BASEBOARD.runner_y[2] + BASEBOARD.runner_width / 2 <= board_y,
         "A runner hangs over the baseboard edge",
     )
-    zrib_half_v = abs(ZMOUNT.plate_v[0])
-    yield (
-        BASEBOARD.runner_pitch / 2 - BASEBOARD.runner_width / 2 - zrib_half_v >= 5
-        and BASEBOARD.zrib_center[0] + ZMOUNT.leg_u[1] <= board_x,
-        "The ZRIB mount does not fit between the runners or on the baseboard",
-    )
-    zx0, zx1 = BASEBOARD.zrib_center[0] - ZMOUNT.leg_u[1], BASEBOARD.zrib_center[0] + ZMOUNT.leg_u[1]
-    zy0, zy1 = BASEBOARD.zrib_center[1] - zrib_half_v, BASEBOARD.zrib_center[1] + zrib_half_v
     head_radius = screw_m5.washer_outer_dia / 2 + 2  #: bolt head and washer under the board, plus room
     yield (
         all(
@@ -2240,13 +2109,6 @@ def design_checks() -> Iterator[tuple[bool, str]]:
             for ry in BASEBOARD.runner_y
         ),
         "A bed post bolt head sits under a runner",
-    )
-    yield (
-        not any(
-            zx0 - head_radius < x < zx1 + head_radius and zy0 - head_radius < y < zy1 + head_radius
-            for x, y in BASEBOARD.post_xy
-        ),
-        "A bed post bolt head hits the ZRIB mount",
     )
     yield (
         FRAME.steel_margin >= BASEBOARD.post_inset + screw_m5.washer_outer_dia / 2 + 1

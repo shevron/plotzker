@@ -23,7 +23,7 @@ Hardware per hanger:
   2 × M3×12 ISO 4762 + 2 × M3 nuts (pressed into the rail's top face; the plywood closes them)
   2 × 4×25 countersunk wood screws into the plywood (boss thickness keeps them 2 mm short of
       the top face)
-  2 × M3 nuts in the leg slots + the strap's screws (see zrib_guard.py)
+  2 × M3 nuts in the leg slots + the strap's screws (see guard.py)
 
 Print: PETG; 0.2 mm layers; 4 perimeters; 40 % infill; outer face (v) down; no supports
 (the holes along z are teardrops pointing up; the nut slots open to the bed face).
@@ -37,8 +37,9 @@ from cadder.printing import nut_slot
 from cadder.types import Matrix
 from pythonscad import cube, cylinder, linear_extrude
 
-from plotzker.hardware import ZRIB_SPEC
-from plotzker.params import TOL, WOOD_SCREW, ZMOUNT
+from plotzker.legacy.zrib.board import ZRIB_SPEC
+from plotzker.legacy.zrib.params import ZMOUNT
+from plotzker.params import TOL, WOOD_SCREW
 
 if TYPE_CHECKING:
     from pythonscad import Solid

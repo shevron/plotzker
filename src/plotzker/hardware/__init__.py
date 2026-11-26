@@ -1,4 +1,4 @@
-"""Plotter-specific hardware: the endstop board, the ZRIB controller board, the Y shafts and
+"""Plotter-specific hardware: the endstop board, the Y shafts and
 the 24 V supply with its mains inlet and DC connector.
 
 Generic vendor parts (fasteners, bearings, belts, motors, V-slot, SK10...) come from
@@ -11,7 +11,6 @@ from cadder.hardware import Shaft, shaft
 
 from plotzker.hardware.endstop import ENDSTOP_SPEC, endstop, endstop_keepout, endstop_placed
 from plotzker.hardware.psu import C14_INLET_SPEC, PSU_SPEC, XT60_SPEC, c14_inlet, psu, xt60_female
-from plotzker.hardware.zrib import ZRIB_SPEC, zrib
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -31,7 +30,6 @@ __all__ = [
     "PSU_SPEC",
     "XT60_SPEC",
     "Y_SHAFT",
-    "ZRIB_SPEC",
     "c14_inlet",
     "endstop",
     "endstop_keepout",
@@ -39,5 +37,4 @@ __all__ = [
     "psu",
     "xt60_female",
     "y_shaft",
-    "zrib",
 ]

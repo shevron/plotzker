@@ -1,5 +1,5 @@
 """Baseboard with its fixings (T3.7, D31): drilled board, runners, SK10 bolts, shafts, bed
-panel on its posts, steel sheet, the ZRIB mount and the PSU mount. Everything that does not
+panel on its posts, steel sheet and the PSU mount. Everything that does not
 move.
 
 Machine frame (``params``): the board's top face is z = 0. Not printable.
@@ -24,7 +24,6 @@ from cadder.hardware import (
 from pythonscad import cube, cylinder
 
 from plotzker.assemblies.psu_mount import psu_mount_assembly
-from plotzker.assemblies.zrib_mount import zrib_mount_assembly
 from plotzker.hardware import y_shaft
 from plotzker.layout import SIDE_UNDER, Hole, board_holes
 from plotzker.params import BASEBOARD, FRAME, PSU_MOUNT, Y_AXIS
@@ -145,12 +144,6 @@ def bed() -> list[Solid]:
     return items
 
 
-def zrib() -> list[Solid]:
-    """The ZRIB mount in its place under the baseboard."""
-    center_x, center_y = BASEBOARD.zrib_center
-    return [item.translate([center_x, center_y, -FRAME.board_size[2]]) for item in zrib_mount_assembly()]
-
-
 def fixed_assembly() -> list[Solid]:
-    """Everything that stays put: board, runners, shafts and supports, bed, ZRIB, PSU."""
-    return [baseboard(), *runners(), *shafts_and_supports(), *bed(), *zrib(), *psu_mount_assembly()]
+    """Everything that stays put: board, runners, shafts and supports, bed, PSU."""
+    return [baseboard(), *runners(), *shafts_and_supports(), *bed(), *psu_mount_assembly()]

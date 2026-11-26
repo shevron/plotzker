@@ -1,6 +1,6 @@
 """ZRIB under the baseboard: two hangers, two guard straps, the board and its screws (T3.7).
 
-Mount frame of ``params.ZribMount`` (u along the board's 110 mm edge, v toward its rear edge,
+Mount frame of ``params.ZribMount`` (this package) (u along the board's 110 mm edge, v toward its rear edge,
 z up with 0 at the baseboard underside). Shown with a piece of the baseboard. Not printable.
 """
 
@@ -10,10 +10,11 @@ from cadder.handles import get_handle, get_handles
 from cadder.hardware import countersunk_screw, hex_nut, shcs
 from pythonscad import cube
 
-from plotzker.hardware import zrib
-from plotzker.params import FRAME, WOOD_SCREW, ZMOUNT
-from plotzker.parts.zrib_guard import zrib_guard
-from plotzker.parts.zrib_hanger import zrib_hanger_mount
+from plotzker.legacy.zrib.board import zrib
+from plotzker.legacy.zrib.guard import zrib_guard
+from plotzker.legacy.zrib.hanger import zrib_hanger_mount
+from plotzker.legacy.zrib.params import ZMOUNT, ZRIB_POSITION
+from plotzker.params import FRAME, WOOD_SCREW
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -43,3 +44,9 @@ def zrib_mount_fit_check() -> list[Solid]:
     """The mount on a piece of baseboard, shown upside down (the mount faces up)."""
     wood = cube([220, 200, FRAME.board_size[2]]).translate([-110, -100, 0]).color("BurlyWood", 0.5)
     return [item.rotate([180, 0, 0]) for item in (wood, *zrib_mount_assembly())]
+
+
+def zrib_mount_installed() -> list[Solid]:
+    """The mount in its place under the baseboard, in the machine frame."""
+    center_x, center_y = ZRIB_POSITION.center
+    return [item.translate([center_x, center_y, -FRAME.board_size[2]]) for item in zrib_mount_assembly()]

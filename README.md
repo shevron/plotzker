@@ -289,8 +289,8 @@ with gravity.
 - **Extrusion runners** (2040/2020 offcuts) screwed across the underside, perpendicular
   to the shafts. They stop the board bowing, act as feet, and leave space underneath for
   the controller and wiring.
-- Electronics: the bare controller on two printed hangers under the board between the runners (D30;
-  the hangers as designed fit the old ZRIB and are to be redone, T3.32); the
+- Electronics: the bare controller on a printed mount under the board between the runners (D30;
+  to be designed for the current board, T3.32); the
   PSU hanging beside the board's right edge (§3.6, D38). Driver cooling fan.
 - Cables moving with the gantry (X motor, X endstop, tool head): printed drag chain or a
   loose loom.
@@ -378,7 +378,8 @@ Plotter/
 │   ├── params.py        ← shared parameters, derived values, design checks
 │   ├── hardware/        ← plotter-specific hardware models
 │   ├── parts/           ← printable parts
-│   └── assemblies/      ← fit-check assemblies
+│   ├── assemblies/      ← fit-check assemblies
+│   └── legacy/          ← superseded hardware, kept outside the current machine
 ├── tests/               ← the plotter's tests
 ├── cadder/              ← the generic CAD-project framework (uv workspace member; own README)
 ├── firmware/            ← Marlin configuration, build notes and bench scripts

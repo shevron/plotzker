@@ -1,7 +1,7 @@
 """Machine layout skeleton: baseboard, Y axis, bed, media envelope, gantry and carriage.
 
 Quick layout check of the height stack-up, travel and clearances, with plain boxes for the
-baseboard and the bed. The full machine (drilled board, runners, bed posts, ZRIB, pen holder)
+baseboard and the bed. The full machine (drilled board, runners, bed posts, pen holder)
 is ``machine.py`` (T3.7). Not printable.
 """
 

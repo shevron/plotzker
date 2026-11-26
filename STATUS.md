@@ -124,8 +124,8 @@ Open:
   - `y_motor_mount_left` FAIL (same plate bending), not yet printed and tested;
   - `pen_holder_body` MARGINAL (sideways knock), not yet printed and tested.
   `idler_slider` MARGINAL is accepted after its print test; `psu_bracket` is under T3.31.
-  `belt_clamp` and `zrib_hanger` have no FEM spec (to decide). *Done when:* each verdict is
-  accepted or the part is changed.
+  `belt_clamp` has no FEM spec (to decide). *Done when:* each verdict is accepted or the part is
+  changed.
 - [ ] **T3.8 Cable management** (D32: loose loom on printed rails). Moving cables: X motor and X
   endstop (move in Y), pen servo (moves in X and Y). The Y motors and endstops are static.
   - [ ] **Loom spec** (the user builds it to this; values *assumed* until it exists). Gantry
@@ -171,36 +171,15 @@ Open:
   - [ ] Measure the inlet's push-on tabs (9 mm *assumed*) and flange flats (32 *assumed*).
   - [ ] Before closing the hood: set the output voltage (the ADJ pot gets covered), set the
     115/230 V selector to 230 V, fit a T3.15 A slow-blow fuse.
-- [ ] **T3.33 Move the ZRIB code to a legacy package** (do before T3.32). The ZRIB is set aside
-  (D41), but the current machine still models it: the machine and FreeCAD assemblies, the design
-  checks, the part and assembly registries and the drilling layout (ZRIB hanger pilot holes). Keep
-  the code, for possible reuse or a later choice of board at build time; take it out of the
-  current machine. Don't build board selection now.
-  1. Create `src/plotzker/legacy/zrib/` with the board model (`hardware/zrib.py`), `zrib_hanger`,
-     `zrib_guard`, `assemblies/zrib_mount.py`, `params.ZribMount` / `ZMOUNT`, the ZRIB-only
-     `Baseboard` values and the ZRIB design checks.
-  2. `legacy` may import the active code; active code never imports `legacy` (add a test).
-  3. Remove the ZRIB from the machine and FreeCAD assemblies (`freecad_assembly.py` asserts item
-     counts), `PARTS`, `ASSEMBLIES` and the drilling layout; regenerate
-     `docs/baseboard-layout.svg` and `docs/baseboard-holes.md`.
-  4. `PSU_MOUNT.terminal_y` uses `BASEBOARD.zrib_center`: replace it with a board-neutral
-     controller position of the same value, so the PSU hood and brackets don't move. Keep the loom
-     hole where it is; T3.32 revisits both.
-  5. Keep a small test that the legacy parts and mount assembly still build and don't collide.
-  6. Update what names the moved files or parts: README §5, this file (T3.21, T3.32, as-built
-     notes), `docs/fem.md`, `docs/hardware.md`, docstrings. Record the decision in the log (§3):
-     code for superseded hardware is kept under `plotzker.legacy`, outside the current machine.
-
-  *Done when:* `make check` and `make test` pass; nothing outside `legacy` and its tests imports
-  it; `python -m plotzker diff` shows only ZRIB items and their holes gone, and no change to the
-  PSU mount or loom.
+- [x] **T3.33 ZRIB code moved to `plotzker.legacy.zrib`** (2026-11-26, D43): out of the machine,
+  FreeCAD assembly, registries and drilling layout; the PSU mount and loom are unchanged.
 - [x] **T3.34 Readable names** (2026-11-26, README §7.5): constants used by name, hardware specs
   suffixed `_SPEC`, abbreviations spelled out. Names in TOML files, `--json`, the CLI and CPSK kept.
-- [ ] **T3.32 Controller mount for the Creality board** (D41). The controller hangers and guards,
-  `hardware/zrib.py`, `assemblies/zrib_mount.py`, their holes in the drilling layout, the loom
-  run and the PSU's XT60 position (D38) were designed around the ZRIB. Measure the Creality
-  board first (outline, holes, height, connector positions); check that the USB cable can reach
-  it. Don't print `zrib_hanger` or `zrib_guard`.
+- [ ] **T3.32 Controller mount for the Creality board** (D41). The machine has no controller mount
+  and the drilling layout no holes for one; the ZRIB's mount is in `legacy/zrib/` (D43). The loom
+  run, the PSU's XT60 position (D38) and `BASEBOARD.controller_center` were designed around the
+  ZRIB: revisit them. Measure the Creality board first (outline, holes, height, connector
+  positions); check that the USB cable can reach it.
 
 ### Phase 4 — Build
 
@@ -287,6 +266,7 @@ update the log once it is agreed (README §7.1). 🟡 = to be confirmed at build
 | D40 | **Licensing:** CC BY-SA 4.0 for the plotter's designs and documentation, LGPL-3.0-or-later for software (all of `cadder/` included); no source headers | ✅ | README §8 |
 | D41 | **Controller: Creality V4.2.2 instead of the ZRIB v5.8**, which failed on the bench. Given up: spare drivers and endstop inputs (pen changer), swappable drivers. Last ZRIB state: git tag `pre-creality-board` | ✅ | `docs/controller.md` |
 | D42 | **Floating belt idlers:** the idler's slider hangs on its tension screw, which runs along the belt line at the axle's height (no couple, no rail, no play); one slider for all three idlers, printed top down. Replaced the dovetail tensioners, which tilted under belt load | ✅ | `parts/floating_idler.py` |
+| D43 | **Superseded hardware code is kept under `plotzker.legacy`**, outside the current machine: it may import the active code, never the reverse (a test checks it). Kept for possible reuse or a later choice of board at build time | ✅ | `src/plotzker/legacy/` |
 
 ---
 

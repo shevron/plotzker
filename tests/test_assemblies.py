@@ -25,7 +25,6 @@ from plotzker.assemblies.psu_mount import (
 from plotzker.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_parts
 from plotzker.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotzker.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
-from plotzker.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
 from plotzker.hardware import C14_INLET_SPEC, xt60_female, y_shaft
 from plotzker.params import BEAM, CARRIAGE, FRAME, X_DRIVE, Y_AXIS
 from plotzker.parts.gantry_end_bracket import Side, gantry_end_bracket_local
@@ -49,7 +48,6 @@ def test_assembly_builds(name):
         lambda: gantry_end_local(Side.LEFT),
         lambda: gantry_end_local(Side.RIGHT),
         gantry_fit_check,
-        zrib_mount_fit_check,
         psu_mount_fit_check,
         lambda: y_drive_fit_check(0),
         lambda: y_drive_fit_check(1),
@@ -59,7 +57,6 @@ def test_assembly_builds(name):
         "left gantry end",
         "right gantry end",
         "gantry on the shafts",
-        "ZRIB under the baseboard",
         "PSU beside the baseboard",
         "Y drive, gantry at the front",
         "Y drive, gantry at the back",
@@ -163,15 +160,6 @@ def test_pen_holder_clears_the_carriage(pen_up):
     assert all(volume(item & carriage) < 0.05 for item in pen_holder_assembly(pen_up))
 
 
-def test_zrib_mount_parts_do_not_collide():
-    """Hangers, board, straps and fasteners clear each other (the wood screws sit in the
-    plywood, which is not part of the mount) and the board hangs free of the baseboard."""
-    items = list(zrib_mount_assembly())
-    for i, a in enumerate(items):
-        for b in items[i + 1 :]:
-            assert volume(a & b) < 0.5  # a screw and its nut meet in their facets
-
-
 #: the XT60 is a press fit in the hood: this much of it overlaps the window and pocket
 XT60_PRESS_MM3 = 15
 
@@ -221,7 +209,7 @@ CORNER_IDS = ["front left", "front right", "back left", "back right"]
 
 
 def test_machine_is_connected():
-    """Board, runners, shafts, bed and ZRIB hold together with the gantry and carriage on the
+    """Board, runners, shafts and bed hold together with the gantry and carriage on the
     shafts. The pen holder hangs on the carriage with a printing gap, so it is left out."""
     groups = connected_groups(
         [*baseboard.fixed_assembly(), *moving_parts(0.5, 0.5)],
@@ -246,12 +234,6 @@ def test_bed_posts_clear_the_carriage_path():
     """Nothing of the bed posts rises into the height the carriage and tool head sweep."""
     for item in baseboard.bed():
         assert bounding_box(item)[1][2] < CARRIAGE.bottom_z
-
-
-def test_zrib_mount_fits_between_the_runners():
-    """No part of the ZRIB mount or board touches a runner."""
-    runner_solids = union(*flatten(baseboard.runners()))
-    assert volume(runner_solids & union(*flatten(baseboard.zrib()))) < 1e-6
 
 
 @pytest.mark.parametrize("gantry", [0, 0.5, 1], ids=["gantry front", "gantry middle", "gantry back"])

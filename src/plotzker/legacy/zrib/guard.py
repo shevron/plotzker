@@ -16,7 +16,8 @@ from typing import TYPE_CHECKING
 from cadder.geometry import FN_HOLE
 from pythonscad import cube, cylinder
 
-from plotzker.params import TOL, ZMOUNT
+from plotzker.legacy.zrib.params import ZMOUNT
+from plotzker.params import TOL
 
 if TYPE_CHECKING:
     from pythonscad import Solid

@@ -89,4 +89,4 @@ Primary until 2026-11-25; the full notes (pin map, allocation, drivers) are in t
 - The first motor had its coils on pins 1–3 and 2–4: a likely contributor.
 
 Its board is 95 × 110 mm, 22 mm to the heat sink tops, with 4 × Ø3 holes 80 × 100 mm apart; the
-CAD's controller mount still uses these (T3.32).
+ZRIB mount that uses these is kept in `src/plotzker/legacy/zrib/`.

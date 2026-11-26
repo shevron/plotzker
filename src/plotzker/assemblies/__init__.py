@@ -15,7 +15,6 @@ from plotzker.assemblies import (
     psu_mount,
     skeleton,
     y_drive,
-    zrib_mount,
 )
 from plotzker.types import Side
 
@@ -71,11 +70,6 @@ ASSEMBLIES: dict[str, Assembly] = {
             name="y_drive",
             description="Baseboard, shafts, SK10s, gantry and both Y drives",
             build=y_drive.y_drive_fit_check,
-        ),
-        Assembly(
-            name="zrib_mount",
-            description="The ZRIB mount on a piece of baseboard, upside down",
-            build=zrib_mount.zrib_mount_fit_check,
         ),
     )
 }

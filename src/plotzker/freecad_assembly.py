@@ -114,21 +114,8 @@ def _fixed_parts(components: Components) -> None:
     components.add("bed_steel", bed[1], "base", STEEL)
     components.add("bed_posts", bed[2:], "base", FASTENER)
 
-    zrib = board_assembly.zrib()
-    assert len(zrib) == 25
-    components.add("zrib_hanger_0", zrib[0], "base", PRINTED_PEN)
-    components.add("zrib_hanger_1", zrib[1], "base", PRINTED_PEN)
-    components.add("zrib_board", zrib[2], "base", BOARD)
-    components.add("zrib_guard_0", zrib[13], "base", PRINTED)
-    components.add("zrib_guard_1", zrib[24], "base", PRINTED)
-    components.add(
-        "zrib_fasteners",
-        [s for i, s in enumerate(zrib) if i >= 3 and i not in (13, 24)],
-        "base",
-        FASTENER,
-    )
     n_psu = _psu_parts(components)
-    assert len(items) == 1 + len(runners) + len(shafts) + len(bed) + len(zrib) + n_psu
+    assert len(items) == 1 + len(runners) + len(shafts) + len(bed) + n_psu
 
 
 def _psu_parts(components: Components) -> int:

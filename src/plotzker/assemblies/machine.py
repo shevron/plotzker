@@ -1,5 +1,5 @@
 """The whole machine (T3.7): drilled baseboard with runners, shafts and bed, gantry, Y and X
-drives, carriage and the v1 pen holder, with the ZRIB under the board.
+drives, carriage and the v1 pen holder. The controller under the board waits for its mount (T3.32).
 
 Machine frame (``params``). Used for the overall fit check (travel, clearances, 15 mm media
 under the head) and the renders. Not printable.

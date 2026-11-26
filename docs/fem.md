@@ -17,8 +17,7 @@ plotzker fem-status` (`make fem-status`), `python -m plotzker part NAME [--json]
 | `psu_bracket` | yes | defined, checked (STATUS.md T3.31) |
 | `y_motor_mount_right` | exact mirror image | covered by the left part (`mirror_of`) |
 | `belt_clamp` | carries belt tension through two screws | to decide |
-| `zrib_hanger` | light (board weight) | to decide |
-| `x_endstop_mount`, `loom_anchor`, `loom_rail`, `zrib_guard`, `psu_hood` | no | not structural |
+| `x_endstop_mount`, `loom_anchor`, `loom_rail`, `psu_hood` | no | not structural |
 
 ## Where things are
 

@@ -24,7 +24,6 @@ from plotzker.params import (
     TOL,
     WOOD_SCREW,
     Y_AXIS,
-    ZMOUNT,
 )
 
 if TYPE_CHECKING:
@@ -79,19 +78,7 @@ def board_holes() -> list[Hole]:
             )
     for x, y in BASEBOARD.post_xy:
         holes.append(Hole("Bed posts", x, y, m5_hole_dia, note="M5 stud, head under the board"))
-    holes.append(Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_dia, note="Y loom to the ZRIB; deburr"))
-    for x, y in BASEBOARD.zrib_pilot_xy:
-        holes.append(
-            Hole(
-                "ZRIB hanger screws",
-                x,
-                y,
-                BASEBOARD.pilot_dia,
-                side=SIDE_UNDER,
-                depth=WOOD_SCREW.length - WOOD_SCREW.boss_thickness,
-                note="pilot for a 4 × 25 wood screw, blind: do not break through the top",
-            )
-        )
+    holes.append(Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_dia, note="Y loom to the controller; deburr"))
     for x, y in PSU_MOUNT.pilot_xy:
         holes.append(
             Hole(
@@ -165,15 +152,6 @@ def drilling_svg() -> str:
             "runner 2040 on edge (underside)",
             size=5,
         )
-    zrib_x, zrib_half_v = BASEBOARD.zrib_center, abs(ZMOUNT.plate_v[0])
-    drawing.rect(
-        zrib_x[0] - ZMOUNT.leg_u[1],
-        zrib_x[1] - zrib_half_v,
-        zrib_x[0] + ZMOUNT.leg_u[1],
-        zrib_x[1] + zrib_half_v,
-        dashed,
-        "ZRIB mount (underside)",
-    )
     for x in Y_AXIS.shaft_x:
         drawing.line(x, Y_AXIS.shaft_y0, x, Y_AXIS.shaft_y0 + 700, "#999", 0.4)
         for y in Y_AXIS.sk10_y:

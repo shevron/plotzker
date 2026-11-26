@@ -23,8 +23,6 @@ from plotzker.parts import (
     x_motor_mount,
     y_idler_mount,
     y_motor_mount,
-    zrib_guard,
-    zrib_hanger,
 )
 from plotzker.types import Side
 
@@ -44,19 +42,9 @@ _PLAIN: dict[str, Part] = {
         ),
         Part(name="loom_rail", description="Loom rail segment (×6)", build=loom_rail.loom_rail),
         Part(
-            name="zrib_hanger",
-            description="ZRIB hanger: carries the controller under the baseboard (×2)",
-            build=zrib_hanger.zrib_hanger,
-        ),
-        Part(
             name="psu_hood",
             description="PSU terminal hood with the C14 inlet and the XT60 (×1)",
             build=psu_hood.psu_hood,
-        ),
-        Part(
-            name="zrib_guard",
-            description="ZRIB guard strap under the board's long edges (×2)",
-            build=zrib_guard.zrib_guard,
         ),
     )
 }
@@ -90,8 +78,6 @@ _ORDER = [
     "pen_holder_body",
     "pen_slide",
     "x_carriage",
-    "zrib_hanger",
-    "zrib_guard",
     "psu_bracket",
     "psu_hood",
     "x_motor_mount",

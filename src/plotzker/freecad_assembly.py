@@ -199,10 +199,10 @@ def _gantry_parts(components: Components, gantry_y: float) -> None:
         items = _mirror_x(items, shaft_x) if mirrored else _shift(items, [shaft_x, 0, 0])
         cursor = 0
 
-        def take(index_n: int, items: list[Solid] = items) -> list[Solid]:
+        def take(count: int, items: list[Solid] = items) -> list[Solid]:
             nonlocal cursor
-            chunk = items[cursor : cursor + index_n]
-            cursor += index_n
+            chunk = items[cursor : cursor + count]
+            cursor += count
             return chunk
 
         components.add(f"gantry_bracket_{label}", take(1)[0], "gantry", PRINTED)

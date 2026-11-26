@@ -194,23 +194,8 @@ Open:
   *Done when:* `make check` and `make test` pass; nothing outside `legacy` and its tests imports
   it; `python -m plotzker diff` shows only ZRIB items and their holes gone, and no change to the
   PSU mount or loom.
-- [ ] **T3.34 Readable names** (README §7.5; do after T3.33). The code uses many short names:
-  roughly 63 local names copied from module constants (`p = PULLEY`), about 140 abbreviated
-  dataclass fields (`od`, `hole_d`, `plate_t`), about 250 short parameters and many short locals.
-  Rename to follow the rule, in `cadder`, `plotzker`, tests and docs, one commit per step:
-  1. Remove local copies of constants.
-  2. Add `_SPEC` to the module instances of the `*Spec` classes (`PULLEY` → `PULLEY_SPEC`). The
-     instances in `params.py` of other classes (`PEN`, `FRAME`, `Y_DRIVE`...) keep their names.
-     Update README §7.4 where it names them.
-  3. Spell out dataclass fields (`dia` is allowed for diameter).
-  4. Rename parameters and locals module by module, starting with `photo/measure.py`,
-     `photo/target.py` and `fem/mesh.py`.
-
-  Keep names that belong to a file format or external interface (CPSK, TOML keys, `--json`
-  output, PythonSCAD arguments); ask before changing one.
-
-  *Done when:* `make check` and `make test` pass; `python -m plotzker diff` shows no geometry
-  change; `python -m plotzker fem-status` shows nothing newly stale.
+- [x] **T3.34 Readable names** (2026-11-26, README §7.5): constants used by name, hardware specs
+  suffixed `_SPEC`, abbreviations spelled out. Names in TOML files, `--json`, the CLI and CPSK kept.
 - [ ] **T3.32 Controller mount for the Creality board** (D41). The controller hangers and guards,
   `hardware/zrib.py`, `assemblies/zrib_mount.py`, their holes in the drilling layout, the loom
   run and the PSU's XT60 position (D38) were designed around the ZRIB. Measure the Creality

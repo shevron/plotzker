@@ -75,7 +75,7 @@ M2_5, M3, M4, M5 = _SIZES
 
 
 def metric(size: float) -> MetricSize:
-    """Fastener dimensions for thread size ``m`` (e.g. ``metric(3)``)."""
+    """Fastener dimensions for thread size ``size`` (e.g. ``metric(3)``)."""
     try:
         return METRIC[size]
     except KeyError:

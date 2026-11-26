@@ -594,7 +594,7 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
   (`cadder.handles.set_handles` / `get_handle`) and assemblies place things with `.align(handle)`
   rather than repeating the part's coordinates (D28).
 - **Nut slots pressed in from an edge** (a nut slid in sideways): use
-  `cadder.printing.nut_slot(m, reach, axis, entrance, tol=TOL)`. The nut goes in **flat-first** (a flat faces the pressing
+  `cadder.printing.nut_slot(size, reach, axis, entrance, tol=TOL)`. The nut goes in **flat-first** (a flat faces the pressing
   direction, so a thumb pushes straight onto it instead of rotating a pointy nut), and the
   pocket follows the hex outline at the bottom (flat floor, 60° sloped sides up to the
   corners) so the nut **cannot turn** when the bolt is tightened; above the corners the walls

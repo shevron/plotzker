@@ -46,7 +46,7 @@ class Tolerances:
     nut_wall: float = 2.0  #: plastic that backs a pressed-in nut (takes the thrust or pull)
 
     def bolt_hole_dia(self, size: float) -> float:
-        """Clearance hole for an M``m`` bolt."""
+        """Clearance hole for an M``size`` bolt."""
         return size + self.bolt
 
     def nut_trap_across_flats(self, size: float) -> float:
@@ -66,11 +66,11 @@ class Tolerances:
         return metric(size).head_dia + 2 * self.bolt
 
     def slide_dia(self, dia: float) -> float:
-        """Hole diameter for a sliding fit on a ``d`` mm part."""
+        """Hole diameter for a sliding fit on a ``dia`` mm part."""
         return dia + self.slide
 
     def press_dia(self, dia: float) -> float:
-        """Hole diameter for a press fit on a ``d`` mm part."""
+        """Hole diameter for a press fit on a ``dia`` mm part."""
         return dia + self.press
 
 
@@ -96,7 +96,7 @@ def nut_slot(
     extra_thickness: float = 0,
     tol: Tolerances | None = None,
 ) -> Solid:
-    """Pocket for an M``m`` nut, centered on the nut's center.
+    """Pocket for an M``size`` nut, centered on the nut's center.
 
     ``axis``: the bolt's axis (``"x"``, ``"y"`` or ``"z"``); ``entrance``: the direction the
     nut is pressed in from, as a signed axis (``"+z"``, ``"-x"``...): the pocket's floor lies

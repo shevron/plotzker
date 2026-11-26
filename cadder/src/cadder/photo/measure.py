@@ -344,11 +344,11 @@ def _ransac_circles(
             scored.append((coverage, float(batch_x[k]), float(batch_y[k]), float(batch_radii[k])))
     scored.sort(reverse=True)
     out: list[tuple[float, float, float]] = []
-    for covered, best_x, best_y, radius0 in scored:
+    for covered, best_x, best_y, best_radius in scored:
         if covered < 18:  # less than half a circle
             break
-        if all(math.hypot(best_x - x, best_y - y) > 3 * tol or abs(radius0 - q) > 3 * tol for x, y, q in out):
-            out.append((best_x, best_y, radius0))
+        if all(math.hypot(best_x - x, best_y - y) > 3 * tol or abs(best_radius - q) > 3 * tol for x, y, q in out):
+            out.append((best_x, best_y, best_radius))
         if len(out) >= best:
             break
     return out

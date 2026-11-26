@@ -69,7 +69,7 @@ class SvgDrawing:
         )
 
     def circle(self, x: float, y: float, radius: float, style: str) -> None:
-        """A circle of radius ``r``."""
+        """A circle of radius ``radius``."""
         self.raw(f'<circle cx="{x:g}" cy="{self.y(y):g}" r="{radius:g}" {style}/>')
 
     def crosshair(self, x: float, y: float, half: float = 6, color: str = "#000", width: float = 0.3) -> None:

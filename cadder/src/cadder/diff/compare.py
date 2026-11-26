@@ -155,13 +155,13 @@ def format_report(before: Snapshot, after: Snapshot, changes: list[PartChange], 
 
 def _detail(change: PartChange) -> str:
     if change.status is Status.CHANGED:
-        volume_delta_value, size_change, shift_vector = change.volume_delta, change.size_delta, change.shift
-        assert volume_delta_value is not None and size_change is not None and shift_vector is not None
-        parts = [f"volume {volume_delta_value:+.1f} mm³"]
+        volume_change, size_change, shift = change.volume_delta, change.size_delta, change.shift
+        assert volume_change is not None and size_change is not None and shift is not None
+        parts = [f"volume {volume_change:+.1f} mm³"]
         if any(abs(x) > 1e-3 for x in size_change):
             parts.append("size " + " ".join(f"{x:+.2f}" for x in size_change))
-        if any(abs(x) > 1e-3 for x in shift_vector):
-            parts.append("origin " + " ".join(f"{x:+.2f}" for x in shift_vector))
+        if any(abs(x) > 1e-3 for x in shift):
+            parts.append("origin " + " ".join(f"{x:+.2f}" for x in shift))
         return ", ".join(parts)
     if change.status is Status.ADDED and change.after:
         return f"{change.after.volume:.1f} mm³"

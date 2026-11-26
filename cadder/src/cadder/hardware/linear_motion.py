@@ -84,8 +84,8 @@ SCS10UU_SPEC = Scs10uuSpec()
 def shaft(spec: Shaft, length: float | None = None) -> Solid:
     """A shaft (``length`` overrides the spec's). Origin: start of the shaft on its axis; runs
     along +Y."""
-    length_value = spec.length if length is None else length
-    return cylinder(d=spec.dia, h=length_value, fn=32).rotate([-90, 0, 0]).color("WhiteSmoke")
+    shaft_length = spec.length if length is None else length
+    return cylinder(d=spec.dia, h=shaft_length, fn=32).rotate([-90, 0, 0]).color("WhiteSmoke")
 
 
 def sk10() -> Solid:

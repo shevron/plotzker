@@ -130,7 +130,7 @@ class FloatingRegions:
 
 
 def regions(idler: FloatingIdler) -> FloatingRegions:
-    """The regions of idler ``t``."""
+    """The regions of ``idler``."""
     rear_mid = idler.rear_mid
     axle = (idler.axle_rel, 0.0, idler.axle_z)
     bore_radius = TOL.bolt_hole_dia(idler.axle_screw_size) / 2 + 0.3

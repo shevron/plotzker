@@ -28,7 +28,6 @@ def _on_beam_plane(axle: Matrix) -> Matrix:
 
 def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
     """Carriage, wheels, spacers, axle bolts, X belt clamps and the endstop trigger."""
-    c = CARRIAGE
     wash = metric(5).washer_t
     carriage = x_carriage_installed()
     items = [carriage.color("MediumSeaGreen")]
@@ -38,11 +37,13 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
         wheel_top = _on_beam_plane(axle_top)
         wheel_bottom = _on_beam_plane(axle_bottom)
         items.append(vwheel().align(wheel_top))
-        items.append(shcs(5, AXLE_BOLT_L).align(shift_handle(axle_top, [0, -wash + c.head_recess, 0])))
+        items.append(shcs(5, AXLE_BOLT_L).align(shift_handle(axle_top, [0, -wash + CARRIAGE.head_recess, 0])))
         # bottom wheels on eccentric spacers (the bolt sits ECCENTRIC.offset off the boss axis)
         items.append(vwheel().align(wheel_bottom))
-        items.append(eccentric_spacer(ecc_rot).align(handle([wheel_bottom[0][3], c.plate_back_y, wheel_bottom[2][3]])))
-        items.append(shcs(5, AXLE_BOLT_L).align(shift_handle(axle_bottom, [0, -wash + c.head_recess, 0])))
+        items.append(
+            eccentric_spacer(ecc_rot).align(handle([wheel_bottom[0][3], CARRIAGE.plate_back_y, wheel_bottom[2][3]]))
+        )
+        items.append(shcs(5, AXLE_BOLT_L).align(shift_handle(axle_bottom, [0, -wash + CARRIAGE.head_recess, 0])))
     for mount in get_handles(carriage, "belt_clamps"):
         clamp = belt_clamp()
         items.append(clamp.align(mount, get_handle(clamp, "mount")).color("Gold"))

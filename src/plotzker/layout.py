@@ -50,44 +50,43 @@ class Hole:
 
 def board_holes() -> list[Hole]:
     """Every hole of the baseboard, in the order of the drilling procedure."""
-    bb = BASEBOARD
     m5 = TOL.bolt_hole_d(5)
     holes: list[Hole] = []
     for rail, shaft_x in enumerate(Y_AXIS.shaft_x):
         floating = rail == 1
         for y in Y_AXIS.sk10_y:
-            for dx in bb.sk10_hole_x:
+            for dx in BASEBOARD.sk10_hole_x:
                 holes.append(
                     Hole(
                         f"SK10, {'right (oversized)' if floating else 'left (fixed)'} rail",
                         shaft_x + dx,
                         y,
-                        bb.sk10_float_hole_d if floating else m5,
+                        BASEBOARD.sk10_float_hole_d if floating else m5,
                         note="M5 bolt, nut + washer underneath",
                     )
                 )
-    for ry in bb.runner_y:
-        for x in bb.runner_screw_x:
+    for ry in BASEBOARD.runner_y:
+        for x in BASEBOARD.runner_screw_x:
             holes.append(
                 Hole(
                     "Runner screws",
                     x,
                     ry,
                     m5,
-                    countersink_d=bb.runner_screw_head_d + 2 * TOL.bolt,
+                    countersink_d=BASEBOARD.runner_screw_head_d + 2 * TOL.bolt,
                     note="M5 countersunk into a T-nut in the runner",
                 )
             )
-    for x, y in bb.post_xy:
+    for x, y in BASEBOARD.post_xy:
         holes.append(Hole("Bed posts", x, y, m5, note="M5 stud, head under the board"))
     holes.append(Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_d, note="Y loom to the ZRIB; deburr"))
-    for x, y in bb.zrib_pilot_xy:
+    for x, y in BASEBOARD.zrib_pilot_xy:
         holes.append(
             Hole(
                 "ZRIB hanger screws",
                 x,
                 y,
-                bb.pilot_d,
+                BASEBOARD.pilot_d,
                 side=SIDE_UNDER,
                 depth=WOOD_SCREW.length - WOOD_SCREW.boss_t,
                 note="pilot for a 4 × 25 wood screw, blind: do not break through the top",
@@ -99,7 +98,7 @@ def board_holes() -> list[Hole]:
                 "PSU bracket screws",
                 x,
                 y,
-                bb.pilot_d,
+                BASEBOARD.pilot_d,
                 side=SIDE_UNDER,
                 depth=WOOD_SCREW.length - WOOD_SCREW.boss_t,
                 note="pilot for a 4 × 25 wood screw, blind: do not break through the top",
@@ -139,7 +138,6 @@ def mount_zones() -> dict[str, tuple[float, float, float, float]]:
 def drilling_svg() -> str:
     """The layout as an SVG drawn at 1 : 1 (1 user unit = 1 mm, printed size in mm)."""
     bx, by, _ = FRAME.board_size
-    bb = BASEBOARD
     d = SvgDrawing(bx, by)
     thin = stroke("#000", 0.4)
     dashed = stroke("#06c", 0.4, "6 3")
@@ -151,10 +149,16 @@ def drilling_svg() -> str:
     d.text(fx + 4, fyy + FRAME.bed_size[1] - 6, "bed panel (on the posts)", size=6)
     a3x, a3y = REQ.media_a3
     d.rect((bx - a3x) / 2, (by - a3y) / 2, (bx + a3x) / 2, (by + a3y) / 2, dotted, "A3 sheet")
-    for ry in bb.runner_y:
-        d.rect(bb.runner_x[0], ry - bb.runner_w / 2, bb.runner_x[1], ry + bb.runner_w / 2, dashed)
-        d.text(bb.runner_x[0] + 3, ry - bb.runner_w / 2 - 3, "runner 2040 on edge (underside)", size=5)
-    zc, zr = bb.zrib_center, abs(ZMOUNT.plate_v[0])
+    for ry in BASEBOARD.runner_y:
+        d.rect(
+            BASEBOARD.runner_x[0],
+            ry - BASEBOARD.runner_w / 2,
+            BASEBOARD.runner_x[1],
+            ry + BASEBOARD.runner_w / 2,
+            dashed,
+        )
+        d.text(BASEBOARD.runner_x[0] + 3, ry - BASEBOARD.runner_w / 2 - 3, "runner 2040 on edge (underside)", size=5)
+    zc, zr = BASEBOARD.zrib_center, abs(ZMOUNT.plate_v[0])
     d.rect(
         zc[0] - ZMOUNT.leg_u[1],
         zc[1] - zr,

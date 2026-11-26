@@ -54,80 +54,80 @@ def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> So
 
 def _body() -> Solid:
     """Sleeve column, V-block, yoke and lug before the holes."""
-    p = PEN
-    z0, z1 = p.slide_z0, p.slide_z0 + p.slide_h
-    r = p.sleeve_od / 2
-    column = cylinder(d=p.sleeve_od, h=p.slide_h, fn=FN_HOLE).translate([p.rod_x, p.rod_d_pos, z0]) | _box(
-        p.rod_x - r, p.rod_x + r, p.slide_d0, p.rod_d_pos, z0, z1
+    z0, z1 = PEN.slide_z0, PEN.slide_z0 + PEN.slide_h
+    r = PEN.sleeve_od / 2
+    column = cylinder(d=PEN.sleeve_od, h=PEN.slide_h, fn=FN_HOLE).translate([PEN.rod_x, PEN.rod_d_pos, z0]) | _box(
+        PEN.rod_x - r, PEN.rod_x + r, PEN.slide_d0, PEN.rod_d_pos, z0, z1
     )
-    h = p.block_half_w
+    h = PEN.block_half_w
     v_profile = polygon(
         [
-            [p.pen_x - h, p.slide_d0],
-            [p.pen_x + h, p.slide_d0],
-            [p.pen_x + h, p.apex_d + h],
-            [p.pen_x, p.apex_d],
-            [p.pen_x - h, p.apex_d + h],
+            [PEN.pen_x - h, PEN.slide_d0],
+            [PEN.pen_x + h, PEN.slide_d0],
+            [PEN.pen_x + h, PEN.apex_d + h],
+            [PEN.pen_x, PEN.apex_d],
+            [PEN.pen_x - h, PEN.apex_d + h],
         ]
     )
-    block = linear_extrude(v_profile, height=p.slide_h).translate([0, 0, z0])
-    bar_d0, bar_d1 = p.yoke_bar_d
-    yz0, yz1 = p.yoke_z
-    yoke = _box(p.pen_x - h, p.pen_x + h, bar_d0, bar_d1, yz0, yz1)
+    block = linear_extrude(v_profile, height=PEN.slide_h).translate([0, 0, z0])
+    bar_d0, bar_d1 = PEN.yoke_bar_d
+    yz0, yz1 = PEN.yoke_z
+    yoke = _box(PEN.pen_x - h, PEN.pen_x + h, bar_d0, bar_d1, yz0, yz1)
     for sx in (-1, 1):
-        x_in, x_out = sorted((p.pen_x + sx * p.yoke_in, p.pen_x + sx * h))
-        yoke = yoke | _box(x_in, x_out, p.apex_d + p.yoke_in, bar_d1, yz0, yz1)
-    lug = _box(p.lug_x0, p.rod_x, p.slide_d0, p.slide_d0 + p.lug_t, *p.lug_z)
+        x_in, x_out = sorted((PEN.pen_x + sx * PEN.yoke_in, PEN.pen_x + sx * h))
+        yoke = yoke | _box(x_in, x_out, PEN.apex_d + PEN.yoke_in, bar_d1, yz0, yz1)
+    lug = _box(PEN.lug_x0, PEN.rod_x, PEN.slide_d0, PEN.slide_d0 + PEN.lug_t, *PEN.lug_z)
     return column | block | yoke | lug
 
 
 def _cuts() -> list[Solid]:
     """Sleeve bores with the relief between them, the V-block's pen space, the slot, the
     key groove and the thumbscrew hole with its nut pocket."""
-    p = PEN
-    z0, z1 = p.slide_z0, p.slide_z0 + p.slide_h
-    bore_d = TOL.slide_d(p.rod_d)
+    z0, z1 = PEN.slide_z0, PEN.slide_z0 + PEN.slide_h
+    bore_d = TOL.slide_d(PEN.rod_d)
     relief_d = bore_d + 1.2
 
     def bore(d: float, za: float, zb: float) -> Solid:
-        return linear_extrude(teardrop(d), height=zb - za).translate([p.rod_x, p.rod_d_pos, za])
+        return linear_extrude(teardrop(d), height=zb - za).translate([PEN.rod_x, PEN.rod_d_pos, za])
 
     cuts = [
-        bore(bore_d, z0 - 1, z0 + p.sleeve_len),
-        bore(relief_d, z0 + p.sleeve_len - 0.01, z1 - p.sleeve_len + 0.01),
-        bore(bore_d, z1 - p.sleeve_len, z1 + 1),
+        bore(bore_d, z0 - 1, z0 + PEN.sleeve_len),
+        bore(relief_d, z0 + PEN.sleeve_len - 0.01, z1 - PEN.sleeve_len + 0.01),
+        bore(bore_d, z1 - PEN.sleeve_len, z1 + 1),
     ]
-    slot_x0, slot_x1 = p.slot_x
+    slot_x0, slot_x1 = PEN.slot_x
     cuts.append(
         _box(
             slot_x0,
             slot_x1,
-            p.slide_d0 - 1,
-            p.slide_d0 + p.lug_t + 1,
-            p.slot_ceiling_z - p.pin_travel - p.pin_d - p.slot_extra_h,
-            p.slot_ceiling_z,
+            PEN.slide_d0 - 1,
+            PEN.slide_d0 + PEN.lug_t + 1,
+            PEN.slot_ceiling_z - PEN.pin_travel - PEN.pin_d - PEN.slot_extra_h,
+            PEN.slot_ceiling_z,
         )
     )
     cuts.append(
         _box(
-            p.key_x - TOL.slide_d(p.key_w) / 2,
-            p.key_x + TOL.slide_d(p.key_w) / 2,
-            p.slide_d0 - 1,
-            p.slide_d0 + p.key_h + TOL.gap,
+            PEN.key_x - TOL.slide_d(PEN.key_w) / 2,
+            PEN.key_x + TOL.slide_d(PEN.key_w) / 2,
+            PEN.slide_d0 - 1,
+            PEN.slide_d0 + PEN.key_h + TOL.gap,
             0,
             200,
         )
     )
-    bar_d0, bar_d1 = p.yoke_bar_d
-    zc = sum(p.yoke_z) / 2
+    bar_d0, bar_d1 = PEN.yoke_bar_d
+    zc = sum(PEN.yoke_z) / 2
     cuts.append(
         cylinder(d=TOL.bolt_hole_d(5), h=bar_d1 - bar_d0 + 2, fn=FN_HOLE)
         .rotate([-90, 0, 0])
-        .translate([p.pen_x, bar_d0 - 1, zc])
+        .translate([PEN.pen_x, bar_d0 - 1, zc])
     )
     nut_t = TOL.nut_trap_h(5)
     cuts.append(
-        cylinder(d=TOL.nut_trap_ac(5), h=nut_t + 1, fn=6).rotate([-90, 0, 0]).translate([p.pen_x, bar_d1 - nut_t, zc])
+        cylinder(d=TOL.nut_trap_ac(5), h=nut_t + 1, fn=6)
+        .rotate([-90, 0, 0])
+        .translate([PEN.pen_x, bar_d1 - nut_t, zc])
     )
     return cuts
 

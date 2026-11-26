@@ -1199,8 +1199,7 @@ class XEndstopMount:
     @property
     def plug_top_z(self) -> float:
         """Top of the plug keep-out (bracket-local z)."""
-        e = ENDSTOP
-        return self.board_bottom_z - Y_AXIS.scs_top_z + e.pcb[2] + e.connector[2] + e.plug_clearance
+        return self.board_bottom_z - Y_AXIS.scs_top_z + ENDSTOP.pcb[2] + ENDSTOP.connector[2] + ENDSTOP.plug_clearance
 
     @property
     def plug_x0(self) -> float:
@@ -1973,70 +1972,68 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         X_DRIVE.motor_face_y - NEMA17.shaft_len_min <= X_DRIVE.pulley_hub_y - PULLEY.hub_len,
         "Shortest motor shaft doesn't reach the pulley hub",
     )
-    xi = X_IDLER
     yield (
-        abs(xi.axle_z - (X_BELT.pulley_axis_z - Y_AXIS.scs_top_z)) < 1e-6 and xi.screw_z == xi.axle_z,
+        abs(X_IDLER.axle_z - (X_BELT.pulley_axis_z - Y_AXIS.scs_top_z)) < 1e-6 and X_IDLER.screw_z == X_IDLER.axle_z,
         "X idler's axle or tension screw is off the X belt line",
     )
     yield (
-        xi.z_bottom >= X_ENDSTOP.plug_top_z + 0.3,
+        X_IDLER.z_bottom >= X_ENDSTOP.plug_top_z + 0.3,
         "X idler slider dips into the endstop plug's keep-out",
     )
     yield (
-        xi.tip_len + xi.tip_clear <= xi.tunnel_end - TOL.nut_wall - xi.nut_t + 1e-6,
+        X_IDLER.tip_len + X_IDLER.tip_clear <= X_IDLER.tunnel_end - TOL.nut_wall - X_IDLER.nut_t + 1e-6,
         "X tension screw's tip doesn't fit in the slider's tunnel when tight",
     )
     yield (
-        xi.axle_z - IDLER.flange_d / 2 >= xi.z_bottom + 1,
+        X_IDLER.axle_z - IDLER.flange_d / 2 >= X_IDLER.z_bottom + 1,
         "X idler hits the slider's underside",
     )
     yield (
-        xi.axle_z - xi.z_bottom >= xi.arm_end_r + 1,
+        X_IDLER.axle_z - X_IDLER.z_bottom >= X_IDLER.arm_end_r + 1,
         "X slider's arms don't reach below the axle's end radius",
     )
     yield (
-        xi.slider_s0 + xi.web_t <= xi.wall_end_s
-        and xi.wall_end_s <= X_ENDSTOP.plug_x0 - 0.5
-        and xi.wall_end_s <= X_DRIVE.foot_x0 - 0.5
-        and xi.wall_end_s <= -SCS10UU.hole_pitch_x / 2 - m5.head_d / 2 - 1,
+        X_IDLER.slider_s0 + X_IDLER.web_t <= X_IDLER.wall_end_s
+        and X_IDLER.wall_end_s <= X_ENDSTOP.plug_x0 - 0.5
+        and X_IDLER.wall_end_s <= X_DRIVE.foot_x0 - 0.5
+        and X_IDLER.wall_end_s <= -SCS10UU.hole_pitch_x / 2 - m5.head_d / 2 - 1,
         "X idler tower's walls don't cover the slider's wall or hit the foot or the bolt heads",
     )
     yield (
-        BRACKET.shelf_x <= xi.tower_s0 and BRACKET.shelf_x <= BRACKET.x_out,
+        BRACKET.shelf_x <= X_IDLER.tower_s0 and BRACKET.shelf_x <= BRACKET.x_out,
         "Bracket shelf doesn't reach the X idler tower's outboard face",
     )
-    yd, ye = Y_DRIVE, Y_ENDSTOP
     shaft_left = Y_AXIS.shaft_x[0]
     yield (
-        shaft_left + yd.idler_foot_x0 >= 3 and shaft_left + yd.motor_foot_x0 >= 3,
+        shaft_left + Y_DRIVE.idler_foot_x0 >= 3 and shaft_left + Y_DRIVE.motor_foot_x0 >= 3,
         "Y drive foot hangs over the baseboard edge",
     )
     yield (
-        yd.motor_plate_y[1] <= FRAME.board_size[1],
+        Y_DRIVE.motor_plate_y[1] <= FRAME.board_size[1],
         "Y motor mount hangs over the back of the baseboard",
     )
     yield (
-        yd.motor_plate_y[0] - Y_AXIS.sk10_y[1] - SK10.length / 2 >= yd.motor_gap - 0.01,
+        Y_DRIVE.motor_plate_y[0] - Y_AXIS.sk10_y[1] - SK10.length / 2 >= Y_DRIVE.motor_gap - 0.01,
         "Y motor hits the rear SK10",
     )
     yield (
-        yd.motor_plate_x[1] - NEMA17.shaft_len_min <= yd.pulley_hub_x - PULLEY.hub_len,
+        Y_DRIVE.motor_plate_x[1] - NEMA17.shaft_len_min <= Y_DRIVE.pulley_hub_x - PULLEY.hub_len,
         "Shortest motor shaft doesn't reach the Y pulley hub",
     )
     yield (
-        yd.foot_t <= Y_AXIS.scs_base_z - 0.5,
+        Y_DRIVE.foot_t <= Y_AXIS.scs_base_z - 0.5,
         "Pocket walls would catch the SCS blocks",
     )
     yield (
-        0 < yd.pocket_end_len <= SK10.width,
+        0 < Y_DRIVE.pocket_end_len <= SK10.width,
         "SK10 pocket end wall must lie within the SK10's width",
     )
     yield (
-        yd.front_pocket_y[1] <= yd.gantry_front_y,
+        Y_DRIVE.front_pocket_y[1] <= Y_DRIVE.gantry_front_y,
         "Front pocket reaches into the gantry's travel",
     )
     yield (
-        Y_AXIS.pulley_axis_z - PULLEY.flange_d / 2 >= max(yd.foot_t, WOOD_SCREW.boss_t) + 1,
+        Y_AXIS.pulley_axis_z - PULLEY.flange_d / 2 >= max(Y_DRIVE.foot_t, WOOD_SCREW.boss_t) + 1,
         "Y pulley hits the motor foot or a screw boss",
     )
     yield (
@@ -2044,51 +2041,49 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Y motor body would hit the baseboard",
     )
     yield (
-        ye.board_x0 + ENDSTOP.thickness <= -SK10.body_w / 2 - 1,
+        Y_ENDSTOP.board_x0 + ENDSTOP.thickness <= -SK10.body_w / 2 - 1,
         "Y endstop board (with its connector) hits the front SK10",
     )
     yield (
-        yd.idler_y + yd.idler_slot / 2 + IDLER.flange_d / 2 + 1 <= ye.keepout_y0,
+        Y_DRIVE.idler_y + Y_DRIVE.idler_slot / 2 + IDLER.flange_d / 2 + 1 <= Y_ENDSTOP.keepout_y0,
         "Y idler hits the Y endstop plug keep-out",
     )
     yield (
-        ye.board_front_y + ENDSTOP.rest_protrusion <= yd.gantry_front_y - 1,
+        Y_ENDSTOP.board_front_y + ENDSTOP.rest_protrusion <= Y_DRIVE.gantry_front_y - 1,
         "Y endstop lever reaches the gantry bracket",
     )
     yield (
-        ye.tower_y[1] <= yd.idler_foot_y[1] and ye.tower_y[0] >= 0,
+        Y_ENDSTOP.tower_y[1] <= Y_DRIVE.idler_foot_y[1] and Y_ENDSTOP.tower_y[0] >= 0,
         "Y endstop tower outside the idler foot or the baseboard",
     )
-    yi = Y_IDLER
     yield (
-        abs(yi.axle_z - Y_AXIS.pulley_axis_z) < 1e-6 and yi.screw_z == yi.axle_z,
+        abs(Y_IDLER.axle_z - Y_AXIS.pulley_axis_z) < 1e-6 and Y_IDLER.screw_z == Y_IDLER.axle_z,
         "Y idler's axle or tension screw is off the Y belt line",
     )
     yield (
-        yi.tip_len + yi.tip_clear <= yi.tunnel_end - TOL.nut_wall - yi.nut_t + 1e-6,
+        Y_IDLER.tip_len + Y_IDLER.tip_clear <= Y_IDLER.tunnel_end - TOL.nut_wall - Y_IDLER.nut_t + 1e-6,
         "Y tension screw's tip doesn't fit in the slider's tunnel when tight",
     )
     yield (
-        yi.axle_z - IDLER.flange_d / 2 >= yi.z_bottom + 1 and yi.z_bottom >= yd.foot_t + 1,
+        Y_IDLER.axle_z - IDLER.flange_d / 2 >= Y_IDLER.z_bottom + 1 and Y_IDLER.z_bottom >= Y_DRIVE.foot_t + 1,
         "Y idler hits the slider's underside, or the slider hits the foot",
     )
     yield (
-        yi.slider_s0 + yi.web_t <= yi.wall_end_s
-        and yi.tower_s0 >= 3
-        and yd.idler_y + yd.idler_slot / 2 + yi.arm_end_r <= ye.keepout_y0,
+        Y_IDLER.slider_s0 + Y_IDLER.web_t <= Y_IDLER.wall_end_s
+        and Y_IDLER.tower_s0 >= 3
+        and Y_DRIVE.idler_y + Y_DRIVE.idler_slot / 2 + Y_IDLER.arm_end_r <= Y_ENDSTOP.keepout_y0,
         "Y idler tower: the walls don't cover the slider's wall, it is off the baseboard, or "
         "the slider reaches the endstop plug's keep-out",
     )
     pen_lo, pen_hi = REQ.pen_d_range
     # --- ZRIB mount (T3.7)
-    zm = ZMOUNT
     yield (
-        -zm.strap_bottom_z <= 40,
-        f"ZRIB mount hangs {-zm.strap_bottom_z:g} mm below the baseboard (2040 on edge: 40)",
+        -ZMOUNT.strap_bottom_z <= 40,
+        f"ZRIB mount hangs {-ZMOUNT.strap_bottom_z:g} mm below the baseboard (2040 on edge: 40)",
     )
     yield (
-        zm.wood_screw_u + zm.boss_d / 2 <= zm.leg_u[0] - 1
-        and zm.wood_screw_u - WOOD_SCREW.head_d / 2 >= ZRIB.width / 2,
+        ZMOUNT.wood_screw_u + ZMOUNT.boss_d / 2 <= ZMOUNT.leg_u[0] - 1
+        and ZMOUNT.wood_screw_u - WOOD_SCREW.head_d / 2 >= ZRIB.width / 2,
         "ZRIB mount wood screw boss hits the leg, or its head is not reachable beside the board",
     )
     yield (
@@ -2096,117 +2091,121 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "ZRIB mount wood screws would reach through the baseboard",
     )
     yield (
-        WOOD_SCREW.boss_t > zm.rail_t and -zm.board_z - WOOD_SCREW.boss_t >= 1,
+        WOOD_SCREW.boss_t > ZMOUNT.rail_t and -ZMOUNT.board_z - WOOD_SCREW.boss_t >= 1,
         "ZRIB mount boss hits the board",
     )
     # --- PSU mount (T3.31)
-    pm = PSU_MOUNT
     table_z = -FRAME.board_size[2] - BASEBOARD.runner_h
     yield (
-        3 <= pm.psu_screw_depth <= PSU.max_screw_depth and 2.5 <= pm.hood_screw_depth <= PSU.max_screw_depth,
-        f"PSU screws enter the case {pm.psu_screw_depth:g} (bracket) and "
-        f"{pm.hood_screw_depth:g} mm (hood): too shallow to hold, or deeper than "
+        3 <= PSU_MOUNT.psu_screw_depth <= PSU.max_screw_depth
+        and 2.5 <= PSU_MOUNT.hood_screw_depth <= PSU.max_screw_depth,
+        f"PSU screws enter the case {PSU_MOUNT.psu_screw_depth:g} (bracket) and "
+        f"{PSU_MOUNT.hood_screw_depth:g} mm (hood): too shallow to hold, or deeper than "
         f"{PSU.max_screw_depth:g}",
     )
     yield (
-        pm.low_z - pm.clearance - pm.wall_t - table_z >= 5,
+        PSU_MOUNT.low_z - PSU_MOUNT.clearance - PSU_MOUNT.wall_t - table_z >= 5,
         "The PSU's hood hangs less than 5 mm above the table",
     )
     yield (
-        PSU.bottom_hole_x[1] + pm.counterbore[0] / 2 <= pm.board_x[1]
-        and pm.board_x[0] > PSU.bottom_hole_x[0] + pm.counterbore[0] / 2,
+        PSU.bottom_hole_x[1] + PSU_MOUNT.counterbore[0] / 2 <= PSU_MOUNT.board_x[1]
+        and PSU_MOUNT.board_x[0] > PSU.bottom_hole_x[0] + PSU_MOUNT.counterbore[0] / 2,
         "PSU bracket: the lower M4's counterbore runs into the flange, or the upper one is not above the board",
     )
     yield (
-        pm.origin[0] + pm.edge_z - pm.flange_reach > BASEBOARD.runner_x[1] + 5
+        PSU_MOUNT.origin[0] + PSU_MOUNT.edge_z - PSU_MOUNT.flange_reach > BASEBOARD.runner_x[1] + 5
         and all(
             math.hypot(x - LOOM.hole_x, y - LOOM.hole_y) >= (LOOM.hole_d + WOOD_SCREW.boss_d) / 2 + 2
-            for x, y in pm.pilot_xy
+            for x, y in PSU_MOUNT.pilot_xy
         ),
         "PSU bracket flange reaches a runner, or a wood screw lands on the loom hole",
     )
     yield (
-        pm.origin[0] + pm.brace_z - (LOOM.hole_x + LOOM.d / 2) >= 1.5,
+        PSU_MOUNT.origin[0] + PSU_MOUNT.brace_z - (LOOM.hole_x + LOOM.d / 2) >= 1.5,
         "PSU bracket: the brace over the board's top comes within 1.5 mm of the Y loom",
     )
     cl, cs = C14_INLET.cutout  # long side along x, short along y
     flange_l, flange_w = C14_INLET.flange  # across the flats (x), across the points (y)
-    ox0, ix0, ix1, ox1 = pm.hood_x
+    ox0, ix0, ix1, ox1 = PSU_MOUNT.hood_x
     yield (
-        ix0 + 0.5 <= pm.inlet_x - cl / 2
-        and pm.inlet_x + cl / 2 <= ix1 - 0.5
-        and -pm.depth + pm.wall_t + 0.5 <= pm.inlet_y - cs / 2
-        and pm.inlet_y + cs / 2 <= -0.5,
+        ix0 + 0.5 <= PSU_MOUNT.inlet_x - cl / 2
+        and PSU_MOUNT.inlet_x + cl / 2 <= ix1 - 0.5
+        and -PSU_MOUNT.depth + PSU_MOUNT.wall_t + 0.5 <= PSU_MOUNT.inlet_y - cs / 2
+        and PSU_MOUNT.inlet_y + cs / 2 <= -0.5,
         "PSU hood: the inlet's cutout is not inside the hood in front of the PSU",
     )
     yield (
-        ox0 <= pm.inlet_x - flange_l / 2
-        and pm.inlet_x + flange_l / 2 <= ox1
-        and -pm.depth <= pm.inlet_y - flange_w / 2
-        and pm.inlet_y + flange_w / 2 <= pm.sleeve_fan,
+        ox0 <= PSU_MOUNT.inlet_x - flange_l / 2
+        and PSU_MOUNT.inlet_x + flange_l / 2 <= ox1
+        and -PSU_MOUNT.depth <= PSU_MOUNT.inlet_y - flange_w / 2
+        and PSU_MOUNT.inlet_y + flange_w / 2 <= PSU_MOUNT.sleeve_fan,
         "PSU hood: the inlet's flange runs off the outer wall",
     )
-    pocket_x, pocket_y = pm.xt60_pocket
-    window_x, window_y = pm.xt60_window
-    xt_x0 = pm.xt60_x - pocket_x / 2 - pm.wall_t
-    xt_x1 = pm.xt60_x + pocket_x / 2 + pm.wall_t
-    xt_y0 = pm.xt60_y - pocket_y / 2 - pm.wall_t - pm.xt60_sleeve
-    xt_y1 = pm.xt60_y + pocket_y / 2 + pm.xt60_pocket_relief + pm.wall_t
+    pocket_x, pocket_y = PSU_MOUNT.xt60_pocket
+    window_x, window_y = PSU_MOUNT.xt60_window
+    xt_x0 = PSU_MOUNT.xt60_x - pocket_x / 2 - PSU_MOUNT.wall_t
+    xt_x1 = PSU_MOUNT.xt60_x + pocket_x / 2 + PSU_MOUNT.wall_t
+    xt_y0 = PSU_MOUNT.xt60_y - pocket_y / 2 - PSU_MOUNT.wall_t - PSU_MOUNT.xt60_sleeve
+    xt_y1 = PSU_MOUNT.xt60_y + pocket_y / 2 + PSU_MOUNT.xt60_pocket_relief + PSU_MOUNT.wall_t
     yield (
-        pm.inlet_x + cl / 2 + 2 <= xt_x0,
+        PSU_MOUNT.inlet_x + cl / 2 + 2 <= xt_x0,
         "PSU hood: the inlet is over the XT60, which reaches far into the hood",
     )
     yield (
-        ix0 <= xt_x0 and xt_x1 <= ix1 and -pm.depth + pm.wall_t <= xt_y0 and xt_y1 <= -(PSU.crimp_reach + 2),
+        ix0 <= xt_x0
+        and xt_x1 <= ix1
+        and -PSU_MOUNT.depth + PSU_MOUNT.wall_t <= xt_y0
+        and xt_y1 <= -(PSU.crimp_reach + 2),
         "PSU hood: the XT60's sleeve runs into a wall or the wire lugs",
     )
     yield (
-        (XT60.collar[0] - window_y) / 2 - pm.xt60_window_relief >= 0.4
+        (XT60.collar[0] - window_y) / 2 - PSU_MOUNT.xt60_window_relief >= 0.4
         and (XT60.collar[1] - window_x) / 2 >= 0.5
-        and pm.xt60_sleeve > 0
-        and pm.xt60_grip <= XT60.collar_len - 0.5,
+        and PSU_MOUNT.xt60_sleeve > 0
+        and PSU_MOUNT.xt60_grip <= XT60.collar_len - 0.5,
         "PSU hood: the XT60's collar does not stop on the lip, or the pocket reaches its rim",
     )
     yield (
-        pm.xt60_x - XT60.front[1] / 2 - pm.xt60_plug_margin >= pm.board_x[1] + 2
-        and pm.low_z - pm.clearance - pm.wall_t - table_z >= 0,  # the plug clears the table
+        PSU_MOUNT.xt60_x - XT60.front[1] / 2 - PSU_MOUNT.xt60_plug_margin >= PSU_MOUNT.board_x[1] + 2
+        and PSU_MOUNT.low_z - PSU_MOUNT.clearance - PSU_MOUNT.wall_t - table_z >= 0,  # the plug clears the table
         "PSU hood: the XT60's plug would hit the board's underside",
     )
     yield (
-        pm.sleeve_bottom <= PSU.hole_y[0] - pm.bracket_w / 2 - 1
-        and PSU.hole_y[0] + 5 <= pm.sleeve_side < PSU.selector_y[0]
-        and pm.sleeve_fan >= PSU.cover_setback + 3,
+        PSU_MOUNT.sleeve_bottom <= PSU.hole_y[0] - PSU_MOUNT.bracket_w / 2 - 1
+        and PSU.hole_y[0] + 5 <= PSU_MOUNT.sleeve_side < PSU.selector_y[0]
+        and PSU_MOUNT.sleeve_fan >= PSU.cover_setback + 3,
         "PSU hood sleeves: one reaches a bracket or the 115/230 V selector, misses the M4 "
         "holes, or leaves the open strip in front of the cover",
     )
     # --- baseboard layout (T3.7)
-    bb = BASEBOARD
     bx, by, _ = FRAME.board_size
     yield (
-        bb.runner_x[0] >= 0
-        and bb.runner_x[1] <= bx
-        and bb.runner_y[0] - bb.runner_w / 2 >= 0
-        and bb.runner_y[2] + bb.runner_w / 2 <= by,
+        BASEBOARD.runner_x[0] >= 0
+        and BASEBOARD.runner_x[1] <= bx
+        and BASEBOARD.runner_y[0] - BASEBOARD.runner_w / 2 >= 0
+        and BASEBOARD.runner_y[2] + BASEBOARD.runner_w / 2 <= by,
         "A runner hangs over the baseboard edge",
     )
-    zrib_half_v = abs(zm.plate_v[0])
+    zrib_half_v = abs(ZMOUNT.plate_v[0])
     yield (
-        bb.runner_pitch / 2 - bb.runner_w / 2 - zrib_half_v >= 5 and bb.zrib_center[0] + zm.leg_u[1] <= bx,
+        BASEBOARD.runner_pitch / 2 - BASEBOARD.runner_w / 2 - zrib_half_v >= 5
+        and BASEBOARD.zrib_center[0] + ZMOUNT.leg_u[1] <= bx,
         "The ZRIB mount does not fit between the runners or on the baseboard",
     )
-    zx0, zx1 = bb.zrib_center[0] - zm.leg_u[1], bb.zrib_center[0] + zm.leg_u[1]
-    zy0, zy1 = bb.zrib_center[1] - zrib_half_v, bb.zrib_center[1] + zrib_half_v
+    zx0, zx1 = BASEBOARD.zrib_center[0] - ZMOUNT.leg_u[1], BASEBOARD.zrib_center[0] + ZMOUNT.leg_u[1]
+    zy0, zy1 = BASEBOARD.zrib_center[1] - zrib_half_v, BASEBOARD.zrib_center[1] + zrib_half_v
     head_r = m5.washer_od / 2 + 2  #: bolt head and washer under the board, plus room
     yield (
-        all(abs(y - ry) >= bb.runner_w / 2 + head_r for _, y in bb.post_xy for ry in bb.runner_y),
+        all(abs(y - ry) >= BASEBOARD.runner_w / 2 + head_r for _, y in BASEBOARD.post_xy for ry in BASEBOARD.runner_y),
         "A bed post bolt head sits under a runner",
     )
     yield (
-        not any(zx0 - head_r < x < zx1 + head_r and zy0 - head_r < y < zy1 + head_r for x, y in bb.post_xy),
+        not any(zx0 - head_r < x < zx1 + head_r and zy0 - head_r < y < zy1 + head_r for x, y in BASEBOARD.post_xy),
         "A bed post bolt head hits the ZRIB mount",
     )
     yield (
-        FRAME.steel_margin >= bb.post_inset + m5.washer_od / 2 + 1 and bb.post_inset >= m5.washer_od / 2 + 3,
+        FRAME.steel_margin >= BASEBOARD.post_inset + m5.washer_od / 2 + 1
+        and BASEBOARD.post_inset >= m5.washer_od / 2 + 3,
         "The bed post nuts hit the steel sheet or hang over the panel edge",
     )
     yield (
@@ -2214,14 +2213,14 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "The steel sheet is smaller than A3",
     )
     yield (
-        bb.post_stud_z + bb.post_bolt_len >= bb.nut_top_z + 1
-        and FRAME.bed_adjust_gap - bb.post_adjust >= 1
-        and bb.spring_len >= FRAME.bed_adjust_gap + bb.post_adjust
-        and bb.spring_id >= m5.m + 0.5,
+        BASEBOARD.post_stud_z + BASEBOARD.post_bolt_len >= BASEBOARD.nut_top_z + 1
+        and FRAME.bed_adjust_gap - BASEBOARD.post_adjust >= 1
+        and BASEBOARD.spring_len >= FRAME.bed_adjust_gap + BASEBOARD.post_adjust
+        and BASEBOARD.spring_id >= m5.m + 0.5,
         "Bed post: stud too short, panel too low, or spring too short at the highest setting",
     )
     yield (
-        bb.nut_top_z + 1 <= CARRIAGE.bottom_z,
+        BASEBOARD.nut_top_z + 1 <= CARRIAGE.bottom_z,
         "Bed post nuts reach into the carriage's path",
     )
     pen_x_lo = CARRIAGE.center_x_range[0] + PEN.pen_x
@@ -2238,15 +2237,14 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         f"The pen cannot reach all of A3 along Y ({pen_y_lo:g}…{pen_y_hi:g})",
     )
     # --- Y loom (T3.8)
-    lm = LOOM
-    yield lm.fold_width >= 2 * lm.bend_r, "The loom fold is tighter than the loom's bend radius"
+    yield LOOM.fold_width >= 2 * LOOM.bend_r, "The loom fold is tighter than the loom's bend radius"
     yield (
-        lm.moving_x - lm.d / 2 >= lm.rail_x + 1 and bx - (lm.hole_x + max(lm.d, lm.hole_d) / 2) >= 3,
+        LOOM.moving_x - LOOM.d / 2 >= LOOM.rail_x + 1 and bx - (LOOM.hole_x + max(LOOM.d, LOOM.hole_d) / 2) >= 3,
         "The loom legs don't fit between the rail and the baseboard edge",
     )
     yield (
-        lm.rail_starts[-1] + lm.rail_len <= Y_DRIVE.motor_plate_y[0] - 3
-        and lm.apex_y + lm.d / 2 + 1 <= Y_DRIVE.motor_plate_y[0],
+        LOOM.rail_starts[-1] + LOOM.rail_len <= Y_DRIVE.motor_plate_y[0] - 3
+        and LOOM.apex_y + LOOM.d / 2 + 1 <= Y_DRIVE.motor_plate_y[0],
         "The loom fold or its rails reach the right Y motor mount",
     )
     yield (
@@ -2254,42 +2252,41 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "The Y belt's lower run hits a loom rail foot's screw boss",
     )
     yield (
-        BRACKET.face_y[1] < lm.anchor_y[0]
-        and lm.anchor_y[1] <= BRACKET.len_y / 2 - CLAMP.length
-        and lm.anchor_x[0] >= BRACKET.x_out,
+        BRACKET.face_y[1] < LOOM.anchor_y[0]
+        and LOOM.anchor_y[1] <= BRACKET.len_y / 2 - CLAMP.length
+        and LOOM.anchor_x[0] >= BRACKET.x_out,
         "The loom anchor block is not within the free area of the bracket's base",
     )
     # --- pen holder (T3.6)
-    pn = PEN
-    yield pn.lift >= REQ.pen_lift_min, "Pen lift stroke below the requirement"
-    yield pn.float_travel >= REQ.pen_float_min, "Pen float below the requirement"
+    yield PEN.lift >= REQ.pen_lift_min, "Pen lift stroke below the requirement"
+    yield PEN.float_travel >= REQ.pen_float_min, "Pen float below the requirement"
     yield (
-        pn.pen_axis_d(pen_hi) <= REQ.pen_axis_max_offset,
-        f"Largest pen axis {pn.pen_axis_d(pen_hi):g} mm from the carriage face",
+        PEN.pen_axis_d(pen_hi) <= REQ.pen_axis_max_offset,
+        f"Largest pen axis {PEN.pen_axis_d(pen_hi):g} mm from the carriage face",
     )
     yield (
-        pn.pen_x + pn.block_half_w <= TOOL_PLATE.w / 2 and pn.wall_x[0] >= -TOOL_PLATE.w / 2,
+        PEN.pen_x + PEN.block_half_w <= TOOL_PLATE.w / 2 and PEN.wall_x[0] >= -TOOL_PLATE.w / 2,
         "Pen holder wider than the tool plate",
     )
     yield (
-        pn.lower_arm_bottom >= TOOL_PLATE.bottom_z,
+        PEN.lower_arm_bottom >= TOOL_PLATE.bottom_z,
         "Lower rod arm below the carriage bottom (media clearance)",
     )
     for pen_d in (pen_lo, pen_hi):
-        reach = math.hypot(pn.pen_x - pn.rod_x, pn.pen_axis_d(pen_d) - pn.rod_d_pos)
+        reach = math.hypot(PEN.pen_x - PEN.rod_x, PEN.pen_axis_d(pen_d) - PEN.rod_d_pos)
         yield (
-            reach >= max(pn.sleeve_od, pn.arm_w) / 2 + pen_d / 2 + 0.3,
+            reach >= max(PEN.sleeve_od, PEN.arm_w) / 2 + pen_d / 2 + 0.3,
             f"A {pen_d:g} mm pen hits the rod sleeve or arm",
         )
-    yield pn.yoke_in >= pen_hi / 2 + 1, "Yoke arms too close to the largest pen"
+    yield PEN.yoke_in >= pen_hi / 2 + 1, "Yoke arms too close to the largest pen"
     yield (
-        pn.servo_x + FT90M.horn_len <= pn.rod_x - pn.sleeve_od / 2 + 0.3,
+        PEN.servo_x + FT90M.horn_len <= PEN.rod_x - PEN.sleeve_od / 2 + 0.3,
         "Servo horn tip reaches the pen slide column",
     )
-    yield pn.horn_swing_deg <= 40, "Pen-lift linkage needs too large a horn swing"
-    groove = (pn.key_x - TOL.slide_d(pn.key_w) / 2, pn.key_x + TOL.slide_d(pn.key_w) / 2)
+    yield PEN.horn_swing_deg <= 40, "Pen-lift linkage needs too large a horn swing"
+    groove = (PEN.key_x - TOL.slide_d(PEN.key_w) / 2, PEN.key_x + TOL.slide_d(PEN.key_w) / 2)
     yield (
-        groove[0] - pn.lug_x0 >= TOL.min_wall and pn.slot_x[0] - groove[1] >= 1.5,
+        groove[0] - PEN.lug_x0 >= TOL.min_wall and PEN.slot_x[0] - groove[1] >= 1.5,
         "Key groove too close to the lug edge or the pin slot",
     )
 

@@ -28,12 +28,11 @@ def placed(item: Solid) -> Solid:
 
 def brackets_local() -> list[Solid]:
     """Both brackets with their screws (PSU frame)."""
-    m = PSU_MOUNT
     items: list[Solid] = []
     for y in PSU.hole_y:
         bracket = psu_bracket_installed().translate([0, y, 0])
         items.append(bracket.color("SteelBlue"))
-        items += [shcs(PSU.hole_m, m.psu_screw_len).align(h) for h in get_handles(bracket, "psu_screws")]
+        items += [shcs(PSU.hole_m, PSU_MOUNT.psu_screw_len).align(h) for h in get_handles(bracket, "psu_screws")]
         items += [
             countersunk_screw(WOOD_SCREW.m, WOOD_SCREW.length, WOOD_SCREW.head_d).align(h)
             for h in get_handles(bracket, "wood_screws")
@@ -43,7 +42,6 @@ def brackets_local() -> list[Solid]:
 
 def hood_local() -> list[Solid]:
     """The hood with the inlet, the XT60 and the screws (PSU frame)."""
-    m = PSU_MOUNT
     hood = psu_hood_installed()
     items: list[Solid] = [hood.color("Orange")]
     items.append(c14_inlet().align(get_handle(hood, "inlet")))
@@ -51,7 +49,7 @@ def hood_local() -> list[Solid]:
     items += [hex_nut(3).align(h) for h in get_handles(hood, "inlet_nuts")]
     items.append(xt60_female().align(get_handle(hood, "xt60")))
     items += [
-        shcs(PSU.hole_m, m.hood_screw_len).align(h)
+        shcs(PSU.hole_m, PSU_MOUNT.hood_screw_len).align(h)
         for name in ("label_screws", "switch_screws")
         for h in get_handles(hood, name)
     ]

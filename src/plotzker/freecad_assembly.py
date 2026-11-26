@@ -312,30 +312,27 @@ def _carriage_parts(ex: Components, gantry_y: float, carriage_x: float) -> None:
 def _axes(gantry_y: float, carriage_x: float) -> dict[str, Any]:
     """Joint frames: ``origin`` in the machine frame at the reference pose, ``dir`` the axis."""
     left_x, right_x = Y_AXIS.shaft_x
-    d = Y_DRIVE
     belt_x = Y_AXIS.belt_x
-    c = CARRIAGE
-    p = PEN
     beam_z = BEAM.bottom_z + BEAM.height / 2
-    horn_y = carriage_x, gantry_y + c.plate_front_y - p.horn_d[0]
+    horn_y = carriage_x, gantry_y + CARRIAGE.plate_front_y - PEN.horn_d[0]
     axes: dict[str, Any] = {
         "y_shaft_L": {"origin": [left_x, gantry_y, Y_AXIS.shaft_z], "dir": [0, 1, 0]},
         "y_shaft_R": {"origin": [right_x, gantry_y, Y_AXIS.shaft_z], "dir": [0, 1, 0]},
         "beam": {"origin": [carriage_x, gantry_y, beam_z], "dir": [1, 0, 0]},
         "y_idler_L": {
-            "origin": [left_x + belt_x, d.idler_y, Y_AXIS.pulley_axis_z],
+            "origin": [left_x + belt_x, Y_DRIVE.idler_y, Y_AXIS.pulley_axis_z],
             "dir": [1, 0, 0],
         },
         "y_idler_R": {
-            "origin": [right_x - belt_x, d.idler_y, Y_AXIS.pulley_axis_z],
+            "origin": [right_x - belt_x, Y_DRIVE.idler_y, Y_AXIS.pulley_axis_z],
             "dir": [1, 0, 0],
         },
         "y_pulley_L": {
-            "origin": [left_x + belt_x, d.motor_y, Y_AXIS.pulley_axis_z],
+            "origin": [left_x + belt_x, Y_DRIVE.motor_y, Y_AXIS.pulley_axis_z],
             "dir": [1, 0, 0],
         },
         "y_pulley_R": {
-            "origin": [right_x - belt_x, d.motor_y, Y_AXIS.pulley_axis_z],
+            "origin": [right_x - belt_x, Y_DRIVE.motor_y, Y_AXIS.pulley_axis_z],
             "dir": [1, 0, 0],
         },
         "x_idler": {
@@ -346,15 +343,15 @@ def _axes(gantry_y: float, carriage_x: float) -> dict[str, Any]:
             "origin": [right_x - X_DRIVE.motor_x, gantry_y + X_BELT.y, X_BELT.pulley_axis_z],
             "dir": [0, 1, 0],
         },
-        "pen_horn": {"origin": [carriage_x + p.servo_x, horn_y[1], p.shaft_z], "dir": [0, 1, 0]},
+        "pen_horn": {"origin": [carriage_x + PEN.servo_x, horn_y[1], PEN.shaft_z], "dir": [0, 1, 0]},
         "pen_slide": {
-            "origin": [carriage_x + p.pen_x, gantry_y + c.plate_front_y, 0],
+            "origin": [carriage_x + PEN.pen_x, gantry_y + CARRIAGE.plate_front_y, 0],
             "dir": [0, 0, 1],
         },
     }
     for k, label in enumerate("LR"):
         sx = -1 if k == 0 else 1
-        for z, pos in zip(c.wheel_z, ("top", "bottom"), strict=True):
+        for z, pos in zip(CARRIAGE.wheel_z, ("top", "bottom"), strict=True):
             axes[f"vwheel_{label}_{pos}"] = {
                 "origin": [carriage_x + sx * WHEEL_X, gantry_y, z],
                 "dir": [0, 1, 0],

@@ -69,26 +69,27 @@ PULLEY: Matrix = handle([Y_DRIVE.pulley_hub_x, Y_DRIVE.motor_y, AXIS_Z], [0, -90
 
 def y_motor_mount_installed() -> Solid:
     """The mount in the left side frame."""
-    d = Y_DRIVE
-    x0, x1 = d.motor_plate_x
-    y0, y1 = d.motor_plate_y
-    foot = cube([x1 - d.motor_foot_x0, y1 - y0, d.foot_t]).translate([d.motor_foot_x0, y0, 0])
-    pocket_frame, pocket_cut = sk10_pocket(PocketEnd.REAR, d.motor_foot_x0)
-    plate = cube([x1 - x0, y1 - y0, d.motor_top_z]).translate([x0, y0, 0])
+    x0, x1 = Y_DRIVE.motor_plate_x
+    y0, y1 = Y_DRIVE.motor_plate_y
+    foot = cube([x1 - Y_DRIVE.motor_foot_x0, y1 - y0, Y_DRIVE.foot_t]).translate([Y_DRIVE.motor_foot_x0, y0, 0])
+    pocket_frame, pocket_cut = sk10_pocket(PocketEnd.REAR, Y_DRIVE.motor_foot_x0)
+    plate = cube([x1 - x0, y1 - y0, Y_DRIVE.motor_top_z]).translate([x0, y0, 0])
     gussets = [
         hull(
-            cube([d.gusset_len, d.gusset_t, EPS]).translate([x0 - d.gusset_len, y, d.foot_t - EPS]),
-            cube([EPS, d.gusset_t, d.gusset_len]).translate([x0 - EPS, y, d.foot_t]),
+            cube([Y_DRIVE.gusset_len, Y_DRIVE.gusset_t, EPS]).translate(
+                [x0 - Y_DRIVE.gusset_len, y, Y_DRIVE.foot_t - EPS]
+            ),
+            cube([EPS, Y_DRIVE.gusset_t, Y_DRIVE.gusset_len]).translate([x0 - EPS, y, Y_DRIVE.foot_t]),
         )
-        for y in (y0, y1 - d.gusset_t)
+        for y in (y0, y1 - Y_DRIVE.gusset_t)
     ]
     plate_cx = (x0 + x1) / 2
-    boss = teardrop_x(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate([plate_cx, d.motor_y, AXIS_Z])
+    boss = teardrop_x(NEMA17.boss_d + 0.4, Y_DRIVE.motor_plate_t + 2).translate([plate_cx, Y_DRIVE.motor_y, AXIS_Z])
     screws = [
-        teardrop_x(TOL.bolt_hole_d(3), d.motor_plate_t + 2).translate([plate_cx, screw[1][3], screw[2][3]])
+        teardrop_x(TOL.bolt_hole_d(3), Y_DRIVE.motor_plate_t + 2).translate([plate_cx, screw[1][3], screw[2][3]])
         for screw in MOTOR_SCREWS
     ]
-    foot_x = d.motor_foot_x0 + WOOD_SCREW.boss_d / 2
+    foot_x = Y_DRIVE.motor_foot_x0 + WOOD_SCREW.boss_d / 2
     screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
     bosses = [wood_screw_boss(foot_x, y) for y in screw_ys]
     holes = [wood_screw_hole(foot_x, y) for y in screw_ys]

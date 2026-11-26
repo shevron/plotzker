@@ -115,24 +115,29 @@ def _tower() -> Solid:
 
 def _body(side: Side) -> Solid:
     """Bracket solid before the holes and cutouts."""
-    b = BRACKET
-    base = cube([b.x_in - b.x_out, b.len_y, b.base_t]).translate([b.x_out, -b.len_y / 2, 0])
+    base = cube([BRACKET.x_in - BRACKET.x_out, BRACKET.len_y, BRACKET.base_t]).translate(
+        [BRACKET.x_out, -BRACKET.len_y / 2, 0]
+    )
     if side is Side.LEFT:
         # shelf under the X idler's tower (T3.19, T3.22)
-        y0, y1 = b.shelf_y
-        base = base | cube([b.x_out - b.shelf_x + EPS, y1 - y0, b.base_t]).translate([b.shelf_x, y0, 0])
+        y0, y1 = BRACKET.shelf_y
+        base = base | cube([BRACKET.x_out - BRACKET.shelf_x + EPS, y1 - y0, BRACKET.base_t]).translate(
+            [BRACKET.shelf_x, y0, 0]
+        )
         base = base | _tower()
-    face = cube([b.face_t, b.face_y[1] - b.face_y[0], FACE_TOP]).translate([FACE_OUT_X, b.face_y[0], 0])
+    face = cube([BRACKET.face_t, BRACKET.face_y[1] - BRACKET.face_y[0], FACE_TOP]).translate(
+        [FACE_OUT_X, BRACKET.face_y[0], 0]
+    )
     # ribs: wedges from the face plate down to the outboard edge of the base
     ribs = [
         hull(
-            cube([EPS, b.rib_t, FACE_TOP]).translate([FACE_OUT_X - EPS, y0, 0]),
-            cube([EPS, b.rib_t, b.base_t]).translate([b.x_out, y0, 0]),
+            cube([EPS, BRACKET.rib_t, FACE_TOP]).translate([FACE_OUT_X - EPS, y0, 0]),
+            cube([EPS, BRACKET.rib_t, BRACKET.base_t]).translate([BRACKET.x_out, y0, 0]),
         )
-        for y0 in b.rib_y0
+        for y0 in BRACKET.rib_y0
     ]
-    bx, by, bz = b.trig_boss
-    boss = cube([bx, by, bz + EPS]).translate([b.trig_x - bx / 2, -b.len_y / 2, b.base_t - EPS])
+    bx, by, bz = BRACKET.trig_boss
+    boss = cube([bx, by, bz + EPS]).translate([BRACKET.trig_x - bx / 2, -BRACKET.len_y / 2, BRACKET.base_t - EPS])
     return base | face | ribs | boss
 
 
@@ -150,22 +155,27 @@ def _loom_cutouts() -> list[Solid]:
 
 def _cutouts() -> list[Solid]:
     """Holes and pockets subtracted from the body."""
-    b = BRACKET
     cuts = []
     # carriage notch: between the blocks the base stops at the face plate
-    cuts.append(cube([b.x_in, 2 * b.notch_y, b.base_t + 2]).translate([FACE_IN_X, -b.notch_y, -1]))
+    cuts.append(
+        cube([BRACKET.x_in, 2 * BRACKET.notch_y, BRACKET.base_t + 2]).translate([FACE_IN_X, -BRACKET.notch_y, -1])
+    )
     cuts += [
-        cylinder(d=TOL.bolt_hole_d(5), h=b.base_t + 2, fn=FN_HOLE).translate([0, 0, -b.base_t - 1]).align(bolt)
+        cylinder(d=TOL.bolt_hole_d(5), h=BRACKET.base_t + 2, fn=FN_HOLE)
+        .translate([0, 0, -BRACKET.base_t - 1])
+        .align(bolt)
         for bolt in (*BLOCK_BOLTS_FRONT, *BLOCK_BOLTS_REAR)
     ]
     clr = TOL.slide
     cuts.append(
-        cube([b.recess + 1, BEAM.depth + 2 * clr, BEAM.height + 2 * clr]).translate(
-            [FACE_IN_X - b.recess, -BEAM.depth / 2 - clr, BEAM_BOTTOM - clr]
+        cube([BRACKET.recess + 1, BEAM.depth + 2 * clr, BEAM.height + 2 * clr]).translate(
+            [FACE_IN_X - BRACKET.recess, -BEAM.depth / 2 - clr, BEAM_BOTTOM - clr]
         )
     )
     cuts += [
-        teardrop_x(TOL.bolt_hole_d(b.beam_bolt_m), b.face_t + 2).translate([(FACE_IN_X + FACE_OUT_X) / 2, 0, z])
+        teardrop_x(TOL.bolt_hole_d(BRACKET.beam_bolt_m), BRACKET.face_t + 2).translate(
+            [(FACE_IN_X + FACE_OUT_X) / 2, 0, z]
+        )
         for z in BEAM_BOLT_Z
     ]
     # belt clamp caps: M3 clearance hole up from the flat underside, and a hex shaft from the
@@ -181,9 +191,17 @@ def _cutouts() -> list[Solid]:
         for sx in (-1, 1)
     ]
     # Y endstop trigger: M3 along -y through the boss, captive nut from the top
-    boss_mid_y = -b.len_y / 2 + b.trig_boss[1] / 2
-    cuts.append(teardrop_y(TOL.bolt_hole_d(3), b.trig_boss[1] + 2).translate([b.trig_x, boss_mid_y, b.trig_z]))
-    cuts.append(nut_slot(3, FACE_TOP + 1 - b.trig_z, "y", "+z", tol=TOL).translate([b.trig_x, boss_mid_y, b.trig_z]))
+    boss_mid_y = -BRACKET.len_y / 2 + BRACKET.trig_boss[1] / 2
+    cuts.append(
+        teardrop_y(TOL.bolt_hole_d(3), BRACKET.trig_boss[1] + 2).translate(
+            [BRACKET.trig_x, boss_mid_y, BRACKET.trig_z]
+        )
+    )
+    cuts.append(
+        nut_slot(3, FACE_TOP + 1 - BRACKET.trig_z, "y", "+z", tol=TOL).translate(
+            [BRACKET.trig_x, boss_mid_y, BRACKET.trig_z]
+        )
+    )
     return cuts
 
 
@@ -281,13 +299,12 @@ def _x_belt_loads(side: Side, run_n: float, jam: bool) -> list[Load]:
         # the tension screw is in line with the belt: its head pushes the tower with the whole pull
         loads: list[Load] = [head_load(X_IDLER, TOWER_PLACEMENT, 2 * run_n)]
     else:
-        footprint = MOTOR_FOOTPRINT
         loads = motor_loads(
-            footprint,
+            MOTOR_FOOTPRINT,
             X_BELT_LOADS,
             jam,
             MOTOR_PULLEY,
-            _centre(footprint),
+            _centre(MOTOR_FOOTPRINT),
             (1, 0, 0),
             (0, -1, 0),
             couples=False,

@@ -24,11 +24,12 @@ if TYPE_CHECKING:
 
 def zrib_guard() -> Solid:
     """The strap, flat on the bed."""
-    m = ZMOUNT
-    length = 2 * m.leg_u[1]
-    bar = cube([length, m.leg_t, m.strap_t]).translate([-length / 2, 0, 0])
+    length = 2 * ZMOUNT.leg_u[1]
+    bar = cube([length, ZMOUNT.leg_t, ZMOUNT.strap_t]).translate([-length / 2, 0, 0])
     holes = [
-        cylinder(d=TOL.bolt_hole_d(3), h=m.strap_t + 2, fn=FN_HOLE).translate([sx * m.strap_screw_u, m.leg_t / 2, -1])
+        cylinder(d=TOL.bolt_hole_d(3), h=ZMOUNT.strap_t + 2, fn=FN_HOLE).translate(
+            [sx * ZMOUNT.strap_screw_u, ZMOUNT.leg_t / 2, -1]
+        )
         for sx in (-1, 1)
     ]
     for hole in holes:

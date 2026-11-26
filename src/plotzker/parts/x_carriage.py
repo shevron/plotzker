@@ -89,93 +89,98 @@ TRIGGER_SCREW: Matrix = handle([-CARRIAGE.rear_w / 2, CARRIAGE.trig_y, CARRIAGE.
 
 def _body() -> Solid:
     """Carriage solid before the holes and cutouts."""
-    c = CARRIAGE
-    plate = cube([c.plate_w, c.plate_t, c.top_z - c.bottom_z]).translate([-c.plate_w / 2, c.plate_front_y, c.bottom_z])
-    tab = cube([c.tab_w, c.plate_t, c.tab_h + EPS]).translate([-c.tab_w / 2, c.plate_front_y, c.top_z - EPS])
+    plate = cube([CARRIAGE.plate_w, CARRIAGE.plate_t, CARRIAGE.top_z - CARRIAGE.bottom_z]).translate(
+        [-CARRIAGE.plate_w / 2, CARRIAGE.plate_front_y, CARRIAGE.bottom_z]
+    )
+    tab = cube([CARRIAGE.tab_w, CARRIAGE.plate_t, CARRIAGE.tab_h + EPS]).translate(
+        [-CARRIAGE.tab_w / 2, CARRIAGE.plate_front_y, CARRIAGE.top_z - EPS]
+    )
     standoffs = [
-        cylinder(d=c.top_boss_d, h=ECCENTRIC.stack + EPS, fn=32)
+        cylinder(d=CARRIAGE.top_boss_d, h=ECCENTRIC.stack + EPS, fn=32)
         .rotate([-90, 0, 0])
-        .translate([sx * WHEEL_X, c.plate_back_y - EPS, c.wheel_z[0]])
+        .translate([sx * WHEEL_X, CARRIAGE.plate_back_y - EPS, CARRIAGE.wheel_z[0]])
         for sx in (-1, 1)
     ]
-    bridge = cube([c.bridge_w, REAR_Y0 - c.plate_back_y + EPS, c.bridge_h]).translate(
-        [-c.bridge_w / 2, c.plate_back_y - EPS, c.bridge_z]
+    bridge = cube([CARRIAGE.bridge_w, REAR_Y0 - CARRIAGE.plate_back_y + EPS, CARRIAGE.bridge_h]).translate(
+        [-CARRIAGE.bridge_w / 2, CARRIAGE.plate_back_y - EPS, CARRIAGE.bridge_z]
     )
     # widening (45° in plan, at most 45° in the top flank) from the bridge into the rear block,
     # behind the beam: the top rises to the belt's bearing face
     widening = hull(
-        cube([c.bridge_w, EPS, c.bridge_h]).translate([-c.bridge_w / 2, REAR_Y0, c.bridge_z]),
-        cube([c.rear_w, EPS, c.rear_h]).translate([-c.rear_w / 2, REAR_Y_FULL, c.block_z]),
+        cube([CARRIAGE.bridge_w, EPS, CARRIAGE.bridge_h]).translate(
+            [-CARRIAGE.bridge_w / 2, REAR_Y0, CARRIAGE.bridge_z]
+        ),
+        cube([CARRIAGE.rear_w, EPS, CARRIAGE.rear_h]).translate([-CARRIAGE.rear_w / 2, REAR_Y_FULL, CARRIAGE.block_z]),
     )
-    rear = cube([c.rear_w, REAR_Y1 - REAR_Y_FULL, c.rear_h]).translate([-c.rear_w / 2, REAR_Y_FULL, c.block_z])
+    rear = cube([CARRIAGE.rear_w, REAR_Y1 - REAR_Y_FULL, CARRIAGE.rear_h]).translate(
+        [-CARRIAGE.rear_w / 2, REAR_Y_FULL, CARRIAGE.block_z]
+    )
     return plate | tab | standoffs | bridge | widening | rear
 
 
 def _wheel_axle_holes() -> list[Solid]:
     """Wheel axle holes."""
-    c = CARRIAGE
     holes = []
     for sx in (-1, 1):
         # top wheels: M5 clearance through plate and stand-off
         holes.append(
-            cylinder(d=TOL.bolt_hole_d(5), h=c.plate_t + ECCENTRIC.stack + 2, fn=FN_HOLE)
+            cylinder(d=TOL.bolt_hole_d(5), h=CARRIAGE.plate_t + ECCENTRIC.stack + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[0]])
+            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[0]])
         )
         # bottom wheels: hole for the eccentric boss (the M5 moves ±offset inside it)
         holes.append(
-            cylinder(d=TOL.slide_d(ECCENTRIC.boss_d), h=c.plate_t + 2, fn=FN_HOLE)
+            cylinder(d=TOL.slide_d(ECCENTRIC.boss_d), h=CARRIAGE.plate_t + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[1]])
+            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[1]])
         )
         # counterbore for the bolt head and washer on the front face
         holes.append(
-            cylinder(d=TOL.slide_d(metric(5).washer_od), h=c.head_recess + 1, fn=FN_HOLE)
+            cylinder(d=TOL.slide_d(metric(5).washer_od), h=CARRIAGE.head_recess + 1, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[0]])
+            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[0]])
         )
         holes.append(
-            cylinder(d=TOL.slide_d(metric(5).washer_od), h=c.head_recess + 1, fn=FN_HOLE)
+            cylinder(d=TOL.slide_d(metric(5).washer_od), h=CARRIAGE.head_recess + 1, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, c.plate_front_y - 1, c.wheel_z[1]])
+            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[1]])
         )
     return holes
 
 
 def _tool_plate_interface() -> list[Solid]:
     """Tool-plate hook groove and mounting holes."""
-    c, tp = CARRIAGE, TOOL_PLATE
     # hook groove (French cleat): opening hook_h tall at the face, undercut hook_d
     # downward at 45°; closed ends locate the tool plate in X
     profile = polygon(
         [
-            [-1, tp.top_z],
-            [tp.hook_d, tp.top_z],
-            [tp.hook_d, tp.top_z - tp.hook_h - tp.hook_d],
-            [0, tp.top_z - tp.hook_h],
-            [-1, tp.top_z - tp.hook_h],
+            [-1, TOOL_PLATE.top_z],
+            [TOOL_PLATE.hook_d, TOOL_PLATE.top_z],
+            [TOOL_PLATE.hook_d, TOOL_PLATE.top_z - TOOL_PLATE.hook_h - TOOL_PLATE.hook_d],
+            [0, TOOL_PLATE.top_z - TOOL_PLATE.hook_h],
+            [-1, TOOL_PLATE.top_z - TOOL_PLATE.hook_h],
         ]
     )
     groove = (
-        linear_extrude(profile, height=tp.w + 2 * tp.fit_gap, center=True)
+        linear_extrude(profile, height=TOOL_PLATE.w + 2 * TOOL_PLATE.fit_gap, center=True)
         .rotate([90, 0, 90])
-        .translate([0, c.plate_front_y, 0])
+        .translate([0, CARRIAGE.plate_front_y, 0])
     )
     # M3 clearance holes through the plate; each nut is pressed into a slot from the bottom
     # edge, behind a wall on the front side that takes the pull of the tool plate's screws
     nut_t = TOL.nut_trap_h(3)
-    screw_zc = tp.bottom_z + tp.screw_z
+    screw_zc = TOOL_PLATE.bottom_z + TOOL_PLATE.screw_z
     nuts = []
     for sx in (-1, 1):
-        x = sx * tp.screw_pitch / 2
+        x = sx * TOOL_PLATE.screw_pitch / 2
         nuts.append(
-            cylinder(d=TOL.bolt_hole_d(3), h=c.plate_t + 2, fn=FN_HOLE)
+            cylinder(d=TOL.bolt_hole_d(3), h=CARRIAGE.plate_t + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([x, c.plate_front_y - 1, screw_zc])
+            .translate([x, CARRIAGE.plate_front_y - 1, screw_zc])
         )
         nuts.append(
-            nut_slot(3, screw_zc - tp.bottom_z + 1, "y", "-z", tol=TOL).translate(
-                [x, c.plate_front_y + TOL.nut_wall + nut_t / 2, screw_zc]
+            nut_slot(3, screw_zc - TOOL_PLATE.bottom_z + 1, "y", "-z", tol=TOL).translate(
+                [x, CARRIAGE.plate_front_y + TOL.nut_wall + nut_t / 2, screw_zc]
             )
         )
     return [groove, *nuts]
@@ -183,17 +188,17 @@ def _tool_plate_interface() -> list[Solid]:
 
 def _top_tab_cutouts() -> list[Solid]:
     """Windows for the top connector tabs."""
-    c, (conn_w, conn_h) = CARRIAGE, TOOL_PLATE.conn_size
-    window = cube([conn_w, c.plate_t + 2, conn_h]).translate(
-        [-conn_w / 2, c.plate_front_y - 1, c.top_z + c.tab_h - 3 - conn_h]
+    conn_w, conn_h = TOOL_PLATE.conn_size
+    window = cube([conn_w, CARRIAGE.plate_t + 2, conn_h]).translate(
+        [-conn_w / 2, CARRIAGE.plate_front_y - 1, CARRIAGE.top_z + CARRIAGE.tab_h - 3 - conn_h]
     )
-    slot_w, slot_h = c.zip_slot
+    slot_w, slot_h = CARRIAGE.zip_slot
     zip_slots = [
-        cube([slot_w, c.plate_t + 2, slot_h]).translate(
+        cube([slot_w, CARRIAGE.plate_t + 2, slot_h]).translate(
             [
                 sx * (conn_w / 2 + 1 + slot_w / 2) - slot_w / 2,
-                c.plate_front_y - 1,
-                c.top_z - 2 - slot_h,
+                CARRIAGE.plate_front_y - 1,
+                CARRIAGE.top_z - 2 - slot_h,
             ]
         )  # above the bridge
         for sx in (-1, 1)
@@ -226,15 +231,14 @@ def _belt_clamp_cutouts() -> list[Solid]:
 
 def _endstop_trigger_cutouts() -> list[Solid]:
     """M3 along -x from the rear block's left end, through a captive nut."""
-    c = CARRIAGE
     screw = (
         teardrop_x(TOL.slide_d(3), 18)  # snug: the screw must not wobble (T3.14)
         .rotate([-90, 0, 0])
-        .translate([-c.rear_w / 2 + 8, c.trig_y, c.trig_z])
+        .translate([-CARRIAGE.rear_w / 2 + 8, CARRIAGE.trig_y, CARRIAGE.trig_z])
     )
     # the nut is pressed in from the underside (the belt bears on the top face)
-    nut = nut_slot(3, c.trig_z - c.block_z + 1, "x", "-z", tol=TOL).translate(
-        [-c.rear_w / 2 + 3.5, c.trig_y, c.trig_z]
+    nut = nut_slot(3, CARRIAGE.trig_z - CARRIAGE.block_z + 1, "x", "-z", tol=TOL).translate(
+        [-CARRIAGE.rear_w / 2 + 3.5, CARRIAGE.trig_y, CARRIAGE.trig_z]
     )
     return [screw, nut]
 

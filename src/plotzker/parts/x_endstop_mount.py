@@ -56,25 +56,29 @@ BOARD: Matrix = frame_handle(
 
 def x_endstop_mount_installed() -> Solid:
     """The mount in the left bracket-local frame."""
-    d = X_DRIVE
-    x0 = d.foot_x0
-    foot = cube([SCS10UU.width / 2 - x0, d.foot_y[1] - d.foot_y[0], d.foot_t]).translate([x0, d.foot_y[0], FOOT_Z0])
-    # the board overhangs the foot's front edge: a shelf under it
-    e = X_ENDSTOP
-    shelf = cube([e.board_x[1] - e.board_x[0] + 2, d.foot_y[0] - e.board_y[0] + 1 + EPS, d.foot_t]).translate(
-        [e.board_x[0] - 1, e.board_y[0] - 1, FOOT_Z0]
+    x0 = X_DRIVE.foot_x0
+    foot = cube([SCS10UU.width / 2 - x0, X_DRIVE.foot_y[1] - X_DRIVE.foot_y[0], X_DRIVE.foot_t]).translate(
+        [x0, X_DRIVE.foot_y[0], FOOT_Z0]
     )
+    # the board overhangs the foot's front edge: a shelf under it
+    shelf = cube(
+        [
+            X_ENDSTOP.board_x[1] - X_ENDSTOP.board_x[0] + 2,
+            X_DRIVE.foot_y[0] - X_ENDSTOP.board_y[0] + 1 + EPS,
+            X_DRIVE.foot_t,
+        ]
+    ).translate([X_ENDSTOP.board_x[0] - 1, X_ENDSTOP.board_y[0] - 1, FOOT_Z0])
     foot = foot | shelf
     # clamped by the rear bolt row; the front row's heads stay flush with the foot top (the
     # endstop plug needs the space), in clearance holes
     bolts = [
-        cylinder(d=TOL.bolt_hole_d(5), h=d.foot_t + 2, fn=FN_HOLE).translate(
-            [hx * SCS10UU.hole_pitch_x / 2, d.bolt_rows[1], FOOT_Z0 - 1]
+        cylinder(d=TOL.bolt_hole_d(5), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
+            [hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[1], FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
     ] + [
-        cylinder(d=metric(5).head_d + 1, h=d.foot_t + 2, fn=FN_HOLE).translate(
-            [hx * SCS10UU.hole_pitch_x / 2, d.bolt_rows[0], FOOT_Z0 - 1]
+        cylinder(d=metric(5).head_d + 1, h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
+            [hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
     ]
@@ -85,20 +89,30 @@ def x_endstop_mount_installed() -> Solid:
     for sv in (-1, 1):
         y = BOARD_YC + sv * ENDSTOP.hole_pitch / 2
         board_holes.append(
-            cylinder(d=TOL.bolt_hole_d(3), h=d.foot_t + 2, fn=FN_HOLE).translate([e.hole_x, y, FOOT_Z0 - 1])
+            cylinder(d=TOL.bolt_hole_d(3), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
+                [X_ENDSTOP.hole_x, y, FOOT_Z0 - 1]
+            )
         )
-        board_holes.append(cylinder(d=TOL.nut_trap_ac(3), h=nut_t + 1, fn=6).translate([e.hole_x, y, FOOT_Z0 - 1]))
+        board_holes.append(
+            cylinder(d=TOL.nut_trap_ac(3), h=nut_t + 1, fn=6).translate([X_ENDSTOP.hole_x, y, FOOT_Z0 - 1])
+        )
     # solder relief: the board's underside has joints and pins sticking out up to 1.8 mm, so
     # the foot under it is recessed except for a land round each screw hole (T3.14)
     relief = cube(
-        [e.board_x[1] - e.board_x[0] + 0.6, e.board_y[1] - e.board_y[0] + 0.6, e.relief_depth + 1]
-    ).translate([e.board_x[0] - 0.3, e.board_y[0] - 0.3, FOOT_Z0 + d.foot_t - e.relief_depth])
+        [
+            X_ENDSTOP.board_x[1] - X_ENDSTOP.board_x[0] + 0.6,
+            X_ENDSTOP.board_y[1] - X_ENDSTOP.board_y[0] + 0.6,
+            X_ENDSTOP.relief_depth + 1,
+        ]
+    ).translate(
+        [X_ENDSTOP.board_x[0] - 0.3, X_ENDSTOP.board_y[0] - 0.3, FOOT_Z0 + X_DRIVE.foot_t - X_ENDSTOP.relief_depth]
+    )
     lands = [
-        cylinder(d=e.land_d, h=e.relief_depth + 3, fn=FN_HOLE).translate(
+        cylinder(d=X_ENDSTOP.land_d, h=X_ENDSTOP.relief_depth + 3, fn=FN_HOLE).translate(
             [
-                e.hole_x,
+                X_ENDSTOP.hole_x,
                 BOARD_YC + sv * ENDSTOP.hole_pitch / 2,
-                FOOT_Z0 + d.foot_t - e.relief_depth - 1,
+                FOOT_Z0 + X_DRIVE.foot_t - X_ENDSTOP.relief_depth - 1,
             ]
         )
         for sv in (-1, 1)

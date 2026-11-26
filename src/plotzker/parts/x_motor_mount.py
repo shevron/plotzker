@@ -72,35 +72,36 @@ MOTOR_SCREWS: list[Matrix] = [
 
 def x_motor_mount_left() -> Solid:
     """The mount as designed, in the left bracket-local frame (not printed like this)."""
-    d = X_DRIVE
     foot_x0, foot_x1 = FOOT_X
-    foot = cube([foot_x1 - foot_x0, d.motor_foot_y[1] - d.motor_foot_y[0], d.foot_t]).translate(
-        [foot_x0, d.motor_foot_y[0], FOOT_Z0]
+    foot = cube([foot_x1 - foot_x0, X_DRIVE.motor_foot_y[1] - X_DRIVE.motor_foot_y[0], X_DRIVE.foot_t]).translate(
+        [foot_x0, X_DRIVE.motor_foot_y[0], FOOT_Z0]
     )
-    plate = cube([NEMA17.width, d.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate([PLATE_X[0], d.plate_y0, FOOT_Z0])
-    rib = cube([d.motor_rib_t, d.foot_y[1] - d.motor_face_y + EPS, MOTOR_BOTTOM - 0.5 - FOOT_Z0]).translate(
-        [d.motor_x - d.motor_rib_t / 2, d.motor_face_y - EPS, FOOT_Z0]
+    plate = cube([NEMA17.width, X_DRIVE.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate(
+        [PLATE_X[0], X_DRIVE.plate_y0, FOOT_Z0]
     )
+    rib = cube(
+        [X_DRIVE.motor_rib_t, X_DRIVE.foot_y[1] - X_DRIVE.motor_face_y + EPS, MOTOR_BOTTOM - 0.5 - FOOT_Z0]
+    ).translate([X_DRIVE.motor_x - X_DRIVE.motor_rib_t / 2, X_DRIVE.motor_face_y - EPS, FOOT_Z0])
     bolts = [
-        cylinder(d=TOL.bolt_hole_d(5), h=d.foot_t + 2, fn=FN_HOLE).translate(
+        cylinder(d=TOL.bolt_hole_d(5), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
             [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
-        for y in d.bolt_rows[:1]
+        for y in X_DRIVE.bolt_rows[:1]
     ]
     recess = [
-        cylinder(d=TOL.slide_d(metric(5).head_d), h=d.foot_head_recess + 1, fn=FN_HOLE).translate(
-            [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 + d.foot_t - d.foot_head_recess]
+        cylinder(d=TOL.slide_d(metric(5).head_d), h=X_DRIVE.foot_head_recess + 1, fn=FN_HOLE).translate(
+            [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 + X_DRIVE.foot_t - X_DRIVE.foot_head_recess]
         )
         for hx in (-1, 1)
-        for y in d.bolt_rows[:1]
+        for y in X_DRIVE.bolt_rows[:1]
     ]
-    plate_mid_y = d.plate_y0 + d.motor_plate_t / 2
-    boss = teardrop_y(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate([d.motor_x, plate_mid_y, AXIS_Z])
+    plate_mid_y = X_DRIVE.plate_y0 + X_DRIVE.motor_plate_t / 2
+    boss = teardrop_y(NEMA17.boss_d + 0.4, X_DRIVE.motor_plate_t + 2).translate([X_DRIVE.motor_x, plate_mid_y, AXIS_Z])
     screws = [
-        teardrop_y(TOL.bolt_hole_d(3), d.motor_plate_t + 2).translate(
+        teardrop_y(TOL.bolt_hole_d(3), X_DRIVE.motor_plate_t + 2).translate(
             [
-                d.motor_x + dx * NEMA17.hole_pitch / 2,
+                X_DRIVE.motor_x + dx * NEMA17.hole_pitch / 2,
                 plate_mid_y,
                 AXIS_Z + dz * NEMA17.hole_pitch / 2,
             ]

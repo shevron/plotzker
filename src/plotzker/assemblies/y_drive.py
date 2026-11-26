@@ -32,25 +32,26 @@ def y_idler_end_local(side: Side = Side.LEFT) -> list[Solid]:
     """Idler end of the left side: idler mount, slider, idler, axle, tension screw."""
     mount = y_idler_mount_installed(side)
     axle = get_handle(mount, "axle")
-    t = Y_IDLER
-    slider_rear_y = t.slider_s0
+    slider_rear_y = Y_IDLER.slider_s0
     head = idler_for(side).head_side  # the nut is on the other arm
     return [
         mount.color("DarkOrange"),
         y_idler_slider_installed(side).color("Orange"),
         gt2_idler().align(_at_x(axle, Y_AXIS.belt_x)),
-        shcs(t.axle_m, t.axle_len).align(axle),
-        hex_nut(t.axle_m)
+        shcs(Y_IDLER.axle_m, Y_IDLER.axle_len).align(axle),
+        hex_nut(Y_IDLER.axle_m)
         .rotate([0, 90 * head, 0])
         .translate(
             [
-                Y_AXIS.belt_x + head * (t.width / 2 - metric(t.axle_m).nut_h),
+                Y_AXIS.belt_x + head * (Y_IDLER.width / 2 - metric(Y_IDLER.axle_m).nut_h),
                 Y_DRIVE.idler_y,
-                t.axle_z,
+                Y_IDLER.axle_z,
             ]
         ),
-        shcs(t.screw_m, t.screw_len).align(get_handle(mount, "tension_screw")),
-        hex_nut(t.screw_m).rotate([-90, 0, 0]).translate([Y_AXIS.belt_x, slider_rear_y + TOL.nut_wall, t.screw_z]),
+        shcs(Y_IDLER.screw_m, Y_IDLER.screw_len).align(get_handle(mount, "tension_screw")),
+        hex_nut(Y_IDLER.screw_m)
+        .rotate([-90, 0, 0])
+        .translate([Y_AXIS.belt_x, slider_rear_y + TOL.nut_wall, Y_IDLER.screw_z]),
     ]
 
 
@@ -71,14 +72,13 @@ def y_belt_runs(gantry_y: float) -> list[Solid]:
     The top run is cut under the gantry: it runs from each pulley to the outer end of
     that end's belt clamp (the gantry model draws the belt inside the clamps).
     """
-    d = Y_DRIVE
     x0 = Y_AXIS.belt_x - GT2.width / 2
     front_clamp_start = gantry_y - BRACKET.len_y / 2
     rear_clamp_end = gantry_y + BRACKET.len_y / 2
     lower_z = Y_AXIS.pulley_axis_z - PULLEY.pd / 2 - GT2.pitch_line_from_back
     upper_z = Y_AXIS.belt_back_z - GT2.thickness
-    runs = [(d.idler_y, d.motor_y, lower_z)]
-    runs += [(d.idler_y, front_clamp_start, upper_z), (rear_clamp_end, d.motor_y, upper_z)]
+    runs = [(Y_DRIVE.idler_y, Y_DRIVE.motor_y, lower_z)]
+    runs += [(Y_DRIVE.idler_y, front_clamp_start, upper_z), (rear_clamp_end, Y_DRIVE.motor_y, upper_z)]
     return [cube([GT2.width, y1 - y0, GT2.thickness]).translate([x0, y0, z]).color("#111") for y0, y1, z in runs]
 
 

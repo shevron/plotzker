@@ -116,11 +116,10 @@ def vslot_y(length: float, size: tuple[int, int] = (1, 1)) -> Solid:
 
 def vwheel() -> Solid:
     """V-wheel. Origin: wheel center; axis along Y (rides on X-direction rails)."""
-    w = VWHEEL
-    inner_d = w.od - 2 * VSLOT.groove_d
-    cone = cylinder(d1=w.od, d2=inner_d, h=w.width / 2 - 0.5, fn=48)
-    body = cylinder(d=inner_d, h=w.width, center=True, fn=48) | cone | cone.mirror([0, 0, 1])
-    bore = cylinder(d=w.bore, h=w.width + 2, center=True, fn=24)
+    inner_d = VWHEEL.od - 2 * VSLOT.groove_d
+    cone = cylinder(d1=VWHEEL.od, d2=inner_d, h=VWHEEL.width / 2 - 0.5, fn=48)
+    body = cylinder(d=inner_d, h=VWHEEL.width, center=True, fn=48) | cone | cone.mirror([0, 0, 1])
+    bore = cylinder(d=VWHEEL.bore, h=VWHEEL.width + 2, center=True, fn=24)
     return (body - bore).rotate([90, 0, 0]).color("#202020")
 
 
@@ -131,11 +130,10 @@ def eccentric_spacer(rot: float = 0) -> Solid:
     (into the plate), the hex and wheel-side boss extend +Y. ``rot`` is the
     adjustment angle; the bore sits ``offset`` off the boss axis.
     """
-    e = ECCENTRIC
     body = (
-        cylinder(d=e.boss_d, h=e.boss_len, fn=32).translate([0, 0, -e.boss_len])
-        | cylinder(d=e.hex_ac, h=e.length, fn=6)
-        | cylinder(d=e.boss_d, h=e.stack, fn=32)
+        cylinder(d=ECCENTRIC.boss_d, h=ECCENTRIC.boss_len, fn=32).translate([0, 0, -ECCENTRIC.boss_len])
+        | cylinder(d=ECCENTRIC.hex_ac, h=ECCENTRIC.length, fn=6)
+        | cylinder(d=ECCENTRIC.boss_d, h=ECCENTRIC.stack, fn=32)
     )
-    bore = cylinder(d=e.bore, h=20, fn=20).translate([e.offset, 0, -5]).rotate([0, 0, rot])
+    bore = cylinder(d=ECCENTRIC.bore, h=20, fn=20).translate([ECCENTRIC.offset, 0, -5]).rotate([0, 0, rot])
     return (body - bore).rotate([-90, 0, 0]).color("Gold")

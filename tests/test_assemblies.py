@@ -337,24 +337,22 @@ def test_y_endstop_board_seats_flat_over_its_solder(side):
     from plotzker.hardware import ENDSTOP
     from plotzker.params import Y_ENDSTOP
 
-    e = Y_ENDSTOP
-
     mount = y_idler_mount_installed(side)
-    zc = e.board_z_center(-1 if side is Side.LEFT else 1)
+    zc = Y_ENDSTOP.board_z_center(-1 if side is Side.LEFT else 1)
     solder = cube([1.8, ENDSTOP.pcb[0] - 2, ENDSTOP.pcb[1] - 2]).translate(
-        [e.board_x0 - 1.8, e.board_y[0] + 1, zc - ENDSTOP.pcb[1] / 2 + 1]
+        [Y_ENDSTOP.board_x0 - 1.8, Y_ENDSTOP.board_y[0] + 1, zc - ENDSTOP.pcb[1] / 2 + 1]
     )
     lands = [
-        cylinder(d=e.land_d + 0.2, h=5, fn=24)
+        cylinder(d=Y_ENDSTOP.land_d + 0.2, h=5, fn=24)
         .rotate([0, 90, 0])
-        .translate([e.board_x0 - 3, e.board_front_y + ENDSTOP.hole_v, zc + s * ENDSTOP.hole_pitch / 2])
+        .translate([Y_ENDSTOP.board_x0 - 3, Y_ENDSTOP.board_front_y + ENDSTOP.hole_v, zc + s * ENDSTOP.hole_pitch / 2])
         for s in (-1, 1)
     ]
     assert volume((solder - union(*lands)) & mount) < 1e-3
     pad = (
-        cylinder(d=e.land_d - 1, h=0.4, fn=24)
+        cylinder(d=Y_ENDSTOP.land_d - 1, h=0.4, fn=24)
         .rotate([0, 90, 0])
-        .translate([e.board_x0 - 0.2, e.board_front_y + ENDSTOP.hole_v, zc + ENDSTOP.hole_pitch / 2])
+        .translate([Y_ENDSTOP.board_x0 - 0.2, Y_ENDSTOP.board_front_y + ENDSTOP.hole_v, zc + ENDSTOP.hole_pitch / 2])
     )
     assert volume(pad & mount) > 1
 
@@ -386,17 +384,16 @@ def test_x_idler_axle_bolt_and_nut_clear_the_tower_walls(shift):
     from plotzker.params import X_BELT, X_DRIVE, X_IDLER
     from plotzker.parts.idler_slider import x_idler_slider_installed
 
-    t = X_IDLER
-    dx = shift * t.travel / 2
+    dx = shift * X_IDLER.travel / 2
     axle = shift_handle(get_handle(x_idler_slider_installed(), "axle"), [dx, 0, 0])
     nut = (
-        hex_nut(t.axle_m)
+        hex_nut(X_IDLER.axle_m)
         .rotate([0, 0, 90])
         .rotate([-90, 0, 0])
-        .translate([X_DRIVE.idler_x + dx, X_BELT.y + t.nut_seat_y, t.axle_z])
+        .translate([X_DRIVE.idler_x + dx, X_BELT.y + X_IDLER.nut_seat_y, X_IDLER.axle_z])
     )
     bracket = gantry_end_bracket_local(Side.LEFT)
-    for part in (shcs(t.axle_m, 25).align(axle), nut):
+    for part in (shcs(X_IDLER.axle_m, 25).align(axle), nut):
         assert volume(part & bracket) < 1e-3
 
 

@@ -65,22 +65,24 @@ def baseboard() -> Solid:
 
 def runners() -> list[Solid]:
     """The three runners with their M5 countersunk screws and T-nuts."""
-    bb = BASEBOARD
     t = FRAME.board_size[2]
     items: list[Solid] = []
-    for ry in bb.runner_y:
+    for ry in BASEBOARD.runner_y:
         items.append(
-            vslot_x(bb.runner_len, _RUNNER_SIZE).translate([bb.runner_x[0], ry - bb.runner_w / 2, -t - bb.runner_h])
+            vslot_x(BASEBOARD.runner_len, _RUNNER_SIZE).translate(
+                [BASEBOARD.runner_x[0], ry - BASEBOARD.runner_w / 2, -t - BASEBOARD.runner_h]
+            )
         )
-        for x in bb.runner_screw_x:
-            items.append(countersunk_screw(5, bb.runner_screw_len, bb.runner_screw_head_d).translate([x, ry, 0]))
-            items.append(t_nut(5, bb.tnut_t).translate([x, ry, -t - bb.slot_lip_t]))
+        for x in BASEBOARD.runner_screw_x:
+            items.append(
+                countersunk_screw(5, BASEBOARD.runner_screw_len, BASEBOARD.runner_screw_head_d).translate([x, ry, 0])
+            )
+            items.append(t_nut(5, BASEBOARD.tnut_t).translate([x, ry, -t - BASEBOARD.slot_lip_t]))
     return items
 
 
 def shafts_and_supports() -> list[Solid]:
     """Y shafts, SK10 supports and the SK10 bolts with their nuts and washers underneath."""
-    bb = BASEBOARD
     t = FRAME.board_size[2]
     m5 = metric(5)
     items: list[Solid] = []
@@ -88,9 +90,9 @@ def shafts_and_supports() -> list[Solid]:
         items.append(y_shaft().translate([x, Y_AXIS.shaft_y0, Y_AXIS.shaft_z]))
         for y in Y_AXIS.sk10_y:
             items.append(sk10().translate([x, y, 0]))
-            for dx in bb.sk10_hole_x:
+            for dx in BASEBOARD.sk10_hole_x:
                 hx = x + dx
-                items.append(shcs(5, bb.sk10_bolt_len).translate([hx, y, SK10.base_t + m5.washer_t]))
+                items.append(shcs(5, BASEBOARD.sk10_bolt_len).translate([hx, y, SK10.base_t + m5.washer_t]))
                 items.append(washer(5).translate([hx, y, SK10.base_t]))
                 items.append(washer(5).translate([hx, y, -t - m5.washer_t]))
                 items.append(hex_nut(5).translate([hx, y, -t - m5.washer_t - m5.nut_h]))
@@ -99,13 +101,12 @@ def shafts_and_supports() -> list[Solid]:
 
 def bed() -> list[Solid]:
     """Bed panel, steel sheet and the four adjustment posts (studs, springs, nuts)."""
-    bb = BASEBOARD
     m5 = metric(5)
     bx, by = FRAME.bed_size
     x0, y0 = FRAME.bed_origin
     gap = FRAME.bed_adjust_gap
     panel = cube([bx, by, FRAME.bed_panel_t]).translate([x0, y0, gap])
-    for x, y in bb.post_xy:
+    for x, y in BASEBOARD.post_xy:
         panel = panel - cylinder(d=5.4, h=FRAME.bed_panel_t + 2, fn=FN_HOLE).translate([x, y, gap - 1])
     sx, sy = FRAME.steel_size
     items: list[Solid] = [
@@ -115,11 +116,11 @@ def bed() -> list[Solid]:
         .color("SlateGray"),
     ]
     top = gap + FRAME.bed_panel_t
-    for x, y in bb.post_xy:
+    for x, y in BASEBOARD.post_xy:
         items += [
-            shcs(5, bb.post_bolt_len).rotate([180, 0, 0]).translate([x, y, bb.post_stud_z]),
-            washer(5).translate([x, y, bb.post_stud_z]),
-            spring(bb.spring_od, bb.spring_id, gap).translate([x, y, 0]),
+            shcs(5, BASEBOARD.post_bolt_len).rotate([180, 0, 0]).translate([x, y, BASEBOARD.post_stud_z]),
+            washer(5).translate([x, y, BASEBOARD.post_stud_z]),
+            spring(BASEBOARD.spring_od, BASEBOARD.spring_id, gap).translate([x, y, 0]),
             washer(5).translate([x, y, top]),
             hex_nut(5).translate([x, y, top + m5.washer_t]),
         ]

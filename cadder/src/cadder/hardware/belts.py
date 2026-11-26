@@ -83,24 +83,22 @@ def gt2_pulley() -> Solid:
 
     The belt runs over z in ``[hub_len + 1, hub_len + 1 + belt width]``.
     """
-    p = PULLEY
     body = (
-        cylinder(d=p.hub_d, h=p.hub_len, fn=32)
-        | cylinder(d=p.flange_d, h=1, fn=32).translate([0, 0, p.hub_len])
-        | cylinder(d=p.od, h=p.length - p.hub_len, fn=40).translate([0, 0, p.hub_len])
-        | cylinder(d=p.flange_d, h=1, fn=32).translate([0, 0, p.length - 1])
+        cylinder(d=PULLEY.hub_d, h=PULLEY.hub_len, fn=32)
+        | cylinder(d=PULLEY.flange_d, h=1, fn=32).translate([0, 0, PULLEY.hub_len])
+        | cylinder(d=PULLEY.od, h=PULLEY.length - PULLEY.hub_len, fn=40).translate([0, 0, PULLEY.hub_len])
+        | cylinder(d=PULLEY.flange_d, h=1, fn=32).translate([0, 0, PULLEY.length - 1])
     )
-    bore = cylinder(d=p.bore, h=p.length + 2, fn=20).translate([0, 0, -1])
+    bore = cylinder(d=PULLEY.bore, h=PULLEY.length + 2, fn=20).translate([0, 0, -1])
     return (body - bore).color("Gold")
 
 
 def gt2_idler() -> Solid:
     """Toothed idler. Origin: center, axis Z, symmetric about z = 0."""
-    i = IDLER
-    body = cylinder(d=i.pd - 0.5, h=i.width, center=True, fn=40)
+    body = cylinder(d=IDLER.pd - 0.5, h=IDLER.width, center=True, fn=40)
     for sz in (-1, 1):
-        body |= cylinder(d=i.flange_d, h=1, center=True, fn=40).translate([0, 0, sz * (i.width / 2 - 0.5)])
-    bore = cylinder(d=i.bore, h=i.width + 2, center=True, fn=20)
+        body |= cylinder(d=IDLER.flange_d, h=1, center=True, fn=40).translate([0, 0, sz * (IDLER.width / 2 - 0.5)])
+    bore = cylinder(d=IDLER.bore, h=IDLER.width + 2, center=True, fn=20)
     return (body - bore).color("Gold")
 
 

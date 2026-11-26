@@ -75,47 +75,45 @@ def _hole_z(d: float, x: float, z0: float, z1: float) -> Solid:
 def _corner_fillet() -> Solid:
     """Fillet in the corner between the upright and the flange (the board's eased edge sits in
     it), as a solid along y."""
-    m = PSU_MOUNT
-    r, x0, z0 = m.corner_r, m.board_x[1], m.edge_z
+    r, x0, z0 = PSU_MOUNT.corner_r, PSU_MOUNT.board_x[1], PSU_MOUNT.edge_z
     profile = square([r, r]).translate([x0 - r, z0 - r]) - circle(r=r, fn=FN_HOLE).translate([x0 - r, z0 - r])
-    w = m.bracket_w
+    w = PSU_MOUNT.bracket_w
     return linear_extrude(profile, height=w).rotate([90, 0, 0]).translate([0, w / 2, 0])
 
 
 def _handles() -> dict[str, Matrix | list[Matrix]]:
     """Fastener handles (PSU frame, bracket at y = 0)."""
-    m = PSU_MOUNT
     return {
         #: M4 heads on the counterbore floors, shanks toward +z (into the PSU)
-        "psu_screws": [handle([x, 0, m.edge_z + m.counterbore[1]], [180, 0, 0]) for x in PSU.bottom_hole_x],
+        "psu_screws": [
+            handle([x, 0, PSU_MOUNT.edge_z + PSU_MOUNT.counterbore[1]], [180, 0, 0]) for x in PSU.bottom_hole_x
+        ],
         #: wood screw heads flush with the flange's underside, shanks toward -x (up)
-        "wood_screws": [handle([m.upright_x[1], 0, z], [0, 90, 0]) for z in m.wood_screw_z],
+        "wood_screws": [handle([PSU_MOUNT.upright_x[1], 0, z], [0, 90, 0]) for z in PSU_MOUNT.wood_screw_z],
     }
 
 
 def psu_bracket_installed() -> Solid:
     """The bracket in the PSU frame, centered on y = 0."""
-    m = PSU_MOUNT
-    w = m.bracket_w
-    x_top, x_bot = m.upright_x
-    flange_x0 = m.board_x[1]
-    upright = box(x_top, -w / 2, m.edge_z, x_bot, w / 2, 0)
-    flange = box(flange_x0, -w / 2, m.edge_z - m.flange_reach, x_bot, w / 2, m.edge_z)
+    w = PSU_MOUNT.bracket_w
+    x_top, x_bot = PSU_MOUNT.upright_x
+    flange_x0 = PSU_MOUNT.board_x[1]
+    upright = box(x_top, -w / 2, PSU_MOUNT.edge_z, x_bot, w / 2, 0)
+    flange = box(flange_x0, -w / 2, PSU_MOUNT.edge_z - PSU_MOUNT.flange_reach, x_bot, w / 2, PSU_MOUNT.edge_z)
     # above the board the upright grows inward and rests on the board's top
-    brace = box(x_top, -w / 2, m.brace_z, m.board_x[0], w / 2, m.edge_z)
+    brace = box(x_top, -w / 2, PSU_MOUNT.brace_z, PSU_MOUNT.board_x[0], w / 2, PSU_MOUNT.edge_z)
     body = upright | flange | brace | _corner_fillet()
-    cb_d, cb_h = m.counterbore
+    cb_d, cb_h = PSU_MOUNT.counterbore
     for x in PSU.bottom_hole_x:
-        body = body - _hole_z(TOL.bolt_hole_d(PSU.hole_m), x, m.edge_z - 1, 1)
-        body = body - _hole_z(cb_d, x, m.edge_z - 1, m.edge_z + cb_h)
-    ws = WOOD_SCREW
-    for z in m.wood_screw_z:
-        body = body - _hole_x(ws.hole_d, flange_x0 - 1, x_bot + 1, z)
+        body = body - _hole_z(TOL.bolt_hole_d(PSU.hole_m), x, PSU_MOUNT.edge_z - 1, 1)
+        body = body - _hole_z(cb_d, x, PSU_MOUNT.edge_z - 1, PSU_MOUNT.edge_z + cb_h)
+    for z in PSU_MOUNT.wood_screw_z:
+        body = body - _hole_x(WOOD_SCREW.hole_d, flange_x0 - 1, x_bot + 1, z)
         # 90° countersink, wide end on the flange's underside (x = x_bot)
-        body = body - cylinder(d1=ws.hole_d, d2=ws.sink_d, h=ws.sink_h, fn=FN_HOLE).rotate([0, 90, 0]).translate(
-            [x_bot - ws.sink_h, 0, z]
-        )
-        body = body - cylinder(d=ws.sink_d, h=1, fn=FN_HOLE).rotate([0, 90, 0]).translate([x_bot, 0, z])
+        body = body - cylinder(d1=WOOD_SCREW.hole_d, d2=WOOD_SCREW.sink_d, h=WOOD_SCREW.sink_h, fn=FN_HOLE).rotate(
+            [0, 90, 0]
+        ).translate([x_bot - WOOD_SCREW.sink_h, 0, z])
+        body = body - cylinder(d=WOOD_SCREW.sink_d, h=1, fn=FN_HOLE).rotate([0, 90, 0]).translate([x_bot, 0, z])
     return set_handles(body, **_handles())
 
 

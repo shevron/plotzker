@@ -90,34 +90,33 @@ def _hole_z(d: float, x: float, d_pos: float, z0: float, z1: float) -> Solid:
 
 def _plate_and_lip() -> Solid:
     """Plate, the spine above it and the hook lip that drops into the carriage groove."""
-    tp, g = TOOL_PLATE, TOOL_PLATE.fit_gap
+    g = TOOL_PLATE.fit_gap
     d0, d1 = PEN.plate_d
-    top = tp.top_z
-    plate = _box(-tp.w / 2, tp.w / 2, d0, d1, tp.bottom_z, top - g)
-    spine = _box(-tp.w / 2, PEN.rod_x + PEN.arm_w / 2, d0, d1, top - g - 1, PEN.upper_arm_top)
+    top = TOOL_PLATE.top_z
+    plate = _box(-TOOL_PLATE.w / 2, TOOL_PLATE.w / 2, d0, d1, TOOL_PLATE.bottom_z, top - g)
+    spine = _box(-TOOL_PLATE.w / 2, PEN.rod_x + PEN.arm_w / 2, d0, d1, top - g - 1, PEN.upper_arm_top)
     # lip: the carriage groove (opening hook_h, 45° undercut hook_d) shrunk by the gap;
     # profile in (d, z), negative d = into the carriage
     profile = polygon(
         [
             [d0 + 1, top - g],
-            [-(tp.hook_d - g), top - g],
-            [-(tp.hook_d - g), top - tp.hook_h - tp.hook_d + 2 * g],
-            [0, top - tp.hook_h + g],
-            [d0 + 1, top - tp.hook_h + g],
+            [-(TOOL_PLATE.hook_d - g), top - g],
+            [-(TOOL_PLATE.hook_d - g), top - TOOL_PLATE.hook_h - TOOL_PLATE.hook_d + 2 * g],
+            [0, top - TOOL_PLATE.hook_h + g],
+            [d0 + 1, top - TOOL_PLATE.hook_h + g],
         ]
     )
-    lip = linear_extrude(profile, height=tp.w, center=True).rotate([90, 0, 90])
+    lip = linear_extrude(profile, height=TOOL_PLATE.w, center=True).rotate([90, 0, 90])
     return plate | spine | lip
 
 
 def _screw_holes() -> list[Solid]:
     """M3 clearance holes with counterbores for the clamp screws."""
-    tp = TOOL_PLATE
     d0, d1 = PEN.plate_d
-    z = tp.bottom_z + tp.screw_z
+    z = TOOL_PLATE.bottom_z + TOOL_PLATE.screw_z
     cuts = []
     for sx in (-1, 1):
-        x = sx * tp.screw_pitch / 2
+        x = sx * TOOL_PLATE.screw_pitch / 2
         cuts.append(_hole_d(TOL.bolt_hole_d(3), x, z, d0 - 1, d1 + 1))
         cuts.append(_hole_d(TOL.cbore_d(3), x, z, d1 - 3, d1 + 1))
     return cuts
@@ -125,65 +124,62 @@ def _screw_holes() -> list[Solid]:
 
 def _rod_arms() -> tuple[list[Solid], list[Solid]]:
     """Both rod arms and the rod holes (parts to add, cuts to subtract)."""
-    p = PEN
-    x0, x1 = p.rod_x - p.arm_w / 2, p.rod_x + p.arm_w / 2
-    d0 = p.plate_d[1] - 1
+    x0, x1 = PEN.rod_x - PEN.arm_w / 2, PEN.rod_x + PEN.arm_w / 2
+    d0 = PEN.plate_d[1] - 1
 
     def arm(z0: float, z1: float) -> Solid:
         """Round boss around the rod, joined to the plate."""
-        boss = cylinder(d=p.arm_w, h=z1 - z0, fn=FN_HOLE).translate([p.rod_x, p.rod_d_pos, z0])
-        return boss | _box(x0, x1, d0, p.rod_d_pos, z0, z1)
+        boss = cylinder(d=PEN.arm_w, h=z1 - z0, fn=FN_HOLE).translate([PEN.rod_x, PEN.rod_d_pos, z0])
+        return boss | _box(x0, x1, d0, PEN.rod_d_pos, z0, z1)
 
-    hole_d = TOL.press_d(p.rod_d)
+    hole_d = TOL.press_d(PEN.rod_d)
     cuts = [
-        _hole_z(hole_d, p.rod_x, p.rod_d_pos, p.lower_arm_top - p.rod_seat_depth, p.lower_arm_top + 1),
-        _hole_z(hole_d, p.rod_x, p.rod_d_pos, p.upper_arm_bottom - 1, p.upper_arm_top + 1),
+        _hole_z(hole_d, PEN.rod_x, PEN.rod_d_pos, PEN.lower_arm_top - PEN.rod_seat_depth, PEN.lower_arm_top + 1),
+        _hole_z(hole_d, PEN.rod_x, PEN.rod_d_pos, PEN.upper_arm_bottom - 1, PEN.upper_arm_top + 1),
     ]
     return [
-        arm(p.lower_arm_bottom, p.lower_arm_top),
-        arm(p.upper_arm_bottom, p.upper_arm_top),
+        arm(PEN.lower_arm_bottom, PEN.lower_arm_top),
+        arm(PEN.upper_arm_bottom, PEN.upper_arm_top),
     ], cuts
 
 
 def _servo_bracket() -> tuple[list[Solid], list[Solid]]:
     """Servo wall, outer rib and webs, with the window and pilot holes."""
-    p = PEN
-    x0, x1 = p.wall_x
-    z0, z1 = p.wall_z
-    d_front = p.wall_d
-    d_back = d_front - p.wall_t
-    plate_front = p.plate_d[1] - 1
-    web_x1 = p.lug_x0 - TOL.gap * 2  # the lug rides past the webs
+    x0, x1 = PEN.wall_x
+    z0, z1 = PEN.wall_z
+    d_front = PEN.wall_d
+    d_back = d_front - PEN.wall_t
+    plate_front = PEN.plate_d[1] - 1
+    web_x1 = PEN.lug_x0 - TOL.gap * 2  # the lug rides past the webs
     wall = _box(x0, x1, d_back, d_front, z0, z1)
-    rib = _box(x0, x0 + p.rib_t, plate_front, d_front, z0, z1)
+    rib = _box(x0, x0 + PEN.rib_t, plate_front, d_front, z0, z1)
     webs = [
-        _box(x0, web_x1, plate_front, d_front, z0, z0 + p.web_t),
-        _box(x0, web_x1, plate_front, d_front, z1 - p.web_t, z1),
+        _box(x0, web_x1, plate_front, d_front, z0, z0 + PEN.web_t),
+        _box(x0, web_x1, plate_front, d_front, z1 - PEN.web_t, z1),
     ]
     length, width, _ = FT90M.body
-    zc, c = p.servo_center_z, p.servo_clear
+    zc, c = PEN.servo_center_z, PEN.servo_clear
     window = _box(
-        p.servo_x - width / 2 - c,
-        p.servo_x + width / 2 + c,
+        PEN.servo_x - width / 2 - c,
+        PEN.servo_x + width / 2 + c,
         d_back - 1,
         d_front + 1,
         zc - length / 2 - c,
         zc + length / 2 + c,
     )
-    pilots = [_hole_d(PILOT_D, p.servo_x, zc + sz * FT90M.hole_pitch / 2, d_back - 1, d_front + 1) for sz in (-1, 1)]
+    pilots = [_hole_d(PILOT_D, PEN.servo_x, zc + sz * FT90M.hole_pitch / 2, d_back - 1, d_front + 1) for sz in (-1, 1)]
     return [wall, rib, *webs], [window, *pilots]
 
 
 def _key_rib() -> Solid:
     """Rib on the plate face that the slide's lug rides on."""
-    p = PEN
-    z0 = p.lug_z[0] - p.sink
-    z1 = p.lug_z[1] + p.lift
+    z0 = PEN.lug_z[0] - PEN.sink
+    z1 = PEN.lug_z[1] + PEN.lift
     return _box(
-        p.key_x - p.key_w / 2,
-        p.key_x + p.key_w / 2,
-        p.plate_d[1] - 1,
-        p.plate_d[1] + p.key_h,
+        PEN.key_x - PEN.key_w / 2,
+        PEN.key_x + PEN.key_w / 2,
+        PEN.plate_d[1] - 1,
+        PEN.plate_d[1] + PEN.key_h,
         z0,
         z1,
     )
@@ -253,12 +249,11 @@ _OVERHANG = (_Z_LOW - _TIP_Z) / (_Z_HIGH - _Z_LOW)
 
 def _knock(name: str, direction: Vec3) -> LoadCase:
     """A pen knock as the rod's reactions on the two arms."""
-    f = PEN_KNOCK
-    lower = tuple(c * f * (1 + _OVERHANG) for c in direction)
-    upper = tuple(-c * f * _OVERHANG for c in direction)
+    lower = tuple(c * PEN_KNOCK * (1 + _OVERHANG) for c in direction)
+    upper = tuple(-c * PEN_KNOCK * _OVERHANG for c in direction)
     return LoadCase(
         name,
-        f"The pen tip is knocked with {f:g} N; the rod passes it to the arms "
+        f"The pen tip is knocked with {PEN_KNOCK:g} N; the rod passes it to the arms "
         f"({1 + _OVERHANG:.1f} × on the lower seat, {_OVERHANG:.1f} × opposite on the upper hole)",
         (
             Force(LOWER_SEAT, (lower[0], lower[1], lower[2]), bearing=True),

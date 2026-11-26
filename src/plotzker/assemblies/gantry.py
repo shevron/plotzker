@@ -64,22 +64,21 @@ def x_drive_local(side: Side) -> list[Solid]:
     mount = x_endstop_mount_installed()
     slider = x_idler_slider_installed()
     axle = get_handle(slider, "axle")
-    t = X_IDLER
-    screw_seat = handle([t.tower_s0, X_BELT.y, t.screw_z], [0, -90, 0])  # head on the tower's face
+    screw_seat = handle([X_IDLER.tower_s0, X_BELT.y, X_IDLER.screw_z], [0, -90, 0])  # head on the tower's face
     return [
         mount.color("DarkOrange"),
         slider.color("Orange"),
-        gt2_idler().rotate([90, 0, 0]).translate([X_DRIVE.idler_x, X_BELT.y, t.axle_z]),
-        shcs(t.axle_m, t.axle_len).align(axle),
-        hex_nut(t.axle_m)
+        gt2_idler().rotate([90, 0, 0]).translate([X_DRIVE.idler_x, X_BELT.y, X_IDLER.axle_z]),
+        shcs(X_IDLER.axle_m, X_IDLER.axle_len).align(axle),
+        hex_nut(X_IDLER.axle_m)
         .rotate([0, 0, 90])
         .rotate([-90, 0, 0])
-        .translate([X_DRIVE.idler_x, X_BELT.y + t.nut_seat_y, t.axle_z]),
-        shcs(t.screw_m, t.screw_len).align(screw_seat),
-        hex_nut(t.screw_m)
+        .translate([X_DRIVE.idler_x, X_BELT.y + X_IDLER.nut_seat_y, X_IDLER.axle_z]),
+        shcs(X_IDLER.screw_m, X_IDLER.screw_len).align(screw_seat),
+        hex_nut(X_IDLER.screw_m)
         .rotate([0, 0, 90])
         .rotate([0, 90, 0])
-        .translate([t.slider_s0 + TOL.nut_wall, X_BELT.y, t.screw_z]),
+        .translate([X_IDLER.slider_s0 + TOL.nut_wall, X_BELT.y, X_IDLER.screw_z]),
         endstop_placed(*frame_axes(get_handle(mount, "board"))),
     ]
 

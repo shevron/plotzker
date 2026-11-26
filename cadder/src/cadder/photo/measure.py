@@ -86,7 +86,6 @@ def crop(
     (x0, y0), (x1, y1) = scale.from_px(np.array([[u0, v0], [u1, v1]], dtype=np.float64))
     xs, ys = sorted((x0, x1)), sorted((y0, y1))
     step = grid or nice_step(max(xs[1] - xs[0], ys[1] - ys[0]))
-    font = cv2.FONT_HERSHEY_SIMPLEX
     for axis, (lo, hi) in enumerate((xs, ys)):
         n0 = math.ceil(lo / step - 1e-9)
         for n in range(n0, math.floor(hi / step + 1e-9) + 1):
@@ -98,12 +97,12 @@ def crop(
             if axis == 0:
                 x = round((u - u0) * k)
                 cv2.line(out, (x, 0), (x, out.shape[0]), color, 1)
-                cv2.putText(out, label, (x + 3, 16), font, 0.5, color, 1, cv2.LINE_AA)
+                cv2.putText(out, label, (x + 3, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
             else:
                 y = round((v - v0) * k)
                 cv2.line(out, (0, y), (out.shape[1], y), color, 1)
-                cv2.putText(out, label, (3, y - 4), font, 0.5, color, 1, cv2.LINE_AA)
-    cv2.putText(out, scale.unit, (out.shape[1] - 40, out.shape[0] - 10), font, 0.6, (0, 0, 255), 1)
+                cv2.putText(out, label, (3, y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+    cv2.putText(out, scale.unit, (out.shape[1] - 40, out.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 1)
     return np.asarray(out, dtype=np.uint8)
 
 

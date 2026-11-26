@@ -139,57 +139,58 @@ XT60 = Xt60Spec()
 
 def psu() -> Solid:
     """The supply in the PSU frame: case, terminal block and the lugs' keep-out."""
-    p = PSU
-    sx, sy, sz = p.size
+    sx, sy, sz = PSU.size
     case = cube([sx, sy, sz])
     # open end: the cover stops short on the fan side, the block sits inside the walls
-    pocket = box(1, -1, 1, sx - 1, p.cover_setback, sz + 1)
-    block = box(p.block_x[0], p.block_front_y, p.block_z[0], p.block_x[1], p.block_back_y, p.block_z[1])
-    xs = p.terminal_xs
+    pocket = box(1, -1, 1, sx - 1, PSU.cover_setback, sz + 1)
+    block = box(PSU.block_x[0], PSU.block_front_y, PSU.block_z[0], PSU.block_x[1], PSU.block_back_y, PSU.block_z[1])
+    xs = PSU.terminal_xs
     lugs = union(
         *(
             box(
-                xs[i] - p.lug_w / 2,
-                -p.crimp_reach,
-                p.crimp_z[0],
-                xs[i] + p.lug_w / 2,
-                p.block_front_y,
-                p.crimp_z[1],
+                xs[i] - PSU.lug_w / 2,
+                -PSU.crimp_reach,
+                PSU.crimp_z[0],
+                xs[i] + PSU.lug_w / 2,
+                PSU.block_front_y,
+                PSU.crimp_z[1],
             )
-            for i in p.wired
+            for i in PSU.wired
         )
     )
     case = case - pocket
-    d, r = p.hole_depth, p.hole_m / 2
-    for y in p.hole_y:
-        for x in p.bottom_hole_x:
+    d, r = PSU.hole_depth, PSU.hole_m / 2
+    for y in PSU.hole_y:
+        for x in PSU.bottom_hole_x:
             case = case - cylinder(r=r, h=d + 1, fn=16).translate([x, y, -1])
-        for z in (p.label_hole_z,):
+        for z in (PSU.label_hole_z,):
             case = case - cylinder(r=r, h=d + 1, fn=16).rotate([0, 90, 0]).translate([-1, y, z])
-        for z in p.switch_hole_z:
+        for z in PSU.switch_hole_z:
             case = case - cylinder(r=r, h=d + 1, fn=16).rotate([0, 90, 0]).translate([sx - d, y, z])
     return union(case.color("Silver"), block.color("#222"), lugs.color("RoyalBlue", 0.5))
 
 
 def c14_inlet() -> Solid:
     """The inlet in its own frame: flange on the panel (z ≥ 0), body behind it (z < 0)."""
-    i = C14_INLET
-    lx, wy = i.flange[0] / 2, i.flange[1] / 2
-    fy = i.flange_flat / 2
+    lx, wy = C14_INLET.flange[0] / 2, C14_INLET.flange[1] / 2
+    fy = C14_INLET.flange_flat / 2
     outline = polygon([[-lx, -fy], [0, -wy], [lx, -fy], [lx, fy], [0, wy], [-lx, fy]])
-    flange = linear_extrude(outline, height=i.flange_t)
-    for x, y in i.hole_xy:
-        flange = flange - cylinder(d=i.hole_d, h=i.flange_t + 2, fn=16).translate([x, y, -1])
-    body = cube([*i.cutout, i.body_h]).translate([-i.cutout[0] / 2, -i.cutout[1] / 2, -i.body_h])
-    tabs = cube([i.cutout[0] - 10, 15.2, i.tabs]).translate([-i.cutout[0] / 2 + 5, -7.6, -i.depth])
+    flange = linear_extrude(outline, height=C14_INLET.flange_t)
+    for x, y in C14_INLET.hole_xy:
+        flange = flange - cylinder(d=C14_INLET.hole_d, h=C14_INLET.flange_t + 2, fn=16).translate([x, y, -1])
+    body = cube([*C14_INLET.cutout, C14_INLET.body_h]).translate(
+        [-C14_INLET.cutout[0] / 2, -C14_INLET.cutout[1] / 2, -C14_INLET.body_h]
+    )
+    tabs = cube([C14_INLET.cutout[0] - 10, 15.2, C14_INLET.tabs]).translate(
+        [-C14_INLET.cutout[0] / 2 + 5, -7.6, -C14_INLET.depth]
+    )
     return (flange | body | tabs).color("#111")
 
 
 def xt60_female() -> Solid:
     """The XT60H-F in its own frame: mating face at y = 0, body toward -y, width along x (the
     chamfered short side toward +x), height along z."""
-    x = XT60
-    w, h, c = *x.front, x.chamfer
+    w, h, c = *XT60.front, XT60.chamfer
     outline = polygon(
         [
             [-w / 2, -h / 2],
@@ -200,22 +201,22 @@ def xt60_female() -> Solid:
             [-w / 2, h / 2],
         ]
     )
-    front = linear_extrude(outline, height=x.front_len).rotate([90, 0, 0])
+    front = linear_extrude(outline, height=XT60.front_len).rotate([90, 0, 0])
 
     def section(size: tuple[float, float], start: float, length: float) -> Solid:
         return cube([size[0], length, size[1]]).translate([-size[0] / 2, -start - length, -size[1] / 2])
 
     # the collar, its two corners on the chamfered (+x) side rounded
-    cw, ch, r = *x.collar, x.collar_r
+    cw, ch, r = *XT60.collar, XT60.collar_r
     corners = union(*(circle(r=r, fn=32).translate([cw / 2 - r, sz * (ch / 2 - r)]) for sz in (-1, 1)))
     collar_2d = hull(union(square([cw - r, ch]).translate([-cw / 2, -ch / 2]), corners))
-    collar = linear_extrude(collar_2d, height=x.collar_len).rotate([90, 0, 0]).translate([0, -x.front_len, 0])
+    collar = linear_extrude(collar_2d, height=XT60.collar_len).rotate([90, 0, 0]).translate([0, -XT60.front_len, 0])
 
-    collar_end = x.front_len + x.collar_len
-    rear = collar_end + x.flange_len
+    collar_end = XT60.front_len + XT60.collar_len
+    rear = collar_end + XT60.flange_len
     return union(
         front,
         collar,
-        section(x.flange, collar_end, x.flange_len),
-        section(x.cap, rear, x.length - rear),
+        section(XT60.flange, collar_end, XT60.flange_len),
+        section(XT60.cap, rear, XT60.length - rear),
     ).color("Gold")

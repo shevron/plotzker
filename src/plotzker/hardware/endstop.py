@@ -125,22 +125,28 @@ ENDSTOP = EndstopSpec()
 
 def endstop(pressed: bool = False) -> Solid:
     """Endstop board in the model frame (see the module docstring); lever at rest or pressed."""
-    e = ENDSTOP
-    length, width, t = e.pcb
-    holes = [cylinder(d=e.hole_d, h=t + 2, fn=16).translate([su * e.hole_pitch / 2, e.hole_v, -1]) for su in (-1, 1)]
+    length, width, t = ENDSTOP.pcb
+    holes = [
+        cylinder(d=ENDSTOP.hole_d, h=t + 2, fn=16).translate([su * ENDSTOP.hole_pitch / 2, ENDSTOP.hole_v, -1])
+        for su in (-1, 1)
+    ]
     pcb = (cube([width, length, t]).translate([-width / 2, -length, 0]) - holes).color("Black")
-    body_w, body_h, body_d = e.body
-    body = cube([body_w, body_h, body_d]).translate([e.body_u - body_w / 2, e.body_overhang - body_h, t]).color("#222")
-    conn_w, conn_l, conn_h = e.connector
-    connector = (
-        cube([conn_w, conn_l, conn_h]).translate([-conn_w / 2, -length - e.connector_overhang, t]).color("White")
+    body_w, body_h, body_d = ENDSTOP.body
+    body = (
+        cube([body_w, body_h, body_d])
+        .translate([ENDSTOP.body_u - body_w / 2, ENDSTOP.body_overhang - body_h, t])
+        .color("#222")
     )
-    protrusion = e.pressed_protrusion if pressed else e.rest_protrusion
+    conn_w, conn_l, conn_h = ENDSTOP.connector
+    connector = (
+        cube([conn_w, conn_l, conn_h]).translate([-conn_w / 2, -length - ENDSTOP.connector_overhang, t]).color("White")
+    )
+    protrusion = ENDSTOP.pressed_protrusion if pressed else ENDSTOP.rest_protrusion
     lever = (
-        cube([e.lever_len, e.lever_t, e.lever_w])
-        .translate([0, -e.lever_t / 2, -e.lever_w / 2])
-        .rotate([0, 0, math.degrees(e.lever_angle(protrusion))])
-        .translate([e.pivot_u, e.body_overhang, e.lever_z])
+        cube([ENDSTOP.lever_len, ENDSTOP.lever_t, ENDSTOP.lever_w])
+        .translate([0, -ENDSTOP.lever_t / 2, -ENDSTOP.lever_w / 2])
+        .rotate([0, 0, math.degrees(ENDSTOP.lever_angle(protrusion))])
+        .translate([ENDSTOP.pivot_u, ENDSTOP.body_overhang, ENDSTOP.lever_z])
         .color("Silver")
     )
     return pcb | body | connector | lever
@@ -148,12 +154,11 @@ def endstop(pressed: bool = False) -> Solid:
 
 def endstop_keepout() -> Solid:
     """Space that must stay free behind the connector for a plug, in the model frame."""
-    e = ENDSTOP
-    width = e.connector[0] + 2 * e.plug_clearance
-    rear_face = -(e.pcb[0] + e.connector_overhang)
-    return cube([width, rear_face - e.plug_keepout_v, e.pcb[2] + e.connector[2] + e.plug_clearance]).translate(
-        [-width / 2, e.plug_keepout_v, 0]
-    )
+    width = ENDSTOP.connector[0] + 2 * ENDSTOP.plug_clearance
+    rear_face = -(ENDSTOP.pcb[0] + ENDSTOP.connector_overhang)
+    return cube(
+        [width, rear_face - ENDSTOP.plug_keepout_v, ENDSTOP.pcb[2] + ENDSTOP.connector[2] + ENDSTOP.plug_clearance]
+    ).translate([-width / 2, ENDSTOP.plug_keepout_v, 0])
 
 
 def endstop_placed(

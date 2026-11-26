@@ -171,6 +171,29 @@ Open:
   - [ ] Measure the inlet's push-on tabs (9 mm *assumed*) and flange flats (32 *assumed*).
   - [ ] Before closing the hood: set the output voltage (the ADJ pot gets covered), set the
     115/230 V selector to 230 V, fit a T3.15 A slow-blow fuse.
+- [ ] **T3.33 Move the ZRIB code to a legacy package** (do before T3.32). The ZRIB is set aside
+  (D41), but the current machine still models it: the machine and FreeCAD assemblies, the design
+  checks, the part and assembly registries and the drilling layout (ZRIB hanger pilot holes). Keep
+  the code, for possible reuse or a later choice of board at build time; take it out of the
+  current machine. Don't build board selection now.
+  1. Create `src/plotzker/legacy/zrib/` with the board model (`hardware/zrib.py`), `zrib_hanger`,
+     `zrib_guard`, `assemblies/zrib_mount.py`, `params.ZribMount` / `ZMOUNT`, the ZRIB-only
+     `Baseboard` values and the ZRIB design checks.
+  2. `legacy` may import the active code; active code never imports `legacy` (add a test).
+  3. Remove the ZRIB from the machine and FreeCAD assemblies (`freecad_assembly.py` asserts item
+     counts), `PARTS`, `ASSEMBLIES` and the drilling layout; regenerate
+     `docs/baseboard-layout.svg` and `docs/baseboard-holes.md`.
+  4. `PSU_MOUNT.terminal_y` uses `BASEBOARD.zrib_center`: replace it with a board-neutral
+     controller position of the same value, so the PSU hood and brackets don't move. Keep the loom
+     hole where it is; T3.32 revisits both.
+  5. Keep a small test that the legacy parts and mount assembly still build and don't collide.
+  6. Update what names the moved files or parts: README §5, this file (T3.21, T3.32, as-built
+     notes), `docs/fem.md`, `docs/hardware.md`, docstrings. Record the decision in the log (§3):
+     code for superseded hardware is kept under `plotzker.legacy`, outside the current machine.
+
+  *Done when:* `make check` and `make test` pass; nothing outside `legacy` and its tests imports
+  it; `python -m plotzker diff` shows only ZRIB items and their holes gone, and no change to the
+  PSU mount or loom.
 - [ ] **T3.32 Controller mount for the Creality board** (D41). The controller hangers and guards,
   `hardware/zrib.py`, `assemblies/zrib_mount.py`, their holes in the drilling layout, the loom
   run and the PSU's XT60 position (D38) were designed around the ZRIB. Measure the Creality

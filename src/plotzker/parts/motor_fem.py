@@ -1,5 +1,5 @@
 """FEM loads of a belt-driven NEMA17 on a mount, shared by the X and Y motor mounts and by the
-gantry bracket that carries the X motor mount (docs/fem-subagent-plan.md §18)."""
+gantry bracket that carries the X motor mount (docs/fem.md)."""
 
 from cadder.geometry import lever_couple
 from cadder.part import Force, Load, Moment

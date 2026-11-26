@@ -6,7 +6,8 @@ Marlin is GPL-3.0: any Marlin file or diff added here stays under that license (
 
 **Tested:** tag `2.1.2.5` with `apply_config.py`: `pio run -e STM32F103RE_creality` compiles
 (flash 14.9 %, RAM 7.2 %). Flashed from microSD to the GD32F303 board; `M115` answers, the X motor moves and `G28 X` homes
-(2026-11-26). Repeatability, travel and steps/mm not measured yet (T2.7).
+(2026-11-26). Repeatability, travel and steps/mm are measured too (results in
+[`docs/controller.md`](../docs/controller.md)).
 
 Run from the project folder; `vendor/` is git-ignored.
 
@@ -28,7 +29,7 @@ direction, homing, steps/mm with `M92`/`M500`, repeatability, travel and soft li
 report to `build/`. Distances are caliper readings of the gap between the left bracket and the
 carriage plate ([picture](../docs/x-axis-measure.svg)). `--from STEP` and `--only STEP` repeat part
 of the test. `--port` and `--cycles` override the defaults. Close the serial monitor first.
-Tested against a simulated board (`tests/test_x_axis_test.py`), not yet on the real one.
+Run on the real board; also tested against a simulated one (`tests/test_x_axis_test.py`).
 
 ## What `apply_config.py` sets (X-axis bring-up)
 

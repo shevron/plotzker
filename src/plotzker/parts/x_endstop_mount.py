@@ -1,8 +1,8 @@
 """X endstop mount (STATUS.md T3.14, T3.22). Print ×1 (left end).
 
 Purpose: a small foot that carries the X endstop board (Creality-type microswitch board) on the
-left gantry bracket's base over the rear SCS block, clamped by that block's rear 4 × M5 (the rear
-row's heads sit on the foot; they become M5×25). It used to be the idler mount's foot; the idler's
+left gantry bracket's base over the rear SCS block, clamped by that block's rear row of M5 (those 2
+heads sit on the foot; they become M5×25). It used to be the idler mount's foot; the idler's
 tower is part of the bracket now (:mod:`gantry_end_bracket`), so this part carries no belt load.
 
   top view
@@ -17,8 +17,7 @@ Frame: LEFT bracket-local (``params.XDrive``), z = 0 on the SCS top face
 (:func:`x_endstop_mount_installed`); :func:`x_endstop_mount` puts the foot on the bed.
 
 Hardware: 2 × M3 nuts (pressed into the foot's underside) + 2 × M3×6 (endstop board);
-4 × M5×25 ISO 4762 replacing the rear SCS bolts of the left bracket (rear row only; the front
-row's heads sit flush with the foot).
+2 × M5×25 ISO 4762 replacing the rear row of the left bracket's rear SCS bolts.
 Print: default profile (``profiles/default.toml``); foot down; no supports.
 
 FEM: not structural (the board's loads are a few newtons at most).

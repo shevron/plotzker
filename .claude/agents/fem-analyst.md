@@ -14,7 +14,7 @@ spec. You only run the check and read its results. Everything you write goes to 
 through the commands below.
 
 Background: `cadder/docs/fem.md` (the method: conventions, how to read results),
-`docs/fem.md` (the plotter's parts, data and modeling choices) and `docs/fem-subagent-plan.md`.
+`docs/fem.md` (the plotter's parts, data and modeling choices).
 Read both `fem.md` files before your first check in a session; cadder's lists the thresholds
 (marginal band, refinement band, singularity flag).
 

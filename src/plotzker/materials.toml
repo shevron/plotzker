@@ -1,4 +1,4 @@
-# Materials for the FEM checks (docs/fem-subagent-plan.md).
+# Materials for the FEM checks (docs/fem.md).
 #
 # Units: MPa, g/cm³. Printed materials are transversely isotropic about the build direction:
 # "in_plane" is within a layer (x/y of the print frame), "build" is across the layers (z).

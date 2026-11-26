@@ -1,6 +1,7 @@
 # Hardware reference dimensions
 
-Vendor-part dimensions we design around. These values go into `src/plotzker/hardware/` (one frozen `*Spec` dataclass per part).
+Vendor-part dimensions we design around. These values go into `cadder/src/cadder/hardware/` (generic vendor parts) or
+`src/plotzker/hardware/` (the plotter's own), one frozen `*Spec` dataclass per part.
 All in mm.
 
 ## SCS10UU linear bearing block (Y axis, 4 pcs)

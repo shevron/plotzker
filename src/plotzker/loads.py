@@ -1,7 +1,7 @@
 """Load magnitudes shared by the FEM load cases. Every value is ASSUMED until measured.
 
 Forces in N, torques in N·mm, accelerations in mm/s². One place to refine them: part
-definitions read these, they don't repeat them (docs/fem-subagent-plan.md §18).
+definitions read these, they don't repeat them (docs/fem.md).
 """
 
 from dataclasses import dataclass

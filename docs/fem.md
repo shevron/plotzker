@@ -2,8 +2,8 @@
 
 The method (writing a spec, running a check, reading a result, assembly checks, limits) is
 cadder's: [`cadder/docs/fem.md`](../cadder/docs/fem.md). This page holds what is the plotter's:
-which parts need a check, where its data lives, and its own modeling choices. The design of the
-tooling and the plotter's FEM history are in [`fem-subagent-plan.md`](fem-subagent-plan.md). The
+which parts need a check, where its data lives, and its own modeling choices. Current verdicts: `make fem-status`; open ones are
+listed in `STATUS.md`. The
 checks are done by the `fem-analyst` sub-agent (`.claude/agents/fem-analyst.md`).
 
 Commands: `python -m plotzker fem NAME... [--viz]` (`make fem NAMES="..."`), `python -m
@@ -14,10 +14,11 @@ plotzker fem-status` (`make fem-status`), `python -m plotzker part NAME [--json]
 | Part | Structural? | State |
 |------|-------------|-------|
 | `idler_slider` (X and both Y idlers), `y_idler_mount_left/right`, `x_motor_mount`, `y_motor_mount_left`, `gantry_end_bracket_left/right`, `x_carriage`, `pen_slide`, `pen_holder_body` | yes | defined, checked |
-| `y_motor_mount_right` | exact mirror images | covered by the left part (`mirror_of`) |
+| `psu_bracket` | yes | defined, checked (STATUS.md T3.31) |
+| `y_motor_mount_right` | exact mirror image | covered by the left part (`mirror_of`) |
 | `belt_clamp` | carries belt tension through two screws | to decide |
 | `zrib_hanger` | light (board weight) | to decide |
-| `loom_anchor`, `loom_rail`, `zrib_guard` | no | not structural |
+| `x_endstop_mount`, `loom_anchor`, `loom_rail`, `zrib_guard`, `psu_hood` | no | not structural |
 
 ## Where things are
 
@@ -38,11 +39,16 @@ plotzker fem-status` (`make fem-status`), `python -m plotzker part NAME [--json]
   a load.
 - The belt tensioner's parts build their spec from one description (`slider_fem`, `mount_fem` in
   `parts/floating_idler.py`) placed in each part's frame with a `Placement`.
+- Abuse cases (pen knock, servo stall, motor jam) get a strength check only, no displacement
+  limit.
+- The brackets carry the force of a mount (and the motor's weight) on its footprint, but not its
+  couple: the clamped joint takes that through bolt preload, and applied as forces it would pull
+  on a surface that can only be pushed. The mounts' own checks include the couple.
 - Gantry-level effects (shaft sag, extrusion bending) are hand calculations, not meshed.
 
 ## Assembly checks
 
-The belt tensioner showed why they are needed (STATUS.md T3.19): the belt pulled the idler axle
+The belt tensioner showed why they are needed (STATUS.md T3.21): the belt pulled the idler axle
 ~14 mm above the tension screw, so a couple twisted the slider in its dovetail; it tilted by the
 clearance while the mount bent. The floating idlers (T3.22) have no play, but their slider and
 mount deflections still add up.

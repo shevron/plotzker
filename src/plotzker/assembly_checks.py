@@ -2,7 +2,7 @@
 
 A part's own FEM check holds its neighbours rigid, so deflections that are small in each part
 but add up, and play between parts, go unseen. The belt tensioners are the case that taught
-this (STATUS.md T3.19): a dovetail slider tilted in its clearance while the mount bent. The
+this (STATUS.md T3.21): a dovetail slider tilted in its clearance while the mount bent. The
 floating idlers have no play, but their mount and slider deflections still add up.
 
 Limits are the sum of the members' own limits (nothing new is decided): both parts may use

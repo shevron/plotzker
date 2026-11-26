@@ -3,7 +3,7 @@
 :data:`PARTS` maps each part's name (= STL file name, ``stl/<name>.stl``) to its
 :class:`~cadder.part.Part`. Parts with a print profile, material and FEM specification are
 printed parts (:class:`~cadder.part.PrintedPart`, module-level ``PART``); the others are
-plain ``Part`` objects until they get their data (``docs/fem-subagent-plan.md``).
+plain ``Part`` objects until they get their data (``docs/fem.md``).
 """
 
 from cadder.part import MaterialPart, Part

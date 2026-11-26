@@ -96,12 +96,12 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
     items += [
         scs10uu().translate([0, block * Y_AXIS.scs_pitch / 2, -SCS10UU.height]) for block in (-1, 1)
     ]
-    # 8 × M5 into the blocks; the rear block's 4 also clamp the X motor/idler foot (M5×25)
+    # 8 × M5 into the blocks; the rear block's bolts also clamp the X motor/endstop foot (2 × M5×25)
     items += [shcs(5, 20).align(bolt) for bolt in get_handles(bracket, "block_bolts_front")]
     foot_top = X_DRIVE.foot_t
     recess = X_DRIVE.foot_head_recess if side is Side.RIGHT else 0  # motor mount: counterbored
     for bolt in get_handles(bracket, "block_bolts_rear"):
-        # the idler mount's foot clamps the rear row; the motor mount's the front row
+        # the endstop mount's foot clamps the rear row; the motor mount's the front row
         rear_row = bolt[1][3] > Y_AXIS.scs_pitch / 2
         clamped = rear_row if side is Side.LEFT else not rear_row
         items.append(

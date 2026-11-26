@@ -1,5 +1,8 @@
 # X-axis bring-up guide (Phase 2, first milestone)
 
+Done on 2026-11-26 (results in [`controller.md`](controller.md)); kept for rebuilding and
+re-testing the X axis.
+
 **Goal:** the printed gantry and X carriage are assembled, the X motor and X− endstop are
 wired to the Creality V4.2.2 board and the 24 V supply, Marlin is flashed, and `G28 X` moves the carriage to
 the endstop, stops, and sets X = 0.
@@ -29,9 +32,8 @@ pen holder, servo, loom, board mount. This guide is the first slice of T2.1–T2
 | `idler_slider` | 1 (the Y idlers use the same part, ×2) | Prints upside down (top on the bed) |
 | `belt_clamp` | 2 | The X belt's two ends (Y needs 4 more later) |
 
-Do **not** print `x_idler_mount.stl`: it is left over from the old design. If you change the
-CAD, run `make stl` first. Print the carriage first and test-fit the nuts, wheels and beam
-before printing the rest (the follow-ups in `STATUS.md` T3.3, T3.22 list what to check).
+If you change the CAD, run `make stl` first. Print the carriage first and test-fit the nuts,
+wheels and beam before printing the rest.
 
 ### Hardware
 
@@ -83,8 +85,7 @@ table, a non-slip mat.
    bracket to its 2 blocks with M5×20.
 5. **Motor and endstop feet.** Place the motor mount's foot on the right bracket and the
    endstop mount's foot on the left bracket, under the rear block's bolt heads, and fit
-   the M5×25 bolts that pass through them (the foot clamps under the head): 2 per side in the
-   assembly model (some part docstrings still say 4; check against the parts).
+   the M5×25 bolts that pass through them (the foot clamps under the head): 2 per side.
 6. **Motor.** Fit the NEMA17 with 4 × M3×10 (shaft toward the beam). Put the 20T pulley on
    the shaft, **hub toward the motor**, belt line level with the idler, set screw on the
    shaft's flat. Tighten it after the belt is on.
@@ -303,14 +304,3 @@ at least 10 times in a row at the same spot (±0.1 mm), and it stays within the 
 | `x_min` always TRIGGERED | Wrong logic setting; cable not on X− |
 | Board resets when the motor moves | Loose 24 V connection; reversed polarity is a different, serious failure: stop |
 | Driver very hot | Vref too high; no airflow |
-
----
-
-## 7. Report back
-
-So that T2.1–T2.3 can be closed from this session, send the test script's report and write down:
-
-- the PSU label, the factory and final Vref, the motor's label, the Marlin tag;
-- what worked and what didn't (with photos of any failure);
-- the measured steps/mm, the gap where the switch clicks, and the repeatability;
-- which endstop logic setting was right, and which connector is X−.

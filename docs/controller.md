@@ -1,7 +1,7 @@
 # Controller: Creality V4.2.2
 
 The plotter's controller (STATUS D41). Facts from the user's photo of the board (2026-11-25) and
-Marlin 2.1.2.5's `pins_CREALITY_V422.h`. The pin map is not yet verified on the bench.
+Marlin 2.1.2.5's `pins_CREALITY_V422.h`. On the bench only the X driver and X− input are verified.
 
 ## What the board has
 
@@ -25,7 +25,7 @@ Board outline, holes and height: not measured yet (T3.32).
 | X step / dir | PC2 / PB9 |
 | Y step / dir | PB8 / PB7 |
 | Z step / dir | PB6 / PB5 |
-| E0 step / dir | PB4 / PB3 |
+| E step / dir (Marlin: `E0`) | PB4 / PB3 |
 | Enable (all drivers share it) | PC3 |
 | X−, Y−, Z− | PA5, PA6, PA7 |
 | SERVO0 / probe input | PB0 / PB1 |
@@ -38,7 +38,7 @@ Board outline, holes and height: not measured yet (T3.32).
 |----------|-------------|----------------|
 | X motor | X driver | — |
 | Y motor (left) | Y driver | — |
-| Y2 motor (right) | E0 driver | `Y_DUAL_STEPPER_DRIVERS` |
+| Y2 motor (right) | E driver | `Y_DUAL_STEPPER_DRIVERS` |
 | X home | X− | `X_HOME_DIR -1` |
 | Y home (left) | Y− | `Y_DUAL_ENDSTOPS` |
 | Y2 home (right) | Z− input | `Y2_USE_ENDSTOP` on Z min (check at T2.2) |
@@ -66,12 +66,11 @@ for a pen changer.
 
 ## To verify on the bench
 
-1. Factory Vref of the four drivers; set X as in the [bring-up guide](x-axis-bringup.md) §3.
-2. Which edge connector is X−, Y−, Z−; endstop logic (`M119`, `M43 W`).
-3. Each driver drives the expected motor (E0 as Y2).
+1. Factory Vref of the four drivers (T2.1).
+2. Y− and Z− inputs: which connector, endstop logic (`M119`, `M43 W`).
+3. The Y and E drivers drive the expected motors (E as Y2).
 4. Servo on `BL_T`: 5 V holds with the servo stalled; if the board resets, use a separate 5 V
    buck converter (common GND).
-5. PSU: ✅ Cheng Liang P360W24V, 24 V, 15 A max, 215 × 113 × 50 mm (user).
 
 ## TFT35-E3 (optional)
 

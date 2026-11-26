@@ -733,7 +733,7 @@ class PsuMount:
     @property
     def origin(self) -> tuple[float, float, float]:
         """Machine position of the PSU frame's origin (the frame turns +90° about y)."""
-        return (FRAME.board_size[0] + self.edge_gap, self.terminal_y, self.top_z)
+        return FRAME.board_size[0] + self.edge_gap, self.terminal_y, self.top_z
 
     @property
     def low_z(self) -> float:
@@ -825,7 +825,7 @@ class YAxis:
     def shaft_x(self) -> tuple[float, float]:
         """Shaft positions in the machine frame (centered on the baseboard)."""
         board_x = FRAME.board_size[0]
-        return ((board_x - self.shaft_spacing) / 2, (board_x + self.shaft_spacing) / 2)
+        return (board_x - self.shaft_spacing) / 2, (board_x + self.shaft_spacing) / 2
 
     @property
     def shaft_y0(self) -> float:
@@ -835,7 +835,7 @@ class YAxis:
     @property
     def sk10_y(self) -> tuple[float, float]:
         """SK10 mid-thickness, front and back."""
-        return (self.shaft_y0 + SK10.length / 2, self.shaft_y0 + Y_SHAFT.length - SK10.length / 2)
+        return self.shaft_y0 + SK10.length / 2, self.shaft_y0 + Y_SHAFT.length - SK10.length / 2
 
     @property
     def shaft_z(self) -> float:
@@ -866,7 +866,7 @@ class YAxis:
     def gantry_y_range(self) -> tuple[float, float]:
         """Gantry center along Y (machine frame) at the front and back ends of travel."""
         front = self.shaft_y0 + SK10.length + self.end_margin + self.gantry_len_y / 2
-        return (front, front + self.travel_avail)
+        return front, front + self.travel_avail
 
     # Y belt line (fixes the Y motor and idler heights for T3.5)
     @property
@@ -986,7 +986,7 @@ class Carriage:
     @property
     def wheel_z(self) -> tuple[float, float]:
         """Wheel axle heights (abs): top pair, bottom pair."""
-        return (BEAM.top_z + VWHEEL.axis_to_face, BEAM.bottom_z - VWHEEL.axis_to_face)
+        return BEAM.top_z + VWHEEL.axis_to_face, BEAM.bottom_z - VWHEEL.axis_to_face
 
     @property
     def bottom_z(self) -> float:
@@ -1048,7 +1048,7 @@ class Carriage:
         """Carriage center along X (machine frame) at the left and right ends of travel."""
         beam_x0 = (FRAME.board_size[0] - BEAM.length) / 2
         left = beam_x0 + self.end_keepout + self.w / 2
-        return (left, left + self.travel_avail)
+        return left, left + self.travel_avail
 
 
 CARRIAGE = Carriage()
@@ -1190,13 +1190,13 @@ class XEndstopMount:
     @property
     def board_x(self) -> tuple[float, float]:
         """Board extent in x: rear edge, front edge."""
-        return (self.board_front_x - ENDSTOP.pcb[0], self.board_front_x)
+        return self.board_front_x - ENDSTOP.pcb[0], self.board_front_x
 
     @property
     def board_y(self) -> tuple[float, float]:
         """Board extent in y: the lever hinge is at +y, its tip toward -y."""
         yc = CARRIAGE.trig_y + ENDSTOP.contact_u
-        return (yc - ENDSTOP.pcb[1] / 2, yc + ENDSTOP.pcb[1] / 2)
+        return yc - ENDSTOP.pcb[1] / 2, yc + ENDSTOP.pcb[1] / 2
 
     @property
     def board_bottom_z(self) -> float:
@@ -1255,7 +1255,7 @@ class XDrive:
     def bolt_rows(self) -> tuple[float, float]:
         """Rear SCS bolt rows (y)."""
         p, c = Y_AXIS.scs_pitch, SCS10UU.hole_pitch_y
-        return (p / 2 - c / 2, p / 2 + c / 2)
+        return p / 2 - c / 2, p / 2 + c / 2
 
     @property
     def plate_y0(self) -> float:
@@ -1266,7 +1266,7 @@ class XDrive:
     def foot_y(self) -> tuple[float, float]:
         """Y range of the foot under the SCS block."""
         p, length = Y_AXIS.scs_pitch, SCS10UU.length
-        return (p / 2 - length / 2, p / 2 + length / 2)
+        return p / 2 - length / 2, p / 2 + length / 2
 
     @property
     def motor_face_y(self) -> float:
@@ -1281,7 +1281,7 @@ class XDrive:
     @property
     def motor_foot_y(self) -> tuple[float, float]:
         """Y range of the motor mount's foot: under the front bolt row and the plate only."""
-        return (self.foot_y[0], self.motor_face_y)
+        return self.foot_y[0], self.motor_face_y
 
 
 X_DRIVE = XDrive()
@@ -1336,13 +1336,13 @@ class YDrive:
     def front_pocket_y(self) -> tuple[float, float]:
         """Front pocket's frame, y extent: from the end wall's outer face to the SK10's inboard
         face."""
-        return (Y_AXIS.shaft_y0 - self.pocket_wall, Y_AXIS.shaft_y0 + SK10.length)
+        return Y_AXIS.shaft_y0 - self.pocket_wall, Y_AXIS.shaft_y0 + SK10.length
 
     @property
     def rear_pocket_y(self) -> tuple[float, float]:
         """Rear pocket's frame, y extent."""
         end = Y_AXIS.shaft_y0 + Y_SHAFT.length
-        return (end - SK10.length, end + self.pocket_wall)
+        return end - SK10.length, end + self.pocket_wall
 
     @property
     def idler_y(self) -> float:
@@ -1368,7 +1368,7 @@ class YDrive:
     @property
     def idler_foot_y(self) -> tuple[float, float]:
         """Y extent of the idler foot's main plate: the end block to the endstop tower."""
-        return (self.idler_block_y, Y_ENDSTOP.tower_y[1] + Y_ENDSTOP.tower_margin)
+        return self.idler_block_y, Y_ENDSTOP.tower_y[1] + Y_ENDSTOP.tower_margin
 
     @property
     def motor_y(self) -> float:
@@ -1384,12 +1384,12 @@ class YDrive:
     def motor_plate_x(self) -> tuple[float, float]:
         """Motor plate x extent; the motor face is its inboard side."""
         x0 = self.pulley_hub_x + self.hub_gap
-        return (x0, x0 + self.motor_plate_t)
+        return x0, x0 + self.motor_plate_t
 
     @property
     def motor_plate_y(self) -> tuple[float, float]:
         """Motor plate y extent (the motor width)."""
-        return (self.motor_y - NEMA17.width / 2, self.motor_y + NEMA17.width / 2)
+        return self.motor_y - NEMA17.width / 2, self.motor_y + NEMA17.width / 2
 
     @property
     def motor_top_z(self) -> float:
@@ -1432,7 +1432,7 @@ class YEndstopMount:
     @property
     def board_y(self) -> tuple[float, float]:
         """Board extent in y: rear edge, front edge."""
-        return (self.board_front_y - ENDSTOP.pcb[0], self.board_front_y)
+        return self.board_front_y - ENDSTOP.pcb[0], self.board_front_y
 
     @property
     def keepout_y0(self) -> float:
@@ -1452,12 +1452,12 @@ class YEndstopMount:
     @property
     def tower_x(self) -> tuple[float, float]:
         """Tower x extent: its outboard face to the board's underside."""
-        return (self.board_x0 - self.tower_t, self.board_x0)
+        return self.board_x0 - self.tower_t, self.board_x0
 
     @property
     def tower_y(self) -> tuple[float, float]:
         """Tower y extent."""
-        return (self.board_y[0] - self.tower_margin, self.board_y[1] + self.tower_margin)
+        return self.board_y[0] - self.tower_margin, self.board_y[1] + self.tower_margin
 
     def board_z_center(self, u_z: int) -> float:
         """Board center height; ``u_z`` = board width direction along z (-1 left, +1 right)."""
@@ -1466,7 +1466,7 @@ class YEndstopMount:
     def board_z(self, u_z: int) -> tuple[float, float]:
         """Board extent in z."""
         zc = self.board_z_center(u_z)
-        return (zc - ENDSTOP.pcb[1] / 2, zc + ENDSTOP.pcb[1] / 2)
+        return zc - ENDSTOP.pcb[1] / 2, zc + ENDSTOP.pcb[1] / 2
 
 
 Y_ENDSTOP = YEndstopMount()
@@ -1640,13 +1640,13 @@ class Baseboard:
     def runner_x(self) -> tuple[float, float]:
         """Runner extent along X (centered on the board, like the beam)."""
         x0 = (FRAME.board_size[0] - self.runner_len) / 2
-        return (x0, x0 + self.runner_len)
+        return x0, x0 + self.runner_len
 
     @property
     def runner_y(self) -> tuple[float, float, float]:
         """Runner center lines along Y."""
         mid = FRAME.board_size[1] / 2
-        return (mid - self.runner_pitch, mid, mid + self.runner_pitch)
+        return mid - self.runner_pitch, mid, mid + self.runner_pitch
 
     @property
     def runner_screw_x(self) -> tuple[float, ...]:
@@ -1658,7 +1658,7 @@ class Baseboard:
     @property
     def sk10_hole_x(self) -> tuple[float, float]:
         """SK10 hole offsets from the shaft axis."""
-        return (-SK10.hole_pitch / 2, SK10.hole_pitch / 2)
+        return -SK10.hole_pitch / 2, SK10.hole_pitch / 2
 
     @property
     def post_xy(self) -> tuple[tuple[float, float], ...]:
@@ -1871,7 +1871,7 @@ class FloatingIdler:
     @property
     def tower_across(self) -> tuple[float, float]:
         """The tower's extent across the belt line (installed frame)."""
-        return (self.belt_pos - self.tower_half, self.belt_pos + self.tower_half)
+        return self.belt_pos - self.tower_half, self.belt_pos + self.tower_half
 
     @property
     def wall_len(self) -> float:
@@ -1893,12 +1893,12 @@ class FloatingIdler:
     def tip_pocket(self) -> tuple[float, float]:
         """Radius and depth that the axle bolt's tip needs in the other wall (the nut sits inside
         the arm's pocket), with clearance."""
-        return (self.axle_m / 2 + 0.5, max(self.axle_len - self.width - self.wall_gap, 0) + 0.5)
+        return self.axle_m / 2 + 0.5, max(self.axle_len - self.width - self.wall_gap, 0) + 0.5
 
     def sweep(self, radius: float) -> tuple[float, float]:
         """Range (tensioner frame x) that something of ``radius`` round the axle sweeps over the
         slider's travel."""
-        return (self.axle_rel - self.travel / 2 - radius, self.axle_rel + self.travel / 2 + radius)
+        return self.axle_rel - self.travel / 2 - radius, self.axle_rel + self.travel / 2 + radius
 
     @property
     def tower_top(self) -> float:

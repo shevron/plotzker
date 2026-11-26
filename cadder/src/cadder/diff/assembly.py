@@ -117,7 +117,7 @@ def _dist(a: Item, b: Item) -> float:
 
 def _shift(a: Item, b: Item) -> tuple[float, float, float]:
     d = np.subtract(b.centroid, a.centroid)
-    return (float(d[0]), float(d[1]), float(d[2]))
+    return float(d[0]), float(d[1]), float(d[2])
 
 
 def match_items(

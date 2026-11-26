@@ -48,7 +48,7 @@ class PartChange:
         """Change of the bounding-box extents (x, y, z), mm."""
         if self.before and self.after:
             b, a = self.before.size, self.after.size
-            return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+            return a[0] - b[0], a[1] - b[1], a[2] - b[2]
         return None
 
     @property
@@ -56,7 +56,7 @@ class PartChange:
         """Movement of the bounding-box minimum corner (x, y, z), mm."""
         if self.before and self.after:
             b, a = self.before.bbox_min, self.after.bbox_min
-            return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
+            return a[0] - b[0], a[1] - b[1], a[2] - b[2]
         return None
 
 

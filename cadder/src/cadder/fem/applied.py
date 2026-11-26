@@ -116,4 +116,4 @@ def net_force(forces: dict[int, Vec3], supports: Sequence[Supports] = ()) -> Vec
         for i in range(3):
             if not mask[i]:
                 total[i] += f[i]
-    return (total[0], total[1], total[2])
+    return total[0], total[1], total[2]

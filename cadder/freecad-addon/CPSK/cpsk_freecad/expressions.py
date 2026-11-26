@@ -145,7 +145,7 @@ class _Parser:
 
     def unary(self) -> _Node:
         if self.peek() in ("+", "-"):
-            return ("unary", self.take(), self.unary())
+            return "unary", self.take(), self.unary()
         return self.primary()
 
     def primary(self) -> _Node:
@@ -167,7 +167,7 @@ class _Parser:
             return self.call()
         if kind == "name" and text in CONSTANTS:
             self.take()
-            return ("ref", text)
+            return "ref", text
         if kind in ("name", "label") or text == ".":
             return self.reference()
         raise UnsupportedExpressionError(f"unexpected {text!r} in {self.source!r}")
@@ -180,7 +180,7 @@ class _Parser:
                 raise UnsupportedExpressionError(f"unit {unit!r} is not supported")
             self.take()
             text += UNITS[unit]
-        return ("number", text)
+        return "number", text
 
     def call(self) -> _Node:
         name = self.take()
@@ -192,7 +192,7 @@ class _Parser:
             self.take()
             args.append(self.sum())
         self.take(")")
-        return ("call", name, args)
+        return "call", name, args
 
     def reference(self) -> _Node:
         label = self.kind() == "label"
@@ -208,7 +208,7 @@ class _Parser:
             parts.append(self.take())
         if len(parts) == 1:
             parts.insert(0, "")
-        return ("ref", self.resolve(Path(tuple(parts), label)))
+        return "ref", self.resolve(Path(tuple(parts), label))
 
 
 # ----- Writing, with CPSK's precedence -----

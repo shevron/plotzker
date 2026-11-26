@@ -172,7 +172,7 @@ def regions(t: FloatingIdler) -> FloatingRegions:
 def axes(place: Placement, flags: tuple[bool, bool, bool]) -> tuple[bool, bool, bool]:
     """Constraint flags (x, y, z of the tensioner frame) in the placed part's frame."""
     mapped = place.vector(tuple(1.0 if f else 0.0 for f in flags))
-    return (abs(mapped[0]) > 0.5, abs(mapped[1]) > 0.5, abs(mapped[2]) > 0.5)
+    return abs(mapped[0]) > 0.5, abs(mapped[1]) > 0.5, abs(mapped[2]) > 0.5
 
 
 def head_load(t: FloatingIdler, place: Placement, pull: float) -> Force:

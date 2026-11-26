@@ -32,7 +32,7 @@ def _cross(a: Vec3, b: Vec3, c: Vec3) -> Vec3:
     """Cross product of the edges ab and ac."""
     ux, uy, uz = b[0] - a[0], b[1] - a[1], b[2] - a[2]
     vx, vy, vz = c[0] - a[0], c[1] - a[1], c[2] - a[2]
-    return (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
+    return uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
 
 
 def _on_segment(m: Vec3, p: Vec3, q: Vec3, tol: float = 2 * WELD_TOL) -> bool:
@@ -103,7 +103,7 @@ def _is_closed(triangles: list[tuple[Vec3, Vec3, Vec3]]) -> bool:
     """Whether every edge has an opposite edge (the printed three decimals are what counts)."""
 
     def rounded(p: Vec3) -> tuple[float, float, float]:
-        return (round(p[0], 4), round(p[1], 4), round(p[2], 4))
+        return round(p[0], 4), round(p[1], 4), round(p[2], 4)
 
     edges = {(rounded(t[i]), rounded(t[(i + 1) % 3])) for t in triangles for i in range(3)}
     return all((b, a) in edges for a, b in edges)

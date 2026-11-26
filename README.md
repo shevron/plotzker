@@ -629,6 +629,8 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
   (`from pythonscad import cube, cylinder`). The one exception is a package `__init__`
   republishing another package's whole public API, marked `# noqa: F403` with the reason.
   Enforced by ruff (F403, F405).
+- Don't parenthesize a returned tuple that fits on one line: `return x, y`, not
+  `return (x, y)`. Parentheses stay where a tuple spans several lines.
 - Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
   reads in the order the operations happen. Note that this is the reverse of the
   OpenSCAD nesting order.

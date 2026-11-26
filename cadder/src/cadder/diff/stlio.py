@@ -32,7 +32,7 @@ class MeshStats:
     def size(self) -> tuple[float, float, float]:
         """Bounding-box extents (x, y, z)."""
         lo, hi = self.bbox_min, self.bbox_max
-        return (hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2])
+        return hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]
 
 
 def read_stl(path: Path) -> Triangles:

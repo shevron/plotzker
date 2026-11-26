@@ -265,7 +265,7 @@ def _cross(a: Vec3, b: Vec3, c: Vec3) -> Vec3:
     """Cross product of the edges ab and ac."""
     ux, uy, uz = b[0] - a[0], b[1] - a[1], b[2] - a[2]
     vx, vy, vz = c[0] - a[0], c[1] - a[1], c[2] - a[2]
-    return (uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx)
+    return uy * vz - uz * vy, uz * vx - ux * vz, ux * vy - uy * vx
 
 
 #: Sub-divisions per triangle edge when sampling how much of a face a region covers.

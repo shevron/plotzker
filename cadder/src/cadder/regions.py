@@ -31,7 +31,7 @@ def _unit(v: Sequence[float]) -> Vec3:
     n = math.sqrt(sum(c * c for c in v))
     if n == 0:
         raise ValueError("zero-length direction")
-    return (v[0] / n, v[1] / n, v[2] / n)
+    return v[0] / n, v[1] / n, v[2] / n
 
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
@@ -167,12 +167,12 @@ class Placement:
         x, y, z = v
         for _ in range(self.quarter_turns % 4):
             x, y = -y, x
-        return (x, y, z)
+        return x, y, z
 
     def point(self, p: Sequence[float]) -> Vec3:
         """A position."""
         x, y, z = self.vector(p)
-        return (x + self.offset[0], y + self.offset[1], z + self.offset[2])
+        return x + self.offset[0], y + self.offset[1], z + self.offset[2]
 
     def region(self, region: Region) -> Region:
         """The region in the part's frame."""

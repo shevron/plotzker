@@ -224,7 +224,7 @@ def _geometry(geometry: Any, construction: bool) -> Geometry:
 
 
 def _circle(geometry: Any) -> tuple[float, float, float]:
-    return (geometry.Center.x, geometry.Center.y, geometry.Radius)
+    return geometry.Center.x, geometry.Center.y, geometry.Radius
 
 
 def _varset(varset: Any) -> VarSet:

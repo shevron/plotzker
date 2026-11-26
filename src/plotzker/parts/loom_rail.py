@@ -28,7 +28,7 @@ FOOT_T = YDrive.foot_t  #: same 6 mm foot as the other baseboard parts
 def screw_y() -> tuple[float, float]:
     """The two screws' y, from each end."""
     inset = WOOD_SCREW.boss_d / 2 + 0.5
-    return (inset, LOOM.rail_len - inset)
+    return inset, LOOM.rail_len - inset
 
 
 def loom_rail() -> Solid:

@@ -137,7 +137,7 @@ def _solver_material(part: MaterialPart) -> SolverMaterial:
 def _mesh_and_solve(
     part: MaterialPart,
     stl: Path,
-    field: SizeField,
+    size_field: SizeField,
     work: Path,
     tag: str,
     options: RunOptions,
@@ -147,7 +147,7 @@ def _mesh_and_solve(
     material = _solver_material(part)
     first = 0
     while first < len(STRATEGIES):
-        mesh = mesh_stl(stl, field, work, tag, first)
+        mesh = mesh_stl(stl, size_field, work, tag, first)
         log(f"  {tag} mesh: {len(mesh.tets)} tets")
         try:
             return solve_cases(part, mesh, material, work, tag, log, options.solver)
@@ -474,16 +474,16 @@ def analyze(
         export_part_stl(part, raw, options.project)
     clean: CleanStl = clean_stl(raw, work / "part.stl")
     extent = max(clean.bbox[1][i] - clean.bbox[0][i] for i in range(3))
-    field = _size_field(part, extent, options)
+    size_field = _size_field(part, extent, options)
 
-    first = _mesh_and_solve(part, clean.path, field, work, "coarse", options, log)
+    first = _mesh_and_solve(part, clean.path, size_field, work, "coarse", options, log)
     criteria = _judge(part, first, None)
     near_limit = any(REFINE_BAND[0] <= c.utilization <= REFINE_BAND[1] for c in criteria)
     refine = options.refine == "always" or (options.refine == "auto" and near_limit)
     final, tag = first, "coarse"
     if refine:
         log(f"  a criterion is within {REFINE_BAND} of its limit: refining the mesh")
-        final = _mesh_and_solve(part, clean.path, field.scaled(1 / REFINEMENT), work, "fine", options, log)
+        final = _mesh_and_solve(part, clean.path, size_field.scaled(1 / REFINEMENT), work, "fine", options, log)
         tag = "fine"
         criteria = _judge(part, final, first)
         result.checks += _convergence(part, first, final)
@@ -504,7 +504,7 @@ def analyze(
         )
     )
     result.mesh = {
-        "element_size_mm": {"near": field.near, "far": field.far},
+        "element_size_mm": {"near": size_field.near, "far": size_field.far},
         "tets": len(final.mesh.tets),
         "solves": first.solves + (final.solves if refine else 0),
         "stl_triangles": clean.triangles,

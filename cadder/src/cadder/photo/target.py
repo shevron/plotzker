@@ -207,8 +207,8 @@ def detect(image: BGR, board: Board) -> tuple[Points, Points]:
         pts = np.asarray(cv2.cornerSubPix(gray, pts, (win, win), (-1, -1), criteria))
     corners = pts
     obj, img = cast(Any, board.opencv()).matchImagePoints(corners, ids)  # stubs: list only
-    obj_cv = np.asarray(obj, dtype=np.float64).reshape(-1, 3)
-    return _from_cv(board, obj_cv), np.asarray(img, dtype=np.float64).reshape(-1, 2)
+    board_points = np.asarray(obj, dtype=np.float64).reshape(-1, 3)
+    return _from_cv(board, board_points), np.asarray(img, dtype=np.float64).reshape(-1, 2)
 
 
 @dataclass

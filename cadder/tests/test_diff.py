@@ -274,8 +274,8 @@ def test_snapshot_builds_the_project_of_a_revision(tmp_path: Path) -> None:
     subprocess.run([*run, "add", "."], check=True)
     subprocess.run([*run, "commit", "-qm", "demo"], check=True)
     config = BuildConfig("demo.project:PROJECT", ("src",))
-    snap = take_snapshot(repo, "HEAD", tmp_path / "cache", config)
-    assert snap.error is None, snap.error
-    assert sorted(snap.parts) == ["block", "tag"]  # the plate is not exported (stl=False)
-    assert snap.parts["block"].source == "src/demo/project.py"
-    assert sorted(snap.assemblies) == ["stack"]
+    snapshot = take_snapshot(repo, "HEAD", tmp_path / "cache", config)
+    assert snapshot.error is None, snapshot.error
+    assert sorted(snapshot.parts) == ["block", "tag"]  # the plate is not exported (stl=False)
+    assert snapshot.parts["block"].source == "src/demo/project.py"
+    assert sorted(snapshot.assemblies) == ["stack"]

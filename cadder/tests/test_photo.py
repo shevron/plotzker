@@ -184,9 +184,9 @@ def test_calibrate_from_several_views(tmp_path: Path) -> None:
     assert [v["photo"] for v in cam.views] == ["a.png", "b.png", "c.png"]
     (tmp_path / "cam.json").write_text(cam.to_json())
     again = Camera.load(tmp_path / "cam.json")
-    rect = rectify(views[1], tmp_path, BOARD, px_per_mm=5, camera=again)
-    assert rect.focal["source"] == "camera"
-    assert np.allclose(rect.camera_center, CAMERA + np.array([60.0, -40.0, -60.0]), atol=1.0)
+    rectification = rectify(views[1], tmp_path, BOARD, px_per_mm=5, camera=again)
+    assert rectification.focal["source"] == "camera"
+    assert np.allclose(rectification.camera_center, CAMERA + np.array([60.0, -40.0, -60.0]), atol=1.0)
 
 
 def test_outline_fits_a_rotated_board_despite_an_overhang() -> None:
@@ -232,11 +232,11 @@ def test_height_scan_finds_a_raised_face(tmp_path: Path) -> None:
             np.array([[0, 0], [300, 0], [300, 300], [0, 300]], np.float32) - 0.5,
             px.reshape(-1, 2).astype(np.float32),
         )
-        photo = cv2.imread(str(path))
+        shot = cv2.imread(str(path))
         warped = cv2.warpPerspective(texture, homography, SIZE)
         mask = cv2.warpPerspective(np.full((300, 300), 255, np.uint8), homography, SIZE) > 0
-        photo[mask] = warped[mask]
-        cv2.imwrite(str(path), photo)
+        shot[mask] = warped[mask]
+        cv2.imwrite(str(path), shot)
         views.append((rectify(path, tmp_path, BOARD, px_per_mm=4, focal_px=FOCAL), tmp_path))
     result = height_scan(views[0], views[1:], (66, 96, 84, 114), (0, 12), 0.5, px_per_mm=12)
     assert result.z == pytest.approx(lift, abs=0.15)

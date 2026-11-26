@@ -647,6 +647,20 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
   `if __name__ in ("__main__", "<file name>"):` and ends a failure with `sys.exit(1)`.
   Exception: files a host application is meant to run on load (FreeCAD's `Init.py`,
   `preview.py`).
+- **Flat is better than nested.** Write functions at module level, prefixed with `_` when
+  private to the module. Nest a function only if it is short (up to 8 lines) and is one of:
+  - a local callable used right where it is defined, such as in a comprehension or as `key=`;
+  - a closure that updates enclosing state, such as a `nonlocal` counter or a signal or event
+    handler;
+  - glue that gives an API callback extra context (prefer `functools.partial`, or a lambda
+    if it is one line with no logic);
+  - a mock or monkeypatch replacement in a test.
+
+  The length limit does not apply to the function a decorator or factory builds and returns,
+  when there is little code outside it.
+- Don't give a local variable or parameter the name of something at module level (an import,
+  function, class or variable). Pytest fixtures requested as parameters are the exception.
+  Enforced by `tests/test_code_rules.py`.
 - Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
   reads in the order the operations happen. Note that this is the reverse of the
   OpenSCAD nesting order.

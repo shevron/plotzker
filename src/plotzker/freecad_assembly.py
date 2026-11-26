@@ -275,8 +275,8 @@ def _carriage_parts(components: Components, gantry_y: float, carriage_x: float) 
     head = pen_holder_items(pen_up=True)
 
     def place(solid: Solid) -> Solid:
-        placed = solid.mirror([0, 1, 0]).translate([0, CARRIAGE.plate_front_y, 0])
-        return translate(placed, [carriage_x, gantry_y, 0])
+        mirrored_solid = solid.mirror([0, 1, 0]).translate([0, CARRIAGE.plate_front_y, 0])
+        return translate(mirrored_solid, [carriage_x, gantry_y, 0])
 
     components.add("pen_body", place(head["body"]), "carriage", PRINTED_PEN)
     components.add("pen_servo", place(head["servo"]), "carriage", MOTOR)
@@ -348,7 +348,7 @@ def _axes(gantry_y: float, carriage_x: float) -> dict[str, Any]:
     return axes
 
 
-def components() -> Components:
+def build_components() -> Components:
     """The machine's components at the reference pose."""
     params.check_design()
     gantry_y = gantry_y_at(GANTRY_POS)
@@ -455,7 +455,7 @@ PEN_PLOTTER = FreeCadAssembly(
     name="PenPlotter",
     label="Pen plotter",
     description="The machine at mid-travel, pen up: four rigid bodies and their joints",
-    components=components,
+    components=build_components,
     bodies=(
         Body("base", "baseboard", grounded=True),
         Body("gantry", "gantry_beam"),

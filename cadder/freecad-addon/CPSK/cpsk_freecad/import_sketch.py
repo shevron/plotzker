@@ -257,7 +257,7 @@ class _Importer:
         self._name_everything(compiled)
         kept = Kept(
             ids={p.index: p.id or "" for p in compiled.primitives},
-            names={fc: cpsk for cpsk, fc in self.names.items() if fc != cpsk},
+            names={fc: identifier for identifier, fc in self.names.items() if fc != identifier},
             metadata=self._metadata(),
             varset=self.varset_name if self.variables else None,
             order=[self.names[identifier] for identifier in self.variables],

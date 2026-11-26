@@ -642,6 +642,11 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
   `min`, `max`, `id`, `dia` (diameter), `tol` (tolerance), `rect` (rectangle) and unit
   suffixes (`_mm`, `_mpa`, `_g`, `_deg`). Names that belong to a file format or external
   interface (CPSK, TOML keys, `--json` output, the CLI) keep their spelling.
+- Entry-point code runs only under a guard, `if __name__ == "__main__":`, so importing a
+  module never runs it. A script run by `freecadcmd` uses
+  `if __name__ in ("__main__", "<file name>"):` and ends a failure with `sys.exit(1)`.
+  Exception: files a host application is meant to run on load (FreeCAD's `Init.py`,
+  `preview.py`).
 - Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
   reads in the order the operations happen. Note that this is the reverse of the
   OpenSCAD nesting order.

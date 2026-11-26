@@ -23,6 +23,7 @@ import json
 import os
 import struct
 import sys
+import traceback
 import zipfile
 
 import FreeCAD as App
@@ -297,11 +298,11 @@ def add_gui_state(path, doc, masters):
     os.replace(temp, path)
 
 
-try:
-    main()
-except Exception:
-    import traceback
-
-    traceback.print_exc()
-    sys.stdout.flush()
-    raise
+# freecadcmd runs a script as a module named after the file, not as __main__
+if __name__ in ("__main__", "build"):
+    try:
+        main()
+    except Exception:
+        traceback.print_exc()
+        sys.stdout.flush()
+        sys.exit(1)  # an uncaught exception would exit 0 and run the script again

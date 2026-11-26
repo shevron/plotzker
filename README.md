@@ -635,9 +635,12 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
   `thickness`, not `h`, `od`, `t`), including in dataclass fields and parameters. Engineering
   shorthand is not an exception. Don't copy a module constant into a shorter local name; use
   the constant's own name. One or two letters are fine only in a very narrow scope
-  (comprehensions, short loops, temporaries) or where the short name is the convention (`x`,
-  `y`, `z`). The wider the scope, the more descriptive the name. Allowed abbreviations: names
-  set by a library (such as PythonSCAD's `fn`), `min`, `max`, `id` and `dia` (diameter).
+  (comprehensions, short loops, temporaries) or where the short name is the convention, such
+  as coordinate letters (`x`, `y`, `z`, `u`, `v`). The wider the scope, the more descriptive
+  the name. Allowed abbreviations: names set by a library (such as PythonSCAD's `fn`),
+  `min`, `max`, `id`, `dia` (diameter), `tol` (tolerance), `rect` (rectangle) and unit
+  suffixes (`_mm`, `_mpa`, `_g`, `_deg`). Names that belong to a file format or external
+  interface (CPSK, TOML keys, `--json` output, the CLI) keep their spelling.
 - Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
   reads in the order the operations happen. Note that this is the reverse of the
   OpenSCAD nesting order.

@@ -14,13 +14,13 @@ AXES = "xyz"
 
 @pytest.mark.parametrize(("axis", "entrance"), list(_ROTATIONS))
 def test_orientation(axis, entrance):
-    lo, hi = bounding_box(nut_slot(3, 10, axis, entrance))
+    low, high = bounding_box(nut_slot(3, 10, axis, entrance))
     af = metric(3).nut_across_flats + TOL.nut_slot
     a, e = AXES.index(axis), AXES.index(entrance[1])
-    assert hi[a] - lo[a] == pytest.approx(TOL.nut_trap_height(3), abs=0.02)
+    assert high[a] - low[a] == pytest.approx(TOL.nut_trap_height(3), abs=0.02)
     sign = 1 if entrance[0] == "+" else -1
-    assert sign * (hi[e] if sign > 0 else lo[e]) == pytest.approx(10, abs=0.02)
-    floor = lo[e] if sign > 0 else hi[e]
+    assert sign * (high[e] if sign > 0 else low[e]) == pytest.approx(10, abs=0.02)
+    floor = low[e] if sign > 0 else high[e]
     assert abs(floor) == pytest.approx(af / 2, abs=0.02)
 
 
@@ -37,7 +37,7 @@ def test_nut_fits_flat_first_and_cannot_turn():
 
 
 def test_extra_thickness_widens_only_the_slot_thickness():
-    lo, hi = bounding_box(nut_slot(3, 10, "x", "+z"))
+    low, high = bounding_box(nut_slot(3, 10, "x", "+z"))
     lo2, hi2 = bounding_box(nut_slot(3, 10, "x", "+z", extra_thickness=0.2))
-    assert (hi2[0] - lo2[0]) - (hi[0] - lo[0]) == pytest.approx(0.2, abs=0.01)
-    assert hi2[1] - lo2[1] == pytest.approx(hi[1] - lo[1], abs=0.01)
+    assert (hi2[0] - lo2[0]) - (high[0] - low[0]) == pytest.approx(0.2, abs=0.01)
+    assert hi2[1] - lo2[1] == pytest.approx(high[1] - low[1], abs=0.01)

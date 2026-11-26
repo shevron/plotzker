@@ -9,9 +9,9 @@ from cadder.testing import bounding_box, connected_groups, shell_count, touching
 def test_volume_and_bounding_box():
     block = cube([10, 20, 30]).translate([1, 2, 3])
     assert volume(block) == pytest.approx(6000)
-    lo, hi = bounding_box(block)
-    assert lo == pytest.approx([1, 2, 3])
-    assert hi == pytest.approx([11, 22, 33])
+    low, high = bounding_box(block)
+    assert low == pytest.approx([1, 2, 3])
+    assert high == pytest.approx([11, 22, 33])
 
 
 def test_volume_of_a_part_with_a_hole():

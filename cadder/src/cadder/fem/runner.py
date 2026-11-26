@@ -250,11 +250,11 @@ def _size_field(part: MaterialPart, extent: float, options: RunOptions) -> SizeF
     margin = 2 * near
     boxes = []
     for region in _load_regions(part):
-        lo, hi = region.bounds()
+        low, high = region.bounds()
         boxes.append(
             (
-                (lo[0] - margin, lo[1] - margin, lo[2] - margin),
-                (hi[0] + margin, hi[1] + margin, hi[2] + margin),
+                (low[0] - margin, low[1] - margin, low[2] - margin),
+                (high[0] + margin, high[1] + margin, high[2] + margin),
             )
         )
     return SizeField(near, far, tuple(boxes), transition=3 * near)

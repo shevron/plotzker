@@ -91,8 +91,8 @@ def load_items(path: Path) -> list[Item]:
             a, b, c = tris[:, 0], tris[:, 1], tris[:, 2]
             volume = abs(float(np.einsum("ij,ij->i", a, np.cross(b, c)).sum()) / 6.0)
             flat = tris.reshape(-1, 3)
-            lo, hi = flat.min(axis=0), flat.max(axis=0)
-            centre = (lo + hi) / 2
+            low, high = flat.min(axis=0), flat.max(axis=0)
+            centre = (low + high) / 2
             items.append(
                 Item(
                     index=int(key[1:]),
@@ -100,7 +100,7 @@ def load_items(path: Path) -> list[Item]:
                     volume=volume,
                     area=surface_area(tris),
                     centroid=(float(centre[0]), float(centre[1]), float(centre[2])),
-                    size=(float(hi[0] - lo[0]), float(hi[1] - lo[1]), float(hi[2] - lo[2])),
+                    size=(float(high[0] - low[0]), float(high[1] - low[1]), float(high[2] - low[2])),
                     hash=shape_hash(tris),
                 )
             )

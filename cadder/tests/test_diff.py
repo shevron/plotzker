@@ -21,9 +21,9 @@ _FACES = [
 
 def box(x: float, y: float, z: float, at: float = 0.0) -> np.ndarray:
     """Triangles of a box with one corner at (at, 0, 0)."""
-    c = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]])
-    c = c * np.array([x, y, z]) + np.array([at, 0, 0])
-    return np.array([[c[i], c[j], c[k]] for i, j, k in _FACES], dtype=np.float64)
+    corners = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]])
+    corners = corners * np.array([x, y, z]) + np.array([at, 0, 0])
+    return np.array([[corners[i], corners[j], corners[k]] for i, j, k in _FACES], dtype=np.float64)
 
 
 def write_ascii(path: Path, tris: np.ndarray) -> Path:
@@ -55,23 +55,23 @@ def test_measure_box(tmp_path: Path) -> None:
 
 
 def test_binary_and_ascii_agree(tmp_path: Path) -> None:
-    t = box(2, 3, 4)
-    a = measure(read_stl(write_ascii(tmp_path / "a.stl", t)))
-    b = measure(read_stl(write_binary(tmp_path / "b.stl", t)))
+    triangles = box(2, 3, 4)
+    a = measure(read_stl(write_ascii(tmp_path / "a.stl", triangles)))
+    b = measure(read_stl(write_binary(tmp_path / "b.stl", triangles)))
     assert a.hash == b.hash
 
 
 def test_hash_ignores_facet_order_and_start_vertex() -> None:
-    t = box(2, 3, 4)
-    shuffled = np.roll(t[::-1], 1, axis=1)
-    assert measure(t).hash == measure(shuffled).hash
-    assert measure(t).hash != measure(box(2, 3, 4.1)).hash
+    triangles = box(2, 3, 4)
+    shuffled = np.roll(triangles[::-1], 1, axis=1)
+    assert measure(triangles).hash == measure(shuffled).hash
+    assert measure(triangles).hash != measure(box(2, 3, 4.1)).hash
 
 
 def test_same_surface_tolerates_noise() -> None:
-    t = box(2, 3, 4)
-    assert same_surface(t, t + 1e-5, 1e-3)
-    assert not same_surface(t, box(2, 3, 4.1), 1e-3)
+    triangles = box(2, 3, 4)
+    assert same_surface(triangles, triangles + 1e-5, 1e-3)
+    assert not same_surface(triangles, box(2, 3, 4.1), 1e-3)
 
 
 def test_compare_statuses(tmp_path: Path) -> None:
@@ -79,9 +79,9 @@ def test_compare_statuses(tmp_path: Path) -> None:
         "same": box(1, 1, 1), "taller": box(1, 1, 1), "taller2": box(1, 1, 2),
         "gone": box(1, 1, 1), "new": box(2, 2, 2), "moved": box(1, 1, 1, at=5),
     }.items()}  # fmt: skip
-    a = snap("A", same=f["same"], taller=f["taller"], gone=f["gone"], moved=f["same"])
-    b = snap("B", same=f["same"], taller=f["taller2"], new=f["new"], moved=f["moved"])
-    got = {c.name: c for c in compare_snapshots(a, b)}
+    before = snap("A", same=f["same"], taller=f["taller"], gone=f["gone"], moved=f["same"])
+    after = snap("B", same=f["same"], taller=f["taller2"], new=f["new"], moved=f["moved"])
+    got = {c.name: c for c in compare_snapshots(before, after)}
     assert {n: c.status for n, c in got.items()} == {
         "same": Status.UNCHANGED, "taller": Status.CHANGED, "gone": Status.REMOVED,
         "new": Status.ADDED, "moved": Status.CHANGED,
@@ -89,16 +89,16 @@ def test_compare_statuses(tmp_path: Path) -> None:
     assert got["taller"].volume_delta == pytest.approx(1)
     assert got["taller"].size_delta == pytest.approx((0, 0, 1))
     assert got["moved"].shift == pytest.approx((5, 0, 0))
-    text = format_report(a, b, list(got.values()), show_all=False)
+    text = format_report(before, after, list(got.values()), show_all=False)
     assert "same" not in text.split("\n\n", 1)[1]
     assert "taller" in text
 
 
 def test_part_without_stl_is_an_error(tmp_path: Path) -> None:
     ok = write_ascii(tmp_path / "ok.stl", box(1, 1, 1))
-    a = snap("A", p=ok)
-    b = Snapshot("B", "B", {"p": PartFile(None, "Traceback\nValueError: boom")})
-    (change,) = compare_snapshots(a, b)
+    before = snap("A", p=ok)
+    after = Snapshot("B", "B", {"p": PartFile(None, "Traceback\nValueError: boom")})
+    (change,) = compare_snapshots(before, after)
     assert change.status is Status.ERROR
     assert "boom" in change.note
 
@@ -129,10 +129,10 @@ def test_report_embeds_changed_meshes_only(tmp_path: Path) -> None:
 
     same = write_ascii(tmp_path / "same.stl", box(1, 1, 1))
     tall = write_ascii(tmp_path / "tall.stl", box(1, 1, 2))
-    a = snap("A", same=same, tall=same)
-    b = snap("B", same=same, tall=tall)
-    changes = compare_snapshots(a, b)
-    path = write_report(a, b, changes, tmp_path / "out")
+    before = snap("A", same=same, tall=same)
+    after = snap("B", same=same, tall=tall)
+    changes = compare_snapshots(before, after)
+    path = write_report(before, after, changes, tmp_path / "out")
     html = path.read_text()
     assert "__DIFF_DATA__" not in html
     match = re.search(r"const DATA = (\{.*?\});\n", html)
@@ -178,12 +178,12 @@ def _asm(tmp_path: Path, name: str, items: list[np.ndarray]) -> Path:
 def test_assembly_instances_matched_by_geometry(tmp_path: Path) -> None:
     from cadder.diff.assembly import InstanceStatus, compare_assembly
 
-    a = _asm(
+    before = _asm(
         tmp_path,
         "a",
         [box(1, 1, 1), box(2, 1, 1), box(3, 3, 3, at=50), box(4, 1, 1, at=-40)],
     )
-    b = _asm(
+    after = _asm(
         tmp_path,
         "b",
         [
@@ -193,15 +193,15 @@ def test_assembly_instances_matched_by_geometry(tmp_path: Path) -> None:
             box(1, 1, 1, at=90),  # added; the 4 mm box is removed
         ],
     )
-    change = compare_assembly("asm", a, b, {box(2, 1, 1)[:, :, 0].size * 0 + 2.0: "bar"})
-    by = {i.status: i for i in change.instances}
+    change = compare_assembly("asm", before, after, {box(2, 1, 1)[:, :, 0].size * 0 + 2.0: "bar"})
+    by_status = {i.status: i for i in change.instances}
     assert change.status == "changed"
     assert [i.status for i in change.instances].count(InstanceStatus.UNCHANGED) == 1
-    assert by[InstanceStatus.MOVED].shift == pytest.approx((10, 0, 0))
-    assert by[InstanceStatus.MOVED].label == "bar"  # labelled by the part with the same volume
-    assert by[InstanceStatus.MODIFIED].after is not None
-    assert by[InstanceStatus.ADDED].before is None
-    assert by[InstanceStatus.REMOVED].after is None
+    assert by_status[InstanceStatus.MOVED].shift == pytest.approx((10, 0, 0))
+    assert by_status[InstanceStatus.MOVED].label == "bar"  # labelled by the part with the same volume
+    assert by_status[InstanceStatus.MODIFIED].after is not None
+    assert by_status[InstanceStatus.ADDED].before is None
+    assert by_status[InstanceStatus.REMOVED].after is None
 
 
 def test_identical_assemblies_are_unchanged(tmp_path: Path) -> None:

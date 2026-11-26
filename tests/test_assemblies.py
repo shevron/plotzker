@@ -194,8 +194,8 @@ def test_psu_mount_clears_the_board_runners_and_loom():
     board = baseboard.baseboard()
     others = union(*flatten([*baseboard.runners(), *loom.rails(), *loom.y_loom(y_gantry_y_at(0))]))
     for item in psu_mount_assembly():
-        lo, hi = bounding_box(item)
-        is_wood_screw = hi[2] - lo[2] > 20 and hi[0] - lo[0] < 10 and hi[1] - lo[1] < 10
+        low, high = bounding_box(item)
+        is_wood_screw = high[2] - low[2] > 20 and high[0] - low[0] < 10 and high[1] - low[1] < 10
         if not is_wood_screw:
             assert volume(item & board) < 0.05
         assert volume(item & others) < 0.05
@@ -438,22 +438,22 @@ def test_y_idler_axle_bolt_and_nut_clear_the_tower_walls(side, shift):
     from plotzker.params import Y_DRIVE
     from plotzker.parts.y_idler_mount import idler_for
 
-    t = idler_for(side)
-    dy = shift * t.travel / 2
+    idler = idler_for(side)
+    dy = shift * idler.travel / 2
     mount = y_idler_mount_installed(side)
     axle = shift_handle(get_handle(mount, "axle"), [0, dy, 0])
     nut = (
-        hex_nut(t.axle_screw_size)
-        .rotate([0, 90 * t.head_side, 0])
+        hex_nut(idler.axle_screw_size)
+        .rotate([0, 90 * idler.head_side, 0])
         .translate(
             [
-                Y_AXIS.belt_x + t.head_side * (t.width / 2 - metric(t.axle_screw_size).nut_height),
+                Y_AXIS.belt_x + idler.head_side * (idler.width / 2 - metric(idler.axle_screw_size).nut_height),
                 Y_DRIVE.idler_y + dy,
-                t.axle_z,
+                idler.axle_z,
             ]
         )
     )
-    for part in (shcs(t.axle_screw_size, t.axle_length).align(axle), nut):
+    for part in (shcs(idler.axle_screw_size, idler.axle_length).align(axle), nut):
         assert volume(part & mount) < 1e-3
 
 
@@ -466,14 +466,14 @@ def test_floating_slider_arm_ends_have_a_straight_45_degree_top_front(which):
     from plotzker.params import X_IDLER, Y_IDLER
     from plotzker.parts.floating_idler import slider_local
 
-    t = X_IDLER if which == "x" else Y_IDLER
-    s = slider_local(t)
-    y_mid = t.gap_y / 2 + t.arm_thickness / 2
-    x = t.chamfer_x + 1.0  # past the start of the line
-    line_z = t.arm_top - 1.0  # the 45° line's height there
+    idler = X_IDLER if which == "x" else Y_IDLER
+    slider = slider_local(idler)
+    y_mid = idler.gap_y / 2 + idler.arm_thickness / 2
+    x = idler.chamfer_x + 1.0  # past the start of the line
+    line_z = idler.arm_top - 1.0  # the 45° line's height there
 
     def probe(dz: float):
         return cube([0.4, 1, 0.4]).translate([x - 0.2, y_mid - 0.5, line_z + dz - 0.2])
 
-    assert volume(s & probe(-0.8)) > 0.9 * 0.4 * 0.4 * 1  # solid below the line
-    assert volume(s & probe(+0.8)) < 1e-3  # nothing above it
+    assert volume(slider & probe(-0.8)) > 0.9 * 0.4 * 0.4 * 1  # solid below the line
+    assert volume(slider & probe(+0.8)) < 1e-3  # nothing above it

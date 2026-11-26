@@ -29,6 +29,6 @@ def test_belt_clamp_mounts_flush_under_the_bracket():
     """The clamp's ``mount`` handle on a bracket clamp handle hangs it below the underside."""
     clamp = belt_clamp()
     mount = get_handles(gantry_end_bracket(Side.LEFT), "belt_clamps")[0]
-    lo, hi = bounding_box(clamp.align(mount, get_handle(clamp, "mount")))
-    assert hi[2] == pytest.approx(0, abs=1e-9)
-    assert lo[2] == pytest.approx(-CLAMP.total_thickness)
+    low, high = bounding_box(clamp.align(mount, get_handle(clamp, "mount")))
+    assert high[2] == pytest.approx(0, abs=1e-9)
+    assert low[2] == pytest.approx(-CLAMP.total_thickness)

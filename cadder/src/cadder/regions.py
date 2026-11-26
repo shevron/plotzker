@@ -106,9 +106,9 @@ class Cylinder:
     def bounds(self) -> tuple[Vec3, Vec3]:
         """Axis-aligned bounding box of the region."""
         reach = [self.half_length if self.axis[i] else self.radius for i in range(3)]
-        lo = (self.center[0] - reach[0], self.center[1] - reach[1], self.center[2] - reach[2])
-        hi = (self.center[0] + reach[0], self.center[1] + reach[1], self.center[2] + reach[2])
-        return lo, hi
+        low = (self.center[0] - reach[0], self.center[1] - reach[1], self.center[2] - reach[2])
+        high = (self.center[0] + reach[0], self.center[1] + reach[1], self.center[2] + reach[2])
+        return low, high
 
     def solid(self) -> Solid:
         """The region as a solid, for checking that it touches the part."""
@@ -171,9 +171,9 @@ class Placement:
         facing = None if region.facing is None else self.vector(region.facing)
         if isinstance(region, Box):
             a, b = self.point(region.lo), self.point(region.hi)
-            lo = (min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2]))
-            hi = (max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2]))
-            return Box(lo, hi, facing, region.facing_tol_deg)
+            low = (min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2]))
+            high = (max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2]))
+            return Box(low, high, facing, region.facing_tol_deg)
         axis = self.vector(region.axis)
         return Cylinder(
             self.point(region.center),

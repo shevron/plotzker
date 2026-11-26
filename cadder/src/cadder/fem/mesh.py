@@ -94,14 +94,14 @@ def write_geo(stl: Path, field: SizeField, geo: Path, algorithm: int = 1) -> Non
         f"Mesh.MeshSizeMin = {field.near / 2};",
     ]
     if field.boxes:
-        for i, (lo, hi) in enumerate(field.boxes, start=1):
+        for i, (low, high) in enumerate(field.boxes, start=1):
             lines += [
                 f"Field[{i}] = Box;",
                 f"Field[{i}].VIn = {field.near};",
                 f"Field[{i}].VOut = {field.far};",
-                f"Field[{i}].XMin = {lo[0]}; Field[{i}].XMax = {hi[0]};",
-                f"Field[{i}].YMin = {lo[1]}; Field[{i}].YMax = {hi[1]};",
-                f"Field[{i}].ZMin = {lo[2]}; Field[{i}].ZMax = {hi[2]};",
+                f"Field[{i}].XMin = {low[0]}; Field[{i}].XMax = {high[0]};",
+                f"Field[{i}].YMin = {low[1]}; Field[{i}].YMax = {high[1]};",
+                f"Field[{i}].ZMin = {low[2]}; Field[{i}].ZMax = {high[2]};",
                 f"Field[{i}].Thickness = {field.transition};",
             ]
         last = len(field.boxes) + 1

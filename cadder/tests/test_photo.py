@@ -53,10 +53,10 @@ def _art() -> np.ndarray:
 def _pose() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Camera matrix, rvec and tvec (OpenCV board frame) of the synthetic camera."""
     k = np.array([[FOCAL, 0, SIZE[0] / 2], [0, FOCAL, SIZE[1] / 2], [0, 0, 1]])
-    r, _ = cv2.Rodrigues(np.array([math.radians(12), math.radians(-5), 0.1]))
+    rotation, _ = cv2.Rodrigues(np.array([math.radians(12), math.radians(-5), 0.1]))
     center_cv = _to_cv(BOARD, CAMERA[None, :])[0]
-    rvec, _ = cv2.Rodrigues(r)
-    return k, rvec, -r @ center_cv
+    rvec, _ = cv2.Rodrigues(rotation)
+    return k, rvec, -rotation @ center_cv
 
 
 @pytest.fixture(scope="module")
@@ -66,8 +66,8 @@ def photo(tmp_path_factory: pytest.TempPathFactory) -> Path:
     k, rvec, tvec = _pose()
     corners = np.array([[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]])
     img_px, _ = cv2.projectPoints(_to_cv(BOARD, corners), rvec, tvec, k, np.zeros(5))
-    w, h = BOARD.width * PPM, BOARD.height * PPM
-    art_px = np.array([[0, h], [w, h], [w, 0], [0, 0]], np.float32) - 0.5  # pixel centers
+    width, height = BOARD.width * PPM, BOARD.height * PPM
+    art_px = np.array([[0, height], [width, height], [width, 0], [0, 0]], np.float32) - 0.5  # pixel centers
     homography = cv2.getPerspectiveTransform(art_px, img_px.reshape(-1, 2).astype(np.float32))
     image = cv2.warpPerspective(_art(), homography, SIZE, flags=cv2.INTER_CUBIC, borderValue=(200, 190, 180))
     path = folder / "part.png"
@@ -145,9 +145,9 @@ def test_triangulate_finds_the_height(rect: Rectification) -> None:
     truth = np.array([[60.0, 70.0, 8.0]])
     # a second camera, 60 mm to the side: same intrinsics, pose from moving the center
     _, rvec, _ = _pose()
-    r, _ = cv2.Rodrigues(rvec)
+    rotation, _ = cv2.Rodrigues(rvec)
     other_center = _to_cv(BOARD, (CAMERA + np.array([60.0, -20.0, 0.0]))[None, :])[0]
-    other = replace(rect, rvec=rect.rvec, tvec=(-r @ other_center).tolist())
+    other = replace(rect, rvec=rect.rvec, tvec=(-rotation @ other_center).tolist())
     views = [(v, v.to_plane(v.project(truth), 0.0)[0]) for v in (rect, other)]
     point, miss = triangulate(views)
     assert np.allclose(point, truth[0], atol=1e-6)
@@ -157,13 +157,13 @@ def test_triangulate_finds_the_height(rect: Rectification) -> None:
 def _render(path: Path, center: np.ndarray, angles: tuple[float, float, float]) -> Path:
     """The board art seen by the synthetic camera from ``center``, rotated by ``angles``."""
     k = np.array([[FOCAL, 0, SIZE[0] / 2], [0, FOCAL, SIZE[1] / 2], [0, 0, 1]])
-    r, _ = cv2.Rodrigues(np.radians(np.array(angles)))
-    rvec, _ = cv2.Rodrigues(r)
-    tvec = -r @ _to_cv(BOARD, center[None, :])[0]
+    rotation, _ = cv2.Rodrigues(np.radians(np.array(angles)))
+    rvec, _ = cv2.Rodrigues(rotation)
+    tvec = -rotation @ _to_cv(BOARD, center[None, :])[0]
     corners = np.array([[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]])
     img_px, _ = cv2.projectPoints(_to_cv(BOARD, corners), rvec, tvec, k, np.zeros(5))
-    w, h = BOARD.width * PPM, BOARD.height * PPM
-    art_px = np.array([[0, h], [w, h], [w, 0], [0, 0]], np.float32) - 0.5
+    width, height = BOARD.width * PPM, BOARD.height * PPM
+    art_px = np.array([[0, height], [width, height], [width, 0], [0, 0]], np.float32) - 0.5
     homography = cv2.getPerspectiveTransform(art_px, img_px.reshape(-1, 2).astype(np.float32))
     image = cv2.warpPerspective(_art(), homography, SIZE, flags=cv2.INTER_CUBIC)
     cv2.imwrite(str(path), image)
@@ -199,11 +199,11 @@ def test_outline_fits_a_rotated_board_despite_an_overhang() -> None:
     # a component hanging over one long side, and print on the board
     cv2.rectangle(image, (480, 180), (700, 300), (30, 30, 30), -1)
     cv2.putText(image, "11 22", (450, 500), cv2.FONT_HERSHEY_SIMPLEX, 3, (230, 230, 230), 6)
-    o, used = outline(image, Scale(), (0, 0, 1200, 900), avoid=[(470, 170, 710, 310)])
-    assert (o.x, o.y) == pytest.approx(center, abs=1.0)
-    assert (o.length, o.width) == pytest.approx(size, abs=1.5)
-    assert abs(o.angle_deg) == pytest.approx(angle, abs=0.3)  # y down in pixel mode
-    assert o.rms < 0.5 and all(n >= 3 for n in o.points.values())
+    fitted, used = outline(image, Scale(), (0, 0, 1200, 900), avoid=[(470, 170, 710, 310)])
+    assert (fitted.x, fitted.y) == pytest.approx(center, abs=1.0)
+    assert (fitted.length, fitted.width) == pytest.approx(size, abs=1.5)
+    assert abs(fitted.angle_deg) == pytest.approx(angle, abs=0.3)  # y down in pixel mode
+    assert fitted.rms < 0.5 and all(n >= 3 for n in fitted.points.values())
     assert set(used) == {"+a", "-a", "+b", "-b"}
 
 
@@ -222,19 +222,19 @@ def test_height_scan_finds_a_raised_face(tmp_path: Path) -> None:
     ):
         path = _render(tmp_path / f"{name}.png", center, angles)
         k = np.array([[FOCAL, 0, SIZE[0] / 2], [0, FOCAL, SIZE[1] / 2], [0, 0, 1]])
-        r, _ = cv2.Rodrigues(np.radians(np.array(angles)))
-        rvec, _ = cv2.Rodrigues(r)
-        tvec = -r @ _to_cv(BOARD, center[None, :])[0]
+        rotation, _ = cv2.Rodrigues(np.radians(np.array(angles)))
+        rvec, _ = cv2.Rodrigues(rotation)
+        tvec = -rotation @ _to_cv(BOARD, center[None, :])[0]
         x0, y0, x1, y1 = face
         quad = np.array([[x0, y1, lift], [x1, y1, lift], [x1, y0, lift], [x0, y0, lift]])
         px, _ = cv2.projectPoints(_to_cv(BOARD, quad), rvec, tvec, k, np.zeros(5))
-        h = cv2.getPerspectiveTransform(
+        homography = cv2.getPerspectiveTransform(
             np.array([[0, 0], [300, 0], [300, 300], [0, 300]], np.float32) - 0.5,
             px.reshape(-1, 2).astype(np.float32),
         )
         photo = cv2.imread(str(path))
-        warped = cv2.warpPerspective(texture, h, SIZE)
-        mask = cv2.warpPerspective(np.full((300, 300), 255, np.uint8), h, SIZE) > 0
+        warped = cv2.warpPerspective(texture, homography, SIZE)
+        mask = cv2.warpPerspective(np.full((300, 300), 255, np.uint8), homography, SIZE) > 0
         photo[mask] = warped[mask]
         cv2.imwrite(str(path), photo)
         views.append((rectify(path, tmp_path, BOARD, px_per_mm=4, focal_px=FOCAL), tmp_path))
@@ -246,13 +246,13 @@ def test_height_scan_finds_a_raised_face(tmp_path: Path) -> None:
 def test_overlay_on_another_photo_cropped(photo: Path, rect: Rectification) -> None:
     from cadder.photo.features import FeatureFile
 
-    ff = FeatureFile(
+    feature_file = FeatureFile(
         path=photo.parent / "f.json",
         features=[{"name": "hole", "kind": "circle", "center": [*HOLE, 0], "d": 6, "source": "photo"}],
         rect=None,
         image=photo,
     )
-    image, legend = overlay(ff, labels="numbers", rect=photo.parent / "part.rect.json", crop=5)
+    image, legend = overlay(feature_file, labels="numbers", rect=photo.parent / "part.rect.json", crop=5)
     assert legend == ["1 hole"]
     assert max(image.shape[:2]) < 300  # cropped to the hole plus 5 mm (photo ~7.9 px/mm)
 
@@ -332,12 +332,12 @@ def test_feature_file_overlay_and_table(photo: Path, rect: Rectification) -> Non
             }
         )
     )
-    ff = read(path)
-    assert any("bad" in e for e in ff.errors)
-    assert np.allclose(ff.to_target(np.array([[1.0, 0, 0]]))[0], [HOLE[0], HOLE[1] + 1, 0])
+    feature_file = read(path)
+    assert any("bad" in e for e in feature_file.errors)
+    assert np.allclose(feature_file.to_target(np.array([[1.0, 0, 0]]))[0], [HOLE[0], HOLE[1] + 1, 0])
     for on in ("photo", "rectified"):
-        assert overlay(ff, on)[0].ndim == 3
-    text = table(ff)
+        assert overlay(feature_file, on)[0].ndim == 3
+    text = table(feature_file)
     assert "| hole | circle | (0, 0, 0) | Ø6 | photo | 0.05 |" in text
 
 

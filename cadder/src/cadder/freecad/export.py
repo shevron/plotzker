@@ -58,10 +58,10 @@ class _Shape:
 
     def __init__(self, points: list[tuple[float, float, float]], facets: int) -> None:
         self.facets = facets
-        lo = [min(p[k] for p in points) for k in range(3)]
-        hi = [max(p[k] for p in points) for k in range(3)]
-        self.center = tuple((a + b) / 2 for a, b in zip(lo, hi, strict=True))
-        self.extents = tuple(round(b - a, 2) for a, b in zip(lo, hi, strict=True))
+        low = [min(p[k] for p in points) for k in range(3)]
+        high = [max(p[k] for p in points) for k in range(3)]
+        self.center = tuple((a + b) / 2 for a, b in zip(low, high, strict=True))
+        self.extents = tuple(round(b - a, 2) for a, b in zip(low, high, strict=True))
         self.points = [(p[0] - self.center[0], p[1] - self.center[1], p[2] - self.center[2]) for p in points]
         self.signature = (len(points), facets, tuple(sorted(self.extents)))
 

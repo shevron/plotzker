@@ -93,9 +93,9 @@ def test_example_overrides_change_derived_values():
 
 def test_example_svg_loads_as_a_plate_with_a_hole(tmp_path):
     svg = cpsk.to_svg(cpsk.solve(cpsk.load(EXAMPLE)))
-    area, lo, hi = area_and_bounds(svg, tmp_path)
-    assert lo == pytest.approx([0, 0], abs=1e-6)
-    assert hi == pytest.approx([40, 25], abs=1e-6)
+    area, low, high = area_and_bounds(svg, tmp_path)
+    assert low == pytest.approx([0, 0], abs=1e-6)
+    assert high == pytest.approx([40, 25], abs=1e-6)
     assert area == pytest.approx(40 * 25 - math.pi * (25 / 6) ** 2, rel=1e-4)
 
 
@@ -135,11 +135,11 @@ def test_slot_of_lines_and_tangent_arcs(tmp_path):
     assert isinstance(right, cpsk.Arc)
     assert right.center == cpsk.Point(pytest.approx(20), pytest.approx(0, abs=1e-9))
     assert math.degrees(right.sweep) == pytest.approx(180)
-    area, lo, hi = area_and_bounds(cpsk.to_svg(solved), tmp_path)
+    area, low, high = area_and_bounds(cpsk.to_svg(solved), tmp_path)
     assert area == pytest.approx(20 * 10 + math.pi * 25, rel=1e-4)
     # Negative coordinates: load_sketch puts the viewBox's bottom-left corner, (-5, -5), at 0.
-    assert lo == pytest.approx([0, 0], abs=1e-6)
-    assert hi == pytest.approx([30, 10], abs=1e-6)
+    assert low == pytest.approx([0, 0], abs=1e-6)
+    assert high == pytest.approx([30, 10], abs=1e-6)
 
 
 def test_nested_and_top_level_forms_are_equivalent():
@@ -186,8 +186,8 @@ def test_document_units_apply_to_coordinates_and_svg(tmp_path):
     )
     solved = cpsk.solve(cpsk.loads(text))
     assert solved.primitive("t").geometry.start == cpsk.Point(pytest.approx(3), pytest.approx(2))
-    _, _, hi = area_and_bounds(cpsk.to_svg(solved), tmp_path)
-    assert hi == pytest.approx([30, 20], abs=1e-6)
+    _, _, high = area_and_bounds(cpsk.to_svg(solved), tmp_path)
+    assert high == pytest.approx([30, 20], abs=1e-6)
 
 
 def test_angles_and_measured_values():

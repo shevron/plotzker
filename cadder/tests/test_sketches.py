@@ -23,18 +23,18 @@ def outline_stats(sketch) -> tuple[float, list[float], list[float]]:
         for a, b in zip(outline, outline[1:] + outline[:1], strict=True)
     )
     points = [p for outline in outlines for p in outline]
-    lo = [min(p[i] for p in points) for i in (0, 1)]
-    hi = [max(p[i] for p in points) for i in (0, 1)]
-    return area, lo, hi
+    low = [min(p[i] for p in points) for i in (0, 1)]
+    high = [max(p[i] for p in points) for i in (0, 1)]
+    return area, low, high
 
 
 @pytest.mark.parametrize("size", PROFILE_SKETCHES)
 def test_vslot_profile_fills_its_envelope(size):
     """Each profile spans exactly its ``n × m`` units from the origin and is not solid."""
-    area, lo, hi = outline_stats(vslot_profile(size))
+    area, low, high = outline_stats(vslot_profile(size))
     width, height = size[0] * VSLOT_SPEC.unit, size[1] * VSLOT_SPEC.unit
-    assert lo == pytest.approx([0, 0], abs=1e-6)
-    assert hi == pytest.approx([width, height], abs=1e-6)
+    assert low == pytest.approx([0, 0], abs=1e-6)
+    assert high == pytest.approx([width, height], abs=1e-6)
     assert 0 < area < width * height
 
 
@@ -61,11 +61,11 @@ def test_sketch_units_origin_and_holes(tmp_path):
         '<svg xmlns="http://www.w3.org/2000/svg" width="40mm" height="50mm" viewBox="0 0 40 50">'
         '<path fill-rule="evenodd" d="M5,25 H35 V45 H5 Z M10,30 H20 V40 H10 Z"/></svg>'
     )
-    area, lo, hi = outline_stats(load_sketch(svg))
+    area, low, high = outline_stats(load_sketch(svg))
     assert area == pytest.approx(30 * 20 - 10 * 10)
     # SVG y runs down from the top of the sheet; CAD y runs up from its bottom
-    assert lo == pytest.approx([5, 5])
-    assert hi == pytest.approx([35, 25])
+    assert low == pytest.approx([5, 5])
+    assert high == pytest.approx([35, 25])
 
 
 def test_curve_facets_follow_fn():
@@ -77,9 +77,9 @@ def test_curve_facets_follow_fn():
 def test_teardrop_covers_the_hole_and_peaks_at_45_degrees():
     """As wide as the hole, with the roof's point where two 45° lines off the circle meet."""
     d = 6
-    _, lo, hi = outline_stats(teardrop(d))
-    assert lo == pytest.approx([-d / 2, -d / 2], abs=1e-3)
-    assert hi == pytest.approx([d / 2, d / 2 * 2**0.5], abs=1e-3)
+    _, low, high = outline_stats(teardrop(d))
+    assert low == pytest.approx([-d / 2, -d / 2], abs=1e-3)
+    assert high == pytest.approx([d / 2, d / 2 * 2**0.5], abs=1e-3)
 
 
 def cpsk_file(tmp_path, geometry: str) -> Path:
@@ -91,17 +91,17 @@ def cpsk_file(tmp_path, geometry: str) -> Path:
 
 def test_cpsk_sketch_is_solved_with_params():
     """The example plate (40 × 25 with a hole of a third of the short side) at another size."""
-    area, lo, hi = outline_stats(load_sketch(CPSK_EXAMPLE, fn=720, params={"width": "6cm"}))
-    assert lo == pytest.approx([0, 0], abs=1e-6)
-    assert hi == pytest.approx([60, 25], abs=1e-6)
+    area, low, high = outline_stats(load_sketch(CPSK_EXAMPLE, fn=720, params={"width": "6cm"}))
+    assert low == pytest.approx([0, 0], abs=1e-6)
+    assert high == pytest.approx([60, 25], abs=1e-6)
     assert area == pytest.approx(60 * 25 - math.pi * (25 / 6) ** 2, rel=1e-4)
 
 
 def test_cpsk_sketch_keeps_negative_coordinates(tmp_path):
     path = cpsk_file(tmp_path, '<circle cx="-3" cy="-4" r="2"><block/></circle>')
-    _, lo, hi = outline_stats(load_sketch(path, fn=360))
-    assert lo == pytest.approx([-5, -6], abs=1e-6)
-    assert hi == pytest.approx([-1, -2], abs=1e-6)
+    _, low, high = outline_stats(load_sketch(path, fn=360))
+    assert low == pytest.approx([-5, -6], abs=1e-6)
+    assert high == pytest.approx([-1, -2], abs=1e-6)
 
 
 def test_cpsk_warnings_and_strict(tmp_path):

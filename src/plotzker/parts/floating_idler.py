@@ -95,7 +95,7 @@ def tower(idler: FloatingIdler) -> Solid:
     height = idler.tower_top - z0
     inner = idler.width / 2 + idler.wall_gap
     plate = cube([idler.plate_thickness, 2 * half, height]).translate([0, -half, z0])
-    walls = [cube([idler.wall_length, half - inner, height]).translate([0, lo, z0]) for lo in (inner, -half)]
+    walls = [cube([idler.wall_length, half - inner, height]).translate([0, low, z0]) for low in (inner, -half)]
     # round, not a teardrop: a teardrop's apex was the highest stress in the plate (a 3.4 mm hole
     # prints flat enough lying on its side)
     hole = (

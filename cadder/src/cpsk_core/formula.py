@@ -96,7 +96,7 @@ class Name:
 class Unary:
     """``+x`` or ``-x``."""
 
-    op: str
+    operator: str
     operand: Node
 
 
@@ -104,7 +104,7 @@ class Unary:
 class Binary:
     """``x op y`` for ``+ - * / ^``."""
 
-    op: str
+    operator: str
     left: Node
     right: Node
 
@@ -169,10 +169,10 @@ def _evaluate(node: Node, units: Units, resolve: Callable[[Name], float]) -> flo
             return units.convert(value, unit)
         case Name():
             return resolve(node)
-        case Unary(op=op, operand=operand):
+        case Unary(operator=op, operand=operand):
             value = _evaluate(operand, units, resolve)
             return -value if op == "-" else value
-        case Binary(op=op, left=left, right=right):
+        case Binary(operator=op, left=left, right=right):
             a = _evaluate(left, units, resolve)
             b = _evaluate(right, units, resolve)
             match op:

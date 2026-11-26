@@ -22,20 +22,20 @@ from plotzker.parts.wood_screw import wood_screw_boss, wood_screw_hole
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-FOOT_T = YDrive.foot_t  #: same 6 mm foot as the other baseboard parts
+FOOT_T = YDrive.foot_thickness  #: same 6 mm foot as the other baseboard parts
 
 
 def screw_y() -> tuple[float, float]:
     """The two screws' y, from each end."""
-    inset = WOOD_SCREW.boss_d / 2 + 0.5
-    return inset, LOOM.rail_len - inset
+    inset = WOOD_SCREW.boss_dia / 2 + 0.5
+    return inset, LOOM.rail_length - inset
 
 
 def loom_rail() -> Solid:
     """One rail segment."""
-    t, w = LOOM.rail_t, LOOM.foot_w
-    wall = cube([t, LOOM.rail_len, LOOM.rail_h]).translate([-t, 0, 0])
-    foot = cube([w, LOOM.rail_len, FOOT_T]).translate([-t - w, 0, 0])
+    t, w = LOOM.rail_thickness, LOOM.foot_width
+    wall = cube([t, LOOM.rail_length, LOOM.rail_height]).translate([-t, 0, 0])
+    foot = cube([w, LOOM.rail_length, FOOT_T]).translate([-t - w, 0, 0])
     xs = -t - w / 2
     body = wall | foot
     for y in screw_y():

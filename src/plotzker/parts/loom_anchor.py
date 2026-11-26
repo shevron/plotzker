@@ -26,7 +26,7 @@ from plotzker.params import BRACKET, LOOM, TOL
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-TIE_SLOT_DY = LOOM.d / 2 + 3  #: tie slots, either side of the loom axis
+TIE_SLOT_DY = LOOM.dia / 2 + 3  #: tie slots, either side of the loom axis
 CHANNEL_H = 2.0  #: tie channel height under the block
 
 
@@ -34,31 +34,33 @@ def loom_anchor_installed() -> Solid:
     """The anchor on the right bracket, in the bracket-local frame."""
     x0, x1 = LOOM.anchor_x
     y0, y1 = LOOM.anchor_y
-    z0, z1 = BRACKET.base_t, BRACKET.base_t + LOOM.anchor_h
+    z0, z1 = BRACKET.base_thickness, BRACKET.base_thickness + LOOM.anchor_height
     cy, gz = LOOM.anchor_cy, LOOM.groove_z
     block = cube([x1 - x0, y1 - y0, z1 - z0]).translate([x0, y0, z0])
-    groove_d = TOL.slide_d(LOOM.d)
-    groove = cylinder(d=groove_d, h=x1 - x0 + 2, fn=FN_HOLE).rotate([0, 90, 0]).translate([x0 - 1, cy, gz]) | cube(
-        [x1 - x0 + 2, groove_d, z1 - gz + 1]
-    ).translate([x0 - 1, cy - groove_d / 2, gz])
+    groove_dia = TOL.slide_dia(LOOM.dia)
+    groove = cylinder(d=groove_dia, h=x1 - x0 + 2, fn=FN_HOLE).rotate([0, 90, 0]).translate([x0 - 1, cy, gz]) | cube(
+        [x1 - x0 + 2, groove_dia, z1 - gz + 1]
+    ).translate([x0 - 1, cy - groove_dia / 2, gz])
     xc = (x0 + x1) / 2
-    tie_len = LOOM.tie_w + 1
-    tie_w = LOOM.tie_t + 0.5
+    tie_length = LOOM.tie_width + 1
+    tie_width = LOOM.tie_thickness + 0.5
     slots = [
-        cube([tie_len, tie_w, LOOM.anchor_h + 2]).translate(
-            [xc - tie_len / 2, cy + s * TIE_SLOT_DY - tie_w / 2, z0 - 1]
+        cube([tie_length, tie_width, LOOM.anchor_height + 2]).translate(
+            [xc - tie_length / 2, cy + s * TIE_SLOT_DY - tie_width / 2, z0 - 1]
         )
         for s in (-1, 1)
     ]
-    channel = cube([tie_len, 2 * TIE_SLOT_DY + tie_w, CHANNEL_H + EPS]).translate(
-        [xc - tie_len / 2, cy - TIE_SLOT_DY - tie_w / 2, z0 - EPS]
+    channel = cube([tie_length, 2 * TIE_SLOT_DY + tie_width, CHANNEL_H + EPS]).translate(
+        [xc - tie_length / 2, cy - TIE_SLOT_DY - tie_width / 2, z0 - EPS]
     )
     holes = [
-        cylinder(d=TOL.bolt_hole_d(3), h=LOOM.anchor_h + 2, fn=FN_HOLE).translate([LOOM.anchor_screw_x, y, z0 - 1])
+        cylinder(d=TOL.bolt_hole_dia(3), h=LOOM.anchor_height + 2, fn=FN_HOLE).translate(
+            [LOOM.anchor_screw_x, y, z0 - 1]
+        )
         for y in LOOM.anchor_screw_y
     ]
     # the loom starts to bend down inside the block: carve its path
-    ball = sphere(d=groove_d, fn=16)
+    ball = sphere(d=groove_dia, fn=16)
     arc = [ball.translate([x, cy, z]) for x, z in LOOM.drop_arc()]
     relief = [hull(a, b) for a, b in itertools.pairwise(arc)]
     return block - groove - relief - slots - channel - holes
@@ -66,4 +68,4 @@ def loom_anchor_installed() -> Solid:
 
 def loom_anchor() -> Solid:
     """The anchor in print orientation."""
-    return loom_anchor_installed().translate([0, 0, -BRACKET.base_t])
+    return loom_anchor_installed().translate([0, 0, -BRACKET.base_thickness])

@@ -44,7 +44,7 @@ def hardware_gallery() -> list[Solid]:
         nema17(),
         gt2_pulley(),
         gt2_idler().translate([0, 0, IDLER_SPEC.width / 2]),
-        vwheel().translate([0, 0, VWHEEL_SPEC.od / 2]),
+        vwheel().translate([0, 0, VWHEEL_SPEC.outer_dia / 2]),
         servo_ft90m(),
         endstop(),
     ]

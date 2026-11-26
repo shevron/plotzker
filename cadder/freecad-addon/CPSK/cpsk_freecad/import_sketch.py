@@ -396,7 +396,7 @@ class _Importer:
             chosen = [chosen[1]]  # Angle on a line
         fields: list[int] = []
         for operand in chosen:
-            fields += _geo_pos(operand)
+            fields += _geo_position(operand)
         if constraint.type == "block":
             fields[1] = 0  # Block takes the GeoId only, also for a point
         while len(fields) < 6:
@@ -519,7 +519,7 @@ def _geometry(primitive: cpsk.Primitive) -> Geometry:
     return Geometry(primitive.kind, coords, primitive.construction)
 
 
-def _geo_pos(operand: cpsk.Operand) -> list[int]:
+def _geo_position(operand: cpsk.Operand) -> list[int]:
     if operand.target == "origin":
         return [-1, 1]
     if operand.target in ("x_axis", "y_axis"):

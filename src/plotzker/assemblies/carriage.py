@@ -28,7 +28,7 @@ def _on_beam_plane(axle: Matrix) -> Matrix:
 
 def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
     """Carriage, wheels, spacers, axle bolts, X belt clamps and the endstop trigger."""
-    wash = metric(5).washer_t
+    wash = metric(5).washer_thickness
     carriage = x_carriage_installed()
     items = [carriage.color("MediumSeaGreen")]
     top = get_handles(carriage, "wheel_axles_top")
@@ -57,9 +57,9 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
     # switch; a lock nut sits between head and block (shown at the end of its
     # adjustment, as params.XEndstopMount.head_x_min assumes), a captive nut inside
     trigger = get_handle(carriage, "trigger_screw")
-    lock_nut_x = trigger[0][3] - metric(3).nut_h
+    lock_nut_x = trigger[0][3] - metric(3).nut_height
     items.append(hex_nut(3).align(handle([lock_nut_x, trigger[1][3], trigger[2][3]], [0, 90, 0])))
-    items.append(shcs(3, CARRIAGE.trig_screw_len).align(shift_handle(trigger, [-metric(3).nut_h, 0, 0])))
+    items.append(shcs(3, CARRIAGE.trigger_screw_length).align(shift_handle(trigger, [-metric(3).nut_height, 0, 0])))
     return items
 
 

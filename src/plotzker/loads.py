@@ -26,7 +26,7 @@ class MotorLoads:
     @property
     def pulley_radius(self) -> float:
         """Pitch radius of the 20T drive pulley (mm)."""
-        return PULLEY_SPEC.pd / 2
+        return PULLEY_SPEC.pitch_dia / 2
 
     @property
     def jam_share(self) -> float:

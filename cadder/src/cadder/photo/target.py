@@ -107,10 +107,10 @@ def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: floa
     """The target page as a grayscale image at ``px_per_mm``."""
     import cv2
 
-    paper_w, paper_h = PAPER[paper.upper()]
-    if board.width > paper_w - 10 or board.height > paper_h - 25:
+    paper_width, paper_height = PAPER[paper.upper()]
+    if board.width > paper_width - 10 or board.height > paper_height - 25:
         raise ValueError(f"{board.width:g} × {board.height:g} mm board does not fit {paper}")
-    page = np.full((round(paper_h * px_per_mm), round(paper_w * px_per_mm)), 255, np.uint8)
+    page = np.full((round(paper_height * px_per_mm), round(paper_width * px_per_mm)), 255, np.uint8)
     bw, bh = round(board.width * px_per_mm), round(board.height * px_per_mm)
     art = board.opencv().generateImage((bw, bh), marginSize=0, borderBits=1)
     if board.field:  # a plain white area for the part (rows count from the top in the image)

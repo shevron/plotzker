@@ -38,18 +38,18 @@ def y_idler_end_local(side: Side = Side.LEFT) -> list[Solid]:
         mount.color("DarkOrange"),
         y_idler_slider_installed(side).color("Orange"),
         gt2_idler().align(_at_x(axle, Y_AXIS.belt_x)),
-        shcs(Y_IDLER.axle_m, Y_IDLER.axle_len).align(axle),
-        hex_nut(Y_IDLER.axle_m)
+        shcs(Y_IDLER.axle_screw_size, Y_IDLER.axle_length).align(axle),
+        hex_nut(Y_IDLER.axle_screw_size)
         .rotate([0, 90 * head, 0])
         .translate(
             [
-                Y_AXIS.belt_x + head * (Y_IDLER.width / 2 - metric(Y_IDLER.axle_m).nut_h),
+                Y_AXIS.belt_x + head * (Y_IDLER.width / 2 - metric(Y_IDLER.axle_screw_size).nut_height),
                 Y_DRIVE.idler_y,
                 Y_IDLER.axle_z,
             ]
         ),
-        shcs(Y_IDLER.screw_m, Y_IDLER.screw_len).align(get_handle(mount, "tension_screw")),
-        hex_nut(Y_IDLER.screw_m)
+        shcs(Y_IDLER.screw_size, Y_IDLER.screw_length).align(get_handle(mount, "tension_screw")),
+        hex_nut(Y_IDLER.screw_size)
         .rotate([-90, 0, 0])
         .translate([Y_AXIS.belt_x, slider_rear_y + TOL.nut_wall, Y_IDLER.screw_z]),
     ]
@@ -73,9 +73,9 @@ def y_belt_runs(gantry_y: float) -> list[Solid]:
     that end's belt clamp (the gantry model draws the belt inside the clamps).
     """
     x0 = Y_AXIS.belt_x - GT2_SPEC.width / 2
-    front_clamp_start = gantry_y - BRACKET.len_y / 2
-    rear_clamp_end = gantry_y + BRACKET.len_y / 2
-    lower_z = Y_AXIS.pulley_axis_z - PULLEY_SPEC.pd / 2 - GT2_SPEC.pitch_line_from_back
+    front_clamp_start = gantry_y - BRACKET.length_y / 2
+    rear_clamp_end = gantry_y + BRACKET.length_y / 2
+    lower_z = Y_AXIS.pulley_axis_z - PULLEY_SPEC.pitch_dia / 2 - GT2_SPEC.pitch_line_from_back
     upper_z = Y_AXIS.belt_back_z - GT2_SPEC.thickness
     runs = [(Y_DRIVE.idler_y, Y_DRIVE.motor_y, lower_z)]
     runs += [(Y_DRIVE.idler_y, front_clamp_start, upper_z), (rear_clamp_end, Y_DRIVE.motor_y, upper_z)]
@@ -129,14 +129,14 @@ def y_drive_assembly(gantry_y: float) -> list[Solid]:
 
 def gantry_y_at(position: float) -> float:
     """Gantry center along Y; ``position`` 0 = front end of travel, 1 = back end."""
-    return Y_DRIVE.gantry_front_y + BRACKET.len_y / 2 + position * Y_AXIS.travel_avail
+    return Y_DRIVE.gantry_front_y + BRACKET.length_y / 2 + position * Y_AXIS.travel_avail
 
 
 def y_drive_fit_check(position: float = 0.0) -> list[Solid]:
     """Baseboard, shafts, SK10s, gantry and both Y drives, gantry at ``position`` (0..1)."""
     gantry_y = gantry_y_at(position)
-    board_t = FRAME.board_size[2]
-    items = [cube(list(FRAME.board_size)).translate([0, 0, -board_t]).color("BurlyWood", 0.5)]
+    board_thickness = FRAME.board_size[2]
+    items = [cube(list(FRAME.board_size)).translate([0, 0, -board_thickness]).color("BurlyWood", 0.5)]
     for x in Y_AXIS.shaft_x:
         items.append(y_shaft().translate([x, Y_AXIS.shaft_y0, Y_AXIS.shaft_z]))
         items += [sk10().translate([x, y, 0]) for y in Y_AXIS.sk10_y]

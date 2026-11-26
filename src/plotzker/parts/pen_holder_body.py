@@ -17,7 +17,7 @@ z absolute); :func:`pen_holder_body_head` returns the part there, :func:`pen_hol
 in print orientation.
 
 Hardware:
-  1 × Ø6 rod, ``PEN.rod_len`` long, pressed into the arms (a drop of glue if loose)
+  1 × Ø6 rod, ``PEN.rod_length`` long, pressed into the arms (a drop of glue if loose)
   2 × M3×10 ISO 4762 — through the plate into the carriage's captive nuts
   2 × the servo's own screws (self-tapping, into the Ø1.6 pilot holes in the wall)
 
@@ -49,18 +49,18 @@ if TYPE_CHECKING:
 PILOT_D = 1.6  #: pilot hole for the servo's self-tapping screws. ASSUMED
 
 #: Rod: bottom end (seated in the lower arm), axis along +z
-ROD: Matrix = handle([PEN.rod_x, PEN.rod_d_pos, PEN.upper_arm_top - PEN.rod_len])
+ROD: Matrix = handle([PEN.rod_x, PEN.rod_depth, PEN.upper_arm_top - PEN.rod_length])
 #: Servo: output facing the plate, in the window (its own model is turned into place)
-SERVO: Matrix = handle([PEN.servo_x, PEN.servo_front_d, PEN.servo_center_z], [0, 90, 270])
+SERVO: Matrix = handle([PEN.servo_x, PEN.servo_front_depth, PEN.servo_center_z], [0, 90, 270])
 #: Horn: on the servo shaft, in the gap behind the wall; the model is turned about its own
 #: axis by the pen-lift angle before it is aligned
-HORN: Matrix = handle([PEN.servo_x, PEN.horn_d[0], PEN.shaft_z], [-90, 0, 0])
+HORN: Matrix = handle([PEN.servo_x, PEN.horn_dia[0], PEN.shaft_z], [-90, 0, 0])
 #: Clamp screws (tool plate to carriage): at the counterbore floors, along +d into the carriage
 CLAMP_SCREWS = [
     handle(
         [
             sx * TOOL_PLATE.screw_pitch / 2,
-            PEN.plate_d[1] - 3,
+            PEN.plate_depth[1] - 3,
             TOOL_PLATE.bottom_z + TOOL_PLATE.screw_z,
         ],
         [-90, 0, 0],
@@ -74,7 +74,7 @@ def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> So
     return cube([x1 - x0, d1 - d0, z1 - z0]).translate([x0, d0, z0])
 
 
-def _hole_d(d: float, x: float, z: float, d0: float, d1: float) -> Solid:
+def _hole_dia(d: float, x: float, z: float, d0: float, d1: float) -> Solid:
     """Hole along d from ``d0`` to ``d1``: a teardrop pointing +x (up in the print)."""
     return (
         linear_extrude(teardrop(d).rotate([0, 0, -90]), height=d1 - d0, center=True)
@@ -83,59 +83,59 @@ def _hole_d(d: float, x: float, z: float, d0: float, d1: float) -> Solid:
     )
 
 
-def _hole_z(d: float, x: float, d_pos: float, z0: float, z1: float) -> Solid:
+def _hole_z(d: float, x: float, depth_position: float, z0: float, z1: float) -> Solid:
     """Hole along z from ``z0`` to ``z1``: a teardrop pointing +x (up in the print)."""
-    return linear_extrude(teardrop(d).rotate([0, 0, -90]), height=z1 - z0).translate([x, d_pos, z0])
+    return linear_extrude(teardrop(d).rotate([0, 0, -90]), height=z1 - z0).translate([x, depth_position, z0])
 
 
 def _plate_and_lip() -> Solid:
     """Plate, the spine above it and the hook lip that drops into the carriage groove."""
     g = TOOL_PLATE.fit_gap
-    d0, d1 = PEN.plate_d
+    d0, d1 = PEN.plate_depth
     top = TOOL_PLATE.top_z
-    plate = _box(-TOOL_PLATE.w / 2, TOOL_PLATE.w / 2, d0, d1, TOOL_PLATE.bottom_z, top - g)
-    spine = _box(-TOOL_PLATE.w / 2, PEN.rod_x + PEN.arm_w / 2, d0, d1, top - g - 1, PEN.upper_arm_top)
-    # lip: the carriage groove (opening hook_h, 45° undercut hook_d) shrunk by the gap;
+    plate = _box(-TOOL_PLATE.width / 2, TOOL_PLATE.width / 2, d0, d1, TOOL_PLATE.bottom_z, top - g)
+    spine = _box(-TOOL_PLATE.width / 2, PEN.rod_x + PEN.arm_width / 2, d0, d1, top - g - 1, PEN.upper_arm_top)
+    # lip: the carriage groove (opening hook_h, 45° undercut hook_depth) shrunk by the gap;
     # profile in (d, z), negative d = into the carriage
     profile = polygon(
         [
             [d0 + 1, top - g],
-            [-(TOOL_PLATE.hook_d - g), top - g],
-            [-(TOOL_PLATE.hook_d - g), top - TOOL_PLATE.hook_h - TOOL_PLATE.hook_d + 2 * g],
+            [-(TOOL_PLATE.hook_depth - g), top - g],
+            [-(TOOL_PLATE.hook_depth - g), top - TOOL_PLATE.hook_h - TOOL_PLATE.hook_depth + 2 * g],
             [0, top - TOOL_PLATE.hook_h + g],
             [d0 + 1, top - TOOL_PLATE.hook_h + g],
         ]
     )
-    lip = linear_extrude(profile, height=TOOL_PLATE.w, center=True).rotate([90, 0, 90])
+    lip = linear_extrude(profile, height=TOOL_PLATE.width, center=True).rotate([90, 0, 90])
     return plate | spine | lip
 
 
 def _screw_holes() -> list[Solid]:
     """M3 clearance holes with counterbores for the clamp screws."""
-    d0, d1 = PEN.plate_d
+    d0, d1 = PEN.plate_depth
     z = TOOL_PLATE.bottom_z + TOOL_PLATE.screw_z
     cuts = []
     for sx in (-1, 1):
         x = sx * TOOL_PLATE.screw_pitch / 2
-        cuts.append(_hole_d(TOL.bolt_hole_d(3), x, z, d0 - 1, d1 + 1))
-        cuts.append(_hole_d(TOL.cbore_d(3), x, z, d1 - 3, d1 + 1))
+        cuts.append(_hole_dia(TOL.bolt_hole_dia(3), x, z, d0 - 1, d1 + 1))
+        cuts.append(_hole_dia(TOL.counterbore_dia(3), x, z, d1 - 3, d1 + 1))
     return cuts
 
 
 def _rod_arms() -> tuple[list[Solid], list[Solid]]:
     """Both rod arms and the rod holes (parts to add, cuts to subtract)."""
-    x0, x1 = PEN.rod_x - PEN.arm_w / 2, PEN.rod_x + PEN.arm_w / 2
-    d0 = PEN.plate_d[1] - 1
+    x0, x1 = PEN.rod_x - PEN.arm_width / 2, PEN.rod_x + PEN.arm_width / 2
+    d0 = PEN.plate_depth[1] - 1
 
     def arm(z0: float, z1: float) -> Solid:
         """Round boss around the rod, joined to the plate."""
-        boss = cylinder(d=PEN.arm_w, h=z1 - z0, fn=FN_HOLE).translate([PEN.rod_x, PEN.rod_d_pos, z0])
-        return boss | _box(x0, x1, d0, PEN.rod_d_pos, z0, z1)
+        boss = cylinder(d=PEN.arm_width, h=z1 - z0, fn=FN_HOLE).translate([PEN.rod_x, PEN.rod_depth, z0])
+        return boss | _box(x0, x1, d0, PEN.rod_depth, z0, z1)
 
-    hole_d = TOL.press_d(PEN.rod_d)
+    hole_dia = TOL.press_dia(PEN.rod_dia)
     cuts = [
-        _hole_z(hole_d, PEN.rod_x, PEN.rod_d_pos, PEN.lower_arm_top - PEN.rod_seat_depth, PEN.lower_arm_top + 1),
-        _hole_z(hole_d, PEN.rod_x, PEN.rod_d_pos, PEN.upper_arm_bottom - 1, PEN.upper_arm_top + 1),
+        _hole_z(hole_dia, PEN.rod_x, PEN.rod_depth, PEN.lower_arm_top - PEN.rod_seat_depth, PEN.lower_arm_top + 1),
+        _hole_z(hole_dia, PEN.rod_x, PEN.rod_depth, PEN.upper_arm_bottom - 1, PEN.upper_arm_top + 1),
     ]
     return [
         arm(PEN.lower_arm_bottom, PEN.lower_arm_top),
@@ -147,28 +147,29 @@ def _servo_bracket() -> tuple[list[Solid], list[Solid]]:
     """Servo wall, outer rib and webs, with the window and pilot holes."""
     x0, x1 = PEN.wall_x
     z0, z1 = PEN.wall_z
-    d_front = PEN.wall_d
-    d_back = d_front - PEN.wall_t
-    plate_front = PEN.plate_d[1] - 1
+    depth_front = PEN.wall_depth
+    depth_back = depth_front - PEN.wall_thickness
+    plate_front = PEN.plate_depth[1] - 1
     web_x1 = PEN.lug_x0 - TOL.gap * 2  # the lug rides past the webs
-    wall = _box(x0, x1, d_back, d_front, z0, z1)
-    rib = _box(x0, x0 + PEN.rib_t, plate_front, d_front, z0, z1)
+    wall = _box(x0, x1, depth_back, depth_front, z0, z1)
+    rib = _box(x0, x0 + PEN.rib_thickness, plate_front, depth_front, z0, z1)
     webs = [
-        _box(x0, web_x1, plate_front, d_front, z0, z0 + PEN.web_t),
-        _box(x0, web_x1, plate_front, d_front, z1 - PEN.web_t, z1),
+        _box(x0, web_x1, plate_front, depth_front, z0, z0 + PEN.web_thickness),
+        _box(x0, web_x1, plate_front, depth_front, z1 - PEN.web_thickness, z1),
     ]
     length, width, _ = FT90M_SPEC.body
     zc, c = PEN.servo_center_z, PEN.servo_clear
     window = _box(
         PEN.servo_x - width / 2 - c,
         PEN.servo_x + width / 2 + c,
-        d_back - 1,
-        d_front + 1,
+        depth_back - 1,
+        depth_front + 1,
         zc - length / 2 - c,
         zc + length / 2 + c,
     )
     pilots = [
-        _hole_d(PILOT_D, PEN.servo_x, zc + sz * FT90M_SPEC.hole_pitch / 2, d_back - 1, d_front + 1) for sz in (-1, 1)
+        _hole_dia(PILOT_D, PEN.servo_x, zc + sz * FT90M_SPEC.hole_pitch / 2, depth_back - 1, depth_front + 1)
+        for sz in (-1, 1)
     ]
     return [wall, rib, *webs], [window, *pilots]
 
@@ -178,10 +179,10 @@ def _key_rib() -> Solid:
     z0 = PEN.lug_z[0] - PEN.sink
     z1 = PEN.lug_z[1] + PEN.lift
     return _box(
-        PEN.key_x - PEN.key_w / 2,
-        PEN.key_x + PEN.key_w / 2,
-        PEN.plate_d[1] - 1,
-        PEN.plate_d[1] + PEN.key_h,
+        PEN.key_x - PEN.key_width / 2,
+        PEN.key_x + PEN.key_width / 2,
+        PEN.plate_depth[1] - 1,
+        PEN.plate_depth[1] + PEN.key_height,
         z0,
         z1,
     )
@@ -203,42 +204,42 @@ def pen_holder_body_head() -> Solid:
 def pen_holder_body() -> Solid:
     """The body in print orientation: on its left side (x = −25), lip toward the bed edge."""
     body = pen_holder_body_head().rotate([0, -90, 0])
-    return body.translate([0, 0, TOOL_PLATE.w / 2])
+    return body.translate([0, 0, TOOL_PLATE.width / 2])
 
 
 # --- FEM definition (head frame = installed frame; build direction +x) -----------------
-_ROD_BORE_R = TOL.press_d(PEN.rod_d) / 2 + 0.3
+_ROD_BORE_R = TOL.press_dia(PEN.rod_dia) / 2 + 0.3
 _UPPER_Z = (PEN.upper_arm_bottom, PEN.upper_arm_top)
 #: The upper arm's rod hole (the rod bears on its wall) and the lower arm's blind rod seat
 UPPER_BORE = Cylinder(
-    (PEN.rod_x, PEN.rod_d_pos, sum(_UPPER_Z) / 2),
+    (PEN.rod_x, PEN.rod_depth, sum(_UPPER_Z) / 2),
     (0, 0, 1),
     _ROD_BORE_R,
     (_UPPER_Z[1] - _UPPER_Z[0]) / 2,
 )
 LOWER_SEAT = Cylinder(
-    (PEN.rod_x, PEN.rod_d_pos, PEN.lower_arm_top - PEN.rod_seat_depth / 2),
+    (PEN.rod_x, PEN.rod_depth, PEN.lower_arm_top - PEN.rod_seat_depth / 2),
     (0, 0, 1),
     _ROD_BORE_R,
     PEN.rod_seat_depth / 2,
 )
 #: The upper arm's underside, which the slide meets at the top of its travel
 UPPER_STOP = Box(
-    (PEN.rod_x - PEN.arm_w / 2, PEN.rod_d_pos - PEN.arm_w / 2, PEN.upper_arm_bottom - 0.3),
-    (PEN.rod_x + PEN.arm_w / 2, PEN.rod_d_pos + PEN.arm_w / 2, PEN.upper_arm_bottom + 0.3),
+    (PEN.rod_x - PEN.arm_width / 2, PEN.rod_depth - PEN.arm_width / 2, PEN.upper_arm_bottom - 0.3),
+    (PEN.rod_x + PEN.arm_width / 2, PEN.rod_depth + PEN.arm_width / 2, PEN.upper_arm_bottom + 0.3),
     facing=(0, 0, -1),
 )
 _SERVO_ZC = PEN.servo_center_z
 #: Where the servo's tabs bear on the wall (its screws pull them on), either side of the window
 SERVO_SEAT = Box(
-    (PEN.servo_x - FT90M_SPEC.body[1] / 2 - 2, PEN.wall_d - 0.3, _SERVO_ZC - FT90M_SPEC.hole_pitch / 2 - 4),
-    (PEN.servo_x + FT90M_SPEC.body[1] / 2 + 2, PEN.wall_d + 0.3, _SERVO_ZC + FT90M_SPEC.hole_pitch / 2 + 4),
+    (PEN.servo_x - FT90M_SPEC.body[1] / 2 - 2, PEN.wall_depth - 0.3, _SERVO_ZC - FT90M_SPEC.hole_pitch / 2 - 4),
+    (PEN.servo_x + FT90M_SPEC.body[1] / 2 + 2, PEN.wall_depth + 0.3, _SERVO_ZC + FT90M_SPEC.hole_pitch / 2 + 4),
     facing=(0, 1, 0),
 )
 #: The plate's back face against the carriage (held there by the hook lip and the clamp screws)
 PLATE_BACK = Box(
-    (-TOOL_PLATE.w / 2, PEN.plate_d[0] - 0.3, TOOL_PLATE.bottom_z),
-    (TOOL_PLATE.w / 2, PEN.plate_d[0] + 0.3, TOOL_PLATE.top_z),
+    (-TOOL_PLATE.width / 2, PEN.plate_depth[0] - 0.3, TOOL_PLATE.bottom_z),
+    (TOOL_PLATE.width / 2, PEN.plate_depth[0] + 0.3, TOOL_PLATE.top_z),
     facing=(0, -1, 0),
 )
 _TIP_Z = FRAME.bed_top_z

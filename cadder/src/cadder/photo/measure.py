@@ -213,15 +213,15 @@ RAYS = 120  #: rays cast around a hole candidate
 
 
 def _ray_peaks(
-    mag: npt.NDArray[np.float32], cx: float, cy: float, r_lo: float, r_hi: float
+    mag: npt.NDArray[np.float32], cx: float, cy: float, radius_lo: float, radius_hi: float
 ) -> dict[int, list[tuple[float, float, float]]]:
-    """Gradient peaks on ``RAYS`` rays from (cx, cy) between radii ``r_lo`` and ``r_hi``:
+    """Gradient peaks on ``RAYS`` rays from (cx, cy) between radii ``radius_lo`` and ``radius_hi``:
     ray index → [(x, y, radius)], sub-pixel, every local maximum above a quarter of the ray's
     strongest."""
     import cv2
 
-    n = max(32, round((r_hi - r_lo) * 2))
-    radii = np.linspace(r_lo, r_hi, n)
+    n = max(32, round((radius_hi - radius_lo) * 2))
+    radii = np.linspace(radius_lo, radius_hi, n)
     step = radii[1] - radii[0]
     out: dict[int, list[tuple[float, float, float]]] = {}
     for ray in range(RAYS):
@@ -294,7 +294,7 @@ def _track(mag: npt.NDArray[np.float32], cx: float, cy: float, r: float) -> Hole
 
 
 def _ransac_circles(
-    edge: Points, r_lo: float, r_hi: float, tol: float, best: int = 4, trials: int = 6000
+    edge: Points, radius_lo: float, radius_hi: float, tol: float, best: int = 4, trials: int = 6000
 ) -> list[tuple[float, float, float]]:
     """Circles through edge points (N × 2) by RANSAC, scored by how much of the circle has
     edge support (36 angular bins), so straight edges and short arcs lose to whole circles."""
@@ -312,7 +312,7 @@ def _ransac_circles(
     ux = (sa * (b[:, 1] - c[:, 1]) + sb * (c[:, 1] - a[:, 1]) + sc * (a[:, 1] - b[:, 1])) / d
     uy = (sa * (c[:, 0] - b[:, 0]) + sb * (a[:, 0] - c[:, 0]) + sc * (b[:, 0] - a[:, 0])) / d
     r = np.hypot(a[:, 0] - ux, a[:, 1] - uy)
-    keep = (r >= r_lo) & (r <= r_hi)
+    keep = (r >= radius_lo) & (r <= radius_hi)
     ux, uy, r = ux[keep], uy[keep], r[keep]
     scored: list[tuple[int, float, float, float]] = []
     for start in range(0, len(r), 500):  # in chunks, to bound memory
@@ -340,12 +340,12 @@ def holes(
     image: BGR,
     scale: Scale,
     box: tuple[float, float, float, float],
-    d_min: float,
-    d_max: float,
+    dia_min: float,
+    dia_max: float,
     count: int = 4,
 ) -> list[Hole]:
-    """Round features (holes, pads, screw heads) with a diameter between ``d_min`` and
-    ``d_max`` (user units) inside ``box``: up to ``count`` holes, each with all its rings.
+    """Round features (holes, pads, screw heads) with a diameter between ``dia_min`` and
+    ``dia_max`` (user units) inside ``box``: up to ``count`` holes, each with all its rings.
 
     Starting circles come from RANSAC on the box's edges (whole circles beat straight edges
     and short arcs) plus the box's center; each is tracked around at full resolution from
@@ -358,20 +358,20 @@ def holes(
 
     u0, v0, u1, v1 = _box_px(scale, box, image.shape)
     gray = cv2.cvtColor(image[v0:v1, u0:u1], cv2.COLOR_BGR2GRAY)
-    r_min = max(2.0, d_min * scale.px_per_unit / 2)
-    r_max = max(r_min + 1, d_max * scale.px_per_unit / 2)
-    k = min(1.0, 40 / ((r_min + r_max) / 2))  # RANSAC on a copy where the radii are ~40 px
+    radius_min = max(2.0, dia_min * scale.px_per_unit / 2)
+    radius_max = max(radius_min + 1, dia_max * scale.px_per_unit / 2)
+    k = min(1.0, 40 / ((radius_min + radius_max) / 2))  # RANSAC on a copy where the radii are ~40 px
     small = cv2.resize(gray, None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
     canny = cv2.Canny(cv2.GaussianBlur(small, (0, 0), 1.0), 40, 120)
     ys, xs = np.nonzero(canny)
     seeds = _ransac_circles(
-        np.column_stack([xs, ys]).astype(np.float64), r_min * k * 0.9, r_max * k * 1.1, 1.5,
+        np.column_stack([xs, ys]).astype(np.float64), radius_min * k * 0.9, radius_max * k * 1.1, 1.5,
         count * 2,
     )  # fmt: skip
     candidates = [(x / k, y / k, r / k) for x, y, r in seeds]
     for frac in (0.25, 0.5, 0.75):  # and the box center, at a few radii
-        candidates.append((gray.shape[1] / 2, gray.shape[0] / 2, r_min + frac * (r_max - r_min)))
-    blur = cv2.GaussianBlur(gray.astype(np.float32), (0, 0), max(1.0, (r_min + r_max) / 200))
+        candidates.append((gray.shape[1] / 2, gray.shape[0] / 2, radius_min + frac * (radius_max - radius_min)))
+    blur = cv2.GaussianBlur(gray.astype(np.float32), (0, 0), max(1.0, (radius_min + radius_max) / 200))
     mag = np.asarray(
         cv2.magnitude(cv2.Sobel(blur, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(blur, cv2.CV_32F, 0, 1, ksize=3)),
         dtype=np.float32,
@@ -379,7 +379,7 @@ def holes(
     fits: list[Hole] = []
     for cx, cy, r in candidates:
         h = _track(mag, cx, cy, r)
-        if h and 1.8 * r_min <= h.diameter <= 2.2 * r_max and h.rms <= max(0.5, 0.01 * h.diameter):
+        if h and 1.8 * radius_min <= h.diameter <= 2.2 * radius_max and h.rms <= max(0.5, 0.01 * h.diameter):
             fits.append(h)
     fits.sort(key=lambda h: (-h.points, h.rms / h.diameter))
     unique: list[Hole] = []
@@ -526,13 +526,13 @@ def fit_rectangle(
             if sel.any():
                 grad[np.array([tag == name for tag, _ in pts])] -= grad[sel].mean()
         g, r = grad[keep], resid[keep]
-        d_theta = -float(np.sum(r * g) / np.sum(g * g)) if np.sum(g * g) > 0 else 0.0
-        theta += d_theta
+        angle_step = -float(np.sum(r * g) / np.sum(g * g)) if np.sum(g * g) > 0 else 0.0
+        theta += angle_step
         sigma = float(np.sqrt(np.mean(r**2))) if len(r) else 0.0
         keep = np.abs(resid) <= max(3 * sigma, 0.75)
         if tol:
             keep &= np.abs(resid) <= 2 * tol
-        if abs(d_theta) < 1e-7:
+        if abs(angle_step) < 1e-7:
             break
     nn = normals(theta)
     offsets = {
@@ -654,20 +654,20 @@ def outline(
     theta, offsets, resid, counts = fit_rectangle(sides, theta, tol)
     n1 = np.array([math.cos(theta), math.sin(theta)])
     n2 = np.array([-math.sin(theta), math.cos(theta)])
-    len_a = offsets["+a"] + offsets["-a"]  # extent along n1
-    len_b = offsets["+b"] + offsets["-b"]  # extent along n2
+    length_a = offsets["+a"] + offsets["-a"]  # extent along n1
+    length_b = offsets["+b"] + offsets["-b"]  # extent along n2
     center_px = n1 * (offsets["+a"] - offsets["-a"]) / 2 + n2 * (offsets["+b"] - offsets["-b"]) / 2
     corners_px = [
-        center_px + n1 * sa * len_a / 2 + n2 * sb * len_b / 2 for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))
+        center_px + n1 * sa * length_a / 2 + n2 * sb * length_b / 2 for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))
     ]
     k = scale.px_per_unit
     center = scale.from_px(center_px[None, :])[0]
     corners = [(float(a), float(b)) for a, b in scale.from_px(np.array(corners_px))]
     # the length side and its angle in user coordinates (y up on rectified images)
-    if len_a >= len_b:
-        length, width, axis = len_a, len_b, n1
+    if length_a >= length_b:
+        length, width, axis = length_a, length_b, n1
     else:
-        length, width, axis = len_b, len_a, n2
+        length, width, axis = length_b, length_a, n2
     p0, p1 = scale.from_px(np.array([center_px, center_px + axis]))
     angle = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
     angle = (angle + 90) % 180 - 90  # a side direction: −90…90

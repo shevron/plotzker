@@ -18,7 +18,7 @@ Hardware:
   1 × M5×20 ISO 4762 + 1 × M5 nut (pressed into the bar's front face) — pen thumbscrew
   1 × M2 screw through a horn hole as the pin (belongs to the servo side)
 
-Print: default profile (``profiles/default.toml``); back face (d = slide_d0) down (the build
+Print: default profile (``profiles/default.toml``); back face (d = slide_depth_start) down (the build
 direction is +d in the head frame).
 The sleeve bores are teardrops pointing up (+d); the V flanks are 45° and open upward.
 No supports. Ream the two bores with a 6.2 mm drill if they print tight.
@@ -42,9 +42,11 @@ if TYPE_CHECKING:
 
 
 #: Thumbscrew: on the yoke bar's front face (pen side), along +d toward the pen
-THUMBSCREW: Matrix = handle([PEN.pen_x, PEN.yoke_bar_d[1], sum(PEN.yoke_z) / 2], [-90, 0, 0])
+THUMBSCREW: Matrix = handle([PEN.pen_x, PEN.yoke_bar_depth[1], sum(PEN.yoke_z) / 2], [-90, 0, 0])
 #: Its nut: pressed into the yoke bar from the front, same axis
-THUMBSCREW_NUT: Matrix = handle([PEN.pen_x, PEN.yoke_bar_d[1] - TOL.nut_trap_h(5), sum(PEN.yoke_z) / 2], [-90, 0, 0])
+THUMBSCREW_NUT: Matrix = handle(
+    [PEN.pen_x, PEN.yoke_bar_depth[1] - TOL.nut_trap_height(5), sum(PEN.yoke_z) / 2], [-90, 0, 0]
+)
 
 
 def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> Solid:
@@ -55,28 +57,28 @@ def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> So
 def _body() -> Solid:
     """Sleeve column, V-block, yoke and lug before the holes."""
     z0, z1 = PEN.slide_z0, PEN.slide_z0 + PEN.slide_h
-    r = PEN.sleeve_od / 2
-    column = cylinder(d=PEN.sleeve_od, h=PEN.slide_h, fn=FN_HOLE).translate([PEN.rod_x, PEN.rod_d_pos, z0]) | _box(
-        PEN.rod_x - r, PEN.rod_x + r, PEN.slide_d0, PEN.rod_d_pos, z0, z1
-    )
-    h = PEN.block_half_w
+    r = PEN.sleeve_outer_dia / 2
+    column = cylinder(d=PEN.sleeve_outer_dia, h=PEN.slide_h, fn=FN_HOLE).translate(
+        [PEN.rod_x, PEN.rod_depth, z0]
+    ) | _box(PEN.rod_x - r, PEN.rod_x + r, PEN.slide_depth_start, PEN.rod_depth, z0, z1)
+    h = PEN.block_half_width
     v_profile = polygon(
         [
-            [PEN.pen_x - h, PEN.slide_d0],
-            [PEN.pen_x + h, PEN.slide_d0],
-            [PEN.pen_x + h, PEN.apex_d + h],
-            [PEN.pen_x, PEN.apex_d],
-            [PEN.pen_x - h, PEN.apex_d + h],
+            [PEN.pen_x - h, PEN.slide_depth_start],
+            [PEN.pen_x + h, PEN.slide_depth_start],
+            [PEN.pen_x + h, PEN.apex_depth + h],
+            [PEN.pen_x, PEN.apex_depth],
+            [PEN.pen_x - h, PEN.apex_depth + h],
         ]
     )
     block = linear_extrude(v_profile, height=PEN.slide_h).translate([0, 0, z0])
-    bar_d0, bar_d1 = PEN.yoke_bar_d
+    bar_d0, bar_d1 = PEN.yoke_bar_depth
     yz0, yz1 = PEN.yoke_z
     yoke = _box(PEN.pen_x - h, PEN.pen_x + h, bar_d0, bar_d1, yz0, yz1)
     for sx in (-1, 1):
         x_in, x_out = sorted((PEN.pen_x + sx * PEN.yoke_in, PEN.pen_x + sx * h))
-        yoke = yoke | _box(x_in, x_out, PEN.apex_d + PEN.yoke_in, bar_d1, yz0, yz1)
-    lug = _box(PEN.lug_x0, PEN.rod_x, PEN.slide_d0, PEN.slide_d0 + PEN.lug_t, *PEN.lug_z)
+        yoke = yoke | _box(x_in, x_out, PEN.apex_depth + PEN.yoke_in, bar_d1, yz0, yz1)
+    lug = _box(PEN.lug_x0, PEN.rod_x, PEN.slide_depth_start, PEN.slide_depth_start + PEN.lug_thickness, *PEN.lug_z)
     return column | block | yoke | lug
 
 
@@ -84,50 +86,50 @@ def _cuts() -> list[Solid]:
     """Sleeve bores with the relief between them, the V-block's pen space, the slot, the
     key groove and the thumbscrew hole with its nut pocket."""
     z0, z1 = PEN.slide_z0, PEN.slide_z0 + PEN.slide_h
-    bore_d = TOL.slide_d(PEN.rod_d)
-    relief_d = bore_d + 1.2
+    bore_dia = TOL.slide_dia(PEN.rod_dia)
+    relief_dia = bore_dia + 1.2
 
     def bore(d: float, za: float, zb: float) -> Solid:
-        return linear_extrude(teardrop(d), height=zb - za).translate([PEN.rod_x, PEN.rod_d_pos, za])
+        return linear_extrude(teardrop(d), height=zb - za).translate([PEN.rod_x, PEN.rod_depth, za])
 
     cuts = [
-        bore(bore_d, z0 - 1, z0 + PEN.sleeve_len),
-        bore(relief_d, z0 + PEN.sleeve_len - 0.01, z1 - PEN.sleeve_len + 0.01),
-        bore(bore_d, z1 - PEN.sleeve_len, z1 + 1),
+        bore(bore_dia, z0 - 1, z0 + PEN.sleeve_length),
+        bore(relief_dia, z0 + PEN.sleeve_length - 0.01, z1 - PEN.sleeve_length + 0.01),
+        bore(bore_dia, z1 - PEN.sleeve_length, z1 + 1),
     ]
     slot_x0, slot_x1 = PEN.slot_x
     cuts.append(
         _box(
             slot_x0,
             slot_x1,
-            PEN.slide_d0 - 1,
-            PEN.slide_d0 + PEN.lug_t + 1,
-            PEN.slot_ceiling_z - PEN.pin_travel - PEN.pin_d - PEN.slot_extra_h,
+            PEN.slide_depth_start - 1,
+            PEN.slide_depth_start + PEN.lug_thickness + 1,
+            PEN.slot_ceiling_z - PEN.pin_travel - PEN.pin_dia - PEN.slot_extra_height,
             PEN.slot_ceiling_z,
         )
     )
     cuts.append(
         _box(
-            PEN.key_x - TOL.slide_d(PEN.key_w) / 2,
-            PEN.key_x + TOL.slide_d(PEN.key_w) / 2,
-            PEN.slide_d0 - 1,
-            PEN.slide_d0 + PEN.key_h + TOL.gap,
+            PEN.key_x - TOL.slide_dia(PEN.key_width) / 2,
+            PEN.key_x + TOL.slide_dia(PEN.key_width) / 2,
+            PEN.slide_depth_start - 1,
+            PEN.slide_depth_start + PEN.key_height + TOL.gap,
             0,
             200,
         )
     )
-    bar_d0, bar_d1 = PEN.yoke_bar_d
+    bar_d0, bar_d1 = PEN.yoke_bar_depth
     zc = sum(PEN.yoke_z) / 2
     cuts.append(
-        cylinder(d=TOL.bolt_hole_d(5), h=bar_d1 - bar_d0 + 2, fn=FN_HOLE)
+        cylinder(d=TOL.bolt_hole_dia(5), h=bar_d1 - bar_d0 + 2, fn=FN_HOLE)
         .rotate([-90, 0, 0])
         .translate([PEN.pen_x, bar_d0 - 1, zc])
     )
-    nut_t = TOL.nut_trap_h(5)
+    nut_thickness = TOL.nut_trap_height(5)
     cuts.append(
-        cylinder(d=TOL.nut_trap_ac(5), h=nut_t + 1, fn=6)
+        cylinder(d=TOL.nut_trap_across_corners(5), h=nut_thickness + 1, fn=6)
         .rotate([-90, 0, 0])
-        .translate([PEN.pen_x, bar_d1 - nut_t, zc])
+        .translate([PEN.pen_x, bar_d1 - nut_thickness, zc])
     )
     return cuts
 
@@ -142,18 +144,18 @@ def pen_slide_head() -> Solid:
 
 def pen_slide() -> Solid:
     """The slide in print orientation: back face down, V open upward."""
-    return pen_slide_head().rotate([90, 0, 0]).translate([0, 0, -PEN.slide_d0])
+    return pen_slide_head().rotate([90, 0, 0]).translate([0, 0, -PEN.slide_depth_start])
 
 
 # --- FEM definition (head frame = installed frame; build direction +d) ----------------
 _BLOCK_Z = PEN.yoke_z
-_BLOCK_MID: Vec3 = (PEN.pen_x, PEN.apex_d + 6, sum(_BLOCK_Z) / 2)
+_BLOCK_MID: Vec3 = (PEN.pen_x, PEN.apex_depth + 6, sum(_BLOCK_Z) / 2)
 #: The pen as held: a 10 mm pen, its tip on the bed
-_PEN_TIP: Vec3 = (PEN.pen_x, PEN.pen_axis_d(10.0), FRAME.bed_top_z)
+_PEN_TIP: Vec3 = (PEN.pen_x, PEN.pen_axis_depth(10.0), FRAME.bed_top_z)
 #: The V-block's flanks, where the pen presses
 V_FLANKS = Box(
-    (PEN.pen_x - PEN.block_half_w, PEN.apex_d, _BLOCK_Z[0]),
-    (PEN.pen_x + PEN.block_half_w, PEN.apex_d + PEN.block_half_w, _BLOCK_Z[1]),
+    (PEN.pen_x - PEN.block_half_width, PEN.apex_depth, _BLOCK_Z[0]),
+    (PEN.pen_x + PEN.block_half_width, PEN.apex_depth + PEN.block_half_width, _BLOCK_Z[1]),
     facing=(0, 1, 0),
     facing_tol_deg=60,
 )
@@ -161,33 +163,33 @@ V_FLANKS = Box(
 PEN_SEAT = Box(V_FLANKS.lo, V_FLANKS.hi)
 #: The slot's ceiling, lifted by the servo horn's pin
 SLOT_CEILING = Box(
-    (PEN.slot_x[0], PEN.slide_d0 - 0.5, PEN.slot_ceiling_z - 0.3),
-    (PEN.slot_x[1], PEN.slide_d0 + PEN.lug_t + 0.5, PEN.slot_ceiling_z + 0.3),
+    (PEN.slot_x[0], PEN.slide_depth_start - 0.5, PEN.slot_ceiling_z - 0.3),
+    (PEN.slot_x[1], PEN.slide_depth_start + PEN.lug_thickness + 0.5, PEN.slot_ceiling_z + 0.3),
     facing=(0, 0, -1),
 )
-_BORE_R = TOL.slide_d(PEN.rod_d) / 2 + 0.6
+_BORE_R = TOL.slide_dia(PEN.rod_dia) / 2 + 0.6
 #: The two sleeve bores on the rod (held in x and d; free to slide along z)
 SLEEVES = [
     Cylinder(
-        (PEN.rod_x, PEN.rod_d_pos, zc),
+        (PEN.rod_x, PEN.rod_depth, zc),
         (0, 0, 1),
         _BORE_R,
-        PEN.sleeve_len / 2 - 0.2,
+        PEN.sleeve_length / 2 - 0.2,
     )
     for zc in (
-        PEN.slide_z0 + PEN.sleeve_len / 2,
-        PEN.slide_z0 + PEN.slide_h - PEN.sleeve_len / 2,
+        PEN.slide_z0 + PEN.sleeve_length / 2,
+        PEN.slide_z0 + PEN.slide_h - PEN.sleeve_length / 2,
     )
 ]
 #: The key rib's groove walls in the lug (hold the slide against turning on the rod)
 KEY_GROOVE = Box(
-    (PEN.key_x - 2.5, PEN.slide_d0 - 0.2, PEN.lug_z[0]),
-    (PEN.key_x + 2.5, PEN.slide_d0 + PEN.key_h + 0.5, PEN.lug_z[1]),
+    (PEN.key_x - 2.5, PEN.slide_depth_start - 0.2, PEN.lug_z[0]),
+    (PEN.key_x + 2.5, PEN.slide_depth_start + PEN.key_height + 0.5, PEN.lug_z[1]),
 )
 #: The sleeve column's top end, which meets the upper arm when the servo lifts it fully
 TOP_STOP = Box(
-    (PEN.rod_x - PEN.sleeve_od / 2, PEN.slide_d0, PEN.slide_z0 + PEN.slide_h - 0.3),
-    (PEN.rod_x + PEN.sleeve_od / 2, PEN.rod_d_pos + PEN.sleeve_od / 2, PEN.slide_z0 + PEN.slide_h),
+    (PEN.rod_x - PEN.sleeve_outer_dia / 2, PEN.slide_depth_start, PEN.slide_z0 + PEN.slide_h - 0.3),
+    (PEN.rod_x + PEN.sleeve_outer_dia / 2, PEN.rod_depth + PEN.sleeve_outer_dia / 2, PEN.slide_z0 + PEN.slide_h),
     facing=(0, 0, 1),
 )
 

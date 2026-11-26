@@ -32,54 +32,54 @@ def carriage_x_at(position: float) -> float:
     return left + position * (right - left)
 
 
-def moving_parts(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list[Solid]:
+def moving_parts(gantry_position: float = 0.5, carriage_position: float = 0.5) -> list[Solid]:
     """Gantry, Y drive and X carriage at the given travel fractions (0..1)."""
-    gantry_y = gantry_y_at(gantry_pos)
+    gantry_y = gantry_y_at(gantry_position)
     return [
         *gantry_assembly(gantry_y),
         *y_drive_assembly(gantry_y),
-        translate(carriage_assembly(), [carriage_x_at(carriage_pos), gantry_y, 0]),
+        translate(carriage_assembly(), [carriage_x_at(carriage_position), gantry_y, 0]),
     ]
 
 
-def skeleton(gantry_pos: float = 0.5, carriage_pos: float = 0.5) -> list[Solid]:
+def skeleton(gantry_position: float = 0.5, carriage_position: float = 0.5) -> list[Solid]:
     """Frame, Y axis, gantry and carriage at the given travel fractions (0..1)."""
-    gantry_y = gantry_y_at(gantry_pos)
-    carriage_x = carriage_x_at(carriage_pos)
-    board_x, board_y, board_t = FRAME.board_size
+    gantry_y = gantry_y_at(gantry_position)
+    carriage_x = carriage_x_at(carriage_position)
+    board_x, board_y, board_thickness = FRAME.board_size
     bed_x, bed_y = FRAME.bed_size
     a3_x, a3_y = REQ.media_a3
 
-    items = [cube(list(FRAME.board_size)).translate([0, 0, -board_t]).color("BurlyWood", 0.5)]
+    items = [cube(list(FRAME.board_size)).translate([0, 0, -board_thickness]).color("BurlyWood", 0.5)]
     for x in Y_AXIS.shaft_x:
         items.append(y_shaft().translate([x, Y_AXIS.shaft_y0, Y_AXIS.shaft_z]))
         items += [sk10().translate([x, y, 0]) for y in Y_AXIS.sk10_y]
     # bed panel, steel sheet, thickest-media envelope (centered on the board)
     bed_origin = [*FRAME.bed_origin, 0]
     items.append(
-        cube([bed_x, bed_y, FRAME.bed_panel_t])
+        cube([bed_x, bed_y, FRAME.bed_panel_thickness])
         .translate([0, 0, FRAME.bed_adjust_gap])
         .translate(bed_origin)
         .color("Tan", 0.8)
     )
     items.append(
-        cube([bed_x, bed_y, FRAME.bed_steel_t])
-        .translate([0, 0, FRAME.bed_adjust_gap + FRAME.bed_panel_t])
+        cube([bed_x, bed_y, FRAME.bed_steel_thickness])
+        .translate([0, 0, FRAME.bed_adjust_gap + FRAME.bed_panel_thickness])
         .translate(bed_origin)
         .color("SlateGray")
     )
     items.append(
-        cube([a3_x, a3_y, REQ.media_max_t])
+        cube([a3_x, a3_y, REQ.media_max_thickness])
         .translate([(board_x - a3_x) / 2, (board_y - a3_y) / 2, FRAME.bed_top_z])
         .color("Orange", 0.25)
     )
-    items += moving_parts(gantry_pos, carriage_pos)
+    items += moving_parts(gantry_position, carriage_position)
     # tool-plate area marked in red
     items.append(
-        cube([TOOL_PLATE.w, 1, TOOL_PLATE.h])
+        cube([TOOL_PLATE.width, 1, TOOL_PLATE.height])
         .translate(
             [
-                carriage_x - TOOL_PLATE.w / 2,
+                carriage_x - TOOL_PLATE.width / 2,
                 gantry_y + CARRIAGE.plate_front_y - 1,
                 TOOL_PLATE.bottom_z,
             ]

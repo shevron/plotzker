@@ -286,24 +286,24 @@ class _Writer:
                 return self.resolve(name), 5, self.dimension(name)
             case cpsk_formula.Call(function=function, args=args):
                 return self.call(function, args)
-            case cpsk_formula.Unary(op=op, operand=operand):
+            case cpsk_formula.Unary(operator=op, operand=operand):
                 text, level, dim = self.write(operand)
                 return f"{op}{_paren(text, level, 4)}", 4, dim
-            case cpsk_formula.Binary(op="^", left=left, right=right):
+            case cpsk_formula.Binary(operator="^", left=left, right=right):
                 (lt, ll, ld), (rt, rl, _) = self.write(left), self.write(right)
                 return (
                     f"{_paren(lt, ll, 3)} ^ {_paren(rt, rl, 4)}",
                     3,
                     None if ld is None else "other",
                 )
-            case cpsk_formula.Binary(op=op, left=left, right=right) if op in ("*", "/"):
+            case cpsk_formula.Binary(operator=op, left=left, right=right) if op in ("*", "/"):
                 (lt, ll, ld), (rt, rl, rd) = self.write(left), self.write(right)
                 if op == "*":
                     dim = rd if ld is None else ld if rd is None else "other"
                 else:
                     dim = ld if rd is None else None if ld == rd else "other"
                 return f"{_paren(lt, ll, 2)} {op} {_paren(rt, rl, 3)}", 2, dim
-            case cpsk_formula.Binary(op=op, left=left, right=right):
+            case cpsk_formula.Binary(operator=op, left=left, right=right):
                 (lt, ll, ld), (rt, rl, rd) = self.matched([left, right])
                 return f"{_paren(lt, ll, 1)} {op} {_paren(rt, rl, 2)}", 1, ld or rd
         raise AssertionError(node)

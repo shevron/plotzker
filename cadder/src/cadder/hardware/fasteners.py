@@ -17,27 +17,59 @@ if TYPE_CHECKING:
 class MetricSize:
     """Dimensions of the fasteners of one metric thread size."""
 
-    m: float  #: nominal thread diameter
-    head_d: float  #: SHCS head diameter
-    head_h: float  #: SHCS head height
-    nut_af: float  #: hex nut across flats
-    nut_h: float  #: hex nut height
-    washer_od: float
-    washer_t: float
+    size: float  #: nominal thread diameter
+    head_dia: float  #: SHCS head diameter
+    head_height: float  #: SHCS head height
+    nut_across_flats: float  #: hex nut across flats
+    nut_height: float  #: hex nut height
+    washer_outer_dia: float
+    washer_thickness: float
 
     @property
-    def nut_ac(self) -> float:
+    def nut_across_corners(self) -> float:
         """Hex nut across corners."""
-        return self.nut_af / cos_deg(30)
+        return self.nut_across_flats / cos_deg(30)
 
 
 _SIZES = (
-    MetricSize(2.5, head_d=4.5, head_h=2.5, nut_af=5.0, nut_h=2.0, washer_od=5.0, washer_t=0.5),
-    MetricSize(3, head_d=5.5, head_h=3.0, nut_af=5.4, nut_h=2.25, washer_od=7.0, washer_t=0.5),
-    MetricSize(4, head_d=7.0, head_h=4.0, nut_af=7.0, nut_h=3.2, washer_od=9.0, washer_t=0.8),
-    MetricSize(5, head_d=8.5, head_h=5.0, nut_af=8.0, nut_h=4.7, washer_od=10.0, washer_t=1.0),
+    MetricSize(
+        2.5,
+        head_dia=4.5,
+        head_height=2.5,
+        nut_across_flats=5.0,
+        nut_height=2.0,
+        washer_outer_dia=5.0,
+        washer_thickness=0.5,
+    ),
+    MetricSize(
+        3,
+        head_dia=5.5,
+        head_height=3.0,
+        nut_across_flats=5.4,
+        nut_height=2.25,
+        washer_outer_dia=7.0,
+        washer_thickness=0.5,
+    ),
+    MetricSize(
+        4,
+        head_dia=7.0,
+        head_height=4.0,
+        nut_across_flats=7.0,
+        nut_height=3.2,
+        washer_outer_dia=9.0,
+        washer_thickness=0.8,
+    ),
+    MetricSize(
+        5,
+        head_dia=8.5,
+        head_height=5.0,
+        nut_across_flats=8.0,
+        nut_height=4.7,
+        washer_outer_dia=10.0,
+        washer_thickness=1.0,
+    ),
 )
-METRIC: dict[float, MetricSize] = {size.m: size for size in _SIZES}
+METRIC: dict[float, MetricSize] = {size.size: size for size in _SIZES}
 
 M2_5, M3, M4, M5 = _SIZES
 
@@ -59,15 +91,15 @@ def shcs(m: float, length: float) -> Solid:
     Origin: center of the underside of the head; shank points down -Z.
     """
     size = metric(m)
-    head = cylinder(d=size.head_d, h=size.head_h, fn=24)
+    head = cylinder(d=size.head_dia, h=size.head_height, fn=24)
     shank = cylinder(d=m, h=length, fn=16).translate([0, 0, -length])
     return (head | shank).color("DimGray")
 
 
-def countersunk_screw(m: float, length: float, head_d: float) -> Solid:
+def countersunk_screw(m: float, length: float, head_dia: float) -> Solid:
     """Countersunk (90°) screw. Origin: center of the head's top face; shank points down -Z."""
-    h = (head_d - m) / 2
-    head = cylinder(d1=m, d2=head_d, h=h, fn=24).translate([0, 0, -h])
+    h = (head_dia - m) / 2
+    head = cylinder(d1=m, d2=head_dia, h=h, fn=24).translate([0, 0, -h])
     shank = cylinder(d=m, h=length - h + 0.01, fn=16).translate([0, 0, -length])
     return (head | shank).color("DimGray")
 
@@ -75,15 +107,15 @@ def countersunk_screw(m: float, length: float, head_d: float) -> Solid:
 def hex_nut(m: float) -> Solid:
     """Hex nut. Origin: center of the bottom face, axis +Z."""
     size = metric(m)
-    body = cylinder(d=size.nut_ac, h=size.nut_h, fn=6)
-    bore = cylinder(d=m, h=size.nut_h + 2, fn=16).translate([0, 0, -1])
+    body = cylinder(d=size.nut_across_corners, h=size.nut_height, fn=6)
+    bore = cylinder(d=m, h=size.nut_height + 2, fn=16).translate([0, 0, -1])
     return (body - bore).color("Silver")
 
 
 def washer(m: float) -> Solid:
     """Washer. Origin: center of the bottom face, axis +Z."""
     size = metric(m)
-    body = cylinder(d=size.washer_od, h=size.washer_t, fn=24)
+    body = cylinder(d=size.washer_outer_dia, h=size.washer_thickness, fn=24)
     bore = cylinder(d=m + 0.3, h=3, fn=16).translate([0, 0, -1])
     return (body - bore).color("Silver")
 
@@ -98,8 +130,8 @@ def t_nut(m: float, thickness: float = 4.0) -> Solid:
     return (plate - bore).color("Silver")
 
 
-def spring(od: float, id_: float, length: float) -> Solid:
+def spring(outer_dia: float, inner_dia: float, length: float) -> Solid:
     """Compression spring as a plain tube. Origin: center of the bottom face, axis +Z."""
-    return (cylinder(d=od, h=length, fn=32) - cylinder(d=id_, h=length + 2, fn=32).translate([0, 0, -1])).color(
-        "SteelBlue"
-    )
+    return (
+        cylinder(d=outer_dia, h=length, fn=32) - cylinder(d=inner_dia, h=length + 2, fn=32).translate([0, 0, -1])
+    ).color("SteelBlue")

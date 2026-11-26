@@ -36,25 +36,25 @@ if TYPE_CHECKING:
 def belt_clamp() -> Solid:
     """One belt clamp cap, in print orientation."""
     belt_zone = GT2_SPEC.width - 0.4  # ridges stay inside the groove
-    plate = cube([CLAMP.w, CLAMP.length, CLAMP.t]).translate([-CLAMP.w / 2, 0, 0])
-    rail_w = (CLAMP.w - CLAMP.channel_w) / 2
+    plate = cube([CLAMP.width, CLAMP.length, CLAMP.thickness]).translate([-CLAMP.width / 2, 0, 0])
+    rail_width = (CLAMP.width - CLAMP.channel_width) / 2
     rails = [
-        cube([rail_w, CLAMP.length, CLAMP.channel_d + EPS]).translate(
-            [sx * (CLAMP.channel_w + rail_w) / 2 - rail_w / 2, 0, CLAMP.t - EPS]
+        cube([rail_width, CLAMP.length, CLAMP.channel_depth + EPS]).translate(
+            [sx * (CLAMP.channel_width + rail_width) / 2 - rail_width / 2, 0, CLAMP.thickness - EPS]
         )
         for sx in (-1, 1)
     ]
     ridges = [
-        cube([belt_zone, CLAMP.ridge_w, CLAMP.ridge_h + EPS]).translate(
-            [-belt_zone / 2, i * GT2_SPEC.pitch + (GT2_SPEC.pitch - CLAMP.ridge_w) / 2, CLAMP.t - EPS]
+        cube([belt_zone, CLAMP.ridge_width, CLAMP.ridge_height + EPS]).translate(
+            [-belt_zone / 2, i * GT2_SPEC.pitch + (GT2_SPEC.pitch - CLAMP.ridge_width) / 2, CLAMP.thickness - EPS]
         )
         for i in range(math.floor(CLAMP.length / GT2_SPEC.pitch))
     ]
     holes = [
-        cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.total_t + 2, fn=FN_HOLE).translate(
+        cylinder(d=TOL.bolt_hole_dia(3), h=CLAMP.total_thickness + 2, fn=FN_HOLE).translate(
             [sx * CLAMP.screw_dx, CLAMP.length / 2, -1]
         )
         for sx in (-1, 1)
     ]
     # "mount": the rail tops, where the cap meets the flat underside it clamps against
-    return set_handles((plate | rails | ridges) - holes, mount=handle([0, 0, CLAMP.total_t]))
+    return set_handles((plate | rails | ridges) - holes, mount=handle([0, 0, CLAMP.total_thickness]))

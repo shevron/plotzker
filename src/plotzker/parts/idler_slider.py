@@ -27,7 +27,7 @@ the idler axle at ``X_DRIVE.idler_x``. The Y sliders are placed in the side fram
 
 Hardware: toothed idler (``IDLER_SPEC``); 1 × M5×25 ISO 4762 (axle, head on the +y arm) + 1 × M5 nut
 (pressed into the -y arm's outside); 1 × M3 nut (pressed in from the top of the wall) + 1 ×
-M3×``X_IDLER.screw_len`` ISO 4762 (tension screw, from the tower's outer face).
+M3×``X_IDLER.screw_length`` ISO 4762 (tension screw, from the tower's outer face).
 Print: default profile (``profiles/default.toml``); upside down, the flat top on the bed (the
 build direction is -z, so the layers lie in the xy plane, parallel to the belt's pull and to the
 tightening of the axle nut and the tension screw); no supports; the holes along x and y are
@@ -57,14 +57,16 @@ if TYPE_CHECKING:
 
 X = X_IDLER
 #: Idler axle: bolt head seat on the +y (rear) arm, shank toward -y
-AXLE: Matrix = handle([X.axle_pos, X.belt_pos + X.head_side * X.width / 2, X.axle_z], [X.axle_head_rot, 0, 0])
+AXLE: Matrix = handle(
+    [X.axle_position, X.belt_position + X.head_side * X.width / 2, X.axle_z], [X.axle_head_rot, 0, 0]
+)
 #: The tensioner frame in the left bracket-local frame (tower's outer face, belt line)
-PLACEMENT = Placement(0, (X.tower_s0, X.belt_pos, 0.0))
+PLACEMENT = Placement(0, (X.tower_s0, X.belt_position, 0.0))
 
 
 def x_idler_slider_installed() -> Solid:
     """The slider in the left bracket-local frame, at mid-travel."""
-    return set_handles(slider_local(X).translate([X.slider_s0, X.belt_pos, 0]), axle=AXLE)
+    return set_handles(slider_local(X).translate([X.slider_s0, X.belt_position, 0]), axle=AXLE)
 
 
 def y_idler_slider_installed(side: Side = Side.LEFT) -> Solid:

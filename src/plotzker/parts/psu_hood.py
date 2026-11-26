@@ -101,7 +101,7 @@ def _xt60_collar_pocket(z0: float, z1: float) -> Solid:
     """The pocket gripping the collar: its +y corners rounded, as the collar's; the top (+y)
     raised by the sag relief."""
     sx, sy = PSU_MOUNT.xt60_pocket
-    r = PSU_MOUNT.xt60_pocket_r
+    r = PSU_MOUNT.xt60_pocket_radius
     top = sy / 2 + PSU_MOUNT.xt60_pocket_relief
     corners = union(*(circle(r=r, fn=32).translate([s * (sx / 2 - r), top - r]) for s in (-1, 1)))
     outline = hull(union(square([sx, top - r + sy / 2]).translate([-sx / 2, -sy / 2]), corners))
@@ -114,9 +114,9 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
     oz0, _, iz1, oz1 = PSU_MOUNT.hood_z
     return {
         "inlet": handle([PSU_MOUNT.inlet_x, PSU_MOUNT.inlet_y, oz1]),
-        "inlet_screws": [handle([x, y, oz1 + C14_INLET_SPEC.flange_t]) for x, y in _inlet_holes()],
+        "inlet_screws": [handle([x, y, oz1 + C14_INLET_SPEC.flange_thickness]) for x, y in _inlet_holes()],
         #: a corner of each nut points +y, as its pocket
-        "inlet_nuts": [handle([x, y, iz1 - PSU_MOUNT.inlet_boss_t], [0, 0, 90]) for x, y in _inlet_holes()],
+        "inlet_nuts": [handle([x, y, iz1 - PSU_MOUNT.inlet_boss_thickness], [0, 0, 90]) for x, y in _inlet_holes()],
         #: mating face out toward the board (-z), the collar on the lip
         "xt60": handle([PSU_MOUNT.xt60_x, PSU_MOUNT.xt60_y, oz0 - PSU_MOUNT.xt60_protrude], [-90, 0, 90]),
         "label_screws": [handle([ox0, HOOD_SCREW_Y, PSU_SPEC.label_hole_z], [0, -90, 0])],
@@ -129,7 +129,7 @@ def _shell() -> Solid:
     side screw tabs."""
     ox0, ix0, ix1, ox1 = PSU_MOUNT.hood_x
     oz0, iz0, iz1, oz1 = PSU_MOUNT.hood_z
-    d, t = PSU_MOUNT.depth, PSU_MOUNT.wall_t
+    d, t = PSU_MOUNT.depth, PSU_MOUNT.wall_thickness
     front = box(ox0, -d, oz0, ox1, 0, oz1) - box(ix0, -d + t, iz0, ix1, 1, iz1)
     fan = box(ox0, -EPS, iz1, ox1, PSU_MOUNT.sleeve_fan, oz1)
     bottom = box(ox0, -EPS, oz0, ox1, PSU_MOUNT.sleeve_bottom, iz0)
@@ -144,7 +144,7 @@ def _xt60_sleeve() -> Solid:
     """Sleeve round the XT60's collar inside the board-side wall, with a 45° underside (-y,
     down in the print)."""
     iz0 = PSU_MOUNT.hood_z[1]
-    s, t = PSU_MOUNT.xt60_sleeve, PSU_MOUNT.wall_t
+    s, t = PSU_MOUNT.xt60_sleeve, PSU_MOUNT.wall_thickness
     sx, sy = PSU_MOUNT.xt60_pocket
     top = PSU_MOUNT.xt60_y + sy / 2 + PSU_MOUNT.xt60_pocket_relief + t
     sleeve = box(
@@ -172,8 +172,8 @@ def _inlet_bosses() -> Solid:
     iz1 = PSU_MOUNT.hood_z[2]
     return union(
         *(
-            cylinder(d=C14_INLET_SPEC.ear_d, h=PSU_MOUNT.inlet_boss_t + EPS, fn=FN_HOLE).translate(
-                [x, y, iz1 - PSU_MOUNT.inlet_boss_t]
+            cylinder(d=C14_INLET_SPEC.ear_dia, h=PSU_MOUNT.inlet_boss_thickness + EPS, fn=FN_HOLE).translate(
+                [x, y, iz1 - PSU_MOUNT.inlet_boss_thickness]
             )
             for x, y in _inlet_holes()
         )
@@ -191,24 +191,29 @@ def psu_hood_installed() -> Solid:
     body = body - box(
         PSU_MOUNT.inlet_x - cl / 2 - f,
         PSU_MOUNT.inlet_y - cs / 2 - f,
-        iz1 - PSU_MOUNT.inlet_boss_t - 1,
+        iz1 - PSU_MOUNT.inlet_boss_thickness - 1,
         PSU_MOUNT.inlet_x + cl / 2 + f,
         PSU_MOUNT.inlet_y + cs / 2 + f,
         oz1 + 1,
     )
-    nut_ac, nut_t = TOL.nut_trap_ac(C14_INLET_SPEC.hole_m), TOL.nut_trap_h(C14_INLET_SPEC.hole_m)
+    nut_across_corners, nut_thickness = (
+        TOL.nut_trap_across_corners(C14_INLET_SPEC.hole_screw_size),
+        TOL.nut_trap_height(C14_INLET_SPEC.hole_screw_size),
+    )
     for x, y in _inlet_holes():
-        body = body - _hole_z(TOL.bolt_hole_d(C14_INLET_SPEC.hole_m), x, y, iz1 - PSU_MOUNT.inlet_boss_t - 1, oz1 + 1)
+        body = body - _hole_z(
+            TOL.bolt_hole_dia(C14_INLET_SPEC.hole_screw_size), x, y, iz1 - PSU_MOUNT.inlet_boss_thickness - 1, oz1 + 1
+        )
         # nut pressed in from inside; a corner points +y (up in the print)
-        body = body - cylinder(d=nut_ac, h=nut_t + 1, fn=6).rotate([0, 0, 90]).translate(
-            [x, y, iz1 - PSU_MOUNT.inlet_boss_t - 1]
+        body = body - cylinder(d=nut_across_corners, h=nut_thickness + 1, fn=6).rotate([0, 0, 90]).translate(
+            [x, y, iz1 - PSU_MOUNT.inlet_boss_thickness - 1]
         )
     # XT60: the keyed window through the lip, then the pocket for its collar and rim
     lip = oz0 + PSU_MOUNT.xt60_lip
     body = body - _xt60_window(oz0 - 1, lip + EPS)
     body = body - _xt60_collar_pocket(lip, iz0 + PSU_MOUNT.xt60_sleeve + 1)
     # M4 through the tabs into the case
-    m4 = TOL.bolt_hole_d(PSU_SPEC.hole_m)
+    m4 = TOL.bolt_hole_dia(PSU_SPEC.hole_screw_size)
     body = body - _hole_x(m4, ox0 - 1, ix0 + 1, HOOD_SCREW_Y, PSU_SPEC.label_hole_z)
     for z in PSU_SPEC.switch_hole_z:
         body = body - _hole_x(m4, ix1 - 1, ox1 + 1, HOOD_SCREW_Y, z)

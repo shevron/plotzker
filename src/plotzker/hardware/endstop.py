@@ -38,15 +38,15 @@ class EndstopSpec:
     #: length (front-rear, measured T3.30) × width × thickness
     pcb: tuple[float, float, float] = (20.3, 20, 1.5)
     hole_pitch: float = 15  #: across the width (measured)
-    hole_m: float = 3
-    hole_d: float = 3.0  #: = 20 - 15 - 2 × 1 mm edge distance
+    hole_screw_size: float = 3
+    hole_dia: float = 3.0  #: = 20 - 15 - 2 × 1 mm edge distance
     hole_from_rear: float = 1.5  #: edge of the hole to the rear edge (measured)
     body: tuple[float, float, float] = (13, 6.3, 5.3)  #: across × along the board × above it
     body_overhang: float = 1.0  #: body front face past the board's front edge (measured)
     body_u: float = 2.5  #: body center, right of the board center. ASSUMED (from the photos)
-    lever_len: float = 13.5  #: hinge to tip. ASSUMED (from the photos)
-    lever_w: float = 3.8  #: across the board's normal (measured)
-    lever_t: float = 0.3
+    lever_length: float = 13.5  #: hinge to tip. ASSUMED (from the photos)
+    lever_width: float = 3.8  #: across the board's normal (measured)
+    lever_thickness: float = 0.3
     pivot_inset: float = 1.2  #: hinge from the body's left end. ASSUMED (from the photos)
     rest_protrusion: float = 5.0  #: lever tip past the board's front edge at rest (measured)
     pressed_protrusion: float = 1.5  #: ... fully pressed (measured)
@@ -60,7 +60,7 @@ class EndstopSpec:
     connector_overhang: float = 2  #: connector past the rear edge (measured)
     #: DESIGN: free space behind the connector for a plug and the bend of its wires, and the
     #: clearance around the plug's sides and top
-    plug_len: float = 13.5  #: 15 until T3.30; shortened so the X idler tower keeps its walls
+    plug_length: float = 13.5  #: 15 until T3.30; shortened so the X idler tower keeps its walls
     plug_clearance: float = 2
 
     @property
@@ -71,12 +71,12 @@ class EndstopSpec:
     @property
     def plug_keepout_v(self) -> float:
         """Rear end of the plug keep-out, behind the front edge (negative)."""
-        return -(self.pcb[0] + self.connector_overhang + self.plug_len)
+        return -(self.pcb[0] + self.connector_overhang + self.plug_length)
 
     @property
     def hole_v(self) -> float:
         """Hole center line, along the board (negative = behind the front edge)."""
-        return -(self.pcb[0] - self.hole_from_rear - self.hole_d / 2)
+        return -(self.pcb[0] - self.hole_from_rear - self.hole_dia / 2)
 
     @property
     def pivot_u(self) -> float:
@@ -91,11 +91,11 @@ class EndstopSpec:
     @property
     def contact_s(self) -> float:
         """Distance of the trigger contact point from the hinge, along the lever."""
-        return self.lever_len - self.contact_inset
+        return self.lever_length - self.contact_inset
 
     def lever_angle(self, protrusion: float) -> float:
         """Lever angle (radians) from the board's width axis for a tip ``protrusion``."""
-        return math.asin((protrusion - self.body_overhang) / self.lever_len)
+        return math.asin((protrusion - self.body_overhang) / self.lever_length)
 
     @property
     def contact_u(self) -> float:
@@ -127,28 +127,28 @@ def endstop(pressed: bool = False) -> Solid:
     """Endstop board in the model frame (see the module docstring); lever at rest or pressed."""
     length, width, t = ENDSTOP_SPEC.pcb
     holes = [
-        cylinder(d=ENDSTOP_SPEC.hole_d, h=t + 2, fn=16).translate(
+        cylinder(d=ENDSTOP_SPEC.hole_dia, h=t + 2, fn=16).translate(
             [su * ENDSTOP_SPEC.hole_pitch / 2, ENDSTOP_SPEC.hole_v, -1]
         )
         for su in (-1, 1)
     ]
     pcb = (cube([width, length, t]).translate([-width / 2, -length, 0]) - holes).color("Black")
-    body_w, body_h, body_d = ENDSTOP_SPEC.body
+    body_width, body_height, body_depth = ENDSTOP_SPEC.body
     body = (
-        cube([body_w, body_h, body_d])
-        .translate([ENDSTOP_SPEC.body_u - body_w / 2, ENDSTOP_SPEC.body_overhang - body_h, t])
+        cube([body_width, body_height, body_depth])
+        .translate([ENDSTOP_SPEC.body_u - body_width / 2, ENDSTOP_SPEC.body_overhang - body_height, t])
         .color("#222")
     )
-    conn_w, conn_l, conn_h = ENDSTOP_SPEC.connector
+    connector_width, connector_length, connector_height = ENDSTOP_SPEC.connector
     connector = (
-        cube([conn_w, conn_l, conn_h])
-        .translate([-conn_w / 2, -length - ENDSTOP_SPEC.connector_overhang, t])
+        cube([connector_width, connector_length, connector_height])
+        .translate([-connector_width / 2, -length - ENDSTOP_SPEC.connector_overhang, t])
         .color("White")
     )
     protrusion = ENDSTOP_SPEC.pressed_protrusion if pressed else ENDSTOP_SPEC.rest_protrusion
     lever = (
-        cube([ENDSTOP_SPEC.lever_len, ENDSTOP_SPEC.lever_t, ENDSTOP_SPEC.lever_w])
-        .translate([0, -ENDSTOP_SPEC.lever_t / 2, -ENDSTOP_SPEC.lever_w / 2])
+        cube([ENDSTOP_SPEC.lever_length, ENDSTOP_SPEC.lever_thickness, ENDSTOP_SPEC.lever_width])
+        .translate([0, -ENDSTOP_SPEC.lever_thickness / 2, -ENDSTOP_SPEC.lever_width / 2])
         .rotate([0, 0, math.degrees(ENDSTOP_SPEC.lever_angle(protrusion))])
         .translate([ENDSTOP_SPEC.pivot_u, ENDSTOP_SPEC.body_overhang, ENDSTOP_SPEC.lever_z])
         .color("Silver")

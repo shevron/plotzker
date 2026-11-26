@@ -43,8 +43,8 @@ def test_x_carriage_clamp_nuts_each_have_a_pocket_and_a_roof():
     from plotzker.parts.x_carriage import CLAMP_X, x_carriage_installed
 
     carriage = x_carriage_installed()
-    nut_z = X_BELT.back_z - CLAMP.nut_z - TOL.nut_trap_h(3) / 2
-    nut = hex_nut(3).translate([0, 0, -metric(3).nut_h / 2])  # corners along x
+    nut_z = X_BELT.back_z - CLAMP.nut_z - TOL.nut_trap_height(3) / 2
+    nut = hex_nut(3).translate([0, 0, -metric(3).nut_height / 2])  # corners along x
     for sx in (-1, 1):
         for sy in (-1, 1):
             # rear nut: flat toward the back (corners along x); front nut: flat toward the end

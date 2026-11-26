@@ -14,9 +14,9 @@ from plotzker.params import FRAME
 def test_holes_are_on_the_board_and_apart():
     holes = layout.board_holes()
     bx, by, _ = FRAME.board_size
-    assert all(h.d / 2 < h.x < bx - h.d / 2 and h.d / 2 < h.y < by - h.d / 2 for h in holes)
+    assert all(h.dia / 2 < h.x < bx - h.dia / 2 and h.dia / 2 < h.y < by - h.dia / 2 for h in holes)
     for a, b in itertools.combinations(holes, 2):
-        assert math.dist((a.x, a.y), (b.x, b.y)) > (a.d + b.d) / 2 + 3, "holes too close"
+        assert math.dist((a.x, a.y), (b.x, b.y)) > (a.dia + b.dia) / 2 + 3, "holes too close"
 
 
 def test_fasteners_pass_through_their_holes():

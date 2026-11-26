@@ -599,9 +599,9 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
   pocket follows the hex outline at the bottom (flat floor, 60° sloped sides up to the
   corners) so the nut **cannot turn** when the bolt is tightened; above the corners the walls
   run straight out to the entrance. A plain rectangular slot wide enough for the corners lets
-  the nut spin. Hex shafts (nut seated along its axis) use `TOL.nut_trap_ac` /
-  `nut_trap_h` instead. Measured on PETG: slots come out ~0.1 mm narrower across and ~0.1 mm
-  thicker than designed (`TOL.nut_slot`, `TOL.nut_t` allow for it).
+  the nut spin. Hex shafts (nut seated along its axis) use `TOL.nut_trap_across_corners` /
+  `nut_trap_height` instead. Measured on PETG: slots come out ~0.1 mm narrower across and ~0.1 mm
+  thicker than designed (`TOL.nut_slot`, `TOL.nut_thickness` allow for it).
 - Prefer designs printable without supports (teardrop holes from `cadder.geometry`, 45°
   overhangs); note any required supports in the module docstring.
 - Each part module starts with a docstring: purpose, required hardware (with

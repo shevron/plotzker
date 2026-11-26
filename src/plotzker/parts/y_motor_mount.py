@@ -46,7 +46,7 @@ if TYPE_CHECKING:
     from pythonscad import Solid
 
 AXIS_Z = Y_AXIS.pulley_axis_z  #: motor axis height
-SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the plate ends (y)
+SCREW_INSET = WOOD_SCREW.boss_dia / 2 + 0.5  #: foot screws from the plate ends (y)
 
 #: Motor mounting screws: on the plate's outboard face (the pulley side), axis along +x
 MOTOR_SCREWS = [
@@ -71,27 +71,33 @@ def y_motor_mount_installed() -> Solid:
     """The mount in the left side frame."""
     x0, x1 = Y_DRIVE.motor_plate_x
     y0, y1 = Y_DRIVE.motor_plate_y
-    foot = cube([x1 - Y_DRIVE.motor_foot_x0, y1 - y0, Y_DRIVE.foot_t]).translate([Y_DRIVE.motor_foot_x0, y0, 0])
+    foot = cube([x1 - Y_DRIVE.motor_foot_x0, y1 - y0, Y_DRIVE.foot_thickness]).translate(
+        [Y_DRIVE.motor_foot_x0, y0, 0]
+    )
     pocket_frame, pocket_cut = sk10_pocket(PocketEnd.REAR, Y_DRIVE.motor_foot_x0)
     plate = cube([x1 - x0, y1 - y0, Y_DRIVE.motor_top_z]).translate([x0, y0, 0])
     gussets = [
         hull(
-            cube([Y_DRIVE.gusset_len, Y_DRIVE.gusset_t, EPS]).translate(
-                [x0 - Y_DRIVE.gusset_len, y, Y_DRIVE.foot_t - EPS]
+            cube([Y_DRIVE.gusset_length, Y_DRIVE.gusset_thickness, EPS]).translate(
+                [x0 - Y_DRIVE.gusset_length, y, Y_DRIVE.foot_thickness - EPS]
             ),
-            cube([EPS, Y_DRIVE.gusset_t, Y_DRIVE.gusset_len]).translate([x0 - EPS, y, Y_DRIVE.foot_t]),
+            cube([EPS, Y_DRIVE.gusset_thickness, Y_DRIVE.gusset_length]).translate(
+                [x0 - EPS, y, Y_DRIVE.foot_thickness]
+            ),
         )
-        for y in (y0, y1 - Y_DRIVE.gusset_t)
+        for y in (y0, y1 - Y_DRIVE.gusset_thickness)
     ]
     plate_cx = (x0 + x1) / 2
-    boss = teardrop_x(NEMA17_SPEC.boss_d + 0.4, Y_DRIVE.motor_plate_t + 2).translate(
+    boss = teardrop_x(NEMA17_SPEC.boss_dia + 0.4, Y_DRIVE.motor_plate_thickness + 2).translate(
         [plate_cx, Y_DRIVE.motor_y, AXIS_Z]
     )
     screws = [
-        teardrop_x(TOL.bolt_hole_d(3), Y_DRIVE.motor_plate_t + 2).translate([plate_cx, screw[1][3], screw[2][3]])
+        teardrop_x(TOL.bolt_hole_dia(3), Y_DRIVE.motor_plate_thickness + 2).translate(
+            [plate_cx, screw[1][3], screw[2][3]]
+        )
         for screw in MOTOR_SCREWS
     ]
-    foot_x = Y_DRIVE.motor_foot_x0 + WOOD_SCREW.boss_d / 2
+    foot_x = Y_DRIVE.motor_foot_x0 + WOOD_SCREW.boss_dia / 2
     screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
     bosses = [wood_screw_boss(foot_x, y) for y in screw_ys]
     holes = [wood_screw_hole(foot_x, y) for y in screw_ys]
@@ -117,15 +123,15 @@ MOTOR_FACE = Box(
     hi=(_X1 + 0.3, Y_DRIVE.motor_y + NEMA17_SPEC.width / 2, AXIS_Z + NEMA17_SPEC.width / 2),
     facing=(1, 0, 0),
 )
-_FOOT_X = Y_DRIVE.motor_foot_x0 + WOOD_SCREW.boss_d / 2
+_FOOT_X = Y_DRIVE.motor_foot_x0 + WOOD_SCREW.boss_dia / 2
 _SCREW_YS = (_Y0 + SCREW_INSET, _Y1 - SCREW_INSET)
 SCREW_SEATS = [
     Cylinder(
-        center=(_FOOT_X, y, WOOD_SCREW.boss_t - WOOD_SCREW.sink_h / 2),
+        center=(_FOOT_X, y, WOOD_SCREW.boss_thickness - WOOD_SCREW.sink_height / 2),
         axis=(0, 0, 1),
-        radius=WOOD_SCREW.sink_d / 2,
-        inner_radius=WOOD_SCREW.hole_d / 2,
-        half_length=WOOD_SCREW.sink_h / 2 + 0.3,
+        radius=WOOD_SCREW.sink_dia / 2,
+        inner_radius=WOOD_SCREW.hole_dia / 2,
+        half_length=WOOD_SCREW.sink_height / 2 + 0.3,
         facing=(0, 0, 1),
         facing_tol_deg=60,
     )

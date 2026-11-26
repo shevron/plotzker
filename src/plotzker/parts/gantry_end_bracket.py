@@ -73,7 +73,7 @@ if TYPE_CHECKING:
 # --- derived local geometry ----------------------------------------------------
 BEAM_BOTTOM = BEAM.bottom_z - Y_AXIS.scs_top_z  #: beam bottom, local z (24.5)
 FACE_IN_X = BEAM.end_offset + BRACKET.recess  #: inboard face of the face plate
-FACE_OUT_X = FACE_IN_X - BRACKET.face_t  #: outboard face (bolt heads)
+FACE_OUT_X = FACE_IN_X - BRACKET.face_thickness  #: outboard face (bolt heads)
 FACE_TOP = BEAM_BOTTOM + BEAM.height + BRACKET.face_above
 #: Beam end bore heights (local z)
 BEAM_BOLT_Z = (BEAM_BOTTOM + VSLOT_SPEC.unit / 2, BEAM_BOTTOM + 3 * VSLOT_SPEC.unit / 2)
@@ -86,7 +86,7 @@ def _block_bolts(block: int) -> list[Matrix]:
             [
                 hx * SCS10UU_SPEC.hole_pitch_x / 2,
                 block * Y_AXIS.scs_pitch / 2 + hy * SCS10UU_SPEC.hole_pitch_y / 2,
-                BRACKET.base_t,
+                BRACKET.base_thickness,
             ]
         )
         for hx in (-1, 1)
@@ -100,56 +100,58 @@ BLOCK_BOLTS_REAR = _block_bolts(1)
 #: Beam bolts: on the outboard face, axis along +x (heads outboard)
 BEAM_BOLTS = [handle([FACE_OUT_X, 0, z], [0, -90, 0]) for z in BEAM_BOLT_Z]
 #: Belt clamps (front, rear): on the flat underside, belt center, clamp start, running +y
-BELT_CLAMPS = [handle([Y_AXIS.belt_x, y0, 0]) for y0 in (-BRACKET.len_y / 2, BRACKET.len_y / 2 - CLAMP.length)]
+BELT_CLAMPS = [handle([Y_AXIS.belt_x, y0, 0]) for y0 in (-BRACKET.length_y / 2, BRACKET.length_y / 2 - CLAMP.length)]
 #: Loom anchor screws (right bracket): on the base top, axis along z (head up)
-LOOM_ANCHOR = [handle([LOOM.anchor_screw_x, y, BRACKET.base_t]) for y in LOOM.anchor_screw_y]
+LOOM_ANCHOR = [handle([LOOM.anchor_screw_x, y, BRACKET.base_thickness]) for y in LOOM.anchor_screw_y]
 #: Y endstop trigger screw: head behind the boss, axis along +y (tip forward, -y)
-TRIGGER_SCREW = handle([BRACKET.trig_x, -BRACKET.len_y / 2 + BRACKET.trig_boss[1], BRACKET.trig_z], [-90, 0, 0])
+TRIGGER_SCREW = handle([BRACKET.trig_x, -BRACKET.length_y / 2 + BRACKET.trig_boss[1], BRACKET.trig_z], [-90, 0, 0])
 
 
 def _tower() -> Solid:
     """The X idler's tower (:func:`floating_idler.tower`): a plate with the tension screw's head
     seat on its outer face and two walls along the slider's sides, standing on the shelf."""
-    return tower(X_IDLER).translate([X_IDLER.tower_s0, X_IDLER.belt_pos, 0])
+    return tower(X_IDLER).translate([X_IDLER.tower_s0, X_IDLER.belt_position, 0])
 
 
 def _body(side: Side) -> Solid:
     """Bracket solid before the holes and cutouts."""
-    base = cube([BRACKET.x_in - BRACKET.x_out, BRACKET.len_y, BRACKET.base_t]).translate(
-        [BRACKET.x_out, -BRACKET.len_y / 2, 0]
+    base = cube([BRACKET.x_in - BRACKET.x_out, BRACKET.length_y, BRACKET.base_thickness]).translate(
+        [BRACKET.x_out, -BRACKET.length_y / 2, 0]
     )
     if side is Side.LEFT:
         # shelf under the X idler's tower (T3.19, T3.22)
         y0, y1 = BRACKET.shelf_y
-        base = base | cube([BRACKET.x_out - BRACKET.shelf_x + EPS, y1 - y0, BRACKET.base_t]).translate(
+        base = base | cube([BRACKET.x_out - BRACKET.shelf_x + EPS, y1 - y0, BRACKET.base_thickness]).translate(
             [BRACKET.shelf_x, y0, 0]
         )
         base = base | _tower()
-    face = cube([BRACKET.face_t, BRACKET.face_y[1] - BRACKET.face_y[0], FACE_TOP]).translate(
+    face = cube([BRACKET.face_thickness, BRACKET.face_y[1] - BRACKET.face_y[0], FACE_TOP]).translate(
         [FACE_OUT_X, BRACKET.face_y[0], 0]
     )
     # ribs: wedges from the face plate down to the outboard edge of the base
     ribs = [
         hull(
-            cube([EPS, BRACKET.rib_t, FACE_TOP]).translate([FACE_OUT_X - EPS, y0, 0]),
-            cube([EPS, BRACKET.rib_t, BRACKET.base_t]).translate([BRACKET.x_out, y0, 0]),
+            cube([EPS, BRACKET.rib_thickness, FACE_TOP]).translate([FACE_OUT_X - EPS, y0, 0]),
+            cube([EPS, BRACKET.rib_thickness, BRACKET.base_thickness]).translate([BRACKET.x_out, y0, 0]),
         )
         for y0 in BRACKET.rib_y0
     ]
     bx, by, bz = BRACKET.trig_boss
-    boss = cube([bx, by, bz + EPS]).translate([BRACKET.trig_x - bx / 2, -BRACKET.len_y / 2, BRACKET.base_t - EPS])
+    boss = cube([bx, by, bz + EPS]).translate(
+        [BRACKET.trig_x - bx / 2, -BRACKET.length_y / 2, BRACKET.base_thickness - EPS]
+    )
     return base | face | ribs | boss
 
 
 def _loom_cutouts() -> list[Solid]:
     """M3 holes from the top and nut slots from the outboard edge for the loom anchor."""
-    nut_t = TOL.nut_trap_h(3)
-    top = BRACKET.base_t - TOL.nut_wall  #: plastic above the nut takes the pull
+    nut_thickness = TOL.nut_trap_height(3)
+    top = BRACKET.base_thickness - TOL.nut_wall  #: plastic above the nut takes the pull
     cuts = []
     for h in LOOM_ANCHOR:
         x, y = h[0][3], h[1][3]
-        cuts.append(cylinder(d=TOL.bolt_hole_d(3), h=BRACKET.base_t, fn=FN_HOLE).translate([x, y, 0]))
-        cuts.append(nut_slot(3, x - BRACKET.x_out + 1, "z", "-x", tol=TOL).translate([x, y, top - nut_t / 2]))
+        cuts.append(cylinder(d=TOL.bolt_hole_dia(3), h=BRACKET.base_thickness, fn=FN_HOLE).translate([x, y, 0]))
+        cuts.append(nut_slot(3, x - BRACKET.x_out + 1, "z", "-x", tol=TOL).translate([x, y, top - nut_thickness / 2]))
     return cuts
 
 
@@ -158,11 +160,13 @@ def _cutouts() -> list[Solid]:
     cuts = []
     # carriage notch: between the blocks the base stops at the face plate
     cuts.append(
-        cube([BRACKET.x_in, 2 * BRACKET.notch_y, BRACKET.base_t + 2]).translate([FACE_IN_X, -BRACKET.notch_y, -1])
+        cube([BRACKET.x_in, 2 * BRACKET.notch_y, BRACKET.base_thickness + 2]).translate(
+            [FACE_IN_X, -BRACKET.notch_y, -1]
+        )
     )
     cuts += [
-        cylinder(d=TOL.bolt_hole_d(5), h=BRACKET.base_t + 2, fn=FN_HOLE)
-        .translate([0, 0, -BRACKET.base_t - 1])
+        cylinder(d=TOL.bolt_hole_dia(5), h=BRACKET.base_thickness + 2, fn=FN_HOLE)
+        .translate([0, 0, -BRACKET.base_thickness - 1])
         .align(bolt)
         for bolt in (*BLOCK_BOLTS_FRONT, *BLOCK_BOLTS_REAR)
     ]
@@ -173,7 +177,7 @@ def _cutouts() -> list[Solid]:
         )
     )
     cuts += [
-        teardrop_x(TOL.bolt_hole_d(BRACKET.beam_bolt_m), BRACKET.face_t + 2).translate(
+        teardrop_x(TOL.bolt_hole_dia(BRACKET.beam_bolt_size), BRACKET.face_thickness + 2).translate(
             [(FACE_IN_X + FACE_OUT_X) / 2, 0, z]
         )
         for z in BEAM_BOLT_Z
@@ -182,8 +186,10 @@ def _cutouts() -> list[Solid]:
     # top down to a nut pressed in at CLAMP.nut_z (the floor below it takes the pull)
     cuts += [
         (
-            cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate([0, 0, -EPS])
-            | cylinder(d=TOL.nut_trap_ac(3), h=FACE_TOP + 1 - CLAMP.nut_z, fn=6).translate([0, 0, CLAMP.nut_z])
+            cylinder(d=TOL.bolt_hole_dia(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate([0, 0, -EPS])
+            | cylinder(d=TOL.nut_trap_across_corners(3), h=FACE_TOP + 1 - CLAMP.nut_z, fn=6).translate(
+                [0, 0, CLAMP.nut_z]
+            )
         )
         .translate([sx * CLAMP.screw_dx, CLAMP.length / 2, 0])
         .align(clamp)
@@ -191,9 +197,9 @@ def _cutouts() -> list[Solid]:
         for sx in (-1, 1)
     ]
     # Y endstop trigger: M3 along -y through the boss, captive nut from the top
-    boss_mid_y = -BRACKET.len_y / 2 + BRACKET.trig_boss[1] / 2
+    boss_mid_y = -BRACKET.length_y / 2 + BRACKET.trig_boss[1] / 2
     cuts.append(
-        teardrop_y(TOL.bolt_hole_d(3), BRACKET.trig_boss[1] + 2).translate(
+        teardrop_y(TOL.bolt_hole_dia(3), BRACKET.trig_boss[1] + 2).translate(
             [BRACKET.trig_x, boss_mid_y, BRACKET.trig_z]
         )
     )
@@ -239,8 +245,8 @@ _BOLT_RINGS = [
     Cylinder(
         center=(bolt[0][3], bolt[1][3], bolt[2][3]),
         axis=(0, 0, 1),
-        radius=metric(5).head_d / 2,
-        inner_radius=TOL.bolt_hole_d(5) / 2,
+        radius=metric(5).head_dia / 2,
+        inner_radius=TOL.bolt_hole_dia(5) / 2,
         half_length=0.3,
         facing=(0, 0, 1),
     )
@@ -248,7 +254,7 @@ _BOLT_RINGS = [
 ]
 _SEAT_X = FACE_IN_X - BRACKET.recess  #: the beam end's seat in the face plate
 #: The X idler tower's frame in the bracket-local frame (outer face, belt line)
-TOWER_PLACEMENT = Placement(0, (X_IDLER.tower_s0, X_IDLER.belt_pos, 0.0))
+TOWER_PLACEMENT = Placement(0, (X_IDLER.tower_s0, X_IDLER.belt_position, 0.0))
 #: The face plate's pocket floor: the beam end pushes back here
 BEAM_SEAT_FACES = Box(
     lo=(_SEAT_X - 0.3, -BEAM.depth / 2, BEAM_BOTTOM),
@@ -266,16 +272,16 @@ def _clamp_footprint(clamp: Matrix) -> Box:
     """A belt clamp's footprint on the bracket's flat underside."""
     x, y = clamp[0][3], clamp[1][3]
     return Box(
-        lo=(x - CLAMP.w / 2, y, -0.3),
-        hi=(x + CLAMP.w / 2, y + CLAMP.length, 0.3),
+        lo=(x - CLAMP.width / 2, y, -0.3),
+        hi=(x + CLAMP.width / 2, y + CLAMP.length, 0.3),
         facing=(0, 0, -1),
     )
 
 
 #: Where the X motor mount's foot rests on the base (right bracket): the motor's pull enters here
 MOTOR_FOOTPRINT = Box(
-    lo=(max(BRACKET.x_out, FOOT_X[0]), X_DRIVE.motor_foot_y[0], BRACKET.base_t - 0.3),
-    hi=(min(BRACKET.x_in, FOOT_X[1]), X_DRIVE.motor_foot_y[1], BRACKET.base_t + 0.3),
+    lo=(max(BRACKET.x_out, FOOT_X[0]), X_DRIVE.motor_foot_y[0], BRACKET.base_thickness - 0.3),
+    hi=(min(BRACKET.x_in, FOOT_X[1]), X_DRIVE.motor_foot_y[1], BRACKET.base_thickness + 0.3),
     facing=(0, 0, 1),
 )
 

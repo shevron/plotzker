@@ -14,17 +14,17 @@ if TYPE_CHECKING:
 
 
 def wood_screw_boss(x: float, y: float) -> Solid:
-    """Round boss on the foot at ``(x, y)``, ``WOOD_SCREW.boss_t`` thick."""
-    return cylinder(d=WOOD_SCREW.boss_d, h=WOOD_SCREW.boss_t, fn=FN_HOLE).translate([x, y, 0])
+    """Round boss on the foot at ``(x, y)``, ``WOOD_SCREW.boss_thickness`` thick."""
+    return cylinder(d=WOOD_SCREW.boss_dia, h=WOOD_SCREW.boss_thickness, fn=FN_HOLE).translate([x, y, 0])
 
 
 def wood_screw_hole(x: float, y: float) -> Solid:
     """Clearance hole with a 90° countersink in the boss's top face (the screw head sits
     flush with the top of the boss)."""
-    top = WOOD_SCREW.boss_t
-    through = cylinder(d=WOOD_SCREW.hole_d, h=top + 2, fn=FN_HOLE).translate([x, y, -1])
-    cone = cylinder(d1=WOOD_SCREW.hole_d, d2=WOOD_SCREW.sink_d, h=WOOD_SCREW.sink_h, fn=FN_HOLE).translate(
-        [x, y, top - WOOD_SCREW.sink_h]
+    top = WOOD_SCREW.boss_thickness
+    through = cylinder(d=WOOD_SCREW.hole_dia, h=top + 2, fn=FN_HOLE).translate([x, y, -1])
+    cone = cylinder(d1=WOOD_SCREW.hole_dia, d2=WOOD_SCREW.sink_dia, h=WOOD_SCREW.sink_height, fn=FN_HOLE).translate(
+        [x, y, top - WOOD_SCREW.sink_height]
     )
-    above = cylinder(d=WOOD_SCREW.sink_d, h=1, fn=FN_HOLE).translate([x, y, top])
+    above = cylinder(d=WOOD_SCREW.sink_dia, h=1, fn=FN_HOLE).translate([x, y, top])
     return through | cone | above

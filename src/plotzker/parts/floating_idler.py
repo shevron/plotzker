@@ -35,34 +35,38 @@ def slider_local(t: FloatingIdler) -> Solid:
     w, zb, top = t.width, t.z_bottom, t.arm_top
     arms = []
     for sy in (-1, 1):
-        y0 = -(t.gap_y / 2 + t.arm_t) if sy < 0 else t.gap_y / 2
+        y0 = -(t.gap_y / 2 + t.arm_thickness) if sy < 0 else t.gap_y / 2
         # the top front corner is a straight 45° line, tangent to the round end: printed upside
         # down it is no overhang that droops, so a slicer doesn't flip the part to avoid it
         arms.append(
             hull(
-                cube([EPS, t.arm_t, top - zb]).translate([0, y0, zb]),
-                cube([t.axle_x - t.arm_end_r, t.arm_t, EPS]).translate([0, y0, zb]),
-                cube([EPS, t.arm_t, EPS]).translate([t.chamfer_x, y0, top - EPS]),
-                cylinder(d=2 * t.arm_end_r, h=t.arm_t, fn=FN).rotate([-90, 0, 0]).translate([t.axle_x, y0, t.axle_z]),
+                cube([EPS, t.arm_thickness, top - zb]).translate([0, y0, zb]),
+                cube([t.axle_x - t.arm_end_radius, t.arm_thickness, EPS]).translate([0, y0, zb]),
+                cube([EPS, t.arm_thickness, EPS]).translate([t.chamfer_x, y0, top - EPS]),
+                cylinder(d=2 * t.arm_end_radius, h=t.arm_thickness, fn=FN)
+                .rotate([-90, 0, 0])
+                .translate([t.axle_x, y0, t.axle_z]),
             )
         )
-    web = cube([t.web_t, w, top - zb]).translate([0, -w / 2, zb])
+    web = cube([t.web_thickness, w, top - zb]).translate([0, -w / 2, zb])
     body = web | arms[0] | arms[1]
     # printed upside down (the top on the bed, +z down): the holes along y and x lie flat, so
     # their teardrops point to -z (print up); the nut pocket has a flat on that side (a 4.6 mm
     # bridge: a corner there would be a 30° overhang)
-    axle_hole = teardrop_y(TOL.bolt_hole_d(t.axle_m), w + 2).rotate([180, 0, 0]).translate([t.axle_x, 0, t.axle_z])
+    axle_hole = (
+        teardrop_y(TOL.bolt_hole_dia(t.axle_screw_size), w + 2).rotate([180, 0, 0]).translate([t.axle_x, 0, t.axle_z])
+    )
     axle_nut = (
-        cylinder(d=TOL.nut_trap_ac(t.axle_m), h=TOL.nut_trap_h(t.axle_m) + 1, fn=6)
+        cylinder(d=TOL.nut_trap_across_corners(t.axle_screw_size), h=TOL.nut_trap_height(t.axle_screw_size) + 1, fn=6)
         .rotate([-90, 0, 0])
         .translate([t.axle_x, t.nut_y, t.axle_z])
     )
-    screw_nut = nut_slot(t.screw_m, top - t.screw_z + 1, "x", "+z", t.nut_slot_extra, tol=TOL).translate(
-        [TOL.nut_wall + t.nut_t / 2, 0, t.screw_z]
+    screw_nut = nut_slot(t.screw_size, top - t.screw_z + 1, "x", "+z", t.nut_slot_extra, tol=TOL).translate(
+        [TOL.nut_wall + t.nut_thickness / 2, 0, t.screw_z]
     )
     # the screw's hole through the thrust wall and on into the blind tunnel for its tip
     tunnel = (
-        teardrop_x(TOL.bolt_hole_d(t.screw_m), t.tunnel_end + 1)
+        teardrop_x(TOL.bolt_hole_dia(t.screw_size), t.tunnel_end + 1)
         .rotate([180, 0, 0])
         .translate([(t.tunnel_end - 1) / 2, 0, t.screw_z])
     )
@@ -84,12 +88,12 @@ def tower(t: FloatingIdler) -> Solid:
     z0 = t.floor_z - 1  # sunk into the floor: no sliver where the outer faces are flush
     h = t.tower_top - z0
     inner = t.width / 2 + t.wall_gap
-    plate = cube([t.plate_t, 2 * half, h]).translate([0, -half, z0])
-    walls = [cube([t.wall_len, half - inner, h]).translate([0, lo, z0]) for lo in (inner, -half)]
+    plate = cube([t.plate_thickness, 2 * half, h]).translate([0, -half, z0])
+    walls = [cube([t.wall_length, half - inner, h]).translate([0, lo, z0]) for lo in (inner, -half)]
     # round, not a teardrop: a teardrop's apex was the highest stress in the plate (a 3.4 mm hole
     # prints flat enough lying on its side)
     hole = (
-        cylinder(d=TOL.bolt_hole_d(t.screw_m), h=t.plate_t + 2, fn=FN_HOLE)
+        cylinder(d=TOL.bolt_hole_dia(t.screw_size), h=t.plate_thickness + 2, fn=FN_HOLE)
         .rotate([0, 90, 0])
         .translate([-1, 0, t.screw_z])
     )
@@ -123,11 +127,11 @@ def regions(t: FloatingIdler) -> FloatingRegions:
     """The regions of idler ``t``."""
     r0 = t.rear_mid
     axle = (t.axle_rel, 0.0, t.axle_z)
-    bore_r = TOL.bolt_hole_d(t.axle_m) / 2 + 0.3
-    hole_r = TOL.bolt_hole_d(t.screw_m) / 2
+    bore_radius = TOL.bolt_hole_dia(t.axle_screw_size) / 2 + 0.3
+    hole_radius = TOL.bolt_hole_dia(t.screw_size) / 2
     return FloatingRegions(
-        bore_load=Cylinder(axle, (0, 1, 0), bore_r, t.width / 2, facing=(-1, 0, 0), facing_tol_deg=60),
-        bore=Cylinder(axle, (0, 1, 0), bore_r, t.width / 2),
+        bore_load=Cylinder(axle, (0, 1, 0), bore_radius, t.width / 2, facing=(-1, 0, 0), facing_tol_deg=60),
+        bore=Cylinder(axle, (0, 1, 0), bore_radius, t.width / 2),
         nut_seat=Box(
             (r0 + TOL.nut_wall - 0.3, -3, t.screw_z - 3),
             (r0 + TOL.nut_wall + 0.3, 3, t.screw_z + 3),
@@ -136,24 +140,24 @@ def regions(t: FloatingIdler) -> FloatingRegions:
         tunnel=Cylinder(
             (r0 + t.tunnel_end / 2, 0, t.screw_z),
             (1, 0, 0),
-            hole_r + 0.3,
+            hole_radius + 0.3,
             t.tunnel_end / 2,
-            inner_radius=hole_r - 0.3,
+            inner_radius=hole_radius - 0.3,
         ),
         guide=Box(
             (r0, -t.width / 2 - 0.3, t.z_bottom),
-            (r0 + t.web_t, -t.width / 2 + 0.3, t.arm_top),
+            (r0 + t.web_thickness, -t.width / 2 + 0.3, t.arm_top),
             facing=(0, -1, 0),
         ),
         head_seat=Cylinder(
             (0, 0, t.screw_z),
             (1, 0, 0),
-            t.washer_od / 2,
+            t.washer_outer_dia / 2,
             0.3,
-            inner_radius=hole_r,
+            inner_radius=hole_radius,
             facing=(-1, 0, 0),
         ),
-        tower_seat=Cylinder((t.plate_t / 2, 0, t.screw_z), (1, 0, 0), 2.6, t.plate_t / 2 + 0.5),
+        tower_seat=Cylinder((t.plate_thickness / 2, 0, t.screw_z), (1, 0, 0), 2.6, t.plate_thickness / 2 + 0.5),
     )
 
 

@@ -39,7 +39,7 @@ from plotzker.params import BRACKET, TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
 if TYPE_CHECKING:
     from pythonscad import Solid
 
-FOOT_Z0 = BRACKET.base_t
+FOOT_Z0 = BRACKET.base_thickness
 BOARD_YC = sum(X_ENDSTOP.board_y) / 2
 #: The endstop board's frame (origin, then its u, v, w axes), left bracket-local
 BOARD: Matrix = frame_handle(
@@ -57,44 +57,46 @@ BOARD: Matrix = frame_handle(
 def x_endstop_mount_installed() -> Solid:
     """The mount in the left bracket-local frame."""
     x0 = X_DRIVE.foot_x0
-    foot = cube([SCS10UU_SPEC.width / 2 - x0, X_DRIVE.foot_y[1] - X_DRIVE.foot_y[0], X_DRIVE.foot_t]).translate(
-        [x0, X_DRIVE.foot_y[0], FOOT_Z0]
-    )
+    foot = cube(
+        [SCS10UU_SPEC.width / 2 - x0, X_DRIVE.foot_y[1] - X_DRIVE.foot_y[0], X_DRIVE.foot_thickness]
+    ).translate([x0, X_DRIVE.foot_y[0], FOOT_Z0])
     # the board overhangs the foot's front edge: a shelf under it
     shelf = cube(
         [
             X_ENDSTOP.board_x[1] - X_ENDSTOP.board_x[0] + 2,
             X_DRIVE.foot_y[0] - X_ENDSTOP.board_y[0] + 1 + EPS,
-            X_DRIVE.foot_t,
+            X_DRIVE.foot_thickness,
         ]
     ).translate([X_ENDSTOP.board_x[0] - 1, X_ENDSTOP.board_y[0] - 1, FOOT_Z0])
     foot = foot | shelf
     # clamped by the rear bolt row; the front row's heads stay flush with the foot top (the
     # endstop plug needs the space), in clearance holes
     bolts = [
-        cylinder(d=TOL.bolt_hole_d(5), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
+        cylinder(d=TOL.bolt_hole_dia(5), h=X_DRIVE.foot_thickness + 2, fn=FN_HOLE).translate(
             [hx * SCS10UU_SPEC.hole_pitch_x / 2, X_DRIVE.bolt_rows[1], FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
     ] + [
-        cylinder(d=metric(5).head_d + 1, h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
+        cylinder(d=metric(5).head_dia + 1, h=X_DRIVE.foot_thickness + 2, fn=FN_HOLE).translate(
             [hx * SCS10UU_SPEC.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
     ]
     # endstop board screws: clearance holes through the foot, a nut pressed into a hex pocket in
     # its underside (the foot above it takes the pull)
-    nut_t = TOL.nut_trap_h(3)
+    nut_thickness = TOL.nut_trap_height(3)
     board_holes = []
     for sv in (-1, 1):
         y = BOARD_YC + sv * ENDSTOP_SPEC.hole_pitch / 2
         board_holes.append(
-            cylinder(d=TOL.bolt_hole_d(3), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
+            cylinder(d=TOL.bolt_hole_dia(3), h=X_DRIVE.foot_thickness + 2, fn=FN_HOLE).translate(
                 [X_ENDSTOP.hole_x, y, FOOT_Z0 - 1]
             )
         )
         board_holes.append(
-            cylinder(d=TOL.nut_trap_ac(3), h=nut_t + 1, fn=6).translate([X_ENDSTOP.hole_x, y, FOOT_Z0 - 1])
+            cylinder(d=TOL.nut_trap_across_corners(3), h=nut_thickness + 1, fn=6).translate(
+                [X_ENDSTOP.hole_x, y, FOOT_Z0 - 1]
+            )
         )
     # solder relief: the board's underside has joints and pins sticking out up to 1.8 mm, so
     # the foot under it is recessed except for a land round each screw hole (T3.14)
@@ -105,14 +107,18 @@ def x_endstop_mount_installed() -> Solid:
             X_ENDSTOP.relief_depth + 1,
         ]
     ).translate(
-        [X_ENDSTOP.board_x[0] - 0.3, X_ENDSTOP.board_y[0] - 0.3, FOOT_Z0 + X_DRIVE.foot_t - X_ENDSTOP.relief_depth]
+        [
+            X_ENDSTOP.board_x[0] - 0.3,
+            X_ENDSTOP.board_y[0] - 0.3,
+            FOOT_Z0 + X_DRIVE.foot_thickness - X_ENDSTOP.relief_depth,
+        ]
     )
     lands = [
-        cylinder(d=X_ENDSTOP.land_d, h=X_ENDSTOP.relief_depth + 3, fn=FN_HOLE).translate(
+        cylinder(d=X_ENDSTOP.land_dia, h=X_ENDSTOP.relief_depth + 3, fn=FN_HOLE).translate(
             [
                 X_ENDSTOP.hole_x,
                 BOARD_YC + sv * ENDSTOP_SPEC.hole_pitch / 2,
-                FOOT_Z0 + X_DRIVE.foot_t - X_ENDSTOP.relief_depth - 1,
+                FOOT_Z0 + X_DRIVE.foot_thickness - X_ENDSTOP.relief_depth - 1,
             ]
         )
         for sv in (-1, 1)

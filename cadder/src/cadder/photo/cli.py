@@ -250,8 +250,8 @@ def holes_command(
     y0: float,
     x1: float,
     y1: float,
-    d_min: Annotated[float, typer.Option("--dmin", help="Smallest diameter (mm or px).")] = 1,
-    d_max: Annotated[float, typer.Option("--dmax", help="Largest diameter (mm or px).")] = 10,
+    dia_min: Annotated[float, typer.Option("--dmin", help="Smallest diameter (mm or px).")] = 1,
+    dia_max: Annotated[float, typer.Option("--dmax", help="Largest diameter (mm or px).")] = 10,
     count: Annotated[int, typer.Option(help="Most holes to report (each with all its rings).")] = 4,
     as_json: Json = False,
 ) -> None:
@@ -263,7 +263,7 @@ def holes_command(
     from cadder.photo.measure import holes
 
     scale = _scale(image)
-    found = holes(load(image), scale, (x0, y0, x1, y1), d_min, d_max, count)
+    found = holes(load(image), scale, (x0, y0, x1, y1), dia_min, dia_max, count)
     if as_json:
         _echo_json([asdict(h) for h in found])
         return

@@ -44,8 +44,8 @@ def sk10_pocket(end: PocketEnd, strip_x0: float) -> tuple[Solid, Solid]:
         cut_y = (y0 - 1, end_y)
     # the end wall reaches part way across the SK10's face; the rest of the pocket is open
     frame_x1 = -Y_DRIVE.pocket_half + Y_DRIVE.pocket_end_len
-    frame = cube([frame_x1 - strip_x0, y1 - y0, Y_DRIVE.foot_t]).translate([strip_x0, y0, 0])
-    cut = cube([2 * Y_DRIVE.pocket_half + 1, cut_y[1] - cut_y[0], Y_DRIVE.foot_t + 2 * EPS]).translate(
+    frame = cube([frame_x1 - strip_x0, y1 - y0, Y_DRIVE.foot_thickness]).translate([strip_x0, y0, 0])
+    cut = cube([2 * Y_DRIVE.pocket_half + 1, cut_y[1] - cut_y[0], Y_DRIVE.foot_thickness + 2 * EPS]).translate(
         [-Y_DRIVE.pocket_half, cut_y[0], -EPS]
     )
     return frame, cut

@@ -23,52 +23,52 @@ if TYPE_CHECKING:
 PEN_LENGTH = 120.0  #: pen model length
 
 
-def pen_holder_items(pen_up: bool = False, pen_d: float = 10.0) -> dict[str, Solid]:
+def pen_holder_items(pen_up: bool = False, pen_dia: float = 10.0) -> dict[str, Solid]:
     """The pen holder in the head frame, by name. ``pen_up`` lifts the slide and the pen."""
     lift = PEN.lift if pen_up else 0.0
     pin_z = PEN.pin_up_z if pen_up else PEN.pin_down_z
-    angle = math.degrees(math.asin((pin_z - PEN.shaft_z) / PEN.horn_r))
+    angle = math.degrees(math.asin((pin_z - PEN.shaft_z) / PEN.horn_radius))
     body = pen_holder_body_head()
     slide = pen_slide_head().translate([0, 0, lift])
     horn = get_handle(body, "horn")
     items = {
         "body": body.color("SteelBlue"),
         "slide": slide.color("Orange"),
-        "rod": cylinder(d=PEN.rod_d, h=PEN.rod_len, fn=32).align(get_handle(body, "rod")).color("Silver"),
+        "rod": cylinder(d=PEN.rod_dia, h=PEN.rod_length, fn=32).align(get_handle(body, "rod")).color("Silver"),
         "servo": servo_ft90m().align(get_handle(body, "servo")),
         "horn": servo_horn().rotate([0, 0, -angle]).align(horn),
-        "pin": cylinder(d=PEN.pin_d, h=PEN.pin_reach + PEN.horn_t, fn=16)
+        "pin": cylinder(d=PEN.pin_dia, h=PEN.pin_reach + PEN.horn_thickness, fn=16)
         .rotate([-90, 0, 0])
         .translate(
             [
-                PEN.servo_x + PEN.horn_r * math.cos(math.radians(angle)),
+                PEN.servo_x + PEN.horn_radius * math.cos(math.radians(angle)),
                 horn[1][3] - PEN.pin_reach,
-                PEN.shaft_z + PEN.horn_r * math.sin(math.radians(angle)),
+                PEN.shaft_z + PEN.horn_radius * math.sin(math.radians(angle)),
             ]
         )
         .color("DimGray"),
     }
     for i, screw in enumerate(get_handles(body, "clamp_screws")):
         items[f"clamp_screw_{i}"] = shcs(3, 10).align(screw)
-    pen_front = PEN.pen_axis_d(pen_d) + pen_d / 2
+    pen_front = PEN.pen_axis_depth(pen_dia) + pen_dia / 2
     thumbscrew = get_handle(slide, "thumbscrew")
     items["pen"] = (
-        cylinder(d=pen_d, h=PEN_LENGTH, fn=FN)
-        .translate([PEN.pen_x, PEN.pen_axis_d(pen_d), FRAME.bed_top_z + lift])
+        cylinder(d=pen_dia, h=PEN_LENGTH, fn=FN)
+        .translate([PEN.pen_x, PEN.pen_axis_depth(pen_dia), FRAME.bed_top_z + lift])
         .color("Crimson")
     )
-    items["thumbscrew"] = shcs(5, PEN.clamp_screw_len).align(
-        shift_handle(thumbscrew, [0, pen_front + PEN.clamp_screw_len - thumbscrew[1][3], 0])
+    items["thumbscrew"] = shcs(5, PEN.clamp_screw_length).align(
+        shift_handle(thumbscrew, [0, pen_front + PEN.clamp_screw_length - thumbscrew[1][3], 0])
     )
     items["thumbscrew_nut"] = hex_nut(5).align(get_handle(slide, "thumbscrew_nut"))
     return items
 
 
-def pen_holder_assembly(pen_up: bool = False, pen_d: float = 10.0) -> list[Solid]:
+def pen_holder_assembly(pen_up: bool = False, pen_dia: float = 10.0) -> list[Solid]:
     """The pen holder in the carriage-local frame (carriage front face at y = plate_front_y)."""
     return [
         item.mirror([0, 1, 0]).translate([0, CARRIAGE.plate_front_y, 0])
-        for item in pen_holder_items(pen_up, pen_d).values()
+        for item in pen_holder_items(pen_up, pen_dia).values()
     ]
 
 

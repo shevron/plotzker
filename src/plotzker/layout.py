@@ -41,16 +41,16 @@ class Hole:
     group: str
     x: float
     y: float
-    d: float  #: drill diameter
+    dia: float  #: drill diameter
     side: str = SIDE_TOP  #: face the hole is drilled from
-    countersink_d: float | None = None  #: 90° countersink diameter at the face
+    countersink_dia: float | None = None  #: 90° countersink diameter at the face
     depth: float | None = None  #: blind depth (None = through)
     note: str = ""
 
 
 def board_holes() -> list[Hole]:
     """Every hole of the baseboard, in the order of the drilling procedure."""
-    m5 = TOL.bolt_hole_d(5)
+    m5 = TOL.bolt_hole_dia(5)
     holes: list[Hole] = []
     for rail, shaft_x in enumerate(Y_AXIS.shaft_x):
         floating = rail == 1
@@ -61,7 +61,7 @@ def board_holes() -> list[Hole]:
                         f"SK10, {'right (oversized)' if floating else 'left (fixed)'} rail",
                         shaft_x + dx,
                         y,
-                        BASEBOARD.sk10_float_hole_d if floating else m5,
+                        BASEBOARD.sk10_float_hole_dia if floating else m5,
                         note="M5 bolt, nut + washer underneath",
                     )
                 )
@@ -73,22 +73,22 @@ def board_holes() -> list[Hole]:
                     x,
                     ry,
                     m5,
-                    countersink_d=BASEBOARD.runner_screw_head_d + 2 * TOL.bolt,
+                    countersink_dia=BASEBOARD.runner_screw_head_dia + 2 * TOL.bolt,
                     note="M5 countersunk into a T-nut in the runner",
                 )
             )
     for x, y in BASEBOARD.post_xy:
         holes.append(Hole("Bed posts", x, y, m5, note="M5 stud, head under the board"))
-    holes.append(Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_d, note="Y loom to the ZRIB; deburr"))
+    holes.append(Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_dia, note="Y loom to the ZRIB; deburr"))
     for x, y in BASEBOARD.zrib_pilot_xy:
         holes.append(
             Hole(
                 "ZRIB hanger screws",
                 x,
                 y,
-                BASEBOARD.pilot_d,
+                BASEBOARD.pilot_dia,
                 side=SIDE_UNDER,
-                depth=WOOD_SCREW.length - WOOD_SCREW.boss_t,
+                depth=WOOD_SCREW.length - WOOD_SCREW.boss_thickness,
                 note="pilot for a 4 × 25 wood screw, blind: do not break through the top",
             )
         )
@@ -98,9 +98,9 @@ def board_holes() -> list[Hole]:
                 "PSU bracket screws",
                 x,
                 y,
-                BASEBOARD.pilot_d,
+                BASEBOARD.pilot_dia,
                 side=SIDE_UNDER,
-                depth=WOOD_SCREW.length - WOOD_SCREW.boss_t,
+                depth=WOOD_SCREW.length - WOOD_SCREW.boss_thickness,
                 note="pilot for a 4 × 25 wood screw, blind: do not break through the top",
             )
         )
@@ -152,12 +152,14 @@ def drilling_svg() -> str:
     for ry in BASEBOARD.runner_y:
         d.rect(
             BASEBOARD.runner_x[0],
-            ry - BASEBOARD.runner_w / 2,
+            ry - BASEBOARD.runner_width / 2,
             BASEBOARD.runner_x[1],
-            ry + BASEBOARD.runner_w / 2,
+            ry + BASEBOARD.runner_width / 2,
             dashed,
         )
-        d.text(BASEBOARD.runner_x[0] + 3, ry - BASEBOARD.runner_w / 2 - 3, "runner 2040 on edge (underside)", size=5)
+        d.text(
+            BASEBOARD.runner_x[0] + 3, ry - BASEBOARD.runner_width / 2 - 3, "runner 2040 on edge (underside)", size=5
+        )
     zc, zr = BASEBOARD.zrib_center, abs(ZMOUNT.plate_v[0])
     d.rect(
         zc[0] - ZMOUNT.leg_u[1],
@@ -183,10 +185,10 @@ def drilling_svg() -> str:
 
     for y0 in LOOM.rail_starts:
         d.rect(
-            LOOM.rail_x - LOOM.rail_t - LOOM.foot_w,
+            LOOM.rail_x - LOOM.rail_thickness - LOOM.foot_width,
             y0,
             LOOM.rail_x,
-            y0 + LOOM.rail_len,
+            y0 + LOOM.rail_length,
             'fill="#dde8f5" stroke="#06c" stroke-width="0.4"',
         )
     d.text(
@@ -197,9 +199,9 @@ def drilling_svg() -> str:
     )
     for i, h in enumerate(board_holes(), 1):
         color = "#c00" if h.side == SIDE_TOP else "#06c"
-        if h.countersink_d:
-            d.circle(h.x, h.y, h.countersink_d / 2, stroke(color, 0.3))
-        d.circle(h.x, h.y, h.d / 2, stroke(color, 0.5))
+        if h.countersink_dia:
+            d.circle(h.x, h.y, h.countersink_dia / 2, stroke(color, 0.3))
+        d.circle(h.x, h.y, h.dia / 2, stroke(color, 0.5))
         d.crosshair(h.x, h.y, 6, color, 0.3)
         d.text(h.x + 5, h.y + 5, str(i), size=6)
 
@@ -221,11 +223,11 @@ def hole_table() -> str:
     rows = []
     for i, h in enumerate(board_holes(), 1):
         notes = h.note
-        if h.countersink_d:
-            notes += f"; countersink Ø{h.countersink_d:g}"
+        if h.countersink_dia:
+            notes += f"; countersink Ø{h.countersink_dia:g}"
         if h.depth:
             notes += f"; {h.depth:g} deep"
-        rows.append((i, h.group, f"{h.x:g}", f"{h.y:g}", f"{h.d:g}", h.side, notes))
+        rows.append((i, h.group, f"{h.x:g}", f"{h.y:g}", f"{h.dia:g}", h.side, notes))
     return markdown_table(("#", "Group", "x", "y", "Ø", "Face", "Notes"), rows)
 
 

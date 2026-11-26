@@ -15,7 +15,7 @@ def test_bracket_block_bolts_sit_on_the_base_top(side):
     for name in ("block_bolts_front", "block_bolts_rear"):
         bolts = get_handles(bracket, name)
         assert len(bolts) == 4
-        assert all(b[2][3] == BRACKET.base_t for b in bolts)
+        assert all(b[2][3] == BRACKET.base_thickness for b in bolts)
 
 
 def test_right_bracket_handles_are_mirrored():
@@ -31,4 +31,4 @@ def test_belt_clamp_mounts_flush_under_the_bracket():
     mount = get_handles(gantry_end_bracket(Side.LEFT), "belt_clamps")[0]
     lo, hi = bounding_box(clamp.align(mount, get_handle(clamp, "mount")))
     assert hi[2] == pytest.approx(0, abs=1e-9)
-    assert lo[2] == pytest.approx(-CLAMP.total_t)
+    assert lo[2] == pytest.approx(-CLAMP.total_thickness)

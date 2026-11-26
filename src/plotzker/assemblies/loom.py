@@ -30,20 +30,20 @@ def _arc(
     start_deg: float,
     end_deg: float,
 ) -> list[Point]:
-    """Points of an arc of radius ``LOOM.bend_r`` around ``center``, in the plane spanned by
+    """Points of an arc of radius ``LOOM.bend_radius`` around ``center``, in the plane spanned by
     the unit vectors ``axes`` (angle measured from the first toward the second)."""
     u, v = axes
     n = max(2, round(abs(end_deg - start_deg) / BEND_STEP_DEG) + 1)
     points = []
     for i in range(n):
         a = math.radians(start_deg + (end_deg - start_deg) * i / (n - 1))
-        points.append([center[k] + LOOM.bend_r * (math.cos(a) * u[k] + math.sin(a) * v[k]) for k in range(3)])
+        points.append([center[k] + LOOM.bend_radius * (math.cos(a) * u[k] + math.sin(a) * v[k]) for k in range(3)])
     return points
 
 
 def y_loom_path(gantry_y: float) -> list[Point]:
     """Axis of the loom for the gantry at ``gantry_y``, from the anchor groove to the hole."""
-    r, z0 = LOOM.bend_r, LOOM.lying_z
+    r, z0 = LOOM.bend_radius, LOOM.lying_z
     mx, sx = LOOM.moving_x, LOOM.hole_x
     ye = gantry_y + LOOM.exit_dy  #: the anchor's groove axis (y)
     shaft_x = Y_AXIS.shaft_x[1]
@@ -62,7 +62,7 @@ def y_loom_path(gantry_y: float) -> list[Point]:
 def y_loom(gantry_y: float) -> list[Solid]:
     """The loom as capsules along :func:`y_loom_path`."""
     path = y_loom_path(gantry_y)
-    ball = sphere(d=LOOM.d, fn=12)
+    ball = sphere(d=LOOM.dia, fn=12)
     return [hull(ball.translate(a), ball.translate(b)).color("#333") for a, b in itertools.pairwise(path)]
 
 

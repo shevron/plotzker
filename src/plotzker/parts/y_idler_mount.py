@@ -23,7 +23,7 @@ mirror image, except for the endstop tower's height and holes (the board is chir
 lever hinge sits at the other end) and the idler tower's head pocket, which is on the other wall
 so that both sides take the same unmirrored slider (:func:`idler_for`).
 
-Hardware: see :mod:`idler_slider` (idler, M5×25 axle + nut, M3 nut) + 1 × M3×``Y_IDLER.screw_len``
+Hardware: see :mod:`idler_slider` (idler, M5×25 axle + nut, M3 nut) + 1 × M3×``Y_IDLER.screw_length``
 ISO 4762 with a large M3 washer (tension screw, from the tower plate's front face); 2 × 4×25
 countersunk wood screws into the baseboard (through 13 mm bosses on the foot, outboard of the
 tower); the endstop board with 2 × M3×12 into 2 × M3 nuts pressed into the endstop tower's outboard
@@ -59,9 +59,9 @@ if TYPE_CHECKING:
 
 T = Y_IDLER
 AXIS_Z = T.axle_z  #: idler axle height
-SCREW_INSET = WOOD_SCREW.boss_d / 2 + 0.5  #: foot screws from the foot's ends (y)
+SCREW_INSET = WOOD_SCREW.boss_dia / 2 + 0.5  #: foot screws from the foot's ends (y)
 #: The wood screws' x: bosses just outboard of the tower's wall
-SCREW_X = Y_DRIVE.idler_foot_x0 + WOOD_SCREW.boss_d / 2 + 0.5
+SCREW_X = Y_DRIVE.idler_foot_x0 + WOOD_SCREW.boss_dia / 2 + 0.5
 
 
 def idler_for(side: Side) -> FloatingIdler:
@@ -92,10 +92,10 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     """The mount in the left side frame (``side`` selects the endstop board's orientation)."""
     x0, x1 = Y_DRIVE.idler_foot_x0, Y_DRIVE.idler_foot_x1
     y0, y1 = Y_DRIVE.idler_foot_y
-    foot = cube([x1 - x0, y1 - y0, Y_DRIVE.foot_t]).translate([x0, y0, 0])
+    foot = cube([x1 - x0, y1 - y0, Y_DRIVE.foot_thickness]).translate([x0, y0, 0])
     # the tower's pad: under both walls, along the slider
-    pad_x = (T.belt_pos - T.tower_half, T.belt_pos + T.tower_half)
-    foot = foot | cube([pad_x[1] - pad_x[0], T.wall_end_s - y0, Y_DRIVE.foot_t]).translate([pad_x[0], y0, 0])
+    pad_x = (T.belt_position - T.tower_half, T.belt_position + T.tower_half)
+    foot = foot | cube([pad_x[1] - pad_x[0], T.wall_end_s - y0, Y_DRIVE.foot_thickness]).translate([pad_x[0], y0, 0])
     pocket_frame, pocket_cut = sk10_pocket(PocketEnd.FRONT, x1)
     idler_tower = to_side_frame(tower(idler_for(side)))
     screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
@@ -114,12 +114,12 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         # M3 clearance through the tower, and a hex pocket for the nut in its outboard face
         # (corners up: no support needed)
         board_holes.append(
-            cylinder(d=TOL.bolt_hole_d(3), h=Y_ENDSTOP.tower_x[1] - Y_ENDSTOP.tower_x[0] + 2, fn=FN_HOLE)
+            cylinder(d=TOL.bolt_hole_dia(3), h=Y_ENDSTOP.tower_x[1] - Y_ENDSTOP.tower_x[0] + 2, fn=FN_HOLE)
             .rotate([0, 90, 0])
             .translate([Y_ENDSTOP.tower_x[0] - 1, y, z])
         )
         board_holes.append(
-            cylinder(d=TOL.nut_trap_ac(3), h=TOL.nut_trap_h(3) + 1, fn=6)
+            cylinder(d=TOL.nut_trap_across_corners(3), h=TOL.nut_trap_height(3) + 1, fn=6)
             .rotate([0, 90, 0])
             .translate([Y_ENDSTOP.tower_x[0] - 1, y, z])
         )
@@ -129,7 +129,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         [Y_ENDSTOP.relief_depth + 1, Y_ENDSTOP.board_y[1] - Y_ENDSTOP.board_y[0] + 0.6, zb1 - zb0 - 0.5]
     ).translate([Y_ENDSTOP.board_x0 - Y_ENDSTOP.relief_depth, Y_ENDSTOP.board_y[0] - 0.3, zb0 - 0.3])
     lands = [
-        cylinder(d=Y_ENDSTOP.land_d, h=Y_ENDSTOP.relief_depth + 3, fn=FN_HOLE)
+        cylinder(d=Y_ENDSTOP.land_dia, h=Y_ENDSTOP.relief_depth + 3, fn=FN_HOLE)
         .rotate([0, 90, 0])
         .translate(
             [
@@ -164,11 +164,11 @@ _SCREW_YS = (_FOOT_Y[0] + SCREW_INSET, _FOOT_Y[1] - SCREW_INSET)
 #: The wood screws' heads seat on the countersink cones and the boss top around them
 SCREW_SEATS = [
     Cylinder(
-        center=(_SCREW_X, y, WOOD_SCREW.boss_t - WOOD_SCREW.sink_h / 2),
+        center=(_SCREW_X, y, WOOD_SCREW.boss_thickness - WOOD_SCREW.sink_height / 2),
         axis=(0, 0, 1),
-        radius=WOOD_SCREW.sink_d / 2,
-        inner_radius=WOOD_SCREW.hole_d / 2,
-        half_length=WOOD_SCREW.sink_h / 2 + 0.3,
+        radius=WOOD_SCREW.sink_dia / 2,
+        inner_radius=WOOD_SCREW.hole_dia / 2,
+        half_length=WOOD_SCREW.sink_height / 2 + 0.3,
         facing=(0, 0, 1),
         facing_tol_deg=60,
     )

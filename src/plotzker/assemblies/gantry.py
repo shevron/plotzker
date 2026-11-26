@@ -69,13 +69,13 @@ def x_drive_local(side: Side) -> list[Solid]:
         mount.color("DarkOrange"),
         slider.color("Orange"),
         gt2_idler().rotate([90, 0, 0]).translate([X_DRIVE.idler_x, X_BELT.y, X_IDLER.axle_z]),
-        shcs(X_IDLER.axle_m, X_IDLER.axle_len).align(axle),
-        hex_nut(X_IDLER.axle_m)
+        shcs(X_IDLER.axle_screw_size, X_IDLER.axle_length).align(axle),
+        hex_nut(X_IDLER.axle_screw_size)
         .rotate([0, 0, 90])
         .rotate([-90, 0, 0])
         .translate([X_DRIVE.idler_x, X_BELT.y + X_IDLER.nut_seat_y, X_IDLER.axle_z]),
-        shcs(X_IDLER.screw_m, X_IDLER.screw_len).align(screw_seat),
-        hex_nut(X_IDLER.screw_m)
+        shcs(X_IDLER.screw_size, X_IDLER.screw_length).align(screw_seat),
+        hex_nut(X_IDLER.screw_size)
         .rotate([0, 0, 90])
         .rotate([0, 90, 0])
         .translate([X_IDLER.slider_s0 + TOL.nut_wall, X_BELT.y, X_IDLER.screw_z]),
@@ -93,7 +93,7 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
     items += [scs10uu().translate([0, block * Y_AXIS.scs_pitch / 2, -SCS10UU_SPEC.height]) for block in (-1, 1)]
     # 8 × M5 into the blocks; the rear block's bolts also clamp the X motor/endstop foot (2 × M5×25)
     items += [shcs(5, 20).align(bolt) for bolt in get_handles(bracket, "block_bolts_front")]
-    foot_top = X_DRIVE.foot_t
+    foot_top = X_DRIVE.foot_thickness
     recess = X_DRIVE.foot_head_recess if side is Side.RIGHT else 0  # motor mount: counterbored
     for bolt in get_handles(bracket, "block_bolts_rear"):
         # the endstop mount's foot clamps the rear row; the motor mount's the front row
@@ -113,11 +113,11 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
             .align(mount)
             .color("#111")
         )
-    items.append(shcs(3, BRACKET.trig_screw_len).align(get_handle(bracket, "trigger_screw")))
+    items.append(shcs(3, BRACKET.trigger_screw_length).align(get_handle(bracket, "trigger_screw")))
     if side is Side.RIGHT:
         items.append(loom_anchor_installed().color("DarkOrange"))
         items += [
-            shcs(3, LOOM.anchor_screw_len).align(shift_handle(h, [0, 0, LOOM.anchor_h]))
+            shcs(3, LOOM.anchor_screw_length).align(shift_handle(h, [0, 0, LOOM.anchor_height]))
             for h in get_handles(bracket, "loom_anchor")
         ]
     return items
@@ -132,7 +132,7 @@ def gantry_assembly(gantry_y: float) -> list[Solid]:
             [
                 left_x + X_DRIVE.idler_x,
                 gantry_y + X_BELT.y - GT2_SPEC.width / 2,
-                X_BELT.pulley_axis_z + PULLEY_SPEC.pd / 2 - GT2_SPEC.pitch_line_from_back,
+                X_BELT.pulley_axis_z + PULLEY_SPEC.pitch_dia / 2 - GT2_SPEC.pitch_line_from_back,
             ]
         )
         .color("#111")

@@ -12,7 +12,7 @@ class Bearing(NamedTuple):
     """Bearing envelope: bore, outer diameter, width (length for linear bearings)."""
 
     bore: float
-    od: float
+    outer_dia: float
     width: float
 
 
@@ -26,6 +26,6 @@ LM10UU = Bearing(10, 19, 29)
 
 def bearing(b: Bearing) -> Solid:
     """Generic bearing. Origin: center of one face, axis +Z."""
-    body = cylinder(d=b.od, h=b.width, fn=48)
+    body = cylinder(d=b.outer_dia, h=b.width, fn=48)
     bore = cylinder(d=b.bore, h=b.width + 2, fn=32).translate([0, 0, -1])
     return (body - bore).color("LightSteelBlue")

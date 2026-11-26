@@ -23,11 +23,11 @@ G_CM3_TO_T_MM3 = 1e-9
 class SolverMaterial:
     """Transversely isotropic material (MPa, g/cm³); material axis 3 is the build direction."""
 
-    e_in_plane: float
-    e_build: float
+    modulus_in_plane: float
+    modulus_build: float
     nu_in_plane: float
     nu_build: float
-    g_build: float
+    shear_modulus_build: float
     density_g_cm3: float
 
 
@@ -90,7 +90,7 @@ def write_input(
     """Write a static analysis deck with the given supports, nodal forces and body acceleration."""
     e1, e2, _ = local_axes(build)
     m = material
-    g_in_plane = m.e_in_plane / (2 * (1 + m.nu_in_plane))
+    g_in_plane = m.modulus_in_plane / (2 * (1 + m.nu_in_plane))
     out = ["*NODE, NSET=ALL"]
     out += [f"{n},{p[0]:.6g},{p[1]:.6g},{p[2]:.6g}" for n, p in mesh.nodes.items()]
     out.append("*ELEMENT, TYPE=C3D10, ELSET=EALL")
@@ -98,9 +98,9 @@ def write_input(
     out += [
         "*MATERIAL, NAME=MAT",
         "*ELASTIC, TYPE=ENGINEERING CONSTANTS",
-        f"{m.e_in_plane:g},{m.e_in_plane:g},{m.e_build:g},{m.nu_in_plane:g},{m.nu_build:g},"
-        f"{m.nu_build:g},{g_in_plane:g},{m.g_build:g},",
-        f"{m.g_build:g}",
+        f"{m.modulus_in_plane:g},{m.modulus_in_plane:g},{m.modulus_build:g},{m.nu_in_plane:g},{m.nu_build:g},"
+        f"{m.nu_build:g},{g_in_plane:g},{m.shear_modulus_build:g},",
+        f"{m.shear_modulus_build:g}",
         "*DENSITY",
         f"{m.density_g_cm3 * G_CM3_TO_T_MM3:g}",
         "*ORIENTATION, NAME=OR, SYSTEM=RECTANGULAR",

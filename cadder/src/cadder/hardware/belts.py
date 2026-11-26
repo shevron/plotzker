@@ -21,12 +21,12 @@ class Gt2BeltSpec:
     pitch: float = 2
     width: float = 6  #: confirmed: plenty on hand
     thickness: float = 1.38  #: total
-    tooth_h: float = 0.75
+    tooth_height: float = 0.75
 
     @property
     def pitch_line_from_back(self) -> float:
         """The pitch line lies 0.254 mm from the tooth roots, inside the belt back (≈ 0.38)."""
-        return (self.thickness - self.tooth_h) - 0.254
+        return (self.thickness - self.tooth_height) - 0.254
 
 
 GT2_SPEC = Gt2BeltSpec()
@@ -37,26 +37,26 @@ class PulleySpec:
     """20T drive pulley (5 mm bore, grub screws)."""
 
     teeth: int = 20
-    flange_d: float = 16  #: ASSUMED
+    flange_dia: float = 16  #: ASSUMED
     length: float = 16  #: overall. ASSUMED
-    hub_d: float = 16  #: ASSUMED
-    hub_len: float = 7  #: ASSUMED
+    hub_dia: float = 16  #: ASSUMED
+    hub_length: float = 7  #: ASSUMED
     bore: float = 5
 
     @property
-    def pd(self) -> float:
+    def pitch_dia(self) -> float:
         """Pitch diameter (12.73)."""
         return self.teeth * GT2_SPEC.pitch / math.pi
 
     @property
-    def od(self) -> float:
+    def outer_dia(self) -> float:
         """Tooth tips (≈ 12.22)."""
-        return self.pd - 0.51
+        return self.pitch_dia - 0.51
 
     @property
     def belt_z(self) -> float:
         """Belt center above the hub's motor-side face."""
-        return self.hub_len + 1 + (self.length - self.hub_len - 2) / 2
+        return self.hub_length + 1 + (self.length - self.hub_length - 2) / 2
 
 
 @dataclass(frozen=True)
@@ -65,11 +65,11 @@ class IdlerSpec:
 
     teeth: int = 20  #: ASSUMED
     bore: float = 5  #: ASSUMED
-    flange_d: float = 18  #: ASSUMED
+    flange_dia: float = 18  #: ASSUMED
     width: float = 8.5  #: overall, incl. flanges. ASSUMED
 
     @property
-    def pd(self) -> float:
+    def pitch_dia(self) -> float:
         """Pitch diameter."""
         return self.teeth * GT2_SPEC.pitch / math.pi
 
@@ -81,15 +81,15 @@ IDLER_SPEC = IdlerSpec()
 def gt2_pulley() -> Solid:
     """20T pulley. Origin: center of the hub's bottom face (motor side); axis +Z.
 
-    The belt runs over z in ``[hub_len + 1, hub_len + 1 + belt width]``.
+    The belt runs over z in ``[hub_length + 1, hub_length + 1 + belt width]``.
     """
     body = (
-        cylinder(d=PULLEY_SPEC.hub_d, h=PULLEY_SPEC.hub_len, fn=32)
-        | cylinder(d=PULLEY_SPEC.flange_d, h=1, fn=32).translate([0, 0, PULLEY_SPEC.hub_len])
-        | cylinder(d=PULLEY_SPEC.od, h=PULLEY_SPEC.length - PULLEY_SPEC.hub_len, fn=40).translate(
-            [0, 0, PULLEY_SPEC.hub_len]
+        cylinder(d=PULLEY_SPEC.hub_dia, h=PULLEY_SPEC.hub_length, fn=32)
+        | cylinder(d=PULLEY_SPEC.flange_dia, h=1, fn=32).translate([0, 0, PULLEY_SPEC.hub_length])
+        | cylinder(d=PULLEY_SPEC.outer_dia, h=PULLEY_SPEC.length - PULLEY_SPEC.hub_length, fn=40).translate(
+            [0, 0, PULLEY_SPEC.hub_length]
         )
-        | cylinder(d=PULLEY_SPEC.flange_d, h=1, fn=32).translate([0, 0, PULLEY_SPEC.length - 1])
+        | cylinder(d=PULLEY_SPEC.flange_dia, h=1, fn=32).translate([0, 0, PULLEY_SPEC.length - 1])
     )
     bore = cylinder(d=PULLEY_SPEC.bore, h=PULLEY_SPEC.length + 2, fn=20).translate([0, 0, -1])
     return (body - bore).color("Gold")
@@ -97,9 +97,9 @@ def gt2_pulley() -> Solid:
 
 def gt2_idler() -> Solid:
     """Toothed idler. Origin: center, axis Z, symmetric about z = 0."""
-    body = cylinder(d=IDLER_SPEC.pd - 0.5, h=IDLER_SPEC.width, center=True, fn=40)
+    body = cylinder(d=IDLER_SPEC.pitch_dia - 0.5, h=IDLER_SPEC.width, center=True, fn=40)
     for sz in (-1, 1):
-        body |= cylinder(d=IDLER_SPEC.flange_d, h=1, center=True, fn=40).translate(
+        body |= cylinder(d=IDLER_SPEC.flange_dia, h=1, center=True, fn=40).translate(
             [0, 0, sz * (IDLER_SPEC.width / 2 - 0.5)]
         )
     bore = cylinder(d=IDLER_SPEC.bore, h=IDLER_SPEC.width + 2, center=True, fn=20)

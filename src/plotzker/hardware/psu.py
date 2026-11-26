@@ -32,7 +32,7 @@ class PsuSpec:
     size: tuple[float, float, float] = (113, 215, 50)  #: x × y × z (measured)
     mass_kg: float = 0.77  #: with the inlet and its wires (weighed by the user)
     # M4 mounting holes (measured)
-    hole_m: float = 4
+    hole_screw_size: float = 4
     hole_y: tuple[float, float] = (32, 182)  #: the same two lines on every face
     bottom_hole_x: tuple[float, float] = (31.5, 81.5)  #: bottom face (z = 0)
     label_hole_z: float = 10.5  #: label wall (x = 0): one hole per line
@@ -53,7 +53,7 @@ class PsuSpec:
     crimp_reach: float = 8.5  #: past the wall ends (y = 0)
     crimp_x: tuple[float, float] = (22, 110)
     crimp_z: tuple[float, float] = (5, 20)
-    lug_w: float = 6.5  #: width of one blue fork lug's barrel
+    lug_width: float = 6.5  #: width of one blue fork lug's barrel
     #: terminals with a wire: +V3, -V1, PE, N, L (the user's wiring; indices from the label wall)
     wired: tuple[int, ...] = (2, 3, 6, 7, 8)
     hole_depth: float = 6  #: modeled depth of the M4 holes (sheet and the nut behind it)
@@ -62,7 +62,7 @@ class PsuSpec:
     selector_z: tuple[float, float] = (11, 19)
     # Vents to keep open (photo): rows of slots along both long edges of the bottom face
     bottom_vent_y: tuple[float, float] = (35, 188.5)
-    bottom_vent_w: float = 20  #: from each long edge, running round the bend
+    bottom_vent_width: float = 20  #: from each long edge, running round the bend
 
     @property
     def terminal_xs(self) -> tuple[float, ...]:
@@ -91,23 +91,23 @@ class C14InletSpec:
     """
 
     cutout: tuple[float, float] = (47.3, 27.3)  #: the body: long × short side (measured)
-    body_h: float = 16.7  #: body behind the flange (measured)
+    body_height: float = 16.7  #: body behind the flange (measured)
     tabs: float = 9  #: ASSUMED: the push-on tabs behind the body
     flange: tuple[float, float] = (58.8, 49.5)  #: across the flats (long) × across the points
     flange_flat: float = 32  #: ASSUMED: length of the flat ends (the hexagon's short sides)
-    flange_t: float = 2.2
+    flange_thickness: float = 2.2
     #: screw holes: (long, short) offsets from the center: at the pointed ends, 40 apart
     hole_xy: tuple[tuple[float, float], ...] = ((0, 20), (0, -20))
-    hole_d: float = 4  #: the flange's holes (measured): M3 screws
-    hole_m: float = 3
-    ear_d: float = 9  #: boss round each screw inside the hood
+    hole_dia: float = 4  #: the flange's holes (measured): M3 screws
+    hole_screw_size: float = 3
+    ear_dia: float = 9  #: boss round each screw inside the hood
     #: room the push-on connectors and the bends of their wires need behind the tabs (ASSUMED)
     connector_room: float = 15
 
     @property
     def depth(self) -> float:
         """Body plus tabs behind the panel."""
-        return self.body_h + self.tabs
+        return self.body_height + self.tabs
 
 
 C14_INLET_SPEC = C14InletSpec()
@@ -122,13 +122,13 @@ class Xt60Spec:
     """
 
     front: tuple[float, float] = (13.9, 6.4)  #: the mating section (measured)
-    front_len: float = 8.0  #: to the collar's shoulder (7.2 proud of a 0.8 lip, measured)
+    front_length: float = 8.0  #: to the collar's shoulder (7.2 proud of a 0.8 lip, measured)
     chamfer: float = 2.2  #: 45°, both corners of one short side (2.0 flat between, measured)
     collar: tuple[float, float] = (15.5, 8.1)  #: the lettered collar (measured)
-    collar_r: float = 1.5  #: its two corners on the chamfered side (measured, roughly)
-    collar_len: float = 3.8  #: its front shoulder to the rim (measured)
+    collar_radius: float = 1.5  #: its two corners on the chamfered side (measured, roughly)
+    collar_length: float = 3.8  #: its front shoulder to the rim (measured)
     flange: tuple[float, float] = (16.4, 9.2)  #: the rim behind the collar (Amass drawing)
-    flange_len: float = 0.8
+    flange_length: float = 0.8
     cap: tuple[float, float] = (15.6, 6.5)  #: black rear cap (photo, ±1)
     length: float = 23.4  #: mating face to the back of the cap
     wire_room: float = 10  #: straight wire behind the cap before it may bend
@@ -155,10 +155,10 @@ def psu() -> Solid:
     lugs = union(
         *(
             box(
-                xs[i] - PSU_SPEC.lug_w / 2,
+                xs[i] - PSU_SPEC.lug_width / 2,
                 -PSU_SPEC.crimp_reach,
                 PSU_SPEC.crimp_z[0],
-                xs[i] + PSU_SPEC.lug_w / 2,
+                xs[i] + PSU_SPEC.lug_width / 2,
                 PSU_SPEC.block_front_y,
                 PSU_SPEC.crimp_z[1],
             )
@@ -166,7 +166,7 @@ def psu() -> Solid:
         )
     )
     case = case - pocket
-    d, r = PSU_SPEC.hole_depth, PSU_SPEC.hole_m / 2
+    d, r = PSU_SPEC.hole_depth, PSU_SPEC.hole_screw_size / 2
     for y in PSU_SPEC.hole_y:
         for x in PSU_SPEC.bottom_hole_x:
             case = case - cylinder(r=r, h=d + 1, fn=16).translate([x, y, -1])
@@ -182,11 +182,13 @@ def c14_inlet() -> Solid:
     lx, wy = C14_INLET_SPEC.flange[0] / 2, C14_INLET_SPEC.flange[1] / 2
     fy = C14_INLET_SPEC.flange_flat / 2
     outline = polygon([[-lx, -fy], [0, -wy], [lx, -fy], [lx, fy], [0, wy], [-lx, fy]])
-    flange = linear_extrude(outline, height=C14_INLET_SPEC.flange_t)
+    flange = linear_extrude(outline, height=C14_INLET_SPEC.flange_thickness)
     for x, y in C14_INLET_SPEC.hole_xy:
-        flange = flange - cylinder(d=C14_INLET_SPEC.hole_d, h=C14_INLET_SPEC.flange_t + 2, fn=16).translate([x, y, -1])
-    body = cube([*C14_INLET_SPEC.cutout, C14_INLET_SPEC.body_h]).translate(
-        [-C14_INLET_SPEC.cutout[0] / 2, -C14_INLET_SPEC.cutout[1] / 2, -C14_INLET_SPEC.body_h]
+        flange = flange - cylinder(d=C14_INLET_SPEC.hole_dia, h=C14_INLET_SPEC.flange_thickness + 2, fn=16).translate(
+            [x, y, -1]
+        )
+    body = cube([*C14_INLET_SPEC.cutout, C14_INLET_SPEC.body_height]).translate(
+        [-C14_INLET_SPEC.cutout[0] / 2, -C14_INLET_SPEC.cutout[1] / 2, -C14_INLET_SPEC.body_height]
     )
     tabs = cube([C14_INLET_SPEC.cutout[0] - 10, 15.2, C14_INLET_SPEC.tabs]).translate(
         [-C14_INLET_SPEC.cutout[0] / 2 + 5, -7.6, -C14_INLET_SPEC.depth]
@@ -208,26 +210,26 @@ def xt60_female() -> Solid:
             [-w / 2, h / 2],
         ]
     )
-    front = linear_extrude(outline, height=XT60_SPEC.front_len).rotate([90, 0, 0])
+    front = linear_extrude(outline, height=XT60_SPEC.front_length).rotate([90, 0, 0])
 
     def section(size: tuple[float, float], start: float, length: float) -> Solid:
         return cube([size[0], length, size[1]]).translate([-size[0] / 2, -start - length, -size[1] / 2])
 
     # the collar, its two corners on the chamfered (+x) side rounded
-    cw, ch, r = *XT60_SPEC.collar, XT60_SPEC.collar_r
+    cw, ch, r = *XT60_SPEC.collar, XT60_SPEC.collar_radius
     corners = union(*(circle(r=r, fn=32).translate([cw / 2 - r, sz * (ch / 2 - r)]) for sz in (-1, 1)))
     collar_2d = hull(union(square([cw - r, ch]).translate([-cw / 2, -ch / 2]), corners))
     collar = (
-        linear_extrude(collar_2d, height=XT60_SPEC.collar_len)
+        linear_extrude(collar_2d, height=XT60_SPEC.collar_length)
         .rotate([90, 0, 0])
-        .translate([0, -XT60_SPEC.front_len, 0])
+        .translate([0, -XT60_SPEC.front_length, 0])
     )
 
-    collar_end = XT60_SPEC.front_len + XT60_SPEC.collar_len
-    rear = collar_end + XT60_SPEC.flange_len
+    collar_end = XT60_SPEC.front_length + XT60_SPEC.collar_length
+    rear = collar_end + XT60_SPEC.flange_length
     return union(
         front,
         collar,
-        section(XT60_SPEC.flange, collar_end, XT60_SPEC.flange_len),
+        section(XT60_SPEC.flange, collar_end, XT60_SPEC.flange_length),
         section(XT60_SPEC.cap, rear, XT60_SPEC.length - rear),
     ).color("Gold")

@@ -19,12 +19,12 @@ class Nema17Spec:
     length_max: float = 48  #: clearance envelope: longest common NEMA17. DESIGN
     hole_pitch: float = 31  #: M3 holes, square pattern
     hole_depth: float = 4.5  #: ASSUMED
-    boss_d: float = 22  #: pilot boss
-    boss_h: float = 2
-    shaft_d: float = 5
-    shaft_len: float = 22.6  #: from the face, 39.2 mm motor (measured)
+    boss_dia: float = 22  #: pilot boss
+    boss_height: float = 2
+    shaft_dia: float = 5
+    shaft_length: float = 22.6  #: from the face, 39.2 mm motor (measured)
     #: Shortest shaft of the supported motors (the 33.5 mm body); belt lines must work with it.
-    shaft_len_min: float = 19
+    shaft_length_min: float = 19
     shaft_flat: float = 0.5  #: D-cut depth. ASSUMED
     chamfer: float = 4  #: corner chamfer (visual)
     mass_g: float = 280  #: ASSUMED
@@ -37,18 +37,18 @@ class ServoSpec:
     #: L × W × H below the gear boss: 25.5 overall (measured, excludes the spline) minus
     #: the 3.8 boss.
     body: tuple[float, float, float] = (23.2, 12.1, 21.7)
-    tab_len: float = 32.5  #: overall length across the tabs (measured)
-    tab_t: float = 1.6  #: measured
+    tab_length: float = 32.5  #: overall length across the tabs (measured)
+    tab_thickness: float = 1.6  #: measured
     tab_z: float = 17.0  #: tab underside above the body bottom (measured)
     hole_pitch: float = 28.5  #: measured
-    hole_d: float = 1.8  #: measured
+    hole_dia: float = 1.8  #: measured
     shaft_offset: float = 5.9  #: shaft axis from the body end (measured)
-    top_h: float = 3.8  #: gear boss above the body (measured)
-    shaft_h: float = 3.0  #: spline above the gear housing. ASSUMED
+    top_height: float = 3.8  #: gear boss above the body (measured)
+    shaft_height: float = 3.0  #: spline above the gear housing. ASSUMED
     mass_g: float = 13.5  #: vendor figure, confirmed by the user
     #: Single-sided horn (supplied with the servo, measured): shaft center to tip, and
     #: 4 holes along the arm; the last is ``horn_last_hole`` from the tip.
-    horn_len: float = 17.0
+    horn_length: float = 17.0
     horn_hole_pitch: float = 2.5
     horn_holes: int = 4
     horn_last_hole: float = 1.9
@@ -72,10 +72,10 @@ def nema17(length: float = NEMA17_SPEC.length) -> Solid:
         for sy in (-1, 1)
     ]
     flat = cube([5, 10, 16]).translate(
-        [NEMA17_SPEC.shaft_d / 2 - NEMA17_SPEC.shaft_flat, -5, NEMA17_SPEC.shaft_len - 15]
+        [NEMA17_SPEC.shaft_dia / 2 - NEMA17_SPEC.shaft_flat, -5, NEMA17_SPEC.shaft_length - 15]
     )
-    shaft = cylinder(d=NEMA17_SPEC.shaft_d, h=NEMA17_SPEC.shaft_len, fn=24) - flat
-    boss = cylinder(d=NEMA17_SPEC.boss_d, h=NEMA17_SPEC.boss_h, fn=48)
+    shaft = cylinder(d=NEMA17_SPEC.shaft_dia, h=NEMA17_SPEC.shaft_length, fn=24) - flat
+    boss = cylinder(d=NEMA17_SPEC.boss_dia, h=NEMA17_SPEC.boss_height, fn=48)
     return (body - holes).color("#2a2a2a") | (boss | shaft).color("Silver")
 
 
@@ -84,36 +84,36 @@ def servo_ft90m() -> Solid:
     length, width, height = FT90M_SPEC.body
     body = cube([length, width, height]).translate([-length / 2, -width / 2, 0])
     tab_holes = [
-        cylinder(d=FT90M_SPEC.hole_d, h=FT90M_SPEC.tab_t + 2, fn=12).translate(
+        cylinder(d=FT90M_SPEC.hole_dia, h=FT90M_SPEC.tab_thickness + 2, fn=12).translate(
             [sx * FT90M_SPEC.hole_pitch / 2, 0, FT90M_SPEC.tab_z - 1]
         )
         for sx in (-1, 1)
     ]
     tabs = (
-        cube([FT90M_SPEC.tab_len, width, FT90M_SPEC.tab_t]).translate(
-            [-FT90M_SPEC.tab_len / 2, -width / 2, FT90M_SPEC.tab_z]
+        cube([FT90M_SPEC.tab_length, width, FT90M_SPEC.tab_thickness]).translate(
+            [-FT90M_SPEC.tab_length / 2, -width / 2, FT90M_SPEC.tab_z]
         )
         - tab_holes
     )
     shaft_x = length / 2 - FT90M_SPEC.shaft_offset
-    gear_housing = cylinder(d=width, h=FT90M_SPEC.top_h, fn=32).translate([shaft_x, 0, height])
-    spline = cylinder(d=4.8, h=FT90M_SPEC.shaft_h, fn=16).translate([shaft_x, 0, height + FT90M_SPEC.top_h])
+    gear_housing = cylinder(d=width, h=FT90M_SPEC.top_height, fn=32).translate([shaft_x, 0, height])
+    spline = cylinder(d=4.8, h=FT90M_SPEC.shaft_height, fn=16).translate([shaft_x, 0, height + FT90M_SPEC.top_height])
     return (body | tabs | gear_housing).color("RoyalBlue") | spline.color("White")
 
 
 def servo_horn() -> Solid:
     """FT90M single-sided horn. Origin: shaft axis on the horn's back face; arm toward +X,
-    thickness along +Z (``horn_t`` ASSUMED 1.8 mm).
+    thickness along +Z (``horn_thickness`` ASSUMED 1.8 mm).
     """
     thickness = 1.8
     hub = cylinder(d=7, h=thickness, fn=32)
     arm = hull(
         cylinder(d=7, h=thickness, fn=32),
-        cylinder(d=3.4, h=thickness, fn=24).translate([FT90M_SPEC.horn_len - 1.7, 0, 0]),
+        cylinder(d=3.4, h=thickness, fn=24).translate([FT90M_SPEC.horn_length - 1.7, 0, 0]),
     )
     holes = [
         cylinder(d=1.2, h=thickness + 2, fn=12).translate(
-            [FT90M_SPEC.horn_len - FT90M_SPEC.horn_last_hole - i * FT90M_SPEC.horn_hole_pitch, 0, -1]
+            [FT90M_SPEC.horn_length - FT90M_SPEC.horn_last_hole - i * FT90M_SPEC.horn_hole_pitch, 0, -1]
         )
         for i in range(FT90M_SPEC.horn_holes)
     ]

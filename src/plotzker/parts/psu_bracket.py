@@ -75,9 +75,9 @@ def _hole_z(d: float, x: float, z0: float, z1: float) -> Solid:
 def _corner_fillet() -> Solid:
     """Fillet in the corner between the upright and the flange (the board's eased edge sits in
     it), as a solid along y."""
-    r, x0, z0 = PSU_MOUNT.corner_r, PSU_MOUNT.board_x[1], PSU_MOUNT.edge_z
+    r, x0, z0 = PSU_MOUNT.corner_radius, PSU_MOUNT.board_x[1], PSU_MOUNT.edge_z
     profile = square([r, r]).translate([x0 - r, z0 - r]) - circle(r=r, fn=FN_HOLE).translate([x0 - r, z0 - r])
-    w = PSU_MOUNT.bracket_w
+    w = PSU_MOUNT.bracket_width
     return linear_extrude(profile, height=w).rotate([90, 0, 0]).translate([0, w / 2, 0])
 
 
@@ -95,7 +95,7 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
 
 def psu_bracket_installed() -> Solid:
     """The bracket in the PSU frame, centered on y = 0."""
-    w = PSU_MOUNT.bracket_w
+    w = PSU_MOUNT.bracket_width
     x_top, x_bot = PSU_MOUNT.upright_x
     flange_x0 = PSU_MOUNT.board_x[1]
     upright = box(x_top, -w / 2, PSU_MOUNT.edge_z, x_bot, w / 2, 0)
@@ -103,29 +103,29 @@ def psu_bracket_installed() -> Solid:
     # above the board the upright grows inward and rests on the board's top
     brace = box(x_top, -w / 2, PSU_MOUNT.brace_z, PSU_MOUNT.board_x[0], w / 2, PSU_MOUNT.edge_z)
     body = upright | flange | brace | _corner_fillet()
-    cb_d, cb_h = PSU_MOUNT.counterbore
+    counterbore_dia, counterbore_height = PSU_MOUNT.counterbore
     for x in PSU_SPEC.bottom_hole_x:
-        body = body - _hole_z(TOL.bolt_hole_d(PSU_SPEC.hole_m), x, PSU_MOUNT.edge_z - 1, 1)
-        body = body - _hole_z(cb_d, x, PSU_MOUNT.edge_z - 1, PSU_MOUNT.edge_z + cb_h)
+        body = body - _hole_z(TOL.bolt_hole_dia(PSU_SPEC.hole_screw_size), x, PSU_MOUNT.edge_z - 1, 1)
+        body = body - _hole_z(counterbore_dia, x, PSU_MOUNT.edge_z - 1, PSU_MOUNT.edge_z + counterbore_height)
     for z in PSU_MOUNT.wood_screw_z:
-        body = body - _hole_x(WOOD_SCREW.hole_d, flange_x0 - 1, x_bot + 1, z)
+        body = body - _hole_x(WOOD_SCREW.hole_dia, flange_x0 - 1, x_bot + 1, z)
         # 90° countersink, wide end on the flange's underside (x = x_bot)
-        body = body - cylinder(d1=WOOD_SCREW.hole_d, d2=WOOD_SCREW.sink_d, h=WOOD_SCREW.sink_h, fn=FN_HOLE).rotate(
-            [0, 90, 0]
-        ).translate([x_bot - WOOD_SCREW.sink_h, 0, z])
-        body = body - cylinder(d=WOOD_SCREW.sink_d, h=1, fn=FN_HOLE).rotate([0, 90, 0]).translate([x_bot, 0, z])
+        body = body - cylinder(
+            d1=WOOD_SCREW.hole_dia, d2=WOOD_SCREW.sink_dia, h=WOOD_SCREW.sink_height, fn=FN_HOLE
+        ).rotate([0, 90, 0]).translate([x_bot - WOOD_SCREW.sink_height, 0, z])
+        body = body - cylinder(d=WOOD_SCREW.sink_dia, h=1, fn=FN_HOLE).rotate([0, 90, 0]).translate([x_bot, 0, z])
     return set_handles(body, **_handles())
 
 
 def psu_bracket() -> Solid:
     """The bracket in print orientation: on its side, the L flat on the bed."""
-    return psu_bracket_installed().rotate([90, 0, 0]).translate([0, 0, PSU_MOUNT.bracket_w / 2])
+    return psu_bracket_installed().rotate([90, 0, 0]).translate([0, 0, PSU_MOUNT.bracket_width / 2])
 
 
 # --- FEM (PSU frame, bracket at y = 0)
 
 _M = PSU_MOUNT
-_W = _M.bracket_w
+_W = _M.bracket_width
 PSU_FACE = Box(lo=(_M.upright_x[0], -_W / 2, -0.3), hi=(_M.upright_x[1], _W / 2, 0.3), facing=(0, 0, 1))
 #: The PSU hangs outboard, so the bracket pries about the flange's inner end: the board can only
 #: push there (the upright pulls away from the board's edge, which holds nothing)
@@ -137,11 +137,11 @@ BOARD_UNDERSIDE = Box(
 )
 SCREW_SEATS = [
     Cylinder(
-        center=(_M.upright_x[1] - WOOD_SCREW.sink_h / 2, 0, z),
+        center=(_M.upright_x[1] - WOOD_SCREW.sink_height / 2, 0, z),
         axis=(1, 0, 0),
-        radius=WOOD_SCREW.sink_d / 2,
-        inner_radius=WOOD_SCREW.hole_d / 2,
-        half_length=WOOD_SCREW.sink_h / 2 + 0.3,
+        radius=WOOD_SCREW.sink_dia / 2,
+        inner_radius=WOOD_SCREW.hole_dia / 2,
+        half_length=WOOD_SCREW.sink_height / 2 + 0.3,
         facing=(1, 0, 0),
         facing_tol_deg=60,
     )

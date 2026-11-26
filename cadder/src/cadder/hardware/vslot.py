@@ -34,7 +34,7 @@ class VSlotSpec:
     unit: float = 20
     #: V-groove depth = slot lip thickness, as drawn in the sketches (vendor drawing);
     #: also shapes the wheel model.
-    groove_d: float = 1.85
+    groove_depth: float = 1.85
     #: kg/m, from the sketch areas (161 and 296 mm²) × 2.70 g/cm³ aluminum
     mass_per_m_2020: float = 0.44
     mass_per_m_4020: float = 0.80
@@ -44,13 +44,13 @@ class VSlotSpec:
 class VWheelSpec:
     """Solid POM V-wheel on 2 × 625 bearings (OpenBuilds "Solid V Wheel" type)."""
 
-    od: float = 24  #: outer diameter (user)
+    outer_dia: float = 24  #: outer diameter (user)
     width: float = 10  #: (user)
     bore: float = 5  #: 625 bearing bore
     #: Wheel axis to the extrusion face it rides on: (39.7 - 20) / 2 from the standard
     #: 39.7 mm wheel spacing across a 20 mm V-slot. ASSUMED
     axis_to_face: float = 9.85
-    spacer_len: float = 6  #: plain spacer between plate and wheel. ASSUMED
+    spacer_length: float = 6  #: plain spacer between plate and wheel. ASSUMED
 
 
 @dataclass(frozen=True)
@@ -59,17 +59,17 @@ class EccentricSpacerSpec:
 
     length: float = 7.8  #: hex body length
     offset: float = 0.7  #: bore offset from the boss axis (±0.7 → 1.4 mm), approx.
-    hex_af: float = 10
-    hex_ac: float = 11.4
+    hex_across_flats: float = 10
+    hex_across_corners: float = 11.4
     bore: float = 5  #: M5 bolt through it
-    boss_d: float = 7.1  #: boss that sits in the carriage plate (measured)
-    boss_len: float = 2.1  #: boss length into the carriage plate
-    back_len: float = 0.5  #: short boss on the wheel side of the hex (approx.)
+    boss_dia: float = 7.1  #: boss that sits in the carriage plate (measured)
+    boss_length: float = 2.1  #: boss length into the carriage plate
+    back_length: float = 0.5  #: short boss on the wheel side of the hex (approx.)
 
     @property
     def stack(self) -> float:
         """Plate face → wheel bearing face (8.3). The plain top wheels must match it."""
-        return self.length + self.back_len
+        return self.length + self.back_length
 
 
 VSLOT_SPEC = VSlotSpec()
@@ -116,9 +116,9 @@ def vslot_y(length: float, size: tuple[int, int] = (1, 1)) -> Solid:
 
 def vwheel() -> Solid:
     """V-wheel. Origin: wheel center; axis along Y (rides on X-direction rails)."""
-    inner_d = VWHEEL_SPEC.od - 2 * VSLOT_SPEC.groove_d
-    cone = cylinder(d1=VWHEEL_SPEC.od, d2=inner_d, h=VWHEEL_SPEC.width / 2 - 0.5, fn=48)
-    body = cylinder(d=inner_d, h=VWHEEL_SPEC.width, center=True, fn=48) | cone | cone.mirror([0, 0, 1])
+    inner_dia = VWHEEL_SPEC.outer_dia - 2 * VSLOT_SPEC.groove_depth
+    cone = cylinder(d1=VWHEEL_SPEC.outer_dia, d2=inner_dia, h=VWHEEL_SPEC.width / 2 - 0.5, fn=48)
+    body = cylinder(d=inner_dia, h=VWHEEL_SPEC.width, center=True, fn=48) | cone | cone.mirror([0, 0, 1])
     bore = cylinder(d=VWHEEL_SPEC.bore, h=VWHEEL_SPEC.width + 2, center=True, fn=24)
     return (body - bore).rotate([90, 0, 0]).color("#202020")
 
@@ -131,9 +131,11 @@ def eccentric_spacer(rot: float = 0) -> Solid:
     adjustment angle; the bore sits ``offset`` off the boss axis.
     """
     body = (
-        cylinder(d=ECCENTRIC_SPEC.boss_d, h=ECCENTRIC_SPEC.boss_len, fn=32).translate([0, 0, -ECCENTRIC_SPEC.boss_len])
-        | cylinder(d=ECCENTRIC_SPEC.hex_ac, h=ECCENTRIC_SPEC.length, fn=6)
-        | cylinder(d=ECCENTRIC_SPEC.boss_d, h=ECCENTRIC_SPEC.stack, fn=32)
+        cylinder(d=ECCENTRIC_SPEC.boss_dia, h=ECCENTRIC_SPEC.boss_length, fn=32).translate(
+            [0, 0, -ECCENTRIC_SPEC.boss_length]
+        )
+        | cylinder(d=ECCENTRIC_SPEC.hex_across_corners, h=ECCENTRIC_SPEC.length, fn=6)
+        | cylinder(d=ECCENTRIC_SPEC.boss_dia, h=ECCENTRIC_SPEC.stack, fn=32)
     )
     bore = cylinder(d=ECCENTRIC_SPEC.bore, h=20, fn=20).translate([ECCENTRIC_SPEC.offset, 0, -5]).rotate([0, 0, rot])
     return (body - bore).rotate([-90, 0, 0]).color("Gold")

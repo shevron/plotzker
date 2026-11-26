@@ -25,10 +25,10 @@ class ZribSpec:
 
     width: float = 110  #: along the rear edge
     depth: float = 95  #: front to rear
-    pcb_t: float = 1.6  #: ASSUMED
+    pcb_thickness: float = 1.6  #: ASSUMED
     height: float = 22  #: bottom of the board to the top of the heat sinks (measured)
     hole_pitch: tuple[float, float] = (100, 80)  #: along the rear edge, front to rear
-    hole_d: float = 3.0
+    hole_dia: float = 3.0
     #: footprint of the tall parts (the driver heat sinks), centered. ASSUMED: the real
     #: layout is not measured; it only has to stay inside the 22 mm envelope
     tall_zone: tuple[float, float] = (90, 40)
@@ -40,19 +40,19 @@ ZRIB_SPEC = ZribSpec()
 def zrib() -> Solid:
     """The board: PCB with its mounting holes and a block standing for the tall parts."""
     holes = [
-        cylinder(d=ZRIB_SPEC.hole_d, h=ZRIB_SPEC.pcb_t + 2, fn=16).translate(
+        cylinder(d=ZRIB_SPEC.hole_dia, h=ZRIB_SPEC.pcb_thickness + 2, fn=16).translate(
             [sx * ZRIB_SPEC.hole_pitch[0] / 2, sy * ZRIB_SPEC.hole_pitch[1] / 2, -1]
         )
         for sx in (-1, 1)
         for sy in (-1, 1)
     ]
     pcb = (
-        cube([ZRIB_SPEC.width, ZRIB_SPEC.depth, ZRIB_SPEC.pcb_t]).translate(
+        cube([ZRIB_SPEC.width, ZRIB_SPEC.depth, ZRIB_SPEC.pcb_thickness]).translate(
             [-ZRIB_SPEC.width / 2, -ZRIB_SPEC.depth / 2, 0]
         )
         - holes
     )
-    tall = cube([*ZRIB_SPEC.tall_zone, ZRIB_SPEC.height - ZRIB_SPEC.pcb_t]).translate(
-        [-ZRIB_SPEC.tall_zone[0] / 2, -ZRIB_SPEC.tall_zone[1] / 2, ZRIB_SPEC.pcb_t]
+    tall = cube([*ZRIB_SPEC.tall_zone, ZRIB_SPEC.height - ZRIB_SPEC.pcb_thickness]).translate(
+        [-ZRIB_SPEC.tall_zone[0] / 2, -ZRIB_SPEC.tall_zone[1] / 2, ZRIB_SPEC.pcb_thickness]
     )
     return pcb.color("DarkGreen") | tall.color("#444")

@@ -144,11 +144,11 @@ PEN_HOLDER_MATING_PAIRS = {frozenset(("servo", "horn")), frozenset(("horn", "pin
 
 
 @pytest.mark.parametrize("pen_up", [False, True], ids=["pen down", "pen up"])
-@pytest.mark.parametrize("pen_d", [7, 10, 16])
-def test_pen_holder_parts_do_not_collide(pen_up, pen_d):
+@pytest.mark.parametrize("pen_dia", [7, 10, 16])
+def test_pen_holder_parts_do_not_collide(pen_up, pen_dia):
     """Nothing overlaps except the horn on its spline and the pin in its hole: the slide
     clears the body and servo wall, and pens of every size clear the rod arms and sleeves."""
-    items = list(pen_holder_items(pen_up, pen_d).items())
+    items = list(pen_holder_items(pen_up, pen_dia).items())
     for i, (name_a, a) in enumerate(items):
         for name_b, b in items[i + 1 :]:
             if frozenset((name_a, name_b)) not in PEN_HOLDER_MATING_PAIRS:
@@ -277,7 +277,7 @@ def test_x_motor_screws_clear_the_mount_bolts():
     bracket = gantry_end_bracket_local(Side.RIGHT)
     m3 = [shcs(3, 10).align(h) for h in get_handles(mount, "motor_screws")]
     m5 = [
-        shcs(5, 25).align(shift_handle(h, [0, 0, X_DRIVE.foot_t - X_DRIVE.foot_head_recess]))
+        shcs(5, 25).align(shift_handle(h, [0, 0, X_DRIVE.foot_thickness - X_DRIVE.foot_head_recess]))
         for h in get_handles(bracket, "block_bolts_rear")
         if h[1][3] < Y_AXIS.scs_pitch / 2
     ]
@@ -303,7 +303,7 @@ def test_x_endstop_board_seats_flat_over_its_solder():
         [X_ENDSTOP.board_x[0] + 1, X_ENDSTOP.board_y[0] + 1, board_bottom - 1.8]
     )
     lands = [
-        cylinder(d=X_ENDSTOP.land_d + 0.2, h=5, fn=24).translate(
+        cylinder(d=X_ENDSTOP.land_dia + 0.2, h=5, fn=24).translate(
             [X_ENDSTOP.hole_x, yc + s * ENDSTOP_SPEC.hole_pitch / 2, board_bottom - 3]
         )
         for s in (-1, 1)
@@ -311,7 +311,7 @@ def test_x_endstop_board_seats_flat_over_its_solder():
     assert get_handle(mount, "board")
     assert volume((solder - union(*lands)) & mount) < 1e-3
     # and the board's underside still rests on the lands
-    pad = cylinder(d=X_ENDSTOP.land_d - 1, h=0.4, fn=24).translate(
+    pad = cylinder(d=X_ENDSTOP.land_dia - 1, h=0.4, fn=24).translate(
         [X_ENDSTOP.hole_x, yc + ENDSTOP_SPEC.hole_pitch / 2, board_bottom - 0.2]
     )
     assert volume(pad & mount) > 1
@@ -323,9 +323,9 @@ def test_x_trigger_screw_reaches_through_its_captive_nut():
 
     from plotzker.params import CARRIAGE
 
-    head_underside = -CARRIAGE.rear_w / 2 - metric(3).nut_h  # end of adjustment, outermost lock nut
-    tip = head_underside + CARRIAGE.trig_screw_len
-    nut_far_face = -CARRIAGE.rear_w / 2 + 3.5 + metric(3).nut_h / 2
+    head_underside = -CARRIAGE.rear_width / 2 - metric(3).nut_height  # end of adjustment, outermost lock nut
+    tip = head_underside + CARRIAGE.trigger_screw_length
+    nut_far_face = -CARRIAGE.rear_width / 2 + 3.5 + metric(3).nut_height / 2
     assert tip - nut_far_face >= 3
 
 
@@ -343,7 +343,7 @@ def test_y_endstop_board_seats_flat_over_its_solder(side):
         [Y_ENDSTOP.board_x0 - 1.8, Y_ENDSTOP.board_y[0] + 1, zc - ENDSTOP_SPEC.pcb[1] / 2 + 1]
     )
     lands = [
-        cylinder(d=Y_ENDSTOP.land_d + 0.2, h=5, fn=24)
+        cylinder(d=Y_ENDSTOP.land_dia + 0.2, h=5, fn=24)
         .rotate([0, 90, 0])
         .translate(
             [
@@ -356,7 +356,7 @@ def test_y_endstop_board_seats_flat_over_its_solder(side):
     ]
     assert volume((solder - union(*lands)) & mount) < 1e-3
     pad = (
-        cylinder(d=Y_ENDSTOP.land_d - 1, h=0.4, fn=24)
+        cylinder(d=Y_ENDSTOP.land_dia - 1, h=0.4, fn=24)
         .rotate([0, 90, 0])
         .translate(
             [Y_ENDSTOP.board_x0 - 0.2, Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v, zc + ENDSTOP_SPEC.hole_pitch / 2]
@@ -395,13 +395,13 @@ def test_x_idler_axle_bolt_and_nut_clear_the_tower_walls(shift):
     dx = shift * X_IDLER.travel / 2
     axle = shift_handle(get_handle(x_idler_slider_installed(), "axle"), [dx, 0, 0])
     nut = (
-        hex_nut(X_IDLER.axle_m)
+        hex_nut(X_IDLER.axle_screw_size)
         .rotate([0, 0, 90])
         .rotate([-90, 0, 0])
         .translate([X_DRIVE.idler_x + dx, X_BELT.y + X_IDLER.nut_seat_y, X_IDLER.axle_z])
     )
     bracket = gantry_end_bracket_local(Side.LEFT)
-    for part in (shcs(X_IDLER.axle_m, 25).align(axle), nut):
+    for part in (shcs(X_IDLER.axle_screw_size, 25).align(axle), nut):
         assert volume(part & bracket) < 1e-3
 
 
@@ -443,17 +443,17 @@ def test_y_idler_axle_bolt_and_nut_clear_the_tower_walls(side, shift):
     mount = y_idler_mount_installed(side)
     axle = shift_handle(get_handle(mount, "axle"), [0, dy, 0])
     nut = (
-        hex_nut(t.axle_m)
+        hex_nut(t.axle_screw_size)
         .rotate([0, 90 * t.head_side, 0])
         .translate(
             [
-                Y_AXIS.belt_x + t.head_side * (t.width / 2 - metric(t.axle_m).nut_h),
+                Y_AXIS.belt_x + t.head_side * (t.width / 2 - metric(t.axle_screw_size).nut_height),
                 Y_DRIVE.idler_y + dy,
                 t.axle_z,
             ]
         )
     )
-    for part in (shcs(t.axle_m, t.axle_len).align(axle), nut):
+    for part in (shcs(t.axle_screw_size, t.axle_length).align(axle), nut):
         assert volume(part & mount) < 1e-3
 
 
@@ -468,7 +468,7 @@ def test_floating_slider_arm_ends_have_a_straight_45_degree_top_front(which):
 
     t = X_IDLER if which == "x" else Y_IDLER
     s = slider_local(t)
-    y_mid = t.gap_y / 2 + t.arm_t / 2
+    y_mid = t.gap_y / 2 + t.arm_thickness / 2
     x = t.chamfer_x + 1.0  # past the start of the line
     line_z = t.arm_top - 1.0  # the 45° line's height there
 

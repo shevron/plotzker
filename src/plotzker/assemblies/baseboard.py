@@ -40,11 +40,11 @@ def _drill(hole: Hole) -> Solid:
     t = FRAME.board_size[2]
     if hole.side == SIDE_UNDER:
         assert hole.depth is not None
-        return cylinder(d=hole.d, h=hole.depth + 1, fn=FN_HOLE).translate([hole.x, hole.y, -t - 1])
-    cutter = cylinder(d=hole.d, h=t + 2, fn=FN_HOLE).translate([hole.x, hole.y, -t - 1])
-    if hole.countersink_d:
-        depth = (hole.countersink_d - hole.d) / 2
-        cutter = cutter | cylinder(d1=hole.d, d2=hole.countersink_d, h=depth, fn=FN_HOLE).translate(
+        return cylinder(d=hole.dia, h=hole.depth + 1, fn=FN_HOLE).translate([hole.x, hole.y, -t - 1])
+    cutter = cylinder(d=hole.dia, h=t + 2, fn=FN_HOLE).translate([hole.x, hole.y, -t - 1])
+    if hole.countersink_dia:
+        depth = (hole.countersink_dia - hole.dia) / 2
+        cutter = cutter | cylinder(d1=hole.dia, d2=hole.countersink_dia, h=depth, fn=FN_HOLE).translate(
             [hole.x, hole.y, -depth]
         )
     return cutter
@@ -57,7 +57,7 @@ def baseboard() -> Solid:
     board = cube([bx, by, t]).translate([0, 0, -t])
     for hole in board_holes():
         board = board - _drill(hole)
-    a = PSU_MOUNT.corner_r * math.sqrt(2)
+    a = PSU_MOUNT.corner_radius * math.sqrt(2)
     ease = cube([a, by + 2, a]).translate([-a / 2, -1, -a / 2]).rotate([0, 45, 0])
     board = board - ease.translate([bx, 0, -t])
     return board.color("BurlyWood", 0.5)
@@ -69,15 +69,17 @@ def runners() -> list[Solid]:
     items: list[Solid] = []
     for ry in BASEBOARD.runner_y:
         items.append(
-            vslot_x(BASEBOARD.runner_len, _RUNNER_SIZE).translate(
-                [BASEBOARD.runner_x[0], ry - BASEBOARD.runner_w / 2, -t - BASEBOARD.runner_h]
+            vslot_x(BASEBOARD.runner_length, _RUNNER_SIZE).translate(
+                [BASEBOARD.runner_x[0], ry - BASEBOARD.runner_width / 2, -t - BASEBOARD.runner_height]
             )
         )
         for x in BASEBOARD.runner_screw_x:
             items.append(
-                countersunk_screw(5, BASEBOARD.runner_screw_len, BASEBOARD.runner_screw_head_d).translate([x, ry, 0])
+                countersunk_screw(5, BASEBOARD.runner_screw_length, BASEBOARD.runner_screw_head_dia).translate(
+                    [x, ry, 0]
+                )
             )
-            items.append(t_nut(5, BASEBOARD.tnut_t).translate([x, ry, -t - BASEBOARD.slot_lip_t]))
+            items.append(t_nut(5, BASEBOARD.tnut_thickness).translate([x, ry, -t - BASEBOARD.slot_lip_thickness]))
     return items
 
 
@@ -92,10 +94,14 @@ def shafts_and_supports() -> list[Solid]:
             items.append(sk10().translate([x, y, 0]))
             for dx in BASEBOARD.sk10_hole_x:
                 hx = x + dx
-                items.append(shcs(5, BASEBOARD.sk10_bolt_len).translate([hx, y, SK10_SPEC.base_t + m5.washer_t]))
-                items.append(washer(5).translate([hx, y, SK10_SPEC.base_t]))
-                items.append(washer(5).translate([hx, y, -t - m5.washer_t]))
-                items.append(hex_nut(5).translate([hx, y, -t - m5.washer_t - m5.nut_h]))
+                items.append(
+                    shcs(5, BASEBOARD.sk10_bolt_length).translate(
+                        [hx, y, SK10_SPEC.base_thickness + m5.washer_thickness]
+                    )
+                )
+                items.append(washer(5).translate([hx, y, SK10_SPEC.base_thickness]))
+                items.append(washer(5).translate([hx, y, -t - m5.washer_thickness]))
+                items.append(hex_nut(5).translate([hx, y, -t - m5.washer_thickness - m5.nut_height]))
     return items
 
 
@@ -105,24 +111,24 @@ def bed() -> list[Solid]:
     bx, by = FRAME.bed_size
     x0, y0 = FRAME.bed_origin
     gap = FRAME.bed_adjust_gap
-    panel = cube([bx, by, FRAME.bed_panel_t]).translate([x0, y0, gap])
+    panel = cube([bx, by, FRAME.bed_panel_thickness]).translate([x0, y0, gap])
     for x, y in BASEBOARD.post_xy:
-        panel = panel - cylinder(d=5.4, h=FRAME.bed_panel_t + 2, fn=FN_HOLE).translate([x, y, gap - 1])
+        panel = panel - cylinder(d=5.4, h=FRAME.bed_panel_thickness + 2, fn=FN_HOLE).translate([x, y, gap - 1])
     sx, sy = FRAME.steel_size
     items: list[Solid] = [
         panel.color("Tan", 0.8),
-        cube([sx, sy, FRAME.bed_steel_t])
-        .translate([x0 + FRAME.steel_margin, y0 + FRAME.steel_margin, gap + FRAME.bed_panel_t])
+        cube([sx, sy, FRAME.bed_steel_thickness])
+        .translate([x0 + FRAME.steel_margin, y0 + FRAME.steel_margin, gap + FRAME.bed_panel_thickness])
         .color("SlateGray"),
     ]
-    top = gap + FRAME.bed_panel_t
+    top = gap + FRAME.bed_panel_thickness
     for x, y in BASEBOARD.post_xy:
         items += [
-            shcs(5, BASEBOARD.post_bolt_len).rotate([180, 0, 0]).translate([x, y, BASEBOARD.post_stud_z]),
+            shcs(5, BASEBOARD.post_bolt_length).rotate([180, 0, 0]).translate([x, y, BASEBOARD.post_stud_z]),
             washer(5).translate([x, y, BASEBOARD.post_stud_z]),
-            spring(BASEBOARD.spring_od, BASEBOARD.spring_id, gap).translate([x, y, 0]),
+            spring(BASEBOARD.spring_outer_dia, BASEBOARD.spring_id, gap).translate([x, y, 0]),
             washer(5).translate([x, y, top]),
-            hex_nut(5).translate([x, y, top + m5.washer_t]),
+            hex_nut(5).translate([x, y, top + m5.washer_thickness]),
         ]
     return items
 

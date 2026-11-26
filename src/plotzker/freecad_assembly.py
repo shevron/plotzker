@@ -264,7 +264,7 @@ def _x_belt_return(gantry_y: float) -> Solid:
         [
             left_x + X_DRIVE.idler_x,
             gantry_y + X_BELT.y - GT2_SPEC.width / 2,
-            X_BELT.pulley_axis_z + PULLEY_SPEC.pd / 2 - GT2_SPEC.pitch_line_from_back,
+            X_BELT.pulley_axis_z + PULLEY_SPEC.pitch_dia / 2 - GT2_SPEC.pitch_line_from_back,
         ]
     )
 
@@ -316,7 +316,7 @@ def _axes(gantry_y: float, carriage_x: float) -> dict[str, Any]:
     left_x, right_x = Y_AXIS.shaft_x
     belt_x = Y_AXIS.belt_x
     beam_z = BEAM.bottom_z + BEAM.height / 2
-    horn_y = carriage_x, gantry_y + CARRIAGE.plate_front_y - PEN.horn_d[0]
+    horn_y = carriage_x, gantry_y + CARRIAGE.plate_front_y - PEN.horn_dia[0]
     axes: dict[str, Any] = {
         "y_shaft_L": {"origin": [left_x, gantry_y, Y_AXIS.shaft_z], "dir": [0, 1, 0]},
         "y_shaft_R": {"origin": [right_x, gantry_y, Y_AXIS.shaft_z], "dir": [0, 1, 0]},
@@ -459,7 +459,7 @@ def metadata() -> dict[str, object]:
             "carriage_x": list(CARRIAGE.center_x_range),
             "pen_lift": PEN.lift,
         },
-        "frame": {"board": list(FRAME.board_size), "bracket_len_y": BRACKET.len_y},
+        "frame": {"board": list(FRAME.board_size), "bracket_len_y": BRACKET.length_y},
     }
 
 

@@ -661,6 +661,12 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
 - Don't give a local variable or parameter the name of something at module level (an import,
   function, class or variable). Pytest fixtures requested as parameters are the exception.
   Enforced by `tests/test_code_rules.py`.
+- **Prefer polymorphism to type checks.** Behavior that depends on an object's class, or
+  mainly works on its data, is a method of that class, and subclasses extend or override it.
+  Treat `isinstance` on our own classes as a code smell. A method must not pull a higher
+  layer into the class (a solver, an exporter, a renderer or the CLI): code there that
+  dispatches on type uses `match`. `isinstance` is fine for validating outside input, for
+  built-in and library types, and for picking out members of a mixed collection.
 - Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
   reads in the order the operations happen. Note that this is the reverse of the
   OpenSCAD nesting order.

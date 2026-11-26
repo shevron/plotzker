@@ -177,6 +177,24 @@ Open:
   suffixed `_SPEC`, abbreviations spelled out. Names in TOML files, `--json`, the CLI and CPSK kept.
 - [x] **T3.35 Disallowed nested functions removed** (2026-11-26, README §7.5): 23 nested functions
   remain, all allowed cases.
+- [ ] **T3.36 Polymorphism instead of type checks** (README §7.5). Behavior that depends on an object's class,
+  or mainly works on its data, becomes a method of the class. A method must not pull a higher
+  layer into the class (solver, exporter, renderer, CLI): code there keeps dispatching on type,
+  with `match` instead of `isinstance` chains.
+  1. Part hierarchy (`part.py`, `report.py`, `fem/report.py`): `part_to_dict` → `Part.to_dict()`,
+     extended by `MaterialPart` and `PrintedPart`; the two part reports and the STL export become
+     methods; `effective_properties` moves into the classes, `PrintedPart` supplying its factors.
+  2. `Placement.region()`: `Box` and `Cylinder` place themselves.
+  3. Each sketch primitive gets a `coordinates` property, replacing the chain in
+     `import_sketch._geometry`.
+  4. `assembly_to_dict` → `AssemblyCheck.to_dict()`; `write` / `save` → methods of `Document`.
+     Candidates to read first: helpers taking a `Rectification`, `Board`, `Scale` or diff record.
+
+  Stays as it is: load handling in `fem/applied.py`, the SVG and FreeCAD exporters' dispatch on
+  sketch geometry (`cpsk_core` must not know them), validation of outside input.
+
+  *Done when:* `make check`, `make test` and `make test-cpsk-core` pass; `part --json` output is
+  identical for every part; `fem-status` shows nothing newly stale; `diff` shows no change.
 - [ ] **T3.32 Controller mount for the Creality board** (D41). The machine has no controller mount
   and the drilling layout no holes for one; the ZRIB's mount is in `legacy/zrib/` (D43). The loom
   run, the PSU's XT60 position (D38) and `BASEBOARD.controller_center` were designed around the

@@ -567,7 +567,7 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
 - **Parametric first.** Shared dimensions in `params.py` (travel, shaft spacing,
   clearances, tolerances, tool-plate interface), grouped into frozen dataclasses with one
   module-level instance each (`TOL`, `BEAM`, `CARRIAGE`, `TOOL_PLATE`...). Vendor-part
-  dimensions and simple models in `cadder.hardware` (`SK10`, `SCS10UU`, `NEMA17`, `VWHEEL`,
+  dimensions and simple models in `cadder.hardware` (`SK10_SPEC`, `SCS10UU_SPEC`, `NEMA17_SPEC`, `VWHEEL_SPEC`,
   fasteners...); plotter-specific hardware in `plotzker.hardware`. Derived values are
   `@property`s, never typed-in numbers. No magic numbers in part modules: add a parameter
   instead.

@@ -30,7 +30,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import EPS, FN_HOLE, teardrop_y
 from cadder.handles import handle, set_handles
-from cadder.hardware import NEMA17, SCS10UU, metric
+from cadder.hardware import NEMA17_SPEC, SCS10UU_SPEC, metric
 from cadder.part import DisplacementLimit, FemSpec, LoadCase, PrintedPart, Support
 from cadder.regions import Box, Cylinder, bond_zone
 from cadder.types import Matrix
@@ -46,22 +46,22 @@ if TYPE_CHECKING:
 
 AXIS_Z = X_BELT.pulley_axis_z - Y_AXIS.scs_top_z  #: motor axis, local z
 FOOT_Z0 = BRACKET.base_t  #: the foot sits on the bracket base
-PLATE_X = (X_DRIVE.motor_x - NEMA17.width / 2, X_DRIVE.motor_x + NEMA17.width / 2)
-PLATE_TOP = AXIS_Z + NEMA17.width / 2
+PLATE_X = (X_DRIVE.motor_x - NEMA17_SPEC.width / 2, X_DRIVE.motor_x + NEMA17_SPEC.width / 2)
+PLATE_TOP = AXIS_Z + NEMA17_SPEC.width / 2
 #: The foot's x extent (under the SCS block and the plate)
-FOOT_X = (min(-SCS10UU.width / 2 - 1, PLATE_X[0]), max(SCS10UU.width / 2, PLATE_X[1]))
-MOTOR_BOTTOM = AXIS_Z - NEMA17.width / 2
+FOOT_X = (min(-SCS10UU_SPEC.width / 2 - 1, PLATE_X[0]), max(SCS10UU_SPEC.width / 2, PLATE_X[1]))
+MOTOR_BOTTOM = AXIS_Z - NEMA17_SPEC.width / 2
 #: Motor: its face on the plate's front face, shaft axis along -y toward the beam
 MOTOR: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.motor_face_y, AXIS_Z], [90, 0, 0])
 #: Pulley: hub on the shaft
-PULLEY: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.pulley_hub_y, AXIS_Z], [90, 0, 0])
+PULLEY_SPEC: Matrix = handle([X_DRIVE.motor_x, X_DRIVE.pulley_hub_y, AXIS_Z], [90, 0, 0])
 #: The 4 motor M3 screws: heads on the plate's beam side (rear face), shanks toward +y
 MOTOR_SCREWS: list[Matrix] = [
     handle(
         [
-            X_DRIVE.motor_x + dx * NEMA17.hole_pitch / 2,
+            X_DRIVE.motor_x + dx * NEMA17_SPEC.hole_pitch / 2,
             X_DRIVE.plate_y0,
-            AXIS_Z + dz * NEMA17.hole_pitch / 2,
+            AXIS_Z + dz * NEMA17_SPEC.hole_pitch / 2,
         ],
         [90, 0, 0],
     )
@@ -76,7 +76,7 @@ def x_motor_mount_left() -> Solid:
     foot = cube([foot_x1 - foot_x0, X_DRIVE.motor_foot_y[1] - X_DRIVE.motor_foot_y[0], X_DRIVE.foot_t]).translate(
         [foot_x0, X_DRIVE.motor_foot_y[0], FOOT_Z0]
     )
-    plate = cube([NEMA17.width, X_DRIVE.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate(
+    plate = cube([NEMA17_SPEC.width, X_DRIVE.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate(
         [PLATE_X[0], X_DRIVE.plate_y0, FOOT_Z0]
     )
     rib = cube(
@@ -84,33 +84,35 @@ def x_motor_mount_left() -> Solid:
     ).translate([X_DRIVE.motor_x - X_DRIVE.motor_rib_t / 2, X_DRIVE.motor_face_y - EPS, FOOT_Z0])
     bolts = [
         cylinder(d=TOL.bolt_hole_d(5), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
-            [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 - 1]
+            [hx * SCS10UU_SPEC.hole_pitch_x / 2, y, FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
         for y in X_DRIVE.bolt_rows[:1]
     ]
     recess = [
         cylinder(d=TOL.slide_d(metric(5).head_d), h=X_DRIVE.foot_head_recess + 1, fn=FN_HOLE).translate(
-            [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 + X_DRIVE.foot_t - X_DRIVE.foot_head_recess]
+            [hx * SCS10UU_SPEC.hole_pitch_x / 2, y, FOOT_Z0 + X_DRIVE.foot_t - X_DRIVE.foot_head_recess]
         )
         for hx in (-1, 1)
         for y in X_DRIVE.bolt_rows[:1]
     ]
     plate_mid_y = X_DRIVE.plate_y0 + X_DRIVE.motor_plate_t / 2
-    boss = teardrop_y(NEMA17.boss_d + 0.4, X_DRIVE.motor_plate_t + 2).translate([X_DRIVE.motor_x, plate_mid_y, AXIS_Z])
+    boss = teardrop_y(NEMA17_SPEC.boss_d + 0.4, X_DRIVE.motor_plate_t + 2).translate(
+        [X_DRIVE.motor_x, plate_mid_y, AXIS_Z]
+    )
     screws = [
         teardrop_y(TOL.bolt_hole_d(3), X_DRIVE.motor_plate_t + 2).translate(
             [
-                X_DRIVE.motor_x + dx * NEMA17.hole_pitch / 2,
+                X_DRIVE.motor_x + dx * NEMA17_SPEC.hole_pitch / 2,
                 plate_mid_y,
-                AXIS_Z + dz * NEMA17.hole_pitch / 2,
+                AXIS_Z + dz * NEMA17_SPEC.hole_pitch / 2,
             ]
         )
         for dx in (-1, 1)
         for dz in (-1, 1)
     ]
     mount = (foot | plate | rib) - bolts - recess - boss - screws
-    return set_handles(mount, motor=MOTOR, pulley=PULLEY, motor_screws=MOTOR_SCREWS)
+    return set_handles(mount, motor=MOTOR, pulley=PULLEY_SPEC, motor_screws=MOTOR_SCREWS)
 
 
 def x_motor_mount() -> Solid:
@@ -123,15 +125,15 @@ def x_motor_mount() -> Solid:
 PULLEY_POINT = (X_DRIVE.motor_x, X_BELT.y, AXIS_Z)
 FACE_POINT = (X_DRIVE.motor_x, X_DRIVE.motor_face_y, AXIS_Z)
 MOTOR_FACE = Box(
-    lo=(X_DRIVE.motor_x - NEMA17.width / 2, X_DRIVE.motor_face_y - 0.3, AXIS_Z - NEMA17.width / 2),
-    hi=(X_DRIVE.motor_x + NEMA17.width / 2, X_DRIVE.motor_face_y + 0.3, AXIS_Z + NEMA17.width / 2),
+    lo=(X_DRIVE.motor_x - NEMA17_SPEC.width / 2, X_DRIVE.motor_face_y - 0.3, AXIS_Z - NEMA17_SPEC.width / 2),
+    hi=(X_DRIVE.motor_x + NEMA17_SPEC.width / 2, X_DRIVE.motor_face_y + 0.3, AXIS_Z + NEMA17_SPEC.width / 2),
     facing=(0, 1, 0),
 )
 #: The front row's M5 heads in their recesses (the rear row's bolts don't pass the foot)
 BOLT_SEATS = [
     Cylinder(
         center=(
-            hx * SCS10UU.hole_pitch_x / 2,
+            hx * SCS10UU_SPEC.hole_pitch_x / 2,
             X_DRIVE.bolt_rows[0],
             FOOT_Z0 + X_DRIVE.foot_t - X_DRIVE.foot_head_recess,
         ),
@@ -151,7 +153,7 @@ FOOT_BEARING = Box(
 
 
 #: Friction around each front bolt: the foot's underside is bonded to the bracket within BOND_RADIUS
-BOND_ZONES = [bond_zone((hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0)) for hx in (-1, 1)]
+BOND_ZONES = [bond_zone((hx * SCS10UU_SPEC.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0)) for hx in (-1, 1)]
 
 
 def _case(name: str, jam: bool) -> LoadCase:

@@ -77,8 +77,8 @@ class Scs10uuSpec:
         return self.recess_w / 2 + self.top_chamfer + self.flat_w / 2
 
 
-SK10 = Sk10Spec()
-SCS10UU = Scs10uuSpec()
+SK10_SPEC = Sk10Spec()
+SCS10UU_SPEC = Scs10uuSpec()
 
 
 def shaft(spec: Shaft, length: float | None = None) -> Solid:
@@ -90,20 +90,28 @@ def shaft(spec: Shaft, length: float | None = None) -> Solid:
 
 def sk10() -> Solid:
     """SK10. Origin: mounting surface under the shaft axis, at mid-thickness; shaft along Y."""
-    c = SK10.base_chamfer
+    c = SK10_SPEC.base_chamfer
     base = hull(
-        cube([SK10.width - 2 * c, SK10.length, SK10.base_t]).translate([-SK10.width / 2 + c, -SK10.length / 2, 0]),
-        cube([SK10.width, SK10.length, SK10.base_t - c]).translate([-SK10.width / 2, -SK10.length / 2, 0]),
+        cube([SK10_SPEC.width - 2 * c, SK10_SPEC.length, SK10_SPEC.base_t]).translate(
+            [-SK10_SPEC.width / 2 + c, -SK10_SPEC.length / 2, 0]
+        ),
+        cube([SK10_SPEC.width, SK10_SPEC.length, SK10_SPEC.base_t - c]).translate(
+            [-SK10_SPEC.width / 2, -SK10_SPEC.length / 2, 0]
+        ),
     )
-    body = base | cube([SK10.body_w, SK10.length, SK10.height]).translate([-SK10.body_w / 2, -SK10.length / 2, 0])
+    body = base | cube([SK10_SPEC.body_w, SK10_SPEC.length, SK10_SPEC.height]).translate(
+        [-SK10_SPEC.body_w / 2, -SK10_SPEC.length / 2, 0]
+    )
     bore = (
-        cylinder(d=SK10.shaft_d, h=SK10.length + 2, center=True, fn=32)
+        cylinder(d=SK10_SPEC.shaft_d, h=SK10_SPEC.length + 2, center=True, fn=32)
         .rotate([90, 0, 0])
-        .translate([0, 0, SK10.shaft_h])
+        .translate([0, 0, SK10_SPEC.shaft_h])
     )
-    slit = cube([1, SK10.length + 2, SK10.height]).translate([-0.5, -SK10.length / 2 - 1, SK10.shaft_h])
+    slit = cube([1, SK10_SPEC.length + 2, SK10_SPEC.height]).translate(
+        [-0.5, -SK10_SPEC.length / 2 - 1, SK10_SPEC.shaft_h]
+    )
     holes = [
-        cylinder(d=SK10.hole_d, h=SK10.base_t + 2, fn=24).translate([sx * SK10.hole_pitch / 2, 0, -1])
+        cylinder(d=SK10_SPEC.hole_d, h=SK10_SPEC.base_t + 2, fn=24).translate([sx * SK10_SPEC.hole_pitch / 2, 0, -1])
         for sx in (-1, 1)
     ]
     return (body - bore - slit - holes).color("Gainsboro")
@@ -111,34 +119,38 @@ def sk10() -> Solid:
 
 def scs10uu() -> Solid:
     """SCS10UU. Origin: block base plane under the shaft axis, at mid-length; shaft along Y."""
-    c = SCS10UU.top_chamfer
+    c = SCS10UU_SPEC.top_chamfer
     recess = polygon(
         [
-            [-SCS10UU.recess_w / 2 - c, EPS],
-            [SCS10UU.recess_w / 2 + c, EPS],
-            [SCS10UU.recess_w / 2, -SCS10UU.recess_d],
-            [-SCS10UU.recess_w / 2, -SCS10UU.recess_d],
+            [-SCS10UU_SPEC.recess_w / 2 - c, EPS],
+            [SCS10UU_SPEC.recess_w / 2 + c, EPS],
+            [SCS10UU_SPEC.recess_w / 2, -SCS10UU_SPEC.recess_d],
+            [-SCS10UU_SPEC.recess_w / 2, -SCS10UU_SPEC.recess_d],
         ]
-    ).translate([0, SCS10UU.height, 0])
+    ).translate([0, SCS10UU_SPEC.height, 0])
     edge_chamfers = [
-        polygon([[0, EPS], [-sx * c, EPS], [0, -c]]).translate([sx * SCS10UU.width / 2, SCS10UU.height, 0])
+        polygon([[0, EPS], [-sx * c, EPS], [0, -c]]).translate([sx * SCS10UU_SPEC.width / 2, SCS10UU_SPEC.height, 0])
         for sx in (-1, 1)
     ]
-    top_cuts = linear_extrude([recess, *edge_chamfers], height=SCS10UU.length + 2, center=True).rotate([90, 0, 0])
+    top_cuts = linear_extrude([recess, *edge_chamfers], height=SCS10UU_SPEC.length + 2, center=True).rotate([90, 0, 0])
     # the block is modeled with its LM10UU bushing in place, so the bore is the shaft's
     bore = (
-        cylinder(d=SCS10UU.shaft_d, h=SCS10UU.length + 2, center=True, fn=40)
+        cylinder(d=SCS10UU_SPEC.shaft_d, h=SCS10UU_SPEC.length + 2, center=True, fn=40)
         .rotate([90, 0, 0])
-        .translate([0, 0, SCS10UU.shaft_h])
+        .translate([0, 0, SCS10UU_SPEC.shaft_h])
     )
     holes = [
-        cylinder(d=SCS10UU.top_hole_m * 0.85, h=SCS10UU.top_hole_depth + 1, fn=16).translate(
-            [sx * SCS10UU.hole_pitch_x / 2, sy * SCS10UU.hole_pitch_y / 2, SCS10UU.height - SCS10UU.top_hole_depth]
+        cylinder(d=SCS10UU_SPEC.top_hole_m * 0.85, h=SCS10UU_SPEC.top_hole_depth + 1, fn=16).translate(
+            [
+                sx * SCS10UU_SPEC.hole_pitch_x / 2,
+                sy * SCS10UU_SPEC.hole_pitch_y / 2,
+                SCS10UU_SPEC.height - SCS10UU_SPEC.top_hole_depth,
+            ]
         )
         for sx in (-1, 1)
         for sy in (-1, 1)
     ]
-    block = cube([SCS10UU.width, SCS10UU.length, SCS10UU.height]).translate(
-        [-SCS10UU.width / 2, -SCS10UU.length / 2, 0]
+    block = cube([SCS10UU_SPEC.width, SCS10UU_SPEC.length, SCS10UU_SPEC.height]).translate(
+        [-SCS10UU_SPEC.width / 2, -SCS10UU_SPEC.length / 2, 0]
     )
     return (block - top_cuts - bore - holes).color("Silver")

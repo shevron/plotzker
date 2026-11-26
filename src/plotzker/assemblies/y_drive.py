@@ -7,7 +7,7 @@ Machine frame (``params``). Not printable.
 from typing import TYPE_CHECKING
 
 from cadder.handles import frame_axes, get_handle, get_handles, place_in_frame, shift_handle
-from cadder.hardware import GT2, PULLEY, gt2_idler, gt2_pulley, hex_nut, metric, nema17, shcs, sk10
+from cadder.hardware import GT2_SPEC, PULLEY_SPEC, gt2_idler, gt2_pulley, hex_nut, metric, nema17, shcs, sk10
 from cadder.types import Matrix
 from pythonscad import cube, mirror, translate
 
@@ -72,14 +72,16 @@ def y_belt_runs(gantry_y: float) -> list[Solid]:
     The top run is cut under the gantry: it runs from each pulley to the outer end of
     that end's belt clamp (the gantry model draws the belt inside the clamps).
     """
-    x0 = Y_AXIS.belt_x - GT2.width / 2
+    x0 = Y_AXIS.belt_x - GT2_SPEC.width / 2
     front_clamp_start = gantry_y - BRACKET.len_y / 2
     rear_clamp_end = gantry_y + BRACKET.len_y / 2
-    lower_z = Y_AXIS.pulley_axis_z - PULLEY.pd / 2 - GT2.pitch_line_from_back
-    upper_z = Y_AXIS.belt_back_z - GT2.thickness
+    lower_z = Y_AXIS.pulley_axis_z - PULLEY_SPEC.pd / 2 - GT2_SPEC.pitch_line_from_back
+    upper_z = Y_AXIS.belt_back_z - GT2_SPEC.thickness
     runs = [(Y_DRIVE.idler_y, Y_DRIVE.motor_y, lower_z)]
     runs += [(Y_DRIVE.idler_y, front_clamp_start, upper_z), (rear_clamp_end, Y_DRIVE.motor_y, upper_z)]
-    return [cube([GT2.width, y1 - y0, GT2.thickness]).translate([x0, y0, z]).color("#111") for y0, y1, z in runs]
+    return [
+        cube([GT2_SPEC.width, y1 - y0, GT2_SPEC.thickness]).translate([x0, y0, z]).color("#111") for y0, y1, z in runs
+    ]
 
 
 def _y_endstop_frame(side: Side) -> tuple[list[float], list[float], list[float], list[float]]:

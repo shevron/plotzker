@@ -8,7 +8,7 @@ import pytest
 
 from cadder import cpsk
 from cadder.geometry import load_sketch, teardrop
-from cadder.hardware import VSLOT
+from cadder.hardware import VSLOT_SPEC
 from cadder.hardware.vslot import PROFILE_SKETCHES, SKETCH_DIR, vslot_profile
 
 CPSK_EXAMPLE = Path(__file__).parents[1] / "docs" / "cpsk" / "examples" / "plate-with-hole.cpsk"
@@ -32,7 +32,7 @@ def outline_stats(sketch) -> tuple[float, list[float], list[float]]:
 def test_vslot_profile_fills_its_envelope(size):
     """Each profile spans exactly its ``n × m`` units from the origin and is not solid."""
     area, lo, hi = outline_stats(vslot_profile(size))
-    width, height = size[0] * VSLOT.unit, size[1] * VSLOT.unit
+    width, height = size[0] * VSLOT_SPEC.unit, size[1] * VSLOT_SPEC.unit
     assert lo == pytest.approx([0, 0], abs=1e-6)
     assert hi == pytest.approx([width, height], abs=1e-6)
     assert 0 < area < width * height

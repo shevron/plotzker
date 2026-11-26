@@ -34,20 +34,25 @@ class ZribSpec:
     tall_zone: tuple[float, float] = (90, 40)
 
 
-ZRIB = ZribSpec()
+ZRIB_SPEC = ZribSpec()
 
 
 def zrib() -> Solid:
     """The board: PCB with its mounting holes and a block standing for the tall parts."""
     holes = [
-        cylinder(d=ZRIB.hole_d, h=ZRIB.pcb_t + 2, fn=16).translate(
-            [sx * ZRIB.hole_pitch[0] / 2, sy * ZRIB.hole_pitch[1] / 2, -1]
+        cylinder(d=ZRIB_SPEC.hole_d, h=ZRIB_SPEC.pcb_t + 2, fn=16).translate(
+            [sx * ZRIB_SPEC.hole_pitch[0] / 2, sy * ZRIB_SPEC.hole_pitch[1] / 2, -1]
         )
         for sx in (-1, 1)
         for sy in (-1, 1)
     ]
-    pcb = cube([ZRIB.width, ZRIB.depth, ZRIB.pcb_t]).translate([-ZRIB.width / 2, -ZRIB.depth / 2, 0]) - holes
-    tall = cube([*ZRIB.tall_zone, ZRIB.height - ZRIB.pcb_t]).translate(
-        [-ZRIB.tall_zone[0] / 2, -ZRIB.tall_zone[1] / 2, ZRIB.pcb_t]
+    pcb = (
+        cube([ZRIB_SPEC.width, ZRIB_SPEC.depth, ZRIB_SPEC.pcb_t]).translate(
+            [-ZRIB_SPEC.width / 2, -ZRIB_SPEC.depth / 2, 0]
+        )
+        - holes
+    )
+    tall = cube([*ZRIB_SPEC.tall_zone, ZRIB_SPEC.height - ZRIB_SPEC.pcb_t]).translate(
+        [-ZRIB_SPEC.tall_zone[0] / 2, -ZRIB_SPEC.tall_zone[1] / 2, ZRIB_SPEC.pcb_t]
     )
     return pcb.color("DarkGreen") | tall.color("#444")

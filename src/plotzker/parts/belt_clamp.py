@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import EPS, FN_HOLE
 from cadder.handles import handle, set_handles
-from cadder.hardware import GT2
+from cadder.hardware import GT2_SPEC
 from pythonscad import cube, cylinder
 
 from plotzker.params import CLAMP, TOL
@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 def belt_clamp() -> Solid:
     """One belt clamp cap, in print orientation."""
-    belt_zone = GT2.width - 0.4  # ridges stay inside the groove
+    belt_zone = GT2_SPEC.width - 0.4  # ridges stay inside the groove
     plate = cube([CLAMP.w, CLAMP.length, CLAMP.t]).translate([-CLAMP.w / 2, 0, 0])
     rail_w = (CLAMP.w - CLAMP.channel_w) / 2
     rails = [
@@ -46,9 +46,9 @@ def belt_clamp() -> Solid:
     ]
     ridges = [
         cube([belt_zone, CLAMP.ridge_w, CLAMP.ridge_h + EPS]).translate(
-            [-belt_zone / 2, i * GT2.pitch + (GT2.pitch - CLAMP.ridge_w) / 2, CLAMP.t - EPS]
+            [-belt_zone / 2, i * GT2_SPEC.pitch + (GT2_SPEC.pitch - CLAMP.ridge_w) / 2, CLAMP.t - EPS]
         )
-        for i in range(math.floor(CLAMP.length / GT2.pitch))
+        for i in range(math.floor(CLAMP.length / GT2_SPEC.pitch))
     ]
     holes = [
         cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.total_t + 2, fn=FN_HOLE).translate(

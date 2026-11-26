@@ -12,7 +12,7 @@ from cadder.handles import get_handle, get_handles
 from cadder.hardware import countersunk_screw, hex_nut, shcs
 from pythonscad import cube
 
-from plotzker.hardware import PSU, c14_inlet, psu, xt60_female
+from plotzker.hardware import PSU_SPEC, c14_inlet, psu, xt60_female
 from plotzker.params import FRAME, PSU_MOUNT, WOOD_SCREW
 from plotzker.parts.psu_bracket import psu_bracket_installed
 from plotzker.parts.psu_hood import psu_hood_installed
@@ -29,10 +29,10 @@ def placed(item: Solid) -> Solid:
 def brackets_local() -> list[Solid]:
     """Both brackets with their screws (PSU frame)."""
     items: list[Solid] = []
-    for y in PSU.hole_y:
+    for y in PSU_SPEC.hole_y:
         bracket = psu_bracket_installed().translate([0, y, 0])
         items.append(bracket.color("SteelBlue"))
-        items += [shcs(PSU.hole_m, PSU_MOUNT.psu_screw_len).align(h) for h in get_handles(bracket, "psu_screws")]
+        items += [shcs(PSU_SPEC.hole_m, PSU_MOUNT.psu_screw_len).align(h) for h in get_handles(bracket, "psu_screws")]
         items += [
             countersunk_screw(WOOD_SCREW.m, WOOD_SCREW.length, WOOD_SCREW.head_d).align(h)
             for h in get_handles(bracket, "wood_screws")
@@ -49,7 +49,7 @@ def hood_local() -> list[Solid]:
     items += [hex_nut(3).align(h) for h in get_handles(hood, "inlet_nuts")]
     items.append(xt60_female().align(get_handle(hood, "xt60")))
     items += [
-        shcs(PSU.hole_m, PSU_MOUNT.hood_screw_len).align(h)
+        shcs(PSU_SPEC.hole_m, PSU_MOUNT.hood_screw_len).align(h)
         for name in ("label_screws", "switch_screws")
         for h in get_handles(hood, name)
     ]
@@ -70,7 +70,7 @@ def board_piece() -> Solid:
     """The corner of the baseboard the mount hangs from (machine frame)."""
     bx, _, t = FRAME.board_size
     y0 = PSU_MOUNT.terminal_y - PSU_MOUNT.depth - 20
-    length = PSU.size[1] + PSU_MOUNT.depth + 40
+    length = PSU_SPEC.size[1] + PSU_MOUNT.depth + 40
     return cube([120, length, t]).translate([bx - 120, y0, -t]).color("BurlyWood", 0.5)
 
 

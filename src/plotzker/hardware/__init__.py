@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 
 from cadder.hardware import Shaft, shaft
 
-from plotzker.hardware.endstop import ENDSTOP, endstop, endstop_keepout, endstop_placed
-from plotzker.hardware.psu import C14_INLET, PSU, XT60, c14_inlet, psu, xt60_female
-from plotzker.hardware.zrib import ZRIB, zrib
+from plotzker.hardware.endstop import ENDSTOP_SPEC, endstop, endstop_keepout, endstop_placed
+from plotzker.hardware.psu import C14_INLET_SPEC, PSU_SPEC, XT60_SPEC, c14_inlet, psu, xt60_female
+from plotzker.hardware.zrib import ZRIB_SPEC, zrib
 
 if TYPE_CHECKING:
     from pythonscad import Solid
@@ -26,12 +26,12 @@ def y_shaft(length: float = Y_SHAFT.length) -> Solid:
 
 
 __all__ = [
-    "C14_INLET",
-    "ENDSTOP",
-    "PSU",
-    "XT60",
+    "C14_INLET_SPEC",
+    "ENDSTOP_SPEC",
+    "PSU_SPEC",
+    "XT60_SPEC",
     "Y_SHAFT",
-    "ZRIB",
+    "ZRIB_SPEC",
     "c14_inlet",
     "endstop",
     "endstop_keepout",

@@ -47,7 +47,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import EPS, FN_HOLE, lever_couple, teardrop_x
 from cadder.handles import handle, set_handles
-from cadder.hardware import ECCENTRIC, metric
+from cadder.hardware import ECCENTRIC_SPEC, metric
 from cadder.part import (
     DisplacementLimit,
     FemSpec,
@@ -96,7 +96,7 @@ def _body() -> Solid:
         [-CARRIAGE.tab_w / 2, CARRIAGE.plate_front_y, CARRIAGE.top_z - EPS]
     )
     standoffs = [
-        cylinder(d=CARRIAGE.top_boss_d, h=ECCENTRIC.stack + EPS, fn=32)
+        cylinder(d=CARRIAGE.top_boss_d, h=ECCENTRIC_SPEC.stack + EPS, fn=32)
         .rotate([-90, 0, 0])
         .translate([sx * WHEEL_X, CARRIAGE.plate_back_y - EPS, CARRIAGE.wheel_z[0]])
         for sx in (-1, 1)
@@ -124,13 +124,13 @@ def _wheel_axle_holes() -> list[Solid]:
     for sx in (-1, 1):
         # top wheels: M5 clearance through plate and stand-off
         holes.append(
-            cylinder(d=TOL.bolt_hole_d(5), h=CARRIAGE.plate_t + ECCENTRIC.stack + 2, fn=FN_HOLE)
+            cylinder(d=TOL.bolt_hole_d(5), h=CARRIAGE.plate_t + ECCENTRIC_SPEC.stack + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
             .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[0]])
         )
         # bottom wheels: hole for the eccentric boss (the M5 moves ±offset inside it)
         holes.append(
-            cylinder(d=TOL.slide_d(ECCENTRIC.boss_d), h=CARRIAGE.plate_t + 2, fn=FN_HOLE)
+            cylinder(d=TOL.slide_d(ECCENTRIC_SPEC.boss_d), h=CARRIAGE.plate_t + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
             .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[1]])
         )

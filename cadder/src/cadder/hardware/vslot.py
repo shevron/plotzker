@@ -72,9 +72,9 @@ class EccentricSpacerSpec:
         return self.length + self.back_len
 
 
-VSLOT = VSlotSpec()
-VWHEEL = VWheelSpec()
-ECCENTRIC = EccentricSpacerSpec()
+VSLOT_SPEC = VSlotSpec()
+VWHEEL_SPEC = VWheelSpec()
+ECCENTRIC_SPEC = EccentricSpacerSpec()
 
 
 def vslot_profile(n: tuple[int, int] = (1, 1)) -> Solid:
@@ -91,7 +91,7 @@ def vslot_profile(n: tuple[int, int] = (1, 1)) -> Solid:
     profile = load_sketch(SKETCH_DIR / name)
     if quarter_turn:
         # lay the upright sketch flat, back into the +X +Y quadrant
-        profile = profile.rotate([0, 0, 90]).translate([n[0] * VSLOT.unit, 0, 0])
+        profile = profile.rotate([0, 0, 90]).translate([n[0] * VSLOT_SPEC.unit, 0, 0])
     return profile
 
 
@@ -116,10 +116,10 @@ def vslot_y(length: float, size: tuple[int, int] = (1, 1)) -> Solid:
 
 def vwheel() -> Solid:
     """V-wheel. Origin: wheel center; axis along Y (rides on X-direction rails)."""
-    inner_d = VWHEEL.od - 2 * VSLOT.groove_d
-    cone = cylinder(d1=VWHEEL.od, d2=inner_d, h=VWHEEL.width / 2 - 0.5, fn=48)
-    body = cylinder(d=inner_d, h=VWHEEL.width, center=True, fn=48) | cone | cone.mirror([0, 0, 1])
-    bore = cylinder(d=VWHEEL.bore, h=VWHEEL.width + 2, center=True, fn=24)
+    inner_d = VWHEEL_SPEC.od - 2 * VSLOT_SPEC.groove_d
+    cone = cylinder(d1=VWHEEL_SPEC.od, d2=inner_d, h=VWHEEL_SPEC.width / 2 - 0.5, fn=48)
+    body = cylinder(d=inner_d, h=VWHEEL_SPEC.width, center=True, fn=48) | cone | cone.mirror([0, 0, 1])
+    bore = cylinder(d=VWHEEL_SPEC.bore, h=VWHEEL_SPEC.width + 2, center=True, fn=24)
     return (body - bore).rotate([90, 0, 0]).color("#202020")
 
 
@@ -131,9 +131,9 @@ def eccentric_spacer(rot: float = 0) -> Solid:
     adjustment angle; the bore sits ``offset`` off the boss axis.
     """
     body = (
-        cylinder(d=ECCENTRIC.boss_d, h=ECCENTRIC.boss_len, fn=32).translate([0, 0, -ECCENTRIC.boss_len])
-        | cylinder(d=ECCENTRIC.hex_ac, h=ECCENTRIC.length, fn=6)
-        | cylinder(d=ECCENTRIC.boss_d, h=ECCENTRIC.stack, fn=32)
+        cylinder(d=ECCENTRIC_SPEC.boss_d, h=ECCENTRIC_SPEC.boss_len, fn=32).translate([0, 0, -ECCENTRIC_SPEC.boss_len])
+        | cylinder(d=ECCENTRIC_SPEC.hex_ac, h=ECCENTRIC_SPEC.length, fn=6)
+        | cylinder(d=ECCENTRIC_SPEC.boss_d, h=ECCENTRIC_SPEC.stack, fn=32)
     )
-    bore = cylinder(d=ECCENTRIC.bore, h=20, fn=20).translate([ECCENTRIC.offset, 0, -5]).rotate([0, 0, rot])
+    bore = cylinder(d=ECCENTRIC_SPEC.bore, h=20, fn=20).translate([ECCENTRIC_SPEC.offset, 0, -5]).rotate([0, 0, rot])
     return (body - bore).rotate([-90, 0, 0]).color("Gold")

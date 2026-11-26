@@ -26,7 +26,7 @@ from plotzker.assemblies.skeleton import carriage_x_at, gantry_y_at, moving_part
 from plotzker.assemblies.y_drive import gantry_y_at as y_gantry_y_at
 from plotzker.assemblies.y_drive import y_drive_assembly, y_drive_fit_check, y_endstop_keepout
 from plotzker.assemblies.zrib_mount import zrib_mount_assembly, zrib_mount_fit_check
-from plotzker.hardware import C14_INLET, xt60_female, y_shaft
+from plotzker.hardware import C14_INLET_SPEC, xt60_female, y_shaft
 from plotzker.params import BEAM, CARRIAGE, FRAME, X_DRIVE, Y_AXIS
 from plotzker.parts.gantry_end_bracket import Side, gantry_end_bracket_local
 from plotzker.parts.psu_hood import psu_hood_installed
@@ -181,7 +181,7 @@ def test_psu_mount_parts_do_not_collide():
     PSU's holes), except the XT60's press fit in the hood."""
     items = list(psu_mount_local())
     hood = 1 + len(brackets_local())
-    xt60 = hood + 2 + 2 * len(C14_INLET.hole_xy)  # after the inlet, its screws and nuts
+    xt60 = hood + 2 + 2 * len(C14_INLET_SPEC.hole_xy)  # after the inlet, its screws and nuts
     for i, a in enumerate(items):
         for j in range(i + 1, len(items)):
             limit = XT60_PRESS_MM3 if (i, j) == (hood, xt60) else 0.05
@@ -292,19 +292,19 @@ def test_x_endstop_board_seats_flat_over_its_solder():
     from cadder.handles import get_handle
     from pythonscad import cube, cylinder
 
-    from plotzker.hardware import ENDSTOP
+    from plotzker.hardware import ENDSTOP_SPEC
     from plotzker.params import X_ENDSTOP
     from plotzker.parts.x_endstop_mount import x_endstop_mount_installed
 
     mount = x_endstop_mount_installed()
     board_bottom = X_ENDSTOP.board_bottom_z - Y_AXIS.scs_top_z
     yc = sum(X_ENDSTOP.board_y) / 2
-    solder = cube([ENDSTOP.pcb[0] - 2, ENDSTOP.pcb[1] - 2, 1.8]).translate(
+    solder = cube([ENDSTOP_SPEC.pcb[0] - 2, ENDSTOP_SPEC.pcb[1] - 2, 1.8]).translate(
         [X_ENDSTOP.board_x[0] + 1, X_ENDSTOP.board_y[0] + 1, board_bottom - 1.8]
     )
     lands = [
         cylinder(d=X_ENDSTOP.land_d + 0.2, h=5, fn=24).translate(
-            [X_ENDSTOP.hole_x, yc + s * ENDSTOP.hole_pitch / 2, board_bottom - 3]
+            [X_ENDSTOP.hole_x, yc + s * ENDSTOP_SPEC.hole_pitch / 2, board_bottom - 3]
         )
         for s in (-1, 1)
     ]
@@ -312,7 +312,7 @@ def test_x_endstop_board_seats_flat_over_its_solder():
     assert volume((solder - union(*lands)) & mount) < 1e-3
     # and the board's underside still rests on the lands
     pad = cylinder(d=X_ENDSTOP.land_d - 1, h=0.4, fn=24).translate(
-        [X_ENDSTOP.hole_x, yc + ENDSTOP.hole_pitch / 2, board_bottom - 0.2]
+        [X_ENDSTOP.hole_x, yc + ENDSTOP_SPEC.hole_pitch / 2, board_bottom - 0.2]
     )
     assert volume(pad & mount) > 1
 
@@ -334,25 +334,33 @@ def test_y_endstop_board_seats_flat_over_its_solder(side):
     """T3.14: same as the X board: only the lands touch the 1.8 mm solder side of the board."""
     from pythonscad import cube, cylinder
 
-    from plotzker.hardware import ENDSTOP
+    from plotzker.hardware import ENDSTOP_SPEC
     from plotzker.params import Y_ENDSTOP
 
     mount = y_idler_mount_installed(side)
     zc = Y_ENDSTOP.board_z_center(-1 if side is Side.LEFT else 1)
-    solder = cube([1.8, ENDSTOP.pcb[0] - 2, ENDSTOP.pcb[1] - 2]).translate(
-        [Y_ENDSTOP.board_x0 - 1.8, Y_ENDSTOP.board_y[0] + 1, zc - ENDSTOP.pcb[1] / 2 + 1]
+    solder = cube([1.8, ENDSTOP_SPEC.pcb[0] - 2, ENDSTOP_SPEC.pcb[1] - 2]).translate(
+        [Y_ENDSTOP.board_x0 - 1.8, Y_ENDSTOP.board_y[0] + 1, zc - ENDSTOP_SPEC.pcb[1] / 2 + 1]
     )
     lands = [
         cylinder(d=Y_ENDSTOP.land_d + 0.2, h=5, fn=24)
         .rotate([0, 90, 0])
-        .translate([Y_ENDSTOP.board_x0 - 3, Y_ENDSTOP.board_front_y + ENDSTOP.hole_v, zc + s * ENDSTOP.hole_pitch / 2])
+        .translate(
+            [
+                Y_ENDSTOP.board_x0 - 3,
+                Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v,
+                zc + s * ENDSTOP_SPEC.hole_pitch / 2,
+            ]
+        )
         for s in (-1, 1)
     ]
     assert volume((solder - union(*lands)) & mount) < 1e-3
     pad = (
         cylinder(d=Y_ENDSTOP.land_d - 1, h=0.4, fn=24)
         .rotate([0, 90, 0])
-        .translate([Y_ENDSTOP.board_x0 - 0.2, Y_ENDSTOP.board_front_y + ENDSTOP.hole_v, zc + ENDSTOP.hole_pitch / 2])
+        .translate(
+            [Y_ENDSTOP.board_x0 - 0.2, Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v, zc + ENDSTOP_SPEC.hole_pitch / 2]
+        )
     )
     assert volume(pad & mount) > 1
 

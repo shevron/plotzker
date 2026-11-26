@@ -8,9 +8,9 @@ from typing import TYPE_CHECKING
 
 from cadder.handles import frame_axes, get_handle, get_handles, handle, place_in_frame, shift_handle
 from cadder.hardware import (
-    GT2,
-    PULLEY,
-    SCS10UU,
+    GT2_SPEC,
+    PULLEY_SPEC,
+    SCS10UU_SPEC,
     gt2_idler,
     gt2_pulley,
     hex_nut,
@@ -90,7 +90,7 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
     """
     bracket = gantry_end_bracket_local(side)
     items = [bracket.color("DarkOrange")]
-    items += [scs10uu().translate([0, block * Y_AXIS.scs_pitch / 2, -SCS10UU.height]) for block in (-1, 1)]
+    items += [scs10uu().translate([0, block * Y_AXIS.scs_pitch / 2, -SCS10UU_SPEC.height]) for block in (-1, 1)]
     # 8 × M5 into the blocks; the rear block's bolts also clamp the X motor/endstop foot (2 × M5×25)
     items += [shcs(5, 20).align(bolt) for bolt in get_handles(bracket, "block_bolts_front")]
     foot_top = X_DRIVE.foot_t
@@ -108,8 +108,8 @@ def gantry_end_local(side: Side = Side.LEFT) -> list[Solid]:
         clamp = belt_clamp()
         items.append(clamp.align(mount, get_handle(clamp, "mount")).color("Gold"))
         items.append(
-            cube([GT2.width, CLAMP.length, GT2.thickness])
-            .translate([-GT2.width / 2, 0, -GT2.thickness])
+            cube([GT2_SPEC.width, CLAMP.length, GT2_SPEC.thickness])
+            .translate([-GT2_SPEC.width / 2, 0, -GT2_SPEC.thickness])
             .align(mount)
             .color("#111")
         )
@@ -127,12 +127,12 @@ def gantry_assembly(gantry_y: float) -> list[Solid]:
     """The whole gantry with its center (midway between the blocks) at machine y = ``gantry_y``."""
     left_x, right_x = Y_AXIS.shaft_x
     belt_return = (
-        cube([Y_AXIS.shaft_spacing - X_DRIVE.idler_x - X_DRIVE.motor_x, GT2.width, GT2.thickness])
+        cube([Y_AXIS.shaft_spacing - X_DRIVE.idler_x - X_DRIVE.motor_x, GT2_SPEC.width, GT2_SPEC.thickness])
         .translate(
             [
                 left_x + X_DRIVE.idler_x,
-                gantry_y + X_BELT.y - GT2.width / 2,
-                X_BELT.pulley_axis_z + PULLEY.pd / 2 - GT2.pitch_line_from_back,
+                gantry_y + X_BELT.y - GT2_SPEC.width / 2,
+                X_BELT.pulley_axis_z + PULLEY_SPEC.pd / 2 - GT2_SPEC.pitch_line_from_back,
             ]
         )
         .color("#111")

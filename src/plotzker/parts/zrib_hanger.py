@@ -37,7 +37,7 @@ from cadder.printing import nut_slot
 from cadder.types import Matrix
 from pythonscad import cube, cylinder, linear_extrude
 
-from plotzker.hardware import ZRIB
+from plotzker.hardware import ZRIB_SPEC
 from plotzker.params import TOL, WOOD_SCREW, ZMOUNT
 
 if TYPE_CHECKING:
@@ -46,15 +46,15 @@ if TYPE_CHECKING:
 
 def _handles() -> dict[str, Matrix | list[Matrix]]:
     """Handles of the negative-v hanger for the hardware that meets it (mount frame)."""
-    board_bottom = ZMOUNT.board_z - ZRIB.pcb_t
+    board_bottom = ZMOUNT.board_z - ZRIB_SPEC.pcb_t
     sides = (-1, 1)
     return {
         "board": handle([0, 0, ZMOUNT.board_z], [0, 180, 0]),
         #: M3×12 up through the post and rail, head under the board's solder side
         "board_screws": [
-            handle([sx * ZRIB.hole_pitch[0] / 2, ZMOUNT.post_v, board_bottom], [180, 0, 0]) for sx in sides
+            handle([sx * ZRIB_SPEC.hole_pitch[0] / 2, ZMOUNT.post_v, board_bottom], [180, 0, 0]) for sx in sides
         ],
-        "post_nuts": [handle([sx * ZRIB.hole_pitch[0] / 2, ZMOUNT.post_v, -TOL.nut_trap_h(3)]) for sx in sides],
+        "post_nuts": [handle([sx * ZRIB_SPEC.hole_pitch[0] / 2, ZMOUNT.post_v, -TOL.nut_trap_h(3)]) for sx in sides],
         "wood_screws": [
             handle([sx * ZMOUNT.wood_screw_u, ZMOUNT.post_v + ZMOUNT.wood_screw_v, -WOOD_SCREW.boss_t], [180, 0, 0])
             for sx in sides
@@ -89,7 +89,7 @@ def zrib_hanger_mount() -> Solid:
         u_in, u_out = sorted((sx * ZMOUNT.leg_u[0], sx * ZMOUNT.leg_u[1]))
         body = body | _box(u_in, u_out, v0, v0 + ZMOUNT.leg_t, ZMOUNT.strap_top_z, 0)
         post = cylinder(d=ZMOUNT.post_d, h=ZMOUNT.post_h + 0.01, fn=FN_HOLE).translate(
-            [sx * ZRIB.hole_pitch[0] / 2, ZMOUNT.post_v, -ZMOUNT.rail_t - ZMOUNT.post_h]
+            [sx * ZRIB_SPEC.hole_pitch[0] / 2, ZMOUNT.post_v, -ZMOUNT.rail_t - ZMOUNT.post_h]
         )
         boss = cylinder(d=ZMOUNT.boss_d, h=WOOD_SCREW.boss_t, fn=FN_HOLE).translate(
             [sx * ZMOUNT.wood_screw_u, ZMOUNT.post_v + ZMOUNT.wood_screw_v, -WOOD_SCREW.boss_t]
@@ -98,7 +98,7 @@ def zrib_hanger_mount() -> Solid:
 
     nut_t, nut_ac = TOL.nut_trap_h(3), TOL.nut_trap_ac(3)
     for sx in (-1, 1):
-        u = sx * ZRIB.hole_pitch[0] / 2
+        u = sx * ZRIB_SPEC.hole_pitch[0] / 2
         body = body - _hole_z(
             TOL.bolt_hole_d(3), u, ZMOUNT.post_v, -ZMOUNT.rail_t - ZMOUNT.post_h - 1, 1
         )  # board screw, through post and rail

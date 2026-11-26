@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from cadder.drawing import SvgDrawing, markdown_table, stroke
-from cadder.hardware import SK10
+from cadder.hardware import SK10_SPEC
 
 from plotzker.params import (
     BASEBOARD,
@@ -171,10 +171,10 @@ def drilling_svg() -> str:
         d.line(x, Y_AXIS.shaft_y0, x, Y_AXIS.shaft_y0 + 700, "#999", 0.4)
         for y in Y_AXIS.sk10_y:
             d.rect(
-                x - SK10.width / 2,
-                y - SK10.length / 2,
-                x + SK10.width / 2,
-                y + SK10.length / 2,
+                x - SK10_SPEC.width / 2,
+                y - SK10_SPEC.length / 2,
+                x + SK10_SPEC.width / 2,
+                y + SK10_SPEC.length / 2,
                 thin,
             )
     for name, (x0, y0, x1, y1) in mount_zones().items():

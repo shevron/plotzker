@@ -45,7 +45,7 @@ from cadder.regions import Box, Cylinder, Placement, bond_zone
 from cadder.types import Matrix
 from pythonscad import cube, cylinder, union
 
-from plotzker.hardware import ENDSTOP
+from plotzker.hardware import ENDSTOP_SPEC
 from plotzker.loads import Y_BELT_LOADS
 from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import TOL, WOOD_SCREW, Y_AXIS, Y_DRIVE, Y_ENDSTOP, Y_IDLER, FloatingIdler
@@ -110,7 +110,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     zc = Y_ENDSTOP.board_z_center(u_z)
     board_holes = []
     for sz in (-1, 1):
-        y, z = Y_ENDSTOP.board_front_y + ENDSTOP.hole_v, zc + sz * ENDSTOP.hole_pitch / 2
+        y, z = Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v, zc + sz * ENDSTOP_SPEC.hole_pitch / 2
         # M3 clearance through the tower, and a hex pocket for the nut in its outboard face
         # (corners up: no support needed)
         board_holes.append(
@@ -134,8 +134,8 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         .translate(
             [
                 Y_ENDSTOP.board_x0 - Y_ENDSTOP.relief_depth - 1,
-                Y_ENDSTOP.board_front_y + ENDSTOP.hole_v,
-                zc + sz * ENDSTOP.hole_pitch / 2,
+                Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v,
+                zc + sz * ENDSTOP_SPEC.hole_pitch / 2,
             ]
         )
         for sz in (-1, 1)

@@ -42,7 +42,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import EPS, FN_HOLE, teardrop_x, teardrop_y
 from cadder.handles import handle, set_handles
-from cadder.hardware import SCS10UU, VSLOT, metric
+from cadder.hardware import SCS10UU_SPEC, VSLOT_SPEC, metric
 from cadder.part import (
     DisplacementLimit,
     FemSpec,
@@ -76,7 +76,7 @@ FACE_IN_X = BEAM.end_offset + BRACKET.recess  #: inboard face of the face plate
 FACE_OUT_X = FACE_IN_X - BRACKET.face_t  #: outboard face (bolt heads)
 FACE_TOP = BEAM_BOTTOM + BEAM.height + BRACKET.face_above
 #: Beam end bore heights (local z)
-BEAM_BOLT_Z = (BEAM_BOTTOM + VSLOT.unit / 2, BEAM_BOTTOM + 3 * VSLOT.unit / 2)
+BEAM_BOLT_Z = (BEAM_BOTTOM + VSLOT_SPEC.unit / 2, BEAM_BOTTOM + 3 * VSLOT_SPEC.unit / 2)
 
 
 def _block_bolts(block: int) -> list[Matrix]:
@@ -84,8 +84,8 @@ def _block_bolts(block: int) -> list[Matrix]:
     return [
         handle(
             [
-                hx * SCS10UU.hole_pitch_x / 2,
-                block * Y_AXIS.scs_pitch / 2 + hy * SCS10UU.hole_pitch_y / 2,
+                hx * SCS10UU_SPEC.hole_pitch_x / 2,
+                block * Y_AXIS.scs_pitch / 2 + hy * SCS10UU_SPEC.hole_pitch_y / 2,
                 BRACKET.base_t,
             ]
         )

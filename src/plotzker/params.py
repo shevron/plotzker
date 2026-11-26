@@ -21,21 +21,21 @@ from dataclasses import dataclass
 
 from cadder.checks import run_design_checks
 from cadder.hardware import (
-    ECCENTRIC,
-    FT90M,
-    GT2,
-    IDLER,
-    NEMA17,
-    PULLEY,
-    SCS10UU,
-    SK10,
-    VSLOT,
-    VWHEEL,
+    ECCENTRIC_SPEC,
+    FT90M_SPEC,
+    GT2_SPEC,
+    IDLER_SPEC,
+    NEMA17_SPEC,
+    PULLEY_SPEC,
+    SCS10UU_SPEC,
+    SK10_SPEC,
+    VSLOT_SPEC,
+    VWHEEL_SPEC,
     metric,
 )
 from cadder.printing import Tolerances
 
-from plotzker.hardware import C14_INLET, ENDSTOP, PSU, XT60, Y_SHAFT, ZRIB
+from plotzker.hardware import C14_INLET_SPEC, ENDSTOP_SPEC, PSU_SPEC, XT60_SPEC, Y_SHAFT, ZRIB_SPEC
 
 # -----------------------------------------------------------------------------
 # Print tolerances (tune after a test print; defaults from README.md §7.4)
@@ -174,7 +174,7 @@ class Drive:
     @property
     def steps_per_mm(self) -> float:
         """Steps per mm of belt travel."""
-        return self.motor_full_steps * self.microsteps / (PULLEY.teeth * GT2.pitch)
+        return self.motor_full_steps * self.microsteps / (PULLEY_SPEC.teeth * GT2_SPEC.pitch)
 
 
 DRIVE = Drive()
@@ -203,17 +203,17 @@ class BeltClamp:
     @property
     def ridge_h(self) -> float:
         """Tooth ridges (0.35): with the squeeze they engage ~0.65 of the 0.75 tooth."""
-        return GT2.tooth_h - self.squeeze - 0.1
+        return GT2_SPEC.tooth_h - self.squeeze - 0.1
 
     @property
     def channel_d(self) -> float:
         """Groove depth = rail height: the belt less its squeeze."""
-        return GT2.thickness - self.squeeze
+        return GT2_SPEC.thickness - self.squeeze
 
     @property
     def channel_w(self) -> float:
         """Groove width."""
-        return GT2.width + 0.4
+        return GT2_SPEC.width + 0.4
 
     @property
     def total_t(self) -> float:
@@ -378,7 +378,7 @@ class PenHolder:
     @property
     def horn_r(self) -> float:
         """Radius of the pin hole from the shaft."""
-        return FT90M.horn_len - FT90M.horn_last_hole - self.horn_hole * FT90M.horn_hole_pitch
+        return FT90M_SPEC.horn_len - FT90M_SPEC.horn_last_hole - self.horn_hole * FT90M_SPEC.horn_hole_pitch
 
     @property
     def slot_ceiling_z(self) -> float:
@@ -414,10 +414,10 @@ class PenHolder:
     @property
     def servo_body_z(self) -> tuple[float, float]:
         """Servo body z extent: the shaft is near the lower end."""
-        length = FT90M.body[0]
+        length = FT90M_SPEC.body[0]
         return (
-            self.shaft_z - FT90M.shaft_offset,
-            self.shaft_z + length - FT90M.shaft_offset,
+            self.shaft_z - FT90M_SPEC.shaft_offset,
+            self.shaft_z + length - FT90M_SPEC.shaft_offset,
         )
 
     @property
@@ -429,14 +429,14 @@ class PenHolder:
     @property
     def wall_z(self) -> tuple[float, float]:
         """Servo wall z extent."""
-        half = FT90M.hole_pitch / 2 + self.wall_margin + self.wall_extra_z
+        half = FT90M_SPEC.hole_pitch / 2 + self.wall_margin + self.wall_extra_z
         return self.servo_center_z - half, self.servo_center_z + half
 
     # ---- derived: x
     @property
     def servo_x(self) -> float:
         """Servo center and shaft x: against the outer rib."""
-        return -TOOL_PLATE.w / 2 + self.rib_t + self.servo_clear + FT90M.body[1] / 2
+        return -TOOL_PLATE.w / 2 + self.rib_t + self.servo_clear + FT90M_SPEC.body[1] / 2
 
     @property
     def pin_x(self) -> float:
@@ -455,7 +455,7 @@ class PenHolder:
     @property
     def wall_x(self) -> tuple[float, float]:
         """Servo wall x extent."""
-        return -TOOL_PLATE.w / 2, self.servo_x + FT90M.body[1] / 2 + self.servo_clear + 2
+        return -TOOL_PLATE.w / 2, self.servo_x + FT90M_SPEC.body[1] / 2 + self.servo_clear + 2
 
     # ---- derived: d
     @property
@@ -487,14 +487,14 @@ class PenHolder:
     @property
     def wall_d(self) -> float:
         """Servo wall front face (the servo tabs rest on it)."""
-        body_h = FT90M.body[2]
-        past_tabs = body_h - FT90M.tab_z - FT90M.tab_t
-        return self.horn_d[1] + self.boss_clear + FT90M.top_h + past_tabs
+        body_h = FT90M_SPEC.body[2]
+        past_tabs = body_h - FT90M_SPEC.tab_z - FT90M_SPEC.tab_t
+        return self.horn_d[1] + self.boss_clear + FT90M_SPEC.top_h + past_tabs
 
     @property
     def servo_front_d(self) -> float:
         """Front end of the servo body."""
-        return self.wall_d + FT90M.tab_z + FT90M.tab_t
+        return self.wall_d + FT90M_SPEC.tab_z + FT90M_SPEC.tab_t
 
     def pen_axis_d(self, pen_d: float) -> float:
         """Distance of a pen's axis from the carriage face, held in the 90° V."""
@@ -560,7 +560,7 @@ class ZribMount:
     @property
     def sink_bottom_z(self) -> float:
         """Lowest point of the heat sinks."""
-        return self.board_z - ZRIB.height
+        return self.board_z - ZRIB_SPEC.height
 
     @property
     def strap_top_z(self) -> float:
@@ -575,18 +575,18 @@ class ZribMount:
     @property
     def leg_u(self) -> tuple[float, float]:
         """Leg extent along u (positive side)."""
-        inner = ZRIB.width / 2 + self.leg_gap
+        inner = ZRIB_SPEC.width / 2 + self.leg_gap
         return inner, inner + self.leg_w
 
     @property
     def wood_screw_u(self) -> float:
         """Wood screw position along u (positive side)."""
-        return ZRIB.width / 2 + self.wood_screw_gap
+        return ZRIB_SPEC.width / 2 + self.wood_screw_gap
 
     @property
     def post_v(self) -> float:
         """Post row (negative-v side hanger): -hole pitch / 2."""
-        return -ZRIB.hole_pitch[1] / 2
+        return -ZRIB_SPEC.hole_pitch[1] / 2
 
     @property
     def plate_v(self) -> tuple[float, float]:
@@ -711,18 +711,18 @@ class PsuMount:
     @property
     def xt60_protrude(self) -> float:
         """How far the mating face stands out of the wall."""
-        return XT60.front_len - self.xt60_lip
+        return XT60_SPEC.front_len - self.xt60_lip
 
     @property
     def xt60_window(self) -> tuple[float, float]:
         """The lip's window: along x (the connector's height) and along y (its width)."""
-        w, h = XT60.front
+        w, h = XT60_SPEC.front
         return h + 2 * self.xt60_window_fit, w + 2 * self.xt60_window_long_fit
 
     @property
     def xt60_pocket(self) -> tuple[float, float]:
         """The pocket gripping the collar behind the lip: along x and along y."""
-        w, h = XT60.collar
+        w, h = XT60_SPEC.collar
         return h + 2 * self.xt60_pocket_fit, w + 2 * self.xt60_pocket_long_fit
 
     @property
@@ -738,7 +738,7 @@ class PsuMount:
     @property
     def low_z(self) -> float:
         """Machine z of the switch wall (the PSU's underside)."""
-        return self.top_z - PSU.size[0]
+        return self.top_z - PSU_SPEC.size[0]
 
     @property
     def board_x(self) -> tuple[float, float]:
@@ -753,7 +753,7 @@ class PsuMount:
     @property
     def upright_x(self) -> tuple[float, float]:
         """The bracket upright's extent in PSU x: past the upper hole down to the flange."""
-        return PSU.bottom_hole_x[0] - self.hole_margin, self.board_x[1] + WOOD_SCREW.boss_t
+        return PSU_SPEC.bottom_hole_x[0] - self.hole_margin, self.board_x[1] + WOOD_SCREW.boss_t
 
     @property
     def wood_screw_z(self) -> tuple[float, ...]:
@@ -780,13 +780,13 @@ class PsuMount:
     def hood_x(self) -> tuple[float, float, float, float]:
         """Hood in PSU x: outer and inner faces (outer0, inner0, inner1, outer1)."""
         c, t = self.clearance, self.wall_t
-        return -c - t, -c, PSU.size[0] + c, PSU.size[0] + c + t
+        return -c - t, -c, PSU_SPEC.size[0] + c, PSU_SPEC.size[0] + c + t
 
     @property
     def hood_z(self) -> tuple[float, float, float, float]:
         """Hood in PSU z: outer and inner faces (outer0, inner0, inner1, outer1)."""
         c, t = self.clearance, self.wall_t
-        return -c - t, -c, PSU.size[2] + c, PSU.size[2] + c + t
+        return -c - t, -c, PSU_SPEC.size[2] + c, PSU_SPEC.size[2] + c + t
 
     @property
     def brace_z(self) -> float:
@@ -797,7 +797,7 @@ class PsuMount:
     def pilot_xy(self) -> tuple[tuple[float, float], ...]:
         """Pilot holes for the brackets' wood screws, in the machine frame (from below)."""
         ox, oy, _ = self.origin
-        return tuple((ox + z, oy + y) for y in PSU.hole_y for z in self.wood_screw_z)
+        return tuple((ox + z, oy + y) for y in PSU_SPEC.hole_y for z in self.wood_screw_z)
 
 
 PSU_MOUNT = PsuMount()
@@ -835,37 +835,37 @@ class YAxis:
     @property
     def sk10_y(self) -> tuple[float, float]:
         """SK10 mid-thickness, front and back."""
-        return self.shaft_y0 + SK10.length / 2, self.shaft_y0 + Y_SHAFT.length - SK10.length / 2
+        return self.shaft_y0 + SK10_SPEC.length / 2, self.shaft_y0 + Y_SHAFT.length - SK10_SPEC.length / 2
 
     @property
     def shaft_z(self) -> float:
         """Z of the Y shaft axis."""
-        return SK10.shaft_h
+        return SK10_SPEC.shaft_h
 
     @property
     def scs_base_z(self) -> float:
         """Z of the underside of the SCS blocks."""
-        return self.shaft_z - SCS10UU.shaft_h
+        return self.shaft_z - SCS10UU_SPEC.shaft_h
 
     @property
     def scs_top_z(self) -> float:
         """Z of the top of the SCS blocks."""
-        return self.scs_base_z + SCS10UU.height
+        return self.scs_base_z + SCS10UU_SPEC.height
 
     @property
     def gantry_len_y(self) -> float:
         """Gantry end length along Y."""
-        return self.scs_pitch + SCS10UU.length
+        return self.scs_pitch + SCS10UU_SPEC.length
 
     @property
     def travel_avail(self) -> float:
         """Available gantry travel along Y."""
-        return Y_SHAFT.length - 2 * SK10.length - self.gantry_len_y - 2 * self.end_margin
+        return Y_SHAFT.length - 2 * SK10_SPEC.length - self.gantry_len_y - 2 * self.end_margin
 
     @property
     def gantry_y_range(self) -> tuple[float, float]:
         """Gantry center along Y (machine frame) at the front and back ends of travel."""
-        front = self.shaft_y0 + SK10.length + self.end_margin + self.gantry_len_y / 2
+        front = self.shaft_y0 + SK10_SPEC.length + self.end_margin + self.gantry_len_y / 2
         return front, front + self.travel_avail
 
     # Y belt line (fixes the Y motor and idler heights for T3.5)
@@ -877,12 +877,12 @@ class YAxis:
     @property
     def belt_pitch_z(self) -> float:
         """Z of the belt pitch line."""
-        return self.belt_back_z - GT2.pitch_line_from_back
+        return self.belt_back_z - GT2_SPEC.pitch_line_from_back
 
     @property
     def pulley_axis_z(self) -> float:
         """Y motor shaft / idler axle height (abs z)."""
-        return self.belt_pitch_z - PULLEY.pd / 2
+        return self.belt_pitch_z - PULLEY_SPEC.pd / 2
 
 
 Y_AXIS = YAxis()
@@ -905,12 +905,12 @@ class Beam:
     @property
     def depth(self) -> float:
         """Extent along Y."""
-        return self.size[0] * VSLOT.unit
+        return self.size[0] * VSLOT_SPEC.unit
 
     @property
     def height(self) -> float:
         """Extent along Z."""
-        return self.size[1] * VSLOT.unit
+        return self.size[1] * VSLOT_SPEC.unit
 
     @property
     def bottom_z_min(self) -> float:
@@ -971,7 +971,7 @@ class Carriage:
     @property
     def w(self) -> float:
         """Carriage envelope along X (wheels)."""
-        return self.wheel_pitch_x + VWHEEL.od
+        return self.wheel_pitch_x + VWHEEL_SPEC.od
 
     @property
     def plate_w(self) -> float:
@@ -981,12 +981,12 @@ class Carriage:
     @property
     def below_beam(self) -> float:
         """How far the lowest part of the carriage sits below the beam's bottom face."""
-        return VWHEEL.axis_to_face + VWHEEL.od / 2 + self.margin_below_wheel
+        return VWHEEL_SPEC.axis_to_face + VWHEEL_SPEC.od / 2 + self.margin_below_wheel
 
     @property
     def wheel_z(self) -> tuple[float, float]:
         """Wheel axle heights (abs): top pair, bottom pair."""
-        return BEAM.top_z + VWHEEL.axis_to_face, BEAM.bottom_z - VWHEEL.axis_to_face
+        return BEAM.top_z + VWHEEL_SPEC.axis_to_face, BEAM.bottom_z - VWHEEL_SPEC.axis_to_face
 
     @property
     def bottom_z(self) -> float:
@@ -996,12 +996,12 @@ class Carriage:
     @property
     def top_z(self) -> float:
         """Z of the top edge."""
-        return self.wheel_z[0] + VWHEEL.od / 2 + self.margin_below_wheel
+        return self.wheel_z[0] + VWHEEL_SPEC.od / 2 + self.margin_below_wheel
 
     @property
     def plate_back_y(self) -> float:
         """Plate back face (wheel face − stand-off)."""
-        return -VWHEEL.width / 2 - ECCENTRIC.stack
+        return -VWHEEL_SPEC.width / 2 - ECCENTRIC_SPEC.stack
 
     @property
     def plate_front_y(self) -> float:
@@ -1027,7 +1027,7 @@ class Carriage:
     @property
     def trig_z(self) -> float:
         """X endstop trigger screw axis (abs z): the lever's height above the board's shelf."""
-        return X_ENDSTOP.board_bottom_z + ENDSTOP.lever_z
+        return X_ENDSTOP.board_bottom_z + ENDSTOP_SPEC.lever_z
 
     @property
     def end_keepout(self) -> float:
@@ -1036,7 +1036,7 @@ class Carriage:
         In front of the beam the tool head can't pass over the SCS blocks / bracket
         (x ≤ SCS width / 2 from the shaft); tool head assumed tool-plate wide.
         """
-        return SCS10UU.width / 2 - BEAM.end_offset - (self.w - TOOL_PLATE.w) / 2 + 2
+        return SCS10UU_SPEC.width / 2 - BEAM.end_offset - (self.w - TOOL_PLATE.w) / 2 + 2
 
     @property
     def travel_avail(self) -> float:
@@ -1084,7 +1084,7 @@ class GantryBracket:
     @property
     def x_in(self) -> float:
         """Inboard edge over the blocks."""
-        return SCS10UU.width / 2
+        return SCS10UU_SPEC.width / 2
 
     @property
     def shelf_x(self) -> float:
@@ -1099,12 +1099,12 @@ class GantryBracket:
     @property
     def len_y(self) -> float:
         """= SCS block extent; keeps the Y travel."""
-        return Y_AXIS.scs_pitch + SCS10UU.length
+        return Y_AXIS.scs_pitch + SCS10UU_SPEC.length
 
     @property
     def notch_y(self) -> float:
         """Between the blocks the base stops at the beam end so the carriage can pass."""
-        return Y_AXIS.scs_pitch / 2 - SCS10UU.length / 2 - 0.5
+        return Y_AXIS.scs_pitch / 2 - SCS10UU_SPEC.length / 2 - 0.5
 
     @property
     def trig_z(self) -> float:
@@ -1137,13 +1137,13 @@ class XBelt:
     @property
     def back_z(self) -> float:
         """Back of the lower run (abs z): the carriage's rear block top bears on it."""
-        return self.pulley_axis_z - GT2.pitch_line_from_back - PULLEY.pd / 2
+        return self.pulley_axis_z - GT2_SPEC.pitch_line_from_back - PULLEY_SPEC.pd / 2
 
     @property
     def pulley_axis_z(self) -> float:
         """X motor shaft / idler axle (abs z). DESIGN: as low as the motor allows: its body
         clears the rear bolt heads (the foot clamps only the front row) by ``motor_clear``."""
-        return Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h + self.motor_clear + NEMA17.width / 2
+        return Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h + self.motor_clear + NEMA17_SPEC.width / 2
 
 
 X_BELT = XBelt()
@@ -1173,18 +1173,18 @@ class XEndstopMount:
     @property
     def board_front_x(self) -> float:
         """Front edge of the board."""
-        return self.head_x_min - ENDSTOP.trigger_v
+        return self.head_x_min - ENDSTOP_SPEC.trigger_v
 
     @property
     def board_x(self) -> tuple[float, float]:
         """Board extent in x: rear edge, front edge."""
-        return self.board_front_x - ENDSTOP.pcb[0], self.board_front_x
+        return self.board_front_x - ENDSTOP_SPEC.pcb[0], self.board_front_x
 
     @property
     def board_y(self) -> tuple[float, float]:
         """Board extent in y: the lever hinge is at +y, its tip toward -y."""
-        yc = CARRIAGE.trig_y + ENDSTOP.contact_u
-        return yc - ENDSTOP.pcb[1] / 2, yc + ENDSTOP.pcb[1] / 2
+        yc = CARRIAGE.trig_y + ENDSTOP_SPEC.contact_u
+        return yc - ENDSTOP_SPEC.pcb[1] / 2, yc + ENDSTOP_SPEC.pcb[1] / 2
 
     @property
     def board_bottom_z(self) -> float:
@@ -1194,17 +1194,23 @@ class XEndstopMount:
     @property
     def hole_x(self) -> float:
         """Board mounting hole line (x)."""
-        return self.board_front_x + ENDSTOP.hole_v
+        return self.board_front_x + ENDSTOP_SPEC.hole_v
 
     @property
     def plug_top_z(self) -> float:
         """Top of the plug keep-out (bracket-local z)."""
-        return self.board_bottom_z - Y_AXIS.scs_top_z + ENDSTOP.pcb[2] + ENDSTOP.connector[2] + ENDSTOP.plug_clearance
+        return (
+            self.board_bottom_z
+            - Y_AXIS.scs_top_z
+            + ENDSTOP_SPEC.pcb[2]
+            + ENDSTOP_SPEC.connector[2]
+            + ENDSTOP_SPEC.plug_clearance
+        )
 
     @property
     def plug_x0(self) -> float:
         """Outboard end of the plug keep-out (x), bracket-local."""
-        return self.board_front_x + ENDSTOP.plug_keepout_v
+        return self.board_front_x + ENDSTOP_SPEC.plug_keepout_v
 
 
 X_ENDSTOP = XEndstopMount()
@@ -1241,7 +1247,7 @@ class XDrive:
     @property
     def bolt_rows(self) -> tuple[float, float]:
         """Rear SCS bolt rows (y)."""
-        p, c = Y_AXIS.scs_pitch, SCS10UU.hole_pitch_y
+        p, c = Y_AXIS.scs_pitch, SCS10UU_SPEC.hole_pitch_y
         return p / 2 - c / 2, p / 2 + c / 2
 
     @property
@@ -1252,7 +1258,7 @@ class XDrive:
     @property
     def foot_y(self) -> tuple[float, float]:
         """Y range of the foot under the SCS block."""
-        p, length = Y_AXIS.scs_pitch, SCS10UU.length
+        p, length = Y_AXIS.scs_pitch, SCS10UU_SPEC.length
         return p / 2 - length / 2, p / 2 + length / 2
 
     @property
@@ -1263,7 +1269,7 @@ class XDrive:
     @property
     def pulley_hub_y(self) -> float:
         """Pulley's motor-side end."""
-        return X_BELT.y + PULLEY.belt_z
+        return X_BELT.y + PULLEY_SPEC.belt_z
 
     @property
     def motor_foot_y(self) -> tuple[float, float]:
@@ -1307,7 +1313,7 @@ class YDrive:
     @property
     def gantry_front_y(self) -> float:
         """Front face of the gantry bracket at its end of travel (machine y)."""
-        return Y_AXIS.shaft_y0 + SK10.length + Y_AXIS.end_margin
+        return Y_AXIS.shaft_y0 + SK10_SPEC.length + Y_AXIS.end_margin
 
     @property
     def motor_gap(self) -> float:
@@ -1317,25 +1323,25 @@ class YDrive:
     @property
     def pocket_half(self) -> float:
         """Wall faces at the SK10's nominal outboard edge (no clearance: the SK10 touches it)."""
-        return SK10.width / 2
+        return SK10_SPEC.width / 2
 
     @property
     def front_pocket_y(self) -> tuple[float, float]:
         """Front pocket's frame, y extent: from the end wall's outer face to the SK10's inboard
         face."""
-        return Y_AXIS.shaft_y0 - self.pocket_wall, Y_AXIS.shaft_y0 + SK10.length
+        return Y_AXIS.shaft_y0 - self.pocket_wall, Y_AXIS.shaft_y0 + SK10_SPEC.length
 
     @property
     def rear_pocket_y(self) -> tuple[float, float]:
         """Rear pocket's frame, y extent."""
         end = Y_AXIS.shaft_y0 + Y_SHAFT.length
-        return end - SK10.length, end + self.pocket_wall
+        return end - SK10_SPEC.length, end + self.pocket_wall
 
     @property
     def idler_y(self) -> float:
         """Idler axle, middle of the slot (machine y): the idler stays clear of the endstop
         board's plug keep-out."""
-        return Y_ENDSTOP.keepout_y0 - 1 - self.idler_slot / 2 - IDLER.flange_d / 2
+        return Y_ENDSTOP.keepout_y0 - 1 - self.idler_slot / 2 - IDLER_SPEC.flange_d / 2
 
     @property
     def idler_block_y(self) -> float:
@@ -1360,12 +1366,12 @@ class YDrive:
     @property
     def motor_y(self) -> float:
         """Motor shaft axis (machine y): the body clears the rear SK10."""
-        return Y_AXIS.sk10_y[1] + SK10.length / 2 + self.motor_gap + NEMA17.width / 2
+        return Y_AXIS.sk10_y[1] + SK10_SPEC.length / 2 + self.motor_gap + NEMA17_SPEC.width / 2
 
     @property
     def pulley_hub_x(self) -> float:
         """Pulley's motor-side face (x); the pulley extends outboard from here."""
-        return Y_AXIS.belt_x + PULLEY.belt_z
+        return Y_AXIS.belt_x + PULLEY_SPEC.belt_z
 
     @property
     def motor_plate_x(self) -> tuple[float, float]:
@@ -1376,12 +1382,12 @@ class YDrive:
     @property
     def motor_plate_y(self) -> tuple[float, float]:
         """Motor plate y extent (the motor width)."""
-        return self.motor_y - NEMA17.width / 2, self.motor_y + NEMA17.width / 2
+        return self.motor_y - NEMA17_SPEC.width / 2, self.motor_y + NEMA17_SPEC.width / 2
 
     @property
     def motor_top_z(self) -> float:
         """Top of the motor and its plate."""
-        return Y_AXIS.pulley_axis_z + NEMA17.width / 2
+        return Y_AXIS.pulley_axis_z + NEMA17_SPEC.width / 2
 
     @property
     def motor_foot_x0(self) -> float:
@@ -1414,17 +1420,17 @@ class YEndstopMount:
     @property
     def board_front_y(self) -> float:
         """Front edge of the board."""
-        return self.trigger_tip_y - ENDSTOP.trigger_v
+        return self.trigger_tip_y - ENDSTOP_SPEC.trigger_v
 
     @property
     def board_y(self) -> tuple[float, float]:
         """Board extent in y: rear edge, front edge."""
-        return self.board_front_y - ENDSTOP.pcb[0], self.board_front_y
+        return self.board_front_y - ENDSTOP_SPEC.pcb[0], self.board_front_y
 
     @property
     def keepout_y0(self) -> float:
         """Rear end of the plug keep-out behind the connector."""
-        return self.board_front_y + ENDSTOP.plug_keepout_v
+        return self.board_front_y + ENDSTOP_SPEC.plug_keepout_v
 
     @property
     def trig_z(self) -> float:
@@ -1434,7 +1440,7 @@ class YEndstopMount:
     @property
     def board_x0(self) -> float:
         """Board underside (left frame x): the lever's center line is on the trigger axis."""
-        return BRACKET.trig_x - ENDSTOP.lever_z
+        return BRACKET.trig_x - ENDSTOP_SPEC.lever_z
 
     @property
     def tower_x(self) -> tuple[float, float]:
@@ -1448,12 +1454,12 @@ class YEndstopMount:
 
     def board_z_center(self, u_z: int) -> float:
         """Board center height; ``u_z`` = board width direction along z (-1 left, +1 right)."""
-        return self.trig_z - u_z * ENDSTOP.contact_u
+        return self.trig_z - u_z * ENDSTOP_SPEC.contact_u
 
     def board_z(self, u_z: int) -> tuple[float, float]:
         """Board extent in z."""
         zc = self.board_z_center(u_z)
-        return zc - ENDSTOP.pcb[1] / 2, zc + ENDSTOP.pcb[1] / 2
+        return zc - ENDSTOP_SPEC.pcb[1] / 2, zc + ENDSTOP_SPEC.pcb[1] / 2
 
 
 Y_ENDSTOP = YEndstopMount()
@@ -1645,7 +1651,7 @@ class Baseboard:
     @property
     def sk10_hole_x(self) -> tuple[float, float]:
         """SK10 hole offsets from the shaft axis."""
-        return -SK10.hole_pitch / 2, SK10.hole_pitch / 2
+        return -SK10_SPEC.hole_pitch / 2, SK10_SPEC.hole_pitch / 2
 
     @property
     def post_xy(self) -> tuple[tuple[float, float], ...]:
@@ -1738,7 +1744,7 @@ class FloatingIdler:
     @property
     def gap_y(self) -> float:
         """Clear width between the arms: the idler plus its end play on each side."""
-        return IDLER.width + 2 * self.side_play
+        return IDLER_SPEC.width + 2 * self.side_play
 
     @property
     def arm_t(self) -> float:
@@ -1812,7 +1818,7 @@ class FloatingIdler:
     @property
     def axle_x(self) -> float:
         """Axle position along the slider, from its rear face."""
-        return self.web_t + IDLER.flange_d / 2 + self.arm_clear
+        return self.web_t + IDLER_SPEC.flange_d / 2 + self.arm_clear
 
     @property
     def length(self) -> float:
@@ -1925,19 +1931,19 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield REQ.x_travel >= REQ.media_a3[0] + 20, "X travel does not cover A3 + margins"
     yield REQ.y_travel >= REQ.media_a3[1] + 20, "Y travel does not cover A3 + margins"
     yield (
-        FRAME.bed_size[0] <= Y_AXIS.shaft_spacing - SCS10UU.width - 2 * 5,
+        FRAME.bed_size[0] <= Y_AXIS.shaft_spacing - SCS10UU_SPEC.width - 2 * 5,
         "Bed panel collides with the SCS blocks",
     )
     yield BEAM.bottom_z >= BEAM.bottom_z_min, "Carriage would hit 15 mm media"
     yield DRIVE.steps_per_mm == 80, "Steps/mm changed — update STATUS.md §5"
     yield (
-        CLAMP.channel_w > GT2.width and CLAMP.screw_dx - TOL.bolt_hole_d(3) / 2 >= CLAMP.channel_w / 2 + 0.5,
+        CLAMP.channel_w > GT2_SPEC.width and CLAMP.screw_dx - TOL.bolt_hole_d(3) / 2 >= CLAMP.channel_w / 2 + 0.5,
         "Belt clamp screws would cut into the belt groove",
     )
-    yield -Y_AXIS.belt_x - GT2.width / 2 >= SK10.width / 2 + 3, "Y belt too close to the SK10"
-    yield -Y_AXIS.belt_x - CLAMP.w / 2 >= SCS10UU.width / 2 + 1, "Y belt clamp hits the SCS block"
+    yield -Y_AXIS.belt_x - GT2_SPEC.width / 2 >= SK10_SPEC.width / 2 + 3, "Y belt too close to the SK10"
+    yield -Y_AXIS.belt_x - CLAMP.w / 2 >= SCS10UU_SPEC.width / 2 + 1, "Y belt clamp hits the SCS block"
     yield -Y_AXIS.belt_x + CLAMP.w / 2 <= -BRACKET.x_out, "Y belt clamp outside the bracket"
-    yield PULLEY.length + 1 <= NEMA17.shaft_len_min, "Pulley longer than the shortest motor shaft"
+    yield PULLEY_SPEC.length + 1 <= NEMA17_SPEC.shaft_len_min, "Pulley longer than the shortest motor shaft"
     yield (
         Y_AXIS.shaft_x[0] + Y_AXIS.belt_x - CLAMP.w / 2 > 0,
         "Y belt clamp overhangs the baseboard",
@@ -1948,7 +1954,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Bottom wheel bolt heads overlap the tool plate",
     )
     yield (
-        CARRIAGE.bridge_w / 2 + 2 <= CARRIAGE.wheel_pitch_x / 2 - VWHEEL.od / 2,
+        CARRIAGE.bridge_w / 2 + 2 <= CARRIAGE.wheel_pitch_x / 2 - VWHEEL_SPEC.od / 2,
         "Bridge hits the wheels",
     )
     yield X_BELT.y - CLAMP.w / 2 >= BEAM.depth / 2 + 1, "X belt clamp too close to the beam"
@@ -1957,7 +1963,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Carriage wheels hit the gantry bracket",
     )
     yield (
-        X_BELT.pulley_axis_z - NEMA17.width / 2 >= Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h,
+        X_BELT.pulley_axis_z - NEMA17_SPEC.width / 2 >= Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h,
         "X motor hits the rear bolt heads",
     )
     yield (
@@ -1965,11 +1971,11 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Carriage bridge hits the beam",
     )
     yield (
-        X_DRIVE.motor_face_y - NEMA17.shaft_len >= BEAM.depth / 2 + 1,
+        X_DRIVE.motor_face_y - NEMA17_SPEC.shaft_len >= BEAM.depth / 2 + 1,
         "X motor shaft would hit the beam",
     )
     yield (
-        X_DRIVE.motor_face_y - NEMA17.shaft_len_min <= X_DRIVE.pulley_hub_y - PULLEY.hub_len,
+        X_DRIVE.motor_face_y - NEMA17_SPEC.shaft_len_min <= X_DRIVE.pulley_hub_y - PULLEY_SPEC.hub_len,
         "Shortest motor shaft doesn't reach the pulley hub",
     )
     yield (
@@ -1985,7 +1991,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "X tension screw's tip doesn't fit in the slider's tunnel when tight",
     )
     yield (
-        X_IDLER.axle_z - IDLER.flange_d / 2 >= X_IDLER.z_bottom + 1,
+        X_IDLER.axle_z - IDLER_SPEC.flange_d / 2 >= X_IDLER.z_bottom + 1,
         "X idler hits the slider's underside",
     )
     yield (
@@ -1996,7 +2002,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         X_IDLER.slider_s0 + X_IDLER.web_t <= X_IDLER.wall_end_s
         and X_IDLER.wall_end_s <= X_ENDSTOP.plug_x0 - 0.5
         and X_IDLER.wall_end_s <= X_DRIVE.foot_x0 - 0.5
-        and X_IDLER.wall_end_s <= -SCS10UU.hole_pitch_x / 2 - m5.head_d / 2 - 1,
+        and X_IDLER.wall_end_s <= -SCS10UU_SPEC.hole_pitch_x / 2 - m5.head_d / 2 - 1,
         "X idler tower's walls don't cover the slider's wall or hit the foot or the bolt heads",
     )
     yield (
@@ -2013,11 +2019,11 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Y motor mount hangs over the back of the baseboard",
     )
     yield (
-        Y_DRIVE.motor_plate_y[0] - Y_AXIS.sk10_y[1] - SK10.length / 2 >= Y_DRIVE.motor_gap - 0.01,
+        Y_DRIVE.motor_plate_y[0] - Y_AXIS.sk10_y[1] - SK10_SPEC.length / 2 >= Y_DRIVE.motor_gap - 0.01,
         "Y motor hits the rear SK10",
     )
     yield (
-        Y_DRIVE.motor_plate_x[1] - NEMA17.shaft_len_min <= Y_DRIVE.pulley_hub_x - PULLEY.hub_len,
+        Y_DRIVE.motor_plate_x[1] - NEMA17_SPEC.shaft_len_min <= Y_DRIVE.pulley_hub_x - PULLEY_SPEC.hub_len,
         "Shortest motor shaft doesn't reach the Y pulley hub",
     )
     yield (
@@ -2025,7 +2031,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Pocket walls would catch the SCS blocks",
     )
     yield (
-        0 < Y_DRIVE.pocket_end_len <= SK10.width,
+        0 < Y_DRIVE.pocket_end_len <= SK10_SPEC.width,
         "SK10 pocket end wall must lie within the SK10's width",
     )
     yield (
@@ -2033,23 +2039,23 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Front pocket reaches into the gantry's travel",
     )
     yield (
-        Y_AXIS.pulley_axis_z - PULLEY.flange_d / 2 >= max(Y_DRIVE.foot_t, WOOD_SCREW.boss_t) + 1,
+        Y_AXIS.pulley_axis_z - PULLEY_SPEC.flange_d / 2 >= max(Y_DRIVE.foot_t, WOOD_SCREW.boss_t) + 1,
         "Y pulley hits the motor foot or a screw boss",
     )
     yield (
-        Y_AXIS.pulley_axis_z - NEMA17.width / 2 >= 0,
+        Y_AXIS.pulley_axis_z - NEMA17_SPEC.width / 2 >= 0,
         "Y motor body would hit the baseboard",
     )
     yield (
-        Y_ENDSTOP.board_x0 + ENDSTOP.thickness <= -SK10.body_w / 2 - 1,
+        Y_ENDSTOP.board_x0 + ENDSTOP_SPEC.thickness <= -SK10_SPEC.body_w / 2 - 1,
         "Y endstop board (with its connector) hits the front SK10",
     )
     yield (
-        Y_DRIVE.idler_y + Y_DRIVE.idler_slot / 2 + IDLER.flange_d / 2 + 1 <= Y_ENDSTOP.keepout_y0,
+        Y_DRIVE.idler_y + Y_DRIVE.idler_slot / 2 + IDLER_SPEC.flange_d / 2 + 1 <= Y_ENDSTOP.keepout_y0,
         "Y idler hits the Y endstop plug keep-out",
     )
     yield (
-        Y_ENDSTOP.board_front_y + ENDSTOP.rest_protrusion <= Y_DRIVE.gantry_front_y - 1,
+        Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.rest_protrusion <= Y_DRIVE.gantry_front_y - 1,
         "Y endstop lever reaches the gantry bracket",
     )
     yield (
@@ -2065,7 +2071,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Y tension screw's tip doesn't fit in the slider's tunnel when tight",
     )
     yield (
-        Y_IDLER.axle_z - IDLER.flange_d / 2 >= Y_IDLER.z_bottom + 1 and Y_IDLER.z_bottom >= Y_DRIVE.foot_t + 1,
+        Y_IDLER.axle_z - IDLER_SPEC.flange_d / 2 >= Y_IDLER.z_bottom + 1 and Y_IDLER.z_bottom >= Y_DRIVE.foot_t + 1,
         "Y idler hits the slider's underside, or the slider hits the foot",
     )
     yield (
@@ -2083,7 +2089,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     yield (
         ZMOUNT.wood_screw_u + ZMOUNT.boss_d / 2 <= ZMOUNT.leg_u[0] - 1
-        and ZMOUNT.wood_screw_u - WOOD_SCREW.head_d / 2 >= ZRIB.width / 2,
+        and ZMOUNT.wood_screw_u - WOOD_SCREW.head_d / 2 >= ZRIB_SPEC.width / 2,
         "ZRIB mount wood screw boss hits the leg, or its head is not reachable beside the board",
     )
     yield (
@@ -2097,19 +2103,19 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     # --- PSU mount (T3.31)
     table_z = -FRAME.board_size[2] - BASEBOARD.runner_h
     yield (
-        3 <= PSU_MOUNT.psu_screw_depth <= PSU.max_screw_depth
-        and 2.5 <= PSU_MOUNT.hood_screw_depth <= PSU.max_screw_depth,
+        3 <= PSU_MOUNT.psu_screw_depth <= PSU_SPEC.max_screw_depth
+        and 2.5 <= PSU_MOUNT.hood_screw_depth <= PSU_SPEC.max_screw_depth,
         f"PSU screws enter the case {PSU_MOUNT.psu_screw_depth:g} (bracket) and "
         f"{PSU_MOUNT.hood_screw_depth:g} mm (hood): too shallow to hold, or deeper than "
-        f"{PSU.max_screw_depth:g}",
+        f"{PSU_SPEC.max_screw_depth:g}",
     )
     yield (
         PSU_MOUNT.low_z - PSU_MOUNT.clearance - PSU_MOUNT.wall_t - table_z >= 5,
         "The PSU's hood hangs less than 5 mm above the table",
     )
     yield (
-        PSU.bottom_hole_x[1] + PSU_MOUNT.counterbore[0] / 2 <= PSU_MOUNT.board_x[1]
-        and PSU_MOUNT.board_x[0] > PSU.bottom_hole_x[0] + PSU_MOUNT.counterbore[0] / 2,
+        PSU_SPEC.bottom_hole_x[1] + PSU_MOUNT.counterbore[0] / 2 <= PSU_MOUNT.board_x[1]
+        and PSU_MOUNT.board_x[0] > PSU_SPEC.bottom_hole_x[0] + PSU_MOUNT.counterbore[0] / 2,
         "PSU bracket: the lower M4's counterbore runs into the flange, or the upper one is not above the board",
     )
     yield (
@@ -2124,8 +2130,8 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         PSU_MOUNT.origin[0] + PSU_MOUNT.brace_z - (LOOM.hole_x + LOOM.d / 2) >= 1.5,
         "PSU bracket: the brace over the board's top comes within 1.5 mm of the Y loom",
     )
-    cl, cs = C14_INLET.cutout  # long side along x, short along y
-    flange_l, flange_w = C14_INLET.flange  # across the flats (x), across the points (y)
+    cl, cs = C14_INLET_SPEC.cutout  # long side along x, short along y
+    flange_l, flange_w = C14_INLET_SPEC.flange  # across the flats (x), across the points (y)
     ox0, ix0, ix1, ox1 = PSU_MOUNT.hood_x
     yield (
         ix0 + 0.5 <= PSU_MOUNT.inlet_x - cl / 2
@@ -2155,25 +2161,25 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         ix0 <= xt_x0
         and xt_x1 <= ix1
         and -PSU_MOUNT.depth + PSU_MOUNT.wall_t <= xt_y0
-        and xt_y1 <= -(PSU.crimp_reach + 2),
+        and xt_y1 <= -(PSU_SPEC.crimp_reach + 2),
         "PSU hood: the XT60's sleeve runs into a wall or the wire lugs",
     )
     yield (
-        (XT60.collar[0] - window_y) / 2 - PSU_MOUNT.xt60_window_relief >= 0.4
-        and (XT60.collar[1] - window_x) / 2 >= 0.5
+        (XT60_SPEC.collar[0] - window_y) / 2 - PSU_MOUNT.xt60_window_relief >= 0.4
+        and (XT60_SPEC.collar[1] - window_x) / 2 >= 0.5
         and PSU_MOUNT.xt60_sleeve > 0
-        and PSU_MOUNT.xt60_grip <= XT60.collar_len - 0.5,
+        and PSU_MOUNT.xt60_grip <= XT60_SPEC.collar_len - 0.5,
         "PSU hood: the XT60's collar does not stop on the lip, or the pocket reaches its rim",
     )
     yield (
-        PSU_MOUNT.xt60_x - XT60.front[1] / 2 - PSU_MOUNT.xt60_plug_margin >= PSU_MOUNT.board_x[1] + 2
+        PSU_MOUNT.xt60_x - XT60_SPEC.front[1] / 2 - PSU_MOUNT.xt60_plug_margin >= PSU_MOUNT.board_x[1] + 2
         and PSU_MOUNT.low_z - PSU_MOUNT.clearance - PSU_MOUNT.wall_t - table_z >= 0,  # the plug clears the table
         "PSU hood: the XT60's plug would hit the board's underside",
     )
     yield (
-        PSU_MOUNT.sleeve_bottom <= PSU.hole_y[0] - PSU_MOUNT.bracket_w / 2 - 1
-        and PSU.hole_y[0] + 5 <= PSU_MOUNT.sleeve_side < PSU.selector_y[0]
-        and PSU_MOUNT.sleeve_fan >= PSU.cover_setback + 3,
+        PSU_MOUNT.sleeve_bottom <= PSU_SPEC.hole_y[0] - PSU_MOUNT.bracket_w / 2 - 1
+        and PSU_SPEC.hole_y[0] + 5 <= PSU_MOUNT.sleeve_side < PSU_SPEC.selector_y[0]
+        and PSU_MOUNT.sleeve_fan >= PSU_SPEC.cover_setback + 3,
         "PSU hood sleeves: one reaches a bracket or the 115/230 V selector, misses the M4 "
         "holes, or leaves the open strip in front of the cover",
     )
@@ -2248,7 +2254,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "The loom fold or its rails reach the right Y motor mount",
     )
     yield (
-        Y_AXIS.pulley_axis_z - PULLEY.pd / 2 - GT2.pitch_line_from_back >= WOOD_SCREW.boss_t + 1,
+        Y_AXIS.pulley_axis_z - PULLEY_SPEC.pd / 2 - GT2_SPEC.pitch_line_from_back >= WOOD_SCREW.boss_t + 1,
         "The Y belt's lower run hits a loom rail foot's screw boss",
     )
     yield (
@@ -2280,7 +2286,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         )
     yield PEN.yoke_in >= pen_hi / 2 + 1, "Yoke arms too close to the largest pen"
     yield (
-        PEN.servo_x + FT90M.horn_len <= PEN.rod_x - PEN.sleeve_od / 2 + 0.3,
+        PEN.servo_x + FT90M_SPEC.horn_len <= PEN.rod_x - PEN.sleeve_od / 2 + 0.3,
         "Servo horn tip reaches the pen slide column",
     )
     yield PEN.horn_swing_deg <= 40, "Pen-lift linkage needs too large a horn swing"

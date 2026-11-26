@@ -27,12 +27,12 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import EPS, FN_HOLE
 from cadder.handles import frame_handle, set_handles
-from cadder.hardware import SCS10UU, metric
+from cadder.hardware import SCS10UU_SPEC, metric
 from cadder.part import PrintedPart
 from cadder.types import Matrix
 from pythonscad import cube, cylinder, union
 
-from plotzker.hardware import ENDSTOP
+from plotzker.hardware import ENDSTOP_SPEC
 from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import BRACKET, TOL, X_DRIVE, X_ENDSTOP, Y_AXIS
 
@@ -57,7 +57,7 @@ BOARD: Matrix = frame_handle(
 def x_endstop_mount_installed() -> Solid:
     """The mount in the left bracket-local frame."""
     x0 = X_DRIVE.foot_x0
-    foot = cube([SCS10UU.width / 2 - x0, X_DRIVE.foot_y[1] - X_DRIVE.foot_y[0], X_DRIVE.foot_t]).translate(
+    foot = cube([SCS10UU_SPEC.width / 2 - x0, X_DRIVE.foot_y[1] - X_DRIVE.foot_y[0], X_DRIVE.foot_t]).translate(
         [x0, X_DRIVE.foot_y[0], FOOT_Z0]
     )
     # the board overhangs the foot's front edge: a shelf under it
@@ -73,12 +73,12 @@ def x_endstop_mount_installed() -> Solid:
     # endstop plug needs the space), in clearance holes
     bolts = [
         cylinder(d=TOL.bolt_hole_d(5), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
-            [hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[1], FOOT_Z0 - 1]
+            [hx * SCS10UU_SPEC.hole_pitch_x / 2, X_DRIVE.bolt_rows[1], FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
     ] + [
         cylinder(d=metric(5).head_d + 1, h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
-            [hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0 - 1]
+            [hx * SCS10UU_SPEC.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0 - 1]
         )
         for hx in (-1, 1)
     ]
@@ -87,7 +87,7 @@ def x_endstop_mount_installed() -> Solid:
     nut_t = TOL.nut_trap_h(3)
     board_holes = []
     for sv in (-1, 1):
-        y = BOARD_YC + sv * ENDSTOP.hole_pitch / 2
+        y = BOARD_YC + sv * ENDSTOP_SPEC.hole_pitch / 2
         board_holes.append(
             cylinder(d=TOL.bolt_hole_d(3), h=X_DRIVE.foot_t + 2, fn=FN_HOLE).translate(
                 [X_ENDSTOP.hole_x, y, FOOT_Z0 - 1]
@@ -111,7 +111,7 @@ def x_endstop_mount_installed() -> Solid:
         cylinder(d=X_ENDSTOP.land_d, h=X_ENDSTOP.relief_depth + 3, fn=FN_HOLE).translate(
             [
                 X_ENDSTOP.hole_x,
-                BOARD_YC + sv * ENDSTOP.hole_pitch / 2,
+                BOARD_YC + sv * ENDSTOP_SPEC.hole_pitch / 2,
                 FOOT_Z0 + X_DRIVE.foot_t - X_ENDSTOP.relief_depth - 1,
             ]
         )

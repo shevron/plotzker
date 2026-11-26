@@ -33,7 +33,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import FN_HOLE, teardrop
 from cadder.handles import handle, set_handles
-from cadder.hardware import FT90M
+from cadder.hardware import FT90M_SPEC
 from cadder.part import FemSpec, Force, LoadCase, Moment, PrintedPart, Support
 from cadder.regions import Box, Cylinder
 from cadder.types import Matrix, Vec3
@@ -157,7 +157,7 @@ def _servo_bracket() -> tuple[list[Solid], list[Solid]]:
         _box(x0, web_x1, plate_front, d_front, z0, z0 + PEN.web_t),
         _box(x0, web_x1, plate_front, d_front, z1 - PEN.web_t, z1),
     ]
-    length, width, _ = FT90M.body
+    length, width, _ = FT90M_SPEC.body
     zc, c = PEN.servo_center_z, PEN.servo_clear
     window = _box(
         PEN.servo_x - width / 2 - c,
@@ -167,7 +167,9 @@ def _servo_bracket() -> tuple[list[Solid], list[Solid]]:
         zc - length / 2 - c,
         zc + length / 2 + c,
     )
-    pilots = [_hole_d(PILOT_D, PEN.servo_x, zc + sz * FT90M.hole_pitch / 2, d_back - 1, d_front + 1) for sz in (-1, 1)]
+    pilots = [
+        _hole_d(PILOT_D, PEN.servo_x, zc + sz * FT90M_SPEC.hole_pitch / 2, d_back - 1, d_front + 1) for sz in (-1, 1)
+    ]
     return [wall, rib, *webs], [window, *pilots]
 
 
@@ -229,8 +231,8 @@ UPPER_STOP = Box(
 _SERVO_ZC = PEN.servo_center_z
 #: Where the servo's tabs bear on the wall (its screws pull them on), either side of the window
 SERVO_SEAT = Box(
-    (PEN.servo_x - FT90M.body[1] / 2 - 2, PEN.wall_d - 0.3, _SERVO_ZC - FT90M.hole_pitch / 2 - 4),
-    (PEN.servo_x + FT90M.body[1] / 2 + 2, PEN.wall_d + 0.3, _SERVO_ZC + FT90M.hole_pitch / 2 + 4),
+    (PEN.servo_x - FT90M_SPEC.body[1] / 2 - 2, PEN.wall_d - 0.3, _SERVO_ZC - FT90M_SPEC.hole_pitch / 2 - 4),
+    (PEN.servo_x + FT90M_SPEC.body[1] / 2 + 2, PEN.wall_d + 0.3, _SERVO_ZC + FT90M_SPEC.hole_pitch / 2 + 4),
     facing=(0, 1, 0),
 )
 #: The plate's back face against the carriage (held there by the hook lip and the clamp screws)

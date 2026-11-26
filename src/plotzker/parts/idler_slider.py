@@ -25,7 +25,7 @@ Frame: the left bracket's local frame, slider at mid-travel (:func:`x_idler_slid
 the idler axle at ``X_DRIVE.idler_x``. The Y sliders are placed in the side frame by
 :func:`y_idler_slider_installed`.
 
-Hardware: toothed idler (``IDLER``); 1 × M5×25 ISO 4762 (axle, head on the +y arm) + 1 × M5 nut
+Hardware: toothed idler (``IDLER_SPEC``); 1 × M5×25 ISO 4762 (axle, head on the +y arm) + 1 × M5 nut
 (pressed into the -y arm's outside); 1 × M3 nut (pressed in from the top of the wall) + 1 ×
 M3×``X_IDLER.screw_len`` ISO 4762 (tension screw, from the tower's outer face).
 Print: default profile (``profiles/default.toml``); upside down, the flat top on the bed (the

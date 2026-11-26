@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import FN_HOLE
 from cadder.hardware import (
-    SK10,
+    SK10_SPEC,
     countersunk_screw,
     hex_nut,
     metric,
@@ -92,8 +92,8 @@ def shafts_and_supports() -> list[Solid]:
             items.append(sk10().translate([x, y, 0]))
             for dx in BASEBOARD.sk10_hole_x:
                 hx = x + dx
-                items.append(shcs(5, BASEBOARD.sk10_bolt_len).translate([hx, y, SK10.base_t + m5.washer_t]))
-                items.append(washer(5).translate([hx, y, SK10.base_t]))
+                items.append(shcs(5, BASEBOARD.sk10_bolt_len).translate([hx, y, SK10_SPEC.base_t + m5.washer_t]))
+                items.append(washer(5).translate([hx, y, SK10_SPEC.base_t]))
                 items.append(washer(5).translate([hx, y, -t - m5.washer_t]))
                 items.append(hex_nut(5).translate([hx, y, -t - m5.washer_t - m5.nut_h]))
     return items

@@ -171,7 +171,7 @@ z from the bottom face to the fan face.
 
 ### C14 inlet (fused, switched; screw-mounted)
 
-Measured by the user (T3.31). Model: `C14_INLET` in `src/plotzker/hardware/psu.py`.
+Measured by the user (T3.31). Model: `C14_INLET_SPEC` in `src/plotzker/hardware/psu.py`.
 
 | Item | Value |
 |------|-------|
@@ -194,4 +194,4 @@ drawing. Distances are from the mating face toward the wires; width = long side.
 | Rim (flange) | 11.8 to 12.6 | **16.4 × 9.2** | Amass drawing |
 | Black cap | 13.5 to **23.4** | 15.6 × 6.5 (±1) | *photo* |
 
-Model: `XT60` in `src/plotzker/hardware/psu.py`.
+Model: `XT60_SPEC` in `src/plotzker/hardware/psu.py`.

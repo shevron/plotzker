@@ -28,7 +28,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import EPS, teardrop_x
 from cadder.handles import handle, set_handles
-from cadder.hardware import NEMA17
+from cadder.hardware import NEMA17_SPEC
 from cadder.part import DisplacementLimit, FemSpec, LoadCase, PrintedPart, Support
 from cadder.regions import Box, Cylinder, bond_zone
 from cadder.types import Matrix
@@ -53,8 +53,8 @@ MOTOR_SCREWS = [
     handle(
         [
             Y_DRIVE.motor_plate_x[0],
-            Y_DRIVE.motor_y + dy * NEMA17.hole_pitch / 2,
-            AXIS_Z + dz * NEMA17.hole_pitch / 2,
+            Y_DRIVE.motor_y + dy * NEMA17_SPEC.hole_pitch / 2,
+            AXIS_Z + dz * NEMA17_SPEC.hole_pitch / 2,
         ],
         [0, -90, 0],
     )
@@ -64,7 +64,7 @@ MOTOR_SCREWS = [
 #: Motor: its face on the plate's inboard face, shaft axis along -x (outboard)
 MOTOR: Matrix = handle([Y_DRIVE.motor_plate_x[1], Y_DRIVE.motor_y, AXIS_Z], [0, -90, 0])
 #: Pulley: hub on the shaft just outboard of the plate, same axis
-PULLEY: Matrix = handle([Y_DRIVE.pulley_hub_x, Y_DRIVE.motor_y, AXIS_Z], [0, -90, 0])
+PULLEY_SPEC: Matrix = handle([Y_DRIVE.pulley_hub_x, Y_DRIVE.motor_y, AXIS_Z], [0, -90, 0])
 
 
 def y_motor_mount_installed() -> Solid:
@@ -84,7 +84,9 @@ def y_motor_mount_installed() -> Solid:
         for y in (y0, y1 - Y_DRIVE.gusset_t)
     ]
     plate_cx = (x0 + x1) / 2
-    boss = teardrop_x(NEMA17.boss_d + 0.4, Y_DRIVE.motor_plate_t + 2).translate([plate_cx, Y_DRIVE.motor_y, AXIS_Z])
+    boss = teardrop_x(NEMA17_SPEC.boss_d + 0.4, Y_DRIVE.motor_plate_t + 2).translate(
+        [plate_cx, Y_DRIVE.motor_y, AXIS_Z]
+    )
     screws = [
         teardrop_x(TOL.bolt_hole_d(3), Y_DRIVE.motor_plate_t + 2).translate([plate_cx, screw[1][3], screw[2][3]])
         for screw in MOTOR_SCREWS
@@ -95,7 +97,7 @@ def y_motor_mount_installed() -> Solid:
     holes = [wood_screw_hole(foot_x, y) for y in screw_ys]
     foot = foot | bosses[0] | bosses[1]
     mount = (foot | plate | gussets | pocket_frame) - pocket_cut - boss - screws - holes
-    return set_handles(mount, motor_screws=MOTOR_SCREWS, motor=MOTOR, pulley=PULLEY)
+    return set_handles(mount, motor_screws=MOTOR_SCREWS, motor=MOTOR, pulley=PULLEY_SPEC)
 
 
 def y_motor_mount(side: Side = Side.LEFT) -> Solid:
@@ -111,8 +113,8 @@ _Y0, _Y1 = Y_DRIVE.motor_plate_y
 PULLEY_POINT = (Y_AXIS.belt_x, Y_DRIVE.motor_y, AXIS_Z)
 FACE_POINT = (_X1, Y_DRIVE.motor_y, AXIS_Z)
 MOTOR_FACE = Box(
-    lo=(_X1 - 0.3, Y_DRIVE.motor_y - NEMA17.width / 2, AXIS_Z - NEMA17.width / 2),
-    hi=(_X1 + 0.3, Y_DRIVE.motor_y + NEMA17.width / 2, AXIS_Z + NEMA17.width / 2),
+    lo=(_X1 - 0.3, Y_DRIVE.motor_y - NEMA17_SPEC.width / 2, AXIS_Z - NEMA17_SPEC.width / 2),
+    hi=(_X1 + 0.3, Y_DRIVE.motor_y + NEMA17_SPEC.width / 2, AXIS_Z + NEMA17_SPEC.width / 2),
     facing=(1, 0, 0),
 )
 _FOOT_X = Y_DRIVE.motor_foot_x0 + WOOD_SCREW.boss_d / 2

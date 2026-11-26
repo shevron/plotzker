@@ -6,7 +6,7 @@ Carriage-local frame (``params.Carriage``). Not printable.
 from typing import TYPE_CHECKING
 
 from cadder.handles import get_handle, get_handles, handle, shift_handle
-from cadder.hardware import GT2, eccentric_spacer, hex_nut, metric, shcs, vslot_x, vwheel
+from cadder.hardware import GT2_SPEC, eccentric_spacer, hex_nut, metric, shcs, vslot_x, vwheel
 from cadder.types import Matrix
 from pythonscad import cube
 
@@ -38,7 +38,7 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
         wheel_bottom = _on_beam_plane(axle_bottom)
         items.append(vwheel().align(wheel_top))
         items.append(shcs(5, AXLE_BOLT_L).align(shift_handle(axle_top, [0, -wash + CARRIAGE.head_recess, 0])))
-        # bottom wheels on eccentric spacers (the bolt sits ECCENTRIC.offset off the boss axis)
+        # bottom wheels on eccentric spacers (the bolt sits ECCENTRIC_SPEC.offset off the boss axis)
         items.append(vwheel().align(wheel_bottom))
         items.append(
             eccentric_spacer(ecc_rot).align(handle([wheel_bottom[0][3], CARRIAGE.plate_back_y, wheel_bottom[2][3]]))
@@ -48,8 +48,8 @@ def carriage_assembly(ecc_rot: float = 0) -> list[Solid]:
         clamp = belt_clamp()
         items.append(clamp.align(mount, get_handle(clamp, "mount")).color("Gold"))
         items.append(
-            cube([GT2.width, CLAMP.length, GT2.thickness])
-            .translate([-GT2.width / 2, 0, -GT2.thickness])
+            cube([GT2_SPEC.width, CLAMP.length, GT2_SPEC.thickness])
+            .translate([-GT2_SPEC.width / 2, 0, -GT2_SPEC.thickness])
             .align(mount)
             .color("#111")
         )

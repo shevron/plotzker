@@ -47,7 +47,7 @@ from cadder.regions import BOND_RADIUS, Box, Cylinder
 from cadder.types import Matrix
 from pythonscad import circle, cylinder, linear_extrude, square
 
-from plotzker.hardware import PSU
+from plotzker.hardware import PSU_SPEC
 from plotzker.materials import DEFAULT_MATERIAL, DEFAULT_PRINT
 from plotzker.params import PSU_MOUNT, TOL, WOOD_SCREW
 
@@ -59,7 +59,7 @@ G = 9.81
 #: with the PSU)
 HOOD_MASS_KG = 0.08
 #: distance of the PSU's center of mass from its bottom face (half its height)
-CG_Z = PSU.size[2] / 2
+CG_Z = PSU_SPEC.size[2] / 2
 
 
 def _hole_x(d: float, x0: float, x1: float, z: float) -> Solid:
@@ -86,7 +86,7 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
     return {
         #: M4 heads on the counterbore floors, shanks toward +z (into the PSU)
         "psu_screws": [
-            handle([x, 0, PSU_MOUNT.edge_z + PSU_MOUNT.counterbore[1]], [180, 0, 0]) for x in PSU.bottom_hole_x
+            handle([x, 0, PSU_MOUNT.edge_z + PSU_MOUNT.counterbore[1]], [180, 0, 0]) for x in PSU_SPEC.bottom_hole_x
         ],
         #: wood screw heads flush with the flange's underside, shanks toward -x (up)
         "wood_screws": [handle([PSU_MOUNT.upright_x[1], 0, z], [0, 90, 0]) for z in PSU_MOUNT.wood_screw_z],
@@ -104,8 +104,8 @@ def psu_bracket_installed() -> Solid:
     brace = box(x_top, -w / 2, PSU_MOUNT.brace_z, PSU_MOUNT.board_x[0], w / 2, PSU_MOUNT.edge_z)
     body = upright | flange | brace | _corner_fillet()
     cb_d, cb_h = PSU_MOUNT.counterbore
-    for x in PSU.bottom_hole_x:
-        body = body - _hole_z(TOL.bolt_hole_d(PSU.hole_m), x, PSU_MOUNT.edge_z - 1, 1)
+    for x in PSU_SPEC.bottom_hole_x:
+        body = body - _hole_z(TOL.bolt_hole_d(PSU_SPEC.hole_m), x, PSU_MOUNT.edge_z - 1, 1)
         body = body - _hole_z(cb_d, x, PSU_MOUNT.edge_z - 1, PSU_MOUNT.edge_z + cb_h)
     for z in PSU_MOUNT.wood_screw_z:
         body = body - _hole_x(WOOD_SCREW.hole_d, flange_x0 - 1, x_bot + 1, z)
@@ -151,7 +151,7 @@ SCREW_SEATS = [
 BOND_ZONES = [Cylinder((_M.board_x[1], 0, z), (1, 0, 0), BOND_RADIUS, 0.3, facing=(-1, 0, 0)) for z in _M.wood_screw_z]
 
 #: Each bracket carries half the PSU and hood; x is down (machine -z)
-_WEIGHT_N = (PSU.mass_kg + HOOD_MASS_KG) * G / 2
+_WEIGHT_N = (PSU_SPEC.mass_kg + HOOD_MASS_KG) * G / 2
 #: ASSUMED abuse: someone leans on the PSU (50 N down) and yanks a cable (30 N out), shared
 _PUSH_N = 50 / 2
 _PULL_N = 30 / 2

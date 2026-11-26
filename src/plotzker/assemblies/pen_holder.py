@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from cadder.geometry import FN
 from cadder.handles import get_handle, get_handles, shift_handle
-from cadder.hardware import FT90M, hex_nut, servo_ft90m, servo_horn, shcs, vslot_x
+from cadder.hardware import FT90M_SPEC, hex_nut, servo_ft90m, servo_horn, shcs, vslot_x
 from pythonscad import cylinder
 
 from plotzker.assemblies.carriage import carriage_assembly
@@ -78,4 +78,4 @@ def pen_holder_fit_check() -> list[Solid]:
     return [*carriage_assembly(), beam, *pen_holder_assembly(pen_up=True)]
 
 
-__all__ = ["FT90M", "pen_holder_assembly", "pen_holder_fit_check", "pen_holder_items"]
+__all__ = ["FT90M_SPEC", "pen_holder_assembly", "pen_holder_fit_check", "pen_holder_items"]

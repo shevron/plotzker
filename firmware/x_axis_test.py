@@ -67,7 +67,7 @@ REPORT_DIR = Path(__file__).resolve().parents[1] / "build"
 class Step(StrEnum):
     """The parts of the test, in the order they run (the connection check always runs)."""
 
-    ENDSTOP = "endstop"
+    ENDSTOP_SPEC = "endstop"
     MARGIN = "margin"
     DIRECTION = "direction"
     HOMING = "homing"
@@ -334,7 +334,7 @@ def select_steps(start: Step | None, only: list[Step] | None) -> list[Step]:
 def run_tests(board: Board, report: Report, cycles: int, steps: list[Step] | None = None) -> None:
     steps = steps or list(Step)
     checks: dict[Step, Callable[[], None]] = {
-        Step.ENDSTOP: lambda: check_endstop(board, report),
+        Step.ENDSTOP_SPEC: lambda: check_endstop(board, report),
         Step.MARGIN: lambda: check_margin(board, report),
         Step.DIRECTION: lambda: check_direction(board, report),
         Step.HOMING: lambda: check_homing(board, report),

@@ -27,7 +27,7 @@ from plotzker.assemblies.y_drive import (
     y_idler_end_local,
     y_motor_end_local,
 )
-from plotzker.hardware import C14_INLET, PSU, psu
+from plotzker.hardware import C14_INLET_SPEC, PSU_SPEC, psu
 from plotzker.params import (
     BEAM,
     BRACKET,
@@ -136,13 +136,13 @@ def _psu_parts(ex: Components) -> int:
     solids (as in ``psu_mount.psu_mount_assembly``)."""
     ex.add("psu", placed(psu()), "base", SILVER)
     brackets = [placed(item) for item in brackets_local()]
-    per_bracket = 1 + len(PSU.bottom_hole_x) + len(params.PSU_MOUNT.wood_screw_z)
-    assert len(brackets) == per_bracket * len(PSU.hole_y)
-    for i in range(len(PSU.hole_y)):
+    per_bracket = 1 + len(PSU_SPEC.bottom_hole_x) + len(params.PSU_MOUNT.wood_screw_z)
+    assert len(brackets) == per_bracket * len(PSU_SPEC.hole_y)
+    for i in range(len(PSU_SPEC.hole_y)):
         ex.add(f"psu_bracket_{i}", brackets[i * per_bracket], "base", PRINTED_PEN)
     # hood_local: hood, inlet, inlet screws, inlet nuts, XT60, hood screws
     hood = [placed(item) for item in hood_local()]
-    xt60 = 2 + 2 * len(C14_INLET.hole_xy)
+    xt60 = 2 + 2 * len(C14_INLET_SPEC.hole_xy)
     ex.add("psu_hood", hood[0], "base", PRINTED)
     ex.add("c14_inlet", hood[1], "base", DARK)
     ex.add("xt60", hood[xt60], "base", GOLD)
@@ -254,15 +254,17 @@ def _gantry_parts(ex: Components, gantry_y: float) -> None:
 
 def _x_belt_return(gantry_y: float) -> Solid:
     """The X belt's upper (free) run, as ``gantry_assembly`` draws it."""
-    from cadder.hardware import GT2, PULLEY
+    from cadder.hardware import GT2_SPEC, PULLEY_SPEC
     from pythonscad import cube
 
     left_x, _ = Y_AXIS.shaft_x
-    return cube([Y_AXIS.shaft_spacing - X_DRIVE.idler_x - X_DRIVE.motor_x, GT2.width, GT2.thickness]).translate(
+    return cube(
+        [Y_AXIS.shaft_spacing - X_DRIVE.idler_x - X_DRIVE.motor_x, GT2_SPEC.width, GT2_SPEC.thickness]
+    ).translate(
         [
             left_x + X_DRIVE.idler_x,
-            gantry_y + X_BELT.y - GT2.width / 2,
-            X_BELT.pulley_axis_z + PULLEY.pd / 2 - GT2.pitch_line_from_back,
+            gantry_y + X_BELT.y - GT2_SPEC.width / 2,
+            X_BELT.pulley_axis_z + PULLEY_SPEC.pd / 2 - GT2_SPEC.pitch_line_from_back,
         ]
     )
 

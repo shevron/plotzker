@@ -6,7 +6,7 @@ definitions read these, they don't repeat them (docs/fem.md).
 
 from dataclasses import dataclass
 
-from cadder.hardware import PULLEY
+from cadder.hardware import PULLEY_SPEC
 
 #: ASSUMED: peak acceleration of the axes (firmware cap; the pen allows no more)
 ACCELERATION = 3000.0
@@ -26,7 +26,7 @@ class MotorLoads:
     @property
     def pulley_radius(self) -> float:
         """Pitch radius of the 20T drive pulley (mm)."""
-        return PULLEY.pd / 2
+        return PULLEY_SPEC.pd / 2
 
     @property
     def jam_share(self) -> float:

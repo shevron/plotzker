@@ -26,8 +26,9 @@ The document is written in millimetres and degrees (D8).
 from __future__ import annotations
 
 import math
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path as FilePath
 from typing import Any
 
@@ -103,6 +104,11 @@ class _UnsupportedError(Exception):
 class _Operand:
     reference: str
     kind: str  # "point" or a curve kind
+
+
+def _name_operands(refs: Sequence[Any], *names: str) -> dict[str, str | float | bool | None]:
+    """The operand attributes of a constraint: ``names`` paired with the references."""
+    return dict(zip(names, (r.reference for r in refs), strict=True))
 
 
 class _Exporter:
@@ -293,8 +299,7 @@ class _Exporter:
         kinds = [r.kind for r in refs]  # "point" for a point or a point of a curve, else an edge
         kind = constraint.type
 
-        def named(*names: str) -> dict[str, str | float | bool | None]:
-            return dict(zip(names, (r.reference for r in refs), strict=True))
+        named = partial(_name_operands, refs)
 
         if kind == "Coincident" and kinds == ["point", "point"]:
             return "coincident", named("a", "b")

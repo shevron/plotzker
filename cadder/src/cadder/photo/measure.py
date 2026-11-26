@@ -6,7 +6,9 @@ them directly; the crop is for looking, the others are for numbers.
 """
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
+from functools import partial
 from typing import Any
 
 import numpy as np
@@ -502,6 +504,13 @@ def _initial_rect(
     )
 
 
+def _side_normals(angle: float) -> dict[str, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]]:
+    """Per side of a rectangle at ``angle``: its outward normal and that normal's derivative."""
+    axis1 = np.array([math.cos(angle), math.sin(angle)])
+    axis2 = np.array([-math.sin(angle), math.cos(angle)])
+    return {"+a": (axis1, axis2), "-a": (-axis1, -axis2), "+b": (axis2, -axis1), "-b": (-axis2, axis1)}
+
+
 def fit_rectangle(
     sides: dict[str, list[npt.NDArray[np.float64]]], theta: float, tol: float = 0.0
 ) -> tuple[float, dict[str, float], npt.NDArray[np.float64], dict[str, int]]:
@@ -534,13 +543,8 @@ def fit_rectangle(
             mode = values[int(np.argmax(counts_near))]
             keep[sel] = np.abs(values - mode) <= tol
 
-    def normals(angle: float) -> dict[str, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]]:
-        axis1 = np.array([math.cos(angle), math.sin(angle)])
-        axis2 = np.array([-math.sin(angle), math.cos(angle)])
-        return {"+a": (axis1, axis2), "-a": (-axis1, -axis2), "+b": (axis2, -axis1), "-b": (-axis2, axis1)}  # n, dn/dθ
-
     for _ in range(8):
-        normal_vectors = normals(theta)
+        normal_vectors = _side_normals(theta)
         offsets = {
             name: float(
                 np.mean(
@@ -568,7 +572,7 @@ def fit_rectangle(
             keep &= np.abs(resid) <= 2 * tol
         if abs(angle_step) < 1e-7:
             break
-    normal_vectors = normals(theta)
+    normal_vectors = _side_normals(theta)
     offsets = {
         name: float(
             np.mean(
@@ -582,6 +586,10 @@ def fit_rectangle(
         name: int(sum(1 for (tag, _), ok in zip(pts, keep, strict=True) if tag == name and ok)) for name in names
     }
     return theta, offsets, resid, counts
+
+
+def _inside_any(point: npt.NDArray[np.float64], boxes: Sequence[tuple[float, ...]]) -> bool:
+    return any(x0 <= point[0] <= x1 and y0 <= point[1] <= y1 for x0, y0, x1, y1 in boxes)
 
 
 def outline(
@@ -670,8 +678,7 @@ def outline(
         for a in (tuple(scale.to_px(np.array([[b[0], b[1]], [b[2], b[3]]])).ravel()) for b in avoid or [])
     ]
 
-    def avoided(point: npt.NDArray[np.float64]) -> bool:
-        return any(x0 <= point[0] <= x1 and y0 <= point[1] <= y1 for x0, y0, x1, y1 in avoid_px)
+    avoided = partial(_inside_any, boxes=avoid_px)
 
     fine: dict[str, list[npt.NDArray[np.float64]]] = {}
     for name, normal, along, half_along in (

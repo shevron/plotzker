@@ -101,6 +101,13 @@ def _compare_part(name: str, path_a: Path | None, path_b: Path | None, error: st
     return PartChange(name, Status.CHANGED, stats_a, stats_b)
 
 
+def _json_default(entry: object) -> object:
+    """What ``json.dumps`` writes for a type it does not know."""
+    if isinstance(entry, Status):
+        return entry.value
+    raise TypeError(type(entry))
+
+
 def to_json(
     before: Snapshot,
     after: Snapshot,
@@ -108,11 +115,6 @@ def to_json(
     assemblies: list[AssemblyChange] | None = None,
 ) -> str:
     """The comparison as JSON (for the later HTML viewer and for scripts)."""
-
-    def default(entry: object) -> object:
-        if isinstance(entry, Status):
-            return entry.value
-        raise TypeError(type(entry))
 
     from cadder.diff.assembly import to_dict
 
@@ -130,7 +132,7 @@ def to_json(
         ],
         "assemblies": to_dict(assemblies or []),
     }
-    return json.dumps(doc, indent=1, default=default)
+    return json.dumps(doc, indent=1, default=_json_default)
 
 
 def _short(snap: Snapshot) -> str:

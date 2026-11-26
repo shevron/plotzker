@@ -198,6 +198,11 @@ def c14_inlet() -> Solid:
     return (flange | body | tabs).color("#111")
 
 
+def _xt60_section(size: tuple[float, float], start: float, length: float) -> Solid:
+    """A rectangular slice of the XT60 body, ``start`` behind its front face."""
+    return cube([size[0], length, size[1]]).translate([-size[0] / 2, -start - length, -size[1] / 2])
+
+
 def xt60_female() -> Solid:
     """The XT60H-F in its own frame: mating face at y = 0, body toward -y, width along x (the
     chamfered short side toward +x), height along z."""
@@ -213,9 +218,6 @@ def xt60_female() -> Solid:
         ]
     )
     front = linear_extrude(outline, height=XT60_SPEC.front_length).rotate([90, 0, 0])
-
-    def section(size: tuple[float, float], start: float, length: float) -> Solid:
-        return cube([size[0], length, size[1]]).translate([-size[0] / 2, -start - length, -size[1] / 2])
 
     # the collar, its two corners on the chamfered (+x) side rounded
     collar_width, collar_height, radius = *XT60_SPEC.collar, XT60_SPEC.collar_radius
@@ -241,6 +243,6 @@ def xt60_female() -> Solid:
     return union(
         front,
         collar,
-        section(XT60_SPEC.flange, collar_end, XT60_SPEC.flange_length),
-        section(XT60_SPEC.cap, rear, XT60_SPEC.length - rear),
+        _xt60_section(XT60_SPEC.flange, collar_end, XT60_SPEC.flange_length),
+        _xt60_section(XT60_SPEC.cap, rear, XT60_SPEC.length - rear),
     ).color("Gold")

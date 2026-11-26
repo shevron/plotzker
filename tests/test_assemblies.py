@@ -1,10 +1,12 @@
 """Assemblies build, and their parts actually meet: nothing floats in mid-air."""
 
+from functools import partial
+
 import pytest
 from cadder.handles import get_handle, get_handles, shift_handle
 from cadder.hardware import shcs, sk10, vslot_x
 from cadder.testing import bounding_box, connected_groups, flatten, touching, volume
-from pythonscad import union
+from pythonscad import cube, union
 
 from plotzker.assemblies import ASSEMBLIES, baseboard, loom
 from plotzker.assemblies.carriage import carriage_assembly, carriage_fit_check
@@ -106,6 +108,10 @@ def test_x_endstop_plug_space_is_free():
     assert all(volume(keepout & s) < 0.1 for s in flatten(gantry_end_local(Side.LEFT)))
 
 
+def _sk10_overlap(solid, sk10_y, dx, dy):
+    return volume(solid & sk10().translate([dx, sk10_y + dy, 0]))
+
+
 @pytest.mark.parametrize(
     ("mount", "sk10_y", "outward"),
     [
@@ -119,8 +125,7 @@ def test_sk10_seats_in_the_mount_corner(mount, sk10_y, outward):
     is free to move toward the open sides."""
     solid = mount()
 
-    def overlap(dx, dy):
-        return volume(solid & sk10().translate([dx, sk10_y + dy, 0]))
+    overlap = partial(_sk10_overlap, solid, sk10_y)
 
     assert overlap(0, 0) < 1e-6
     assert touching(solid, sk10().translate([0, sk10_y, 0]))
@@ -439,11 +444,15 @@ def test_y_idler_axle_bolt_and_nut_clear_the_tower_walls(side, shift):
         assert volume(part & mount) < 1e-3
 
 
+def _probe_cube(x: float, y: float, z: float, dz: float):
+    """A small cube ``dz`` above the point."""
+    return cube([0.4, 1, 0.4]).translate([x - 0.2, y - 0.5, z + dz - 0.2])
+
+
 @pytest.mark.parametrize("which", ["x", "y"])
 def test_floating_slider_arm_ends_have_a_straight_45_degree_top_front(which):
     """T3.22: printed upside down the arms' round ends must not droop: the top front corner is a
     straight 45° line, so material is solid just below it and absent just above it."""
-    from pythonscad import cube
 
     from plotzker.params import X_IDLER, Y_IDLER
     from plotzker.parts.floating_idler import slider_local
@@ -454,8 +463,7 @@ def test_floating_slider_arm_ends_have_a_straight_45_degree_top_front(which):
     x = idler.chamfer_x + 1.0  # past the start of the line
     line_z = idler.arm_top - 1.0  # the 45° line's height there
 
-    def probe(dz: float):
-        return cube([0.4, 1, 0.4]).translate([x - 0.2, y_mid - 0.5, line_z + dz - 0.2])
+    probe = partial(_probe_cube, x, y_mid, line_z)
 
     assert volume(slider & probe(-0.8)) > 0.9 * 0.4 * 0.4 * 1  # solid below the line
     assert volume(slider & probe(+0.8)) < 1e-3  # nothing above it

@@ -142,6 +142,10 @@ def _outline(f: dict[str, Any]) -> list[Points]:
     return [np.array([_xyz(f["center"])], dtype=np.float64)]
 
 
+def _unchanged(points: Points) -> Points:
+    return points
+
+
 def overlay(
     feature_file: FeatureFile,
     on: str = "photo",
@@ -162,10 +166,7 @@ def overlay(
     if rect is not None:
         feature_file.rect, feature_file.rect_dir = Rectification.load(rect), rect.parent
 
-    def same(line_points: Points) -> Points:
-        return line_points
-
-    to_img: Callable[[Points], Points] = same
+    to_img: Callable[[Points], Points] = _unchanged
     if feature_file.rect is None:
         assert feature_file.image is not None
         image = load(feature_file.image)

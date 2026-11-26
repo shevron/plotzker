@@ -122,24 +122,23 @@ def _screw_holes() -> list[Solid]:
     return cuts
 
 
+def _rod_arm(z0: float, z1: float) -> Solid:
+    """Round boss around the rod, joined to the plate."""
+    boss = cylinder(d=PEN.arm_width, h=z1 - z0, fn=FN_HOLE).translate([PEN.rod_x, PEN.rod_depth, z0])
+    x0, x1 = PEN.rod_x - PEN.arm_width / 2, PEN.rod_x + PEN.arm_width / 2
+    return boss | _box(x0, x1, PEN.plate_depth[1] - 1, PEN.rod_depth, z0, z1)
+
+
 def _rod_arms() -> tuple[list[Solid], list[Solid]]:
     """Both rod arms and the rod holes (parts to add, cuts to subtract)."""
-    x0, x1 = PEN.rod_x - PEN.arm_width / 2, PEN.rod_x + PEN.arm_width / 2
-    d0 = PEN.plate_depth[1] - 1
-
-    def arm(z0: float, z1: float) -> Solid:
-        """Round boss around the rod, joined to the plate."""
-        boss = cylinder(d=PEN.arm_width, h=z1 - z0, fn=FN_HOLE).translate([PEN.rod_x, PEN.rod_depth, z0])
-        return boss | _box(x0, x1, d0, PEN.rod_depth, z0, z1)
-
     hole_dia = TOL.press_dia(PEN.rod_dia)
     cuts = [
         _hole_z(hole_dia, PEN.rod_x, PEN.rod_depth, PEN.lower_arm_top - PEN.rod_seat_depth, PEN.lower_arm_top + 1),
         _hole_z(hole_dia, PEN.rod_x, PEN.rod_depth, PEN.upper_arm_bottom - 1, PEN.upper_arm_top + 1),
     ]
     return [
-        arm(PEN.lower_arm_bottom, PEN.lower_arm_top),
-        arm(PEN.upper_arm_bottom, PEN.upper_arm_top),
+        _rod_arm(PEN.lower_arm_bottom, PEN.lower_arm_top),
+        _rod_arm(PEN.upper_arm_bottom, PEN.upper_arm_top),
     ], cuts
 
 

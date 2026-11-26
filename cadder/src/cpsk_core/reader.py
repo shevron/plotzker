@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import Literal, TypeAlias, cast
 
@@ -127,6 +128,77 @@ class _RawConstraint:
 
 class _ReferenceFailedError(Exception):
     """A reference in a formula failed; the problem is already reported."""
+
+
+def _operand_kinds(operands: Mapping[str, Operand], *names: str) -> tuple[Kind, ...] | None:
+    """The kinds of the operands, if they are exactly those called ``names``."""
+    return tuple(operands[n].kind for n in names) if set(operands) == set(names) else None
+
+
+def _on_curve_end(operand: Operand) -> bool:
+    return operand.point in ("start", "end")
+
+
+class _Evaluator:
+    """Evaluates named formulas on demand, following their references and finding cycles."""
+
+    def __init__(
+        self, reader: _Reader, named: Mapping[str, _RawConstraint], valued: Mapping[str, _RawConstraint]
+    ) -> None:
+        self.reader = reader
+        self.named = named
+        self.valued = valued
+        self.values: dict[str, float] = {}
+        self.failed: set[str] = set()
+        self.visiting: list[str] = []
+
+    def value_of(self, id: str, line: int | None) -> float:
+        """The value of a variable or a driving constraint."""
+        if id in self.values:
+            return self.values[id]
+        if id in self.failed:
+            raise _ReferenceFailedError
+        if id in self.visiting:
+            cycle = (*self.visiting[self.visiting.index(id) :], id)
+            self.reader.error("cycle", f"circular reference: {' -> '.join(cycle)}", line, cycle)
+            self.failed.update(cycle)
+            raise _ReferenceFailedError
+        if id in self.reader.variables:
+            node, where = self.reader.variables[id].formula, self.reader.variables[id].line
+        else:
+            node, where = self.valued[id].formula, self.valued[id].line
+        self.visiting.append(id)
+        try:
+            if node is None:
+                raise _ReferenceFailedError
+            self.values[id] = evaluate(node, self.reader.units, partial(self.resolve, line=where))
+        except FormulaError as e:
+            self.reader.error("formula", f"{id!r}: {e}", where, (id,))
+            self.failed.add(id)
+            raise _ReferenceFailedError from None
+        except _ReferenceFailedError:
+            self.failed.add(id)
+            raise
+        finally:
+            self.visiting.pop()
+        return self.values[id]
+
+    def resolve(self, name: Name, line: int | None) -> float:
+        """The value a formula on ``line`` reads under ``name``."""
+        head = name.parts[0]
+        if len(name.parts) > 1:
+            message = f"{name}: formulas cannot read solved properties (spec §10.5)"
+            self.reader.error("forbidden-reference", message, line, (head,))
+        elif head in self.named and self.named[head].type in _DIMENSIONS and not self.named[head].driving:
+            message = f"{name}: formulas cannot read non-driving constraints (spec §10.5)"
+            self.reader.error("forbidden-reference", message, line, (head,))
+        elif head in self.reader.variables or head in self.valued:
+            return self.value_of(head, line)
+        elif head in self.reader.ids or head in RESERVED:
+            self.reader.error("reference", f"{name!r} has no value", line, (head,))
+        else:
+            self.reader.error("reference", f"unknown name {str(name)!r}", line, (head,))
+        raise _ReferenceFailedError
 
 
 @dataclass
@@ -396,62 +468,10 @@ class _Reader:
         """Values of variables and of identified driving constraints, and of anonymous ones."""
         named = {raw.id: raw for raw in self.raws if raw.id is not None and raw.id in self.ids}
         valued = {id: raw for id, raw in named.items() if raw.type in _DIMENSIONS and raw.driving}
-        values: dict[str, float] = {}
-        failed: set[str] = set()
-        visiting: list[str] = []
-
-        def value_of(id: str, line: int | None) -> float:
-            if id in values:
-                return values[id]
-            if id in failed:
-                raise _ReferenceFailedError
-            if id in visiting:
-                cycle = (*visiting[visiting.index(id) :], id)
-                self.error("cycle", f"circular reference: {' -> '.join(cycle)}", line, cycle)
-                failed.update(cycle)
-                raise _ReferenceFailedError
-            if id in self.variables:
-                node, where = self.variables[id].formula, self.variables[id].line
-            else:
-                node, where = valued[id].formula, valued[id].line
-            visiting.append(id)
-            try:
-                if node is None:
-                    raise _ReferenceFailedError
-                values[id] = evaluate(node, self.units, resolver(where))
-            except FormulaError as e:
-                self.error("formula", f"{id!r}: {e}", where, (id,))
-                failed.add(id)
-                raise _ReferenceFailedError from None
-            except _ReferenceFailedError:
-                failed.add(id)
-                raise
-            finally:
-                visiting.pop()
-            return values[id]
-
-        def resolver(line: int | None) -> Callable[[Name], float]:
-            def resolve(name: Name) -> float:
-                head = name.parts[0]
-                if len(name.parts) > 1:
-                    message = f"{name}: formulas cannot read solved properties (spec §10.5)"
-                    self.error("forbidden-reference", message, line, (head,))
-                elif head in named and named[head].type in _DIMENSIONS and not named[head].driving:
-                    message = f"{name}: formulas cannot read non-driving constraints (spec §10.5)"
-                    self.error("forbidden-reference", message, line, (head,))
-                elif head in self.variables or head in valued:
-                    return value_of(head, line)
-                elif head in self.ids or head in RESERVED:
-                    self.error("reference", f"{name!r} has no value", line, (head,))
-                else:
-                    self.error("reference", f"unknown name {str(name)!r}", line, (head,))
-                raise _ReferenceFailedError
-
-            return resolve
-
+        evaluator = _Evaluator(self, named, valued)
         for id, variable in self.variables.items():
             try:
-                result = value_of(id, variable.line)
+                result = evaluator.value_of(id, variable.line)
             except _ReferenceFailedError:
                 continue
             low, high = variable.low, variable.high
@@ -465,14 +485,14 @@ class _Reader:
                 continue
             try:
                 if raw.id is not None and raw.id in valued:
-                    value_of(raw.id, raw.line)
+                    evaluator.value_of(raw.id, raw.line)
                 else:
-                    anonymous[index] = evaluate(raw.formula, self.units, resolver(raw.line))
+                    anonymous[index] = evaluate(raw.formula, self.units, partial(evaluator.resolve, line=raw.line))
             except FormulaError as e:
                 self.error("formula", str(e), raw.line)
             except _ReferenceFailedError:
                 pass
-        return values, anonymous
+        return evaluator.values, anonymous
 
     # ----- Constraints (spec §8, §9) -----
 
@@ -558,26 +578,20 @@ class _Reader:
         return None
 
     def check_operands(self, raw: _RawConstraint, ops: Mapping[str, Operand]) -> bool:
-        def kinds(*names: str) -> tuple[Kind, ...] | None:
-            return tuple(ops[n].kind for n in names) if set(ops) == set(names) else None
-
-        def on_curve_end(op: Operand) -> bool:
-            return op.point in ("start", "end")
-
-        pair = kinds("a", "b")
+        pair = _operand_kinds(ops, "a", "b")
         match raw.type:
             case "coincident" | "distance-x" | "distance-y":
                 ok = pair == ("point", "point")
             case "point-on":
-                found = kinds("point", "object")
+                found = _operand_kinds(ops, "point", "object")
                 ok = found is not None and found[0] == "point" and found[1] != "point"
             case "horizontal" | "vertical":
-                ok = kinds("of") == ("line",) or pair == ("point", "point")
+                ok = _operand_kinds(ops, "of") == ("line",) or pair == ("point", "point")
             case "parallel":
                 ok = pair == ("line", "line")
             case "perpendicular":
                 if pair == ("point", "point"):  # end points of a line and an arc
-                    ends = on_curve_end(ops["a"]) and on_curve_end(ops["b"])
+                    ends = _on_curve_end(ops["a"]) and _on_curve_end(ops["b"])
                     ok = ends and {self.parent_kind(o) for o in ops.values()} == {"arc", "line"}
                 else:  # two lines, or a line and a circle or arc (through its centre)
                     ok = pair is not None and sorted(pair) in (
@@ -587,27 +601,27 @@ class _Reader:
                     )
             case "tangent":
                 if pair == ("point", "point"):
-                    ok = on_curve_end(ops["a"]) and on_curve_end(ops["b"])
+                    ok = _on_curve_end(ops["a"]) and _on_curve_end(ops["b"])
                 else:
                     ok = pair is not None and "point" not in pair and pair != ("line", "line")
             case "equal":
                 ok = pair == ("line", "line") or (pair is not None and set(pair) <= {"circle", "arc"})
             case "symmetric":
-                found = kinds("a", "b", "about")
+                found = _operand_kinds(ops, "a", "b", "about")
                 ok = found in (("point", "point", "point"), ("point", "point", "line"))
             case "block":
-                ok = kinds("of") is not None and isinstance(ops["of"].target, int)
+                ok = _operand_kinds(ops, "of") is not None and isinstance(ops["of"].target, int)
                 ok = ok and ops["of"].point is None
             case "distance":
-                ok = kinds("of") == ("line",) or pair in (
+                ok = _operand_kinds(ops, "of") == ("line",) or pair in (
                     ("point", "point"),
                     ("point", "line"),
                     ("line", "point"),
                 )
             case "radius" | "diameter":
-                ok = kinds("of") in (("circle",), ("arc",))
+                ok = _operand_kinds(ops, "of") in (("circle",), ("arc",))
             case _:
-                ok = kinds("of") == ("arc",) or pair == ("line", "line")
+                ok = _operand_kinds(ops, "of") == ("arc",) or pair == ("line", "line")
         if not ok:
             written = ", ".join(f"{name}={op.text!r} ({op.kind})" for name, op in ops.items())
             message = f"<{raw.type}> does not take these operands: {written or 'none'}"

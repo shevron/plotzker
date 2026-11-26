@@ -10,6 +10,7 @@ Shapes are drawn deformed (scale printed on the image) over a faint ghost of the
 import json
 import math
 import sys
+from functools import partial
 from pathlib import Path
 
 import vtk
@@ -196,6 +197,12 @@ def normalize(v):
     return tuple(c / length for c in v)
 
 
+def _render_into(names, out, name, *args):
+    """Render the picture ``name`` into ``out`` and note it in ``names``."""
+    render(*args, out / name)
+    names.append(name)
+
+
 def main():
     """Render every picture of the case."""
     data = load(sys.argv[1])
@@ -215,9 +222,7 @@ def main():
     note = f"deformation x{scale:.0f}, ghost = undeformed   max displacement {top:.3f} mm"
     names = []
 
-    def put(name, *args):
-        render(*args, out / name)
-        names.append(name)
+    put = partial(_render_into, names, out)
 
     view = normalize((1, -1.1, 0.8))
     back = normalize((-1, 1.1, 0.8))

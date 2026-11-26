@@ -16,6 +16,7 @@ import json
 import math
 import os
 from dataclasses import asdict, dataclass, field, replace
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
@@ -103,6 +104,24 @@ def make_target(path: Path, board: Board = DEFAULT_BOARD, paper: str = "A4", px_
     return path
 
 
+def _draw_text(
+    page: npt.NDArray[np.uint8], px_per_mm: float, text: str, x_mm: float, y_mm: float, size: float = 0.9
+) -> None:
+    """Write ``text`` on the target page with its baseline's start at (``x_mm``, ``y_mm``)."""
+    import cv2
+
+    cv2.putText(
+        page,
+        text,
+        (round(x_mm * px_per_mm), round(y_mm * px_per_mm)),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        size * px_per_mm / 20 * 1.2,
+        0,
+        max(1, round(px_per_mm / 10)),
+        cv2.LINE_AA,
+    )
+
+
 def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: float = 20.0) -> npt.NDArray[np.uint8]:
     """The target page as a grayscale image at ``px_per_mm``."""
     import cv2
@@ -122,21 +141,10 @@ def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: floa
     y0 = round(8 * px_per_mm)
     page[y0 : y0 + board_height, x0 : x0 + board_width] = art
 
-    def text(square: str, x_mm: float, y_mm: float, size: float = 0.9) -> None:
-        cv2.putText(
-            page,
-            square,
-            (round(x_mm * px_per_mm), round(y_mm * px_per_mm)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            size * px_per_mm / 20 * 1.2,
-            0,
-            max(1, round(px_per_mm / 10)),
-            cv2.LINE_AA,
-        )
-
     left_mm, bottom_mm = x0 / px_per_mm, (y0 + board_height) / px_per_mm
-    text(board.label(), left_mm, bottom_mm + 5)
-    text(
+    draw = partial(_draw_text, page, px_per_mm)
+    draw(board.label(), left_mm, bottom_mm + 5)
+    draw(
         "Print at 100 % (no fit to page). Measure 10 squares; pass square size to rectify.",
         left_mm,
         bottom_mm + 9,
@@ -145,7 +153,7 @@ def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: floa
     origin = "origin (0,0): this corner, x right, y up, z up"
     if board.field_mm:
         origin += "; white field x {:g}-{:g}, y {:g}-{:g} mm".format(*board.field_mm[::2], *board.field_mm[1::2])
-    text(origin, left_mm, bottom_mm + 13, 0.75)
+    draw(origin, left_mm, bottom_mm + 13, 0.75)
     bar_y = round((bottom_mm + 17) * px_per_mm)
     bar_x0 = x0
     for i in range(11):  # 100 mm scale bar with a tick every 10 mm
@@ -153,7 +161,7 @@ def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: floa
         tick = round((2 if i % 5 else 3.5) * px_per_mm)
         cv2.line(page, (x, bar_y - tick), (x, bar_y), 0, max(1, round(px_per_mm / 10)))
     cv2.line(page, (bar_x0, bar_y), (bar_x0 + round(100 * px_per_mm), bar_y), 0, 2)
-    text("100 mm", left_mm + 102, bottom_mm + 17, 0.75)
+    draw("100 mm", left_mm + 102, bottom_mm + 17, 0.75)
     return page
 
 
@@ -699,18 +707,19 @@ def with_square(board: Board, square_mm: float | None) -> Board:
     return replace(board, square_mm=square_mm, marker_mm=board.marker_mm * square_mm / board.square_mm)
 
 
+def _whole_pixels(value: float | str | None) -> str:
+    return "-" if value is None else f"{float(value):.0f}"
+
+
 def summary(rect: Rectification) -> str:
     """A few lines describing a rectification."""
     eye_x, eye_y, eye_z = rect.camera_center
     f = rect.focal
 
-    def px(value: float | str | None) -> str:
-        return "-" if value is None else f"{float(value):.0f}"
-
     lines = [
         f"photo {rect.source}: {rect.corners} target corners, reprojection {rect.rms_px:.2f} px",
-        f"focal {px(f['used'])} px ({f['source']}; exif {px(f['exif'])}, "
-        + (f"fit {px(f['fit'])})" if rect.tilt_deg > 10 else "fit: view too square-on to tell)"),
+        f"focal {_whole_pixels(f['used'])} px ({f['source']}; exif {_whole_pixels(f['exif'])}, "
+        + (f"fit {_whole_pixels(f['fit'])})" if rect.tilt_deg > 10 else "fit: view too square-on to tell)"),
         f"camera at ({eye_x:.0f}, {eye_y:.0f}, {eye_z:.0f}) mm, tilt {rect.tilt_deg:.1f}°",
         f"rectified plane z = {rect.plane_height:g} mm, {rect.px_per_mm:g} px/mm, region "
         + ", ".join(f"{v:g}" for v in rect.region)

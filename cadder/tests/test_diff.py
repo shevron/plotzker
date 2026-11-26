@@ -3,6 +3,7 @@
 import struct
 import subprocess
 import zlib
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -212,6 +213,13 @@ def test_identical_assemblies_are_unchanged(tmp_path: Path) -> None:
     assert change.status == "unchanged"
 
 
+def _commit(git: list[str], message: str) -> str:
+    """Commit everything and return the new revision."""
+    subprocess.run([*git, "add", "."], check=True)
+    subprocess.run([*git, "commit", "-qm", message], check=True)
+    return subprocess.run([*git, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+
+
 def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
     """A repository with two commits: params.py and a part module changed, FEM verdict re-run."""
     repo = tmp_path / "gitrepo"
@@ -220,10 +228,7 @@ def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
     run = ["git", "-C", str(repo), "-c", "user.name=t", "-c", "user.email=t@t"]
     subprocess.run([*run, "init", "-q"], check=True)
 
-    def commit(msg: str) -> str:
-        subprocess.run([*run, "add", "."], check=True)
-        subprocess.run([*run, "commit", "-qm", msg], check=True)
-        return subprocess.run([*run, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
+    commit = partial(_commit, run)
 
     (repo / "src/demo/params.py").write_text("W = 1\n")
     (repo / "src/demo/parts/p.py").write_text("T = 2\n")

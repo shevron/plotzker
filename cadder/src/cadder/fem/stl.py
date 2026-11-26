@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 from cadder.types import Vec3
@@ -79,13 +80,17 @@ def _split_t_junctions(triangles: list[tuple[Vec3, Vec3, Vec3]]) -> list[tuple[V
     return triangles
 
 
+def _weld(p: Vec3, welded: dict[tuple[int, int, int], Vec3], tol: float) -> Vec3:
+    """The shared vertex for ``p``: points in the same ``tol`` cell become one."""
+    key = (round(p[0] / tol), round(p[1] / tol), round(p[2] / tol))
+    return welded.setdefault(key, (key[0] * tol, key[1] * tol, key[2] * tol))
+
+
 def _weld_and_filter(raw: list[Vec3], tol: float) -> tuple[list[tuple[Vec3, Vec3, Vec3]], int]:
     """Welded triangles without degenerate or zero-area ones, made conforming."""
     welded: dict[tuple[int, int, int], Vec3] = {}
 
-    def weld(p: Vec3) -> Vec3:
-        key = (round(p[0] / tol), round(p[1] / tol), round(p[2] / tol))
-        return welded.setdefault(key, (key[0] * tol, key[1] * tol, key[2] * tol))
+    weld = partial(_weld, welded=welded, tol=tol)
 
     triangles: list[tuple[Vec3, Vec3, Vec3]] = []
     dropped = 0

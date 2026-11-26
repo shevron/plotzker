@@ -175,25 +175,8 @@ Open:
   FreeCAD assembly, registries and drilling layout; the PSU mount and loom are unchanged.
 - [x] **T3.34 Readable names** (2026-11-26, README §7.5): constants used by name, hardware specs
   suffixed `_SPEC`, abbreviations spelled out. Names in TOML files, `--json`, the CLI and CPSK kept.
-- [ ] **T3.35 Remove disallowed nested functions** (README §7.5, "Flat is better than nested").
-  47 of the 70 nested functions break the rule. Prefer a better structure that removes the need
-  for the helper (as `Element.descendants()` replaced a recursive `walk`) over only moving it to
-  module level.
-  1. Restructure: the nine CLI commands in `cli.make_app` (module-level, the project from
-     Typer's context); `freecad/build.py` (`load_mesh`, `make_part`, `placement_of`, `frame`,
-     `make_joint`, `add_gui_state.add`); `cpsk_core/reader.py` `evaluate_all` (`value_of`,
-     `resolver`, `resolve`: an evaluator class).
-  2. Longer than 8 lines: `solve.py` `run` (`partial`), `photo/check.py` `pose`,
-     `photo/target.py` `text`, `cpsk/svg.py` `segment`.
-  3. Short, but none of the allowed cases: `named`, `xy`, `fix` (`fem/mesh.py`), `weld`, `put`,
-     `kinds`, `on_curve_end`, `place` (two, `freecad_assembly.py`), `joint`, `limit`, `arm`,
-     `find` (`testing.py`), `avoided`, `normals`, `same`, `px` (`photo/target.py` and
-     `test_photo.py`), `fmt`, `section`, `bore`, `default` (`diff/compare.py`), and in tests
-     `overlap`, `probe`, `commit`.
-
-  *Done when:* only allowed cases remain; `make check` and `make test` pass; `make
-  test-cpsk-core` passes; the FreeCAD assembly builds; `python -m plotzker diff` shows no
-  geometry change; CLI help is unchanged; `fem-status` shows nothing newly stale.
+- [x] **T3.35 Disallowed nested functions removed** (2026-11-26, README §7.5): 23 nested functions
+  remain, all allowed cases.
 - [ ] **T3.32 Controller mount for the Creality board** (D41). The machine has no controller mount
   and the drilling layout no holes for one; the ZRIB's mount is in `legacy/zrib/` (D43). The loom
   run, the PSU's XT60 position (D38) and `BASEBOARD.controller_center` were designed around the

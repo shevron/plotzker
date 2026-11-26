@@ -167,6 +167,176 @@ def diff(
             webbrowser.open(report.as_uri())
 
 
+def _check_command(ctx: typer.Context) -> None:
+    """Run the design checks and print the key numbers."""
+    project: Project = ctx.obj
+    check(project)
+
+
+def _stl_command(
+    ctx: typer.Context,
+    names: Annotated[list[str] | None, typer.Argument(help="Part names (default: all).")] = None,
+    out: OutDir = None,
+) -> None:
+    """Export parts to STL."""
+    project: Project = ctx.obj
+    export_stls(project, names, out, log=typer.echo)
+
+
+def _render_command(
+    ctx: typer.Context,
+    names: Annotated[list[str] | None, typer.Argument(help="Part or assembly names (default: all).")] = None,
+    out: OutDir = None,
+    inspect: Annotated[
+        bool,
+        typer.Option(help="Render all views (iso, rear iso, front, rear, left, right, top) to renders/inspect/."),
+    ] = False,
+    pythonscad: PythonscadBinary = None,
+) -> None:
+    """Render parts and assemblies to PNG (needs PythonSCAD)."""
+    project: Project = ctx.obj
+    render_pngs(project, names, out, pythonscad, inspect, log=typer.echo)
+
+
+def _part_command(
+    ctx: typer.Context,
+    name: Annotated[str | None, typer.Argument(help="Part name.")] = None,
+    list_all: Annotated[bool, typer.Option("--list", help="List all parts.")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print as JSON.")] = False,
+    stl: Annotated[Path | None, typer.Option(help="Write the part (analysis frame) to this STL file.")] = None,
+) -> None:
+    """Show a part's print profile, material and FEM properties."""
+    project: Project = ctx.obj
+    from cadder import report
+
+    parts = project.parts()
+    if stl is not None and name:
+        report.export_part_stl(name, stl, parts)
+    elif list_all or not name:
+        typer.echo(report.list_parts(parts))
+    else:
+        typer.echo(report.part_json(name, parts) if as_json else report.part_text(name, parts))
+
+
+def _fem_command(
+    ctx: typer.Context,
+    names: Annotated[
+        list[str],
+        typer.Argument(
+            help="Part names, or assembly check names (judged from the members' recorded "
+            "results; checks whose members were all just checked are included)."
+        ),
+    ],
+    size: Annotated[float | None, typer.Option(help="Element size near loads in mm (default by size).")] = None,
+    refine: Annotated[
+        Refine,
+        typer.Option(help="Solve a finer second mesh: only near a limit, always, or never."),
+    ] = Refine.AUTO,
+    uniform: Annotated[bool, typer.Option(help="Same element size everywhere.")] = False,
+    solver: Annotated[str, typer.Option(help="CalculiX solver (default: SPOOLES).")] = "",
+    viz: Annotated[bool, typer.Option(help="Also write pictures and .vtu files.")] = False,
+    no_record: Annotated[
+        bool,
+        typer.Option(
+            "--no-record",
+            help="Diagnostic run: leave the verdicts file alone (use --out to keep results apart).",
+        ),
+    ] = False,
+    out: OutDir = None,
+) -> None:
+    """FEM check of parts (needs FreeCAD's gmsh and CalculiX); exit code 1 unless all pass."""
+    project: Project = ctx.obj
+    from cadder.fem.runner import RunOptions
+
+    options = RunOptions(size, refine.value, not uniform, solver, viz, project.spec)
+    folder = out or project.path("fem")
+    if not run_fem(project, names, folder, options, record=not no_record):
+        raise typer.Exit(1)
+
+
+def _fem_status_command(
+    ctx: typer.Context,
+    no_geometry: Annotated[
+        bool, typer.Option("--no-geometry", help="Skip the geometry hash (spec changes only).")
+    ] = False,
+) -> None:
+    """Show the FEM state of every part; stale verdicts are flagged."""
+    project: Project = ctx.obj
+    typer.echo("\n".join(fem_status(project, not no_geometry)))
+
+
+def _diff_command(
+    ctx: typer.Context,
+    rev_a: Annotated[str, typer.Argument(help="Base revision.")] = "HEAD",
+    rev_b: Annotated[str, typer.Argument(help="Revision to compare (default: working tree).")] = "WORKTREE",
+    all_parts: Annotated[bool, typer.Option("--all", help="Also list unchanged parts.")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the comparison as JSON.")] = False,
+    open_report: Annotated[bool, typer.Option("--open", help="Open the HTML report in the browser.")] = False,
+    serve_report: Annotated[bool, typer.Option("--serve", help="Serve the report on localhost.")] = False,
+    port: Annotated[int, typer.Option(help="Port for --serve.")] = 8765,
+    no_html: Annotated[bool, typer.Option("--no-html", help="Skip the HTML report.")] = False,
+    out: OutDir = None,
+) -> None:
+    """Show the parts added, removed or changed between two git revisions."""
+    project: Project = ctx.obj
+    folder = out or project.path("build") / "diff"
+    port_or_none = port if serve_report else None
+    diff(
+        project,
+        rev_a,
+        rev_b,
+        all_parts,
+        as_json,
+        open_report,
+        port_or_none,
+        not no_html,
+        folder,
+    )
+
+
+def _freecad_command(
+    ctx: typer.Context,
+    names: Annotated[list[str] | None, typer.Argument(help="FreeCAD assembly names (default: all).")] = None,
+    export_only: Annotated[bool, typer.Option("--export-only", help="Write STLs and manifest, skip FreeCAD.")] = False,
+    out: OutDir = None,
+) -> None:
+    """Build the project's FreeCAD assemblies (needs FreeCAD 1.x for the build step)."""
+    project: Project = ctx.obj
+    from cadder.freecad.export import build_assembly, export_assembly
+    from cadder.render import select
+
+    assemblies = project.freecad_assemblies()
+    folder = out or project.path("freecad")
+    for name in select(names, assemblies):
+        manifest = export_assembly(assemblies[name], folder, log=typer.echo)
+        if not export_only:
+            build_assembly(manifest, log=typer.echo)
+
+
+def _all_command(ctx: typer.Context, pythonscad: PythonscadBinary = None) -> None:
+    """Run check, stl, the project's extra outputs and render."""
+    project: Project = ctx.obj
+    check(project)
+    export_stls(project, log=typer.echo)
+    for step in project.all_steps:
+        step()
+    render_pngs(project, binary=pythonscad, log=typer.echo)
+
+
+#: The commands every project has, in the order the help lists them
+_COMMANDS: tuple[tuple[str, Callable[..., None]], ...] = (
+    ("check", _check_command),
+    ("stl", _stl_command),
+    ("render", _render_command),
+    ("part", _part_command),
+    ("fem", _fem_command),
+    ("fem-status", _fem_status_command),
+    ("diff", _diff_command),
+    ("freecad", _freecad_command),
+    ("all", _all_command),
+)
+
+
 def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
     """The command-line app for ``project``, with its own commands added."""
     app = typer.Typer(
@@ -174,158 +344,11 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
         help=f"cadder for {project.name}: checks, exports, reports, FEM and the design diff.",
         no_args_is_help=True,
         add_completion=False,
+        context_settings={"obj": project},  # how the commands get the project
     )
 
-    @app.command("check")
-    @reports_errors
-    def check_command() -> None:
-        """Run the design checks and print the key numbers."""
-        check(project)
-
-    @app.command("stl")
-    @reports_errors
-    def stl_command(
-        names: Annotated[list[str] | None, typer.Argument(help="Part names (default: all).")] = None,
-        out: OutDir = None,
-    ) -> None:
-        """Export parts to STL."""
-        export_stls(project, names, out, log=typer.echo)
-
-    @app.command("render")
-    @reports_errors
-    def render_command(
-        names: Annotated[list[str] | None, typer.Argument(help="Part or assembly names (default: all).")] = None,
-        out: OutDir = None,
-        inspect: Annotated[
-            bool,
-            typer.Option(help="Render all views (iso, rear iso, front, rear, left, right, top) to renders/inspect/."),
-        ] = False,
-        pythonscad: PythonscadBinary = None,
-    ) -> None:
-        """Render parts and assemblies to PNG (needs PythonSCAD)."""
-        render_pngs(project, names, out, pythonscad, inspect, log=typer.echo)
-
-    @app.command("part")
-    @reports_errors
-    def part_command(
-        name: Annotated[str | None, typer.Argument(help="Part name.")] = None,
-        list_all: Annotated[bool, typer.Option("--list", help="List all parts.")] = False,
-        as_json: Annotated[bool, typer.Option("--json", help="Print as JSON.")] = False,
-        stl: Annotated[Path | None, typer.Option(help="Write the part (analysis frame) to this STL file.")] = None,
-    ) -> None:
-        """Show a part's print profile, material and FEM properties."""
-        from cadder import report
-
-        parts = project.parts()
-        if stl is not None and name:
-            report.export_part_stl(name, stl, parts)
-        elif list_all or not name:
-            typer.echo(report.list_parts(parts))
-        else:
-            typer.echo(report.part_json(name, parts) if as_json else report.part_text(name, parts))
-
-    @app.command("fem")
-    @reports_errors
-    def fem_command(
-        names: Annotated[
-            list[str],
-            typer.Argument(
-                help="Part names, or assembly check names (judged from the members' recorded "
-                "results; checks whose members were all just checked are included)."
-            ),
-        ],
-        size: Annotated[float | None, typer.Option(help="Element size near loads in mm (default by size).")] = None,
-        refine: Annotated[
-            Refine,
-            typer.Option(help="Solve a finer second mesh: only near a limit, always, or never."),
-        ] = Refine.AUTO,
-        uniform: Annotated[bool, typer.Option(help="Same element size everywhere.")] = False,
-        solver: Annotated[str, typer.Option(help="CalculiX solver (default: SPOOLES).")] = "",
-        viz: Annotated[bool, typer.Option(help="Also write pictures and .vtu files.")] = False,
-        no_record: Annotated[
-            bool,
-            typer.Option(
-                "--no-record",
-                help="Diagnostic run: leave the verdicts file alone (use --out to keep results apart).",
-            ),
-        ] = False,
-        out: OutDir = None,
-    ) -> None:
-        """FEM check of parts (needs FreeCAD's gmsh and CalculiX); exit code 1 unless all pass."""
-        from cadder.fem.runner import RunOptions
-
-        options = RunOptions(size, refine.value, not uniform, solver, viz, project.spec)
-        folder = out or project.path("fem")
-        if not run_fem(project, names, folder, options, record=not no_record):
-            raise typer.Exit(1)
-
-    @app.command("fem-status")
-    @reports_errors
-    def fem_status_command(
-        no_geometry: Annotated[
-            bool, typer.Option("--no-geometry", help="Skip the geometry hash (spec changes only).")
-        ] = False,
-    ) -> None:
-        """Show the FEM state of every part; stale verdicts are flagged."""
-        typer.echo("\n".join(fem_status(project, not no_geometry)))
-
-    @app.command("diff")
-    @reports_errors
-    def diff_command(
-        rev_a: Annotated[str, typer.Argument(help="Base revision.")] = "HEAD",
-        rev_b: Annotated[str, typer.Argument(help="Revision to compare (default: working tree).")] = "WORKTREE",
-        all_parts: Annotated[bool, typer.Option("--all", help="Also list unchanged parts.")] = False,
-        as_json: Annotated[bool, typer.Option("--json", help="Print the comparison as JSON.")] = False,
-        open_report: Annotated[bool, typer.Option("--open", help="Open the HTML report in the browser.")] = False,
-        serve_report: Annotated[bool, typer.Option("--serve", help="Serve the report on localhost.")] = False,
-        port: Annotated[int, typer.Option(help="Port for --serve.")] = 8765,
-        no_html: Annotated[bool, typer.Option("--no-html", help="Skip the HTML report.")] = False,
-        out: OutDir = None,
-    ) -> None:
-        """Show the parts added, removed or changed between two git revisions."""
-        folder = out or project.path("build") / "diff"
-        port_or_none = port if serve_report else None
-        diff(
-            project,
-            rev_a,
-            rev_b,
-            all_parts,
-            as_json,
-            open_report,
-            port_or_none,
-            not no_html,
-            folder,
-        )
-
-    @app.command("freecad")
-    @reports_errors
-    def freecad_command(
-        names: Annotated[list[str] | None, typer.Argument(help="FreeCAD assembly names (default: all).")] = None,
-        export_only: Annotated[
-            bool, typer.Option("--export-only", help="Write STLs and manifest, skip FreeCAD.")
-        ] = False,
-        out: OutDir = None,
-    ) -> None:
-        """Build the project's FreeCAD assemblies (needs FreeCAD 1.x for the build step)."""
-        from cadder.freecad.export import build_assembly, export_assembly
-        from cadder.render import select
-
-        assemblies = project.freecad_assemblies()
-        folder = out or project.path("freecad")
-        for name in select(names, assemblies):
-            manifest = export_assembly(assemblies[name], folder, log=typer.echo)
-            if not export_only:
-                build_assembly(manifest, log=typer.echo)
-
-    @app.command("all")
-    @reports_errors
-    def all_command(pythonscad: PythonscadBinary = None) -> None:
-        """Run check, stl, the project's extra outputs and render."""
-        check(project)
-        export_stls(project, log=typer.echo)
-        for step in project.all_steps:
-            step()
-        render_pngs(project, binary=pythonscad, log=typer.echo)
+    for name, command in _COMMANDS:
+        app.command(name)(reports_errors(command))
 
     from cadder.photo.cli import app as photo_app  # imports OpenCV only when a command runs
 

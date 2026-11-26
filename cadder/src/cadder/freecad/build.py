@@ -36,6 +36,64 @@ import JointObject
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
+def _load_mesh(stl_dir, stl):
+    """The STL as a mesh, repaired where needed and centered on its bounding box."""
+    mesh = Mesh.Mesh(os.path.join(stl_dir, f"{stl}.stl"))
+    if mesh.hasNonManifolds() or mesh.hasNonUniformOrientedFacets():
+        mesh.harmonizeNormals()
+        mesh.removeNonManifolds()
+    if mesh.hasSelfIntersections():  # overlapping fasteners; FreeCAD warns about it on load
+        mesh.fixSelfIntersections()
+    center = mesh.BoundBox.Center
+    mesh.translate(-center.x, -center.y, -center.z)
+    return mesh
+
+
+def _make_part(doc, container, name, entry, stl_dir, label):
+    """A part holding the mesh of ``entry``, with its display color and transparency."""
+    part = doc.addObject("App::Part", name) if container is doc else container.newObject("App::Part", name)
+    feature = part.newObject("Mesh::Feature", f"{name}_mesh")
+    feature.Mesh = _load_mesh(stl_dir, entry["stl"])
+    part.addProperty("App::PropertyIntegerList", "RGB", label, "Display color (RGB)")
+    part.RGB = entry["color"]
+    part.addProperty("App::PropertyInteger", "Transparency", label, "Transparency (%)")
+    part.Transparency = entry.get("transparency", 0)
+    return part
+
+
+def _placement_of(entry):
+    """World placement of a component: its bounding-box center and orientation."""
+    rotation_matrix = entry["rotation"]
+    matrix = App.Matrix(
+        rotation_matrix[0], rotation_matrix[1], rotation_matrix[2], entry["center"][0],
+        rotation_matrix[3], rotation_matrix[4], rotation_matrix[5], entry["center"][1],
+        rotation_matrix[6], rotation_matrix[7], rotation_matrix[8], entry["center"][2],
+        0, 0, 0, 1,
+    )  # fmt: skip
+    return App.Placement(matrix)
+
+
+def _joint_frame(origin, direction):
+    """World placement of a joint frame whose z axis is the axis direction."""
+    rotation = App.Rotation(App.Vector(0, 0, 1), App.Vector(*direction))
+    return App.Placement(App.Vector(*origin), rotation)
+
+
+def _make_joint(joint_group, kind, a, b, world, label, **props):
+    """Joint of type ``kind`` between parts ``a`` and ``b`` with its frame at ``world``."""
+    joint = joint_group.newObject("App::FeaturePython", label)
+    JointObject.Joint(joint, JointObject.JointTypes.index(kind))
+    joint.Detach1 = True
+    joint.Detach2 = True
+    joint.Reference1 = [a, ["", ""]]
+    joint.Reference2 = [b, ["", ""]]
+    joint.Placement1 = a.Placement.inverse() * world
+    joint.Placement2 = b.Placement.inverse() * world
+    for key, value in props.items():
+        setattr(joint, key, value)
+    return joint
+
+
 def main():
     path = os.environ["CADDER_FREECAD_MANIFEST"]
     with open(path) as handle:
@@ -54,40 +112,6 @@ def main():
     asm.Label = label
     joints = asm.newObject("Assembly::JointGroup", "Joints")
 
-    def load_mesh(stl):
-        """The STL as a mesh, repaired where needed and centered on its bounding box."""
-        mesh = Mesh.Mesh(os.path.join(stl_dir, f"{stl}.stl"))
-        if mesh.hasNonManifolds() or mesh.hasNonUniformOrientedFacets():
-            mesh.harmonizeNormals()
-            mesh.removeNonManifolds()
-        if mesh.hasSelfIntersections():  # overlapping fasteners; FreeCAD warns about it on load
-            mesh.fixSelfIntersections()
-        center = mesh.BoundBox.Center
-        mesh.translate(-center.x, -center.y, -center.z)
-        return mesh
-
-    def make_part(container, name, entry):
-        """A part holding the mesh of ``entry``, with its display color and transparency."""
-        part = doc.addObject("App::Part", name) if container is doc else container.newObject("App::Part", name)
-        feature = part.newObject("Mesh::Feature", f"{name}_mesh")
-        feature.Mesh = load_mesh(entry["stl"])
-        part.addProperty("App::PropertyIntegerList", "RGB", label, "Display color (RGB)")
-        part.RGB = entry["color"]
-        part.addProperty("App::PropertyInteger", "Transparency", label, "Transparency (%)")
-        part.Transparency = entry.get("transparency", 0)
-        return part
-
-    def placement_of(entry):
-        """World placement of a component: its bounding-box center and orientation."""
-        rotation_matrix = entry["rotation"]
-        matrix = App.Matrix(
-            rotation_matrix[0], rotation_matrix[1], rotation_matrix[2], entry["center"][0],
-            rotation_matrix[3], rotation_matrix[4], rotation_matrix[5], entry["center"][1],
-            rotation_matrix[6], rotation_matrix[7], rotation_matrix[8], entry["center"][2],
-            0, 0, 0, 1,
-        )  # fmt: skip
-        return App.Placement(matrix)
-
     # A shape used by several components is one master part, kept out of the assembly and
     # hidden, and the assembly holds an App::Link to it for each use.
     uses = {}
@@ -95,7 +119,11 @@ def main():
         uses.setdefault(entry["stl"], []).append(entry)
     parts_group = doc.addObject("App::DocumentObjectGroup", "Parts")
     parts_group.Label = "Parts"
-    masters = {stl: make_part(parts_group, stl, entries[0]) for stl, entries in uses.items() if len(entries) > 1}
+    masters = {
+        stl: _make_part(doc, parts_group, stl, entries[0], stl_dir, label)
+        for stl, entries in uses.items()
+        if len(entries) > 1
+    }
 
     parts = {}
     bodies = {}
@@ -105,32 +133,13 @@ def main():
             part = asm.newObject("App::Link", name)
             part.LinkedObject = masters[entry["stl"]]
         else:
-            part = make_part(asm, name, entry)
+            part = _make_part(doc, asm, name, entry, stl_dir, label)
         part.Label = name
-        part.Placement = placement_of(entry)
+        part.Placement = _placement_of(entry)
         part.addProperty("App::PropertyString", "RigidBody", label, "Rigid body it moves with")
         part.RigidBody = entry["body"]
         parts[name] = part
         bodies.setdefault(entry["body"], []).append(name)
-
-    def frame(origin, direction):
-        """World placement of a joint frame whose z axis is the axis direction."""
-        rotation = App.Rotation(App.Vector(0, 0, 1), App.Vector(*direction))
-        return App.Placement(App.Vector(*origin), rotation)
-
-    def make_joint(kind, a, b, world, label, **props):
-        """Joint of type ``kind`` between parts ``a`` and ``b`` with its frame at ``world``."""
-        joint = joints.newObject("App::FeaturePython", label)
-        JointObject.Joint(joint, JointObject.JointTypes.index(kind))
-        joint.Detach1 = True
-        joint.Detach2 = True
-        joint.Reference1 = [a, ["", ""]]
-        joint.Reference2 = [b, ["", ""]]
-        joint.Placement1 = a.Placement.inverse() * world
-        joint.Placement2 = b.Placement.inverse() * world
-        for key, value in props.items():
-            setattr(joint, key, value)
-        return joint
 
     ground = joints.newObject("App::FeaturePython", f"Ground {grounded}")
     JointObject.GroundedJoint(ground, parts[grounded])
@@ -141,7 +150,7 @@ def main():
         for name in names:
             if name == roots[body] or name in moving:
                 continue
-            make_joint("Fixed", root, parts[name], parts[name].Placement, f"Fixed {name}")
+            _make_joint(joints, "Fixed", root, parts[name], parts[name].Placement, f"Fixed {name}")
 
     # The joints that give the assembly its motion, with limits relative to the modeled pose.
     for j in manifest["joints"]:
@@ -155,11 +164,12 @@ def main():
                 f"{prefix}Min": low,
                 f"{prefix}Max": high,
             }
-        make_joint(
+        _make_joint(
+            joints,
             j["kind"],
             parts[j["a"]],
             parts[j["b"]],
-            frame(j["origin"], j["direction"]),
+            _joint_frame(j["origin"], j["direction"]),
             j["label"],
             **props,
         )
@@ -221,34 +231,28 @@ def assembly_corners(asm):
     return corners
 
 
-def add_gui_state(path, doc, masters):
-    """Add ``GuiDocument.xml`` (visibility, colors, joint view providers) to the saved file.
+class _ViewProviders:
+    """The view providers of ``GuiDocument.xml``, filled in from its prototypes."""
 
-    Only the GUI writes it, and without it the file opens with everything hidden and the
-    joints failing to recompute. It is built here from the prototypes in ``gui_document.xml``
-    (copied, then name, visibility and color filled in) so the build runs headless. Shown: the
-    assembly, its parts, links and their meshes (and the meshes of the masters, which the links
-    draw). Hidden: joints, the "Parts" group, the masters, and every origin (objects without an
-    entry open hidden).
-    """
-    tree = etree.parse(os.path.join(HERE, "gui_document.xml"), etree.XMLParser(remove_comments=True))
-    data = tree.getroot().find("ViewProviderData")
-    prototypes = {provider.get("template"): provider for provider in data.findall("ViewProvider")}
-    for provider in prototypes.values():
-        data.remove(provider)
-    appearances = {}  # file name -> bytes
+    def __init__(self, data):
+        self.data = data
+        self.prototypes = {provider.get("template"): provider for provider in data.findall("ViewProvider")}
+        for provider in self.prototypes.values():
+            data.remove(provider)
+        self.appearances = {}  # file name -> bytes
 
-    def add(kind, obj, visible, rgb=None, transparency=0):
-        provider = copy.deepcopy(prototypes[kind])
+    def add(self, kind, obj, visible, rgb=None, transparency=0):
+        """Add the entry of ``obj``, made from the prototype of its ``kind``."""
+        provider = copy.deepcopy(self.prototypes[kind])
         del provider.attrib["template"]
         provider.set("name", obj.Name)
         provider.find('.//Property[@name="Visibility"]/Bool').set("value", str(visible).lower())
         if rgb is not None:
-            name = f"ShapeAppearance{len(appearances) + 1000}"
+            name = f"ShapeAppearance{len(self.appearances) + 1000}"
             provider.find('.//Property[@name="ShapeAppearance"]/MaterialList').set("file", name)
             provider.find('.//Property[@name="Transparency"]/Integer').set("value", str(transparency))
             red, green, blue = rgb
-            appearances[name] = struct.pack(
+            self.appearances[name] = struct.pack(
                 "<i4I2f3i",
                 1,
                 0x555555FF,  # ambient, diffuse, specular, emissive as RGBA, then shininess,
@@ -261,7 +265,22 @@ def add_gui_state(path, doc, masters):
                 0,
                 0,
             )
-        data.append(provider)
+        self.data.append(provider)
+
+
+def add_gui_state(path, doc, masters):
+    """Add ``GuiDocument.xml`` (visibility, colors, joint view providers) to the saved file.
+
+    Only the GUI writes it, and without it the file opens with everything hidden and the
+    joints failing to recompute. It is built here from the prototypes in ``gui_document.xml``
+    (copied, then name, visibility and color filled in) so the build runs headless. Shown: the
+    assembly, its parts, links and their meshes (and the meshes of the masters, which the links
+    draw). Hidden: joints, the "Parts" group, the masters, and every origin (objects without an
+    entry open hidden).
+    """
+    tree = etree.parse(os.path.join(HERE, "gui_document.xml"), etree.XMLParser(remove_comments=True))
+    data = tree.getroot().find("ViewProviderData")
+    providers = _ViewProviders(data)
 
     kinds = {
         "Assembly::AssemblyObject": "assembly",
@@ -275,13 +294,13 @@ def add_gui_state(path, doc, masters):
         if obj.TypeId == "Mesh::Feature":
             owner = obj.getParentGeoFeatureGroup()
             kind = "master_mesh" if owner in master_objects else "mesh"
-            add(kind, obj, True, tuple(owner.RGB), owner.Transparency)
+            providers.add(kind, obj, True, tuple(owner.RGB), owner.Transparency)
         elif obj.TypeId == "App::FeaturePython":  # joints (grounded or regular)
-            add("ground" if hasattr(obj, "ObjectToGround") else "joint", obj, False)
+            providers.add("ground" if hasattr(obj, "ObjectToGround") else "joint", obj, False)
         elif obj in master_objects:
-            add("master", obj, False)
+            providers.add("master", obj, False)
         elif obj.TypeId in kinds:
-            add(kinds[obj.TypeId], obj, kinds[obj.TypeId] != "group")
+            providers.add(kinds[obj.TypeId], obj, kinds[obj.TypeId] != "group")
     data.set("Count", str(len(data)))
     asm = doc.getObject("Assembly")
     tree.getroot().find("Camera").set("settings", isometric_camera(assembly_corners(asm)))
@@ -293,7 +312,7 @@ def add_gui_state(path, doc, masters):
         for item in src.infolist():
             dst.writestr(item, src.read(item.filename))
         dst.writestr("GuiDocument.xml", xml)
-        for name, data_bytes in appearances.items():
+        for name, data_bytes in providers.appearances.items():
             dst.writestr(name, data_bytes)
     os.replace(temp, path)
 

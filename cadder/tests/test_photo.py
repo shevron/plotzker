@@ -34,6 +34,11 @@ SIZE = (3000, 4000)
 CAMERA = np.array([95.0, 130.0, 420.0])  #: camera position, target frame
 
 
+def _art_pixel(x: float, y: float) -> tuple[int, int]:
+    """mm on the board → pixel of the art (fixed point, shift 4)."""
+    return round(x * PPM * 16 - 8), round((BOARD.height - y) * PPM * 16 - 8)
+
+
 def _art() -> np.ndarray:
     """The board as printed, with a light plate, a dark ring and a darker hole on it."""
     art = BOARD.opencv().generateImage(
@@ -41,12 +46,9 @@ def _art() -> np.ndarray:
     )
     art = cv2.cvtColor(art, cv2.COLOR_GRAY2BGR)
 
-    def px(x: float, y: float) -> tuple[int, int]:  # mm → art pixel (fixed point, shift 4)
-        return round(x * PPM * 16 - 8), round((BOARD.height - y) * PPM * 16 - 8)
-
-    cv2.rectangle(art, px(40, 80), px(70, 55), (170, 170, 170), -1, cv2.LINE_AA, 4)
-    cv2.circle(art, px(*HOLE), round((RING_D / 2 * PPM - 0.5) * 16), (90, 90, 90), -1, cv2.LINE_AA, 4)
-    cv2.circle(art, px(*HOLE), round((HOLE_D / 2 * PPM - 0.5) * 16), (25, 25, 25), -1, cv2.LINE_AA, 4)
+    cv2.rectangle(art, _art_pixel(40, 80), _art_pixel(70, 55), (170, 170, 170), -1, cv2.LINE_AA, 4)
+    cv2.circle(art, _art_pixel(*HOLE), round((RING_D / 2 * PPM - 0.5) * 16), (90, 90, 90), -1, cv2.LINE_AA, 4)
+    cv2.circle(art, _art_pixel(*HOLE), round((HOLE_D / 2 * PPM - 0.5) * 16), (25, 25, 25), -1, cv2.LINE_AA, 4)
     return art
 
 

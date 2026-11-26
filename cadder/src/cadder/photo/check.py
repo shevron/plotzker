@@ -1,7 +1,7 @@
 """A quick verdict on a set of photos, before anyone spends time measuring on them."""
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 import numpy as np
@@ -68,30 +68,31 @@ def camera_pose(photo: Path, board: Board, camera: Camera | None = None) -> Rect
         source = "exif"
     rvec, tvec, rms = solve_pose(obj, img, board, k, dist)
 
-    def pose(corners: int, error: float) -> Rectification:
-        return Rectification(
-            source=photo.name,
-            image_size=size,
-            board=board,
-            camera_matrix=k.tolist(),
-            rvec=rvec.tolist(),
-            tvec=tvec.tolist(),
-            corners=corners,
-            rms_px=error,
-            focal={"used": float(k[0, 0]), "source": source},
-            dist=dist.tolist(),
-        )
+    first_fit = Rectification(
+        source=photo.name,
+        image_size=size,
+        board=board,
+        camera_matrix=k.tolist(),
+        rvec=rvec.tolist(),
+        tvec=tvec.tolist(),
+        corners=0,
+        rms_px=rms,
+        focal={"used": float(k[0, 0]), "source": source},
+        dist=dist.tolist(),
+    )
+    pose = first_fit
 
     # a corner next to the part can be found in the wrong place: drop the far outliers
     keep = np.ones(len(obj), dtype=bool)
     for _ in range(3):
-        errors = np.linalg.norm(pose(0, 0).project(obj) - img, axis=1)
+        errors = np.linalg.norm(pose.project(obj) - img, axis=1)
         keep = errors <= max(3 * float(np.median(errors)), 3.0)
         if keep.sum() < 6:
             keep[:] = True
             break
         rvec, tvec, rms = solve_pose(obj[keep], img[keep], board, k, dist)
-    return pose(int(keep.sum()), rms)
+        pose = replace(first_fit, rvec=rvec.tolist(), tvec=tvec.tolist(), rms_px=rms)
+    return replace(pose, corners=int(keep.sum()))
 
 
 def _fit_mm(rect: Rectification) -> float:

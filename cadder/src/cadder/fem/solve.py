@@ -1,13 +1,14 @@
 """Solving the load cases of a part on one mesh: scaling proportional cases, in parallel."""
 
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 
 from cadder.fem import applied
-from cadder.fem.ccx import DEFAULT_SOLVER, Results, SolverMaterial, run_ccx, write_input
+from cadder.fem.ccx import DEFAULT_SOLVER, Results, SolverMaterial, Supports, run_ccx, write_input
 from cadder.fem.mesh import Mesh
 from cadder.part import MaterialPart
 from cadder.types import Vec3
@@ -41,6 +42,26 @@ def proportional(base: Forces, other: Forces, tol: float = 1e-6) -> float | None
         if any(abs(other[n][i] - k * f[i]) > tol * scale for i in range(3)):
             return None
     return k
+
+
+def _solve_case(
+    name: str,
+    mesh: Mesh,
+    material: SolverMaterial,
+    axis: Vec3,
+    supports: Sequence[Supports],
+    forces: Mapping[str, Forces],
+    accelerations: Mapping[str, Vec3 | None],
+    solver: str,
+    inp_stem: Path,
+    threads: int,
+    log: Callable[[str], None],
+) -> Results:
+    """Write and solve one load case; its input file is ``<inp_stem>_<name>.inp``."""
+    inp = inp_stem.with_name(f"{inp_stem.name}_{name}.inp")
+    write_input(inp, mesh, material, axis, supports, forces[name], accelerations[name], solver)
+    log(f"    solving {name} on {len(mesh.tets)} tets ({threads} threads)")
+    return run_ccx(inp, threads)
 
 
 def solve_cases(
@@ -80,21 +101,19 @@ def solve_cases(
 
     threads = max(1, min(MAX_THREADS, os.cpu_count() or 1) // len(bases))
 
-    def run(name: str) -> Results:
-        inp = work / f"{tag}_{name}.inp"
-        write_input(
-            inp,
-            mesh,
-            material,
-            part.axis,
-            supports,
-            forces[name],
-            accelerations[name],
-            solver,
-        )
-        log(f"    solving {name} on {len(mesh.tets)} tets ({threads} threads)")
-        return run_ccx(inp, threads)
-
+    run = partial(
+        _solve_case,
+        mesh=mesh,
+        material=material,
+        axis=part.axis,
+        supports=supports,
+        forces=forces,
+        accelerations=accelerations,
+        solver=solver,
+        inp_stem=work / tag,
+        threads=threads,
+        log=log,
+    )
     with ThreadPoolExecutor(max_workers=len(bases)) as pool:
         solved = dict(zip(bases, pool.map(run, bases), strict=True))
     results = {}

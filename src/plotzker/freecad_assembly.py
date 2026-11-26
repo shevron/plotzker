@@ -7,6 +7,8 @@ pen slide), with the joints that give the machine its motion (all numbers from `
 cadder exports and builds it: ``python -m plotzker freecad``.
 """
 
+from collections.abc import Mapping
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from cadder.freecad import Body, Components, FreeCadAssembly, Joint
@@ -143,6 +145,11 @@ def _psu_parts(components: Components) -> int:
     return 1 + len(brackets) + len(hood)
 
 
+def _place_side(items: list[Solid], x: float, mirrored: bool) -> list[Solid]:
+    """Items of a left-hand end moved to the shaft at ``x``, mirrored for the right-hand one."""
+    return _mirror_x(items, x) if mirrored else _shift(items, [x, 0, 0])
+
+
 def _y_drive_parts(components: Components, gantry_y: float) -> None:
     """Y motor and idler ends, endstops and the static lower belt run on each side."""
     sides = ((Side.LEFT, "L", Y_AXIS.shaft_x[0], False), (Side.RIGHT, "R", Y_AXIS.shaft_x[1], True))
@@ -151,8 +158,7 @@ def _y_drive_parts(components: Components, gantry_y: float) -> None:
         motor = y_motor_end_local()
         runs = y_belt_runs(gantry_y)
 
-        def place(items: list[Solid], x: float = shaft_x, flip: bool = mirrored) -> list[Solid]:
-            return _mirror_x(items, x) if flip else _shift(items, [x, 0, 0])
+        place = partial(_place_side, x=shaft_x, mirrored=mirrored)
 
         i = place(idler)
         placed_motor = place(motor)
@@ -256,6 +262,12 @@ def _x_belt_return(gantry_y: float) -> Solid:
     )
 
 
+def _place_head(solid: Solid, carriage_x: float, gantry_y: float) -> Solid:
+    """A pen holder item, turned to the carriage's front face at the carriage's position."""
+    turned = solid.mirror([0, 1, 0]).translate([0, CARRIAGE.plate_front_y, 0])
+    return translate(turned, [carriage_x, gantry_y, 0])
+
+
 def _carriage_parts(components: Components, gantry_y: float, carriage_x: float) -> None:
     """X carriage with wheels, fasteners and the pen holder."""
     items = _shift(carriage_assembly(), [carriage_x, gantry_y, 0])
@@ -274,9 +286,7 @@ def _carriage_parts(components: Components, gantry_y: float, carriage_x: float) 
 
     head = pen_holder_items(pen_up=True)
 
-    def place(solid: Solid) -> Solid:
-        mirrored_solid = solid.mirror([0, 1, 0]).translate([0, CARRIAGE.plate_front_y, 0])
-        return translate(mirrored_solid, [carriage_x, gantry_y, 0])
+    place = partial(_place_head, carriage_x=carriage_x, gantry_y=gantry_y)
 
     components.add("pen_body", place(head["body"]), "carriage", PRINTED_PEN)
     components.add("pen_servo", place(head["servo"]), "carriage", MOTOR)
@@ -361,14 +371,20 @@ def build_components() -> Components:
     return collected
 
 
+def _joint(
+    axes: Mapping[str, Mapping[str, Any]], kind: str, a: str, b: str, axis: str, label: str, **kw: Any
+) -> Joint:
+    """A joint between ``a`` and ``b`` about the named axis."""
+    return Joint(kind, a, b, tuple(axes[axis]["origin"]), tuple(axes[axis]["dir"]), label, **kw)  # type: ignore[arg-type]
+
+
 def joints() -> list[Joint]:
     """The joints that give the machine its motion; travel limits from the reference pose."""
     gantry_y = gantry_y_at(GANTRY_POS)
     carriage_x = carriage_x_at(CARRIAGE_POS)
     axes = _axes(gantry_y, carriage_x)
 
-    def joint(kind: str, a: str, b: str, axis: str, label: str, **kw: Any) -> Joint:
-        return Joint(kind, a, b, tuple(axes[axis]["origin"]), tuple(axes[axis]["dir"]), label, **kw)  # type: ignore[arg-type]
+    joint = partial(_joint, axes)
 
     y_lo, y_hi = Y_AXIS.gantry_y_range
     x_lo, x_hi = CARRIAGE.center_x_range

@@ -2205,35 +2205,36 @@ def check_design() -> None:
     run_design_checks(design_checks())
 
 
+def _join_numbers(*values: float) -> str:
+    return ", ".join(f"{v:g}" for v in values)
+
+
 def report() -> str:
     """Key numbers of the current parameter set, one topic per line."""
 
-    def fmt(*values: float) -> str:
-        return ", ".join(f"{v:g}" for v in values)
-
     return "\n".join(
         [
-            f"Stack-up: shaft {fmt(Y_AXIS.shaft_z)}, SCS top {fmt(Y_AXIS.scs_top_z)}, "
-            f"bed top {fmt(FRAME.bed_top_z)}, media top {fmt(FRAME.media_top_z)}",
-            f"Beam bottom {fmt(BEAM.bottom_z)} (min {fmt(BEAM.bottom_z_min)}), "
-            f"top {fmt(BEAM.top_z)}; rise above SCS top {fmt(BEAM.rise_above_scs)}",
-            f"Travel available X {fmt(CARRIAGE.travel_avail)} / Y {fmt(Y_AXIS.travel_avail)} "
-            f"(targets {fmt(REQ.x_travel)} / {fmt(REQ.y_travel)})",
-            f"Steps/mm {fmt(DRIVE.steps_per_mm)}; shaft spacing {fmt(Y_AXIS.shaft_spacing)} "
+            f"Stack-up: shaft {_join_numbers(Y_AXIS.shaft_z)}, SCS top {_join_numbers(Y_AXIS.scs_top_z)}, "
+            f"bed top {_join_numbers(FRAME.bed_top_z)}, media top {_join_numbers(FRAME.media_top_z)}",
+            f"Beam bottom {_join_numbers(BEAM.bottom_z)} (min {_join_numbers(BEAM.bottom_z_min)}), "
+            f"top {_join_numbers(BEAM.top_z)}; rise above SCS top {_join_numbers(BEAM.rise_above_scs)}",
+            f"Travel available X {_join_numbers(CARRIAGE.travel_avail)} / Y {_join_numbers(Y_AXIS.travel_avail)} "
+            f"(targets {_join_numbers(REQ.x_travel)} / {_join_numbers(REQ.y_travel)})",
+            f"Steps/mm {_join_numbers(DRIVE.steps_per_mm)}; shaft spacing {_join_numbers(Y_AXIS.shaft_spacing)} "
             f"(x {Y_AXIS.shaft_x[0]:g} / {Y_AXIS.shaft_x[1]:g}); "
-            f"X end keep-out {fmt(CARRIAGE.end_keepout)}",
-            f"Carriage: wheels z [{fmt(*CARRIAGE.wheel_z)}], bottom {fmt(CARRIAGE.bottom_z)}, "
-            f"top {fmt(CARRIAGE.top_z)}; front face y {fmt(CARRIAGE.plate_front_y)}; "
-            f"tool plate z {fmt(TOOL_PLATE.bottom_z)}–{fmt(TOOL_PLATE.top_z)}",
-            f"X belt: center y {fmt(X_BELT.y)} behind beam center, back of lower run z "
-            f"{fmt(X_BELT.back_z)}, motor/idler axis z {fmt(X_BELT.pulley_axis_z)}",
-            f"Y belt: back of lower run z {fmt(Y_AXIS.belt_back_z)}, pulley/idler axis z "
-            f"{fmt(Y_AXIS.pulley_axis_z)}, belt center {fmt(-Y_AXIS.belt_x)} "
+            f"X end keep-out {_join_numbers(CARRIAGE.end_keepout)}",
+            f"Carriage: wheels z [{_join_numbers(*CARRIAGE.wheel_z)}], bottom {_join_numbers(CARRIAGE.bottom_z)}, "
+            f"top {_join_numbers(CARRIAGE.top_z)}; front face y {_join_numbers(CARRIAGE.plate_front_y)}; "
+            f"tool plate z {_join_numbers(TOOL_PLATE.bottom_z)}–{_join_numbers(TOOL_PLATE.top_z)}",
+            f"X belt: center y {_join_numbers(X_BELT.y)} behind beam center, back of lower run z "
+            f"{_join_numbers(X_BELT.back_z)}, motor/idler axis z {_join_numbers(X_BELT.pulley_axis_z)}",
+            f"Y belt: back of lower run z {_join_numbers(Y_AXIS.belt_back_z)}, pulley/idler axis z "
+            f"{_join_numbers(Y_AXIS.pulley_axis_z)}, belt center {_join_numbers(-Y_AXIS.belt_x)} "
             "outboard of each shaft",
-            f"Y drive: idler axle y {fmt(Y_DRIVE.idler_y)} (slot ±{fmt(Y_DRIVE.idler_slot / 2)}), "
-            f"motor axis y {fmt(Y_DRIVE.motor_y)}; endstop board front y "
-            f"{fmt(Y_ENDSTOP.board_front_y)}, trigger tip y {fmt(Y_ENDSTOP.trigger_tip_y)} at the "
-            f"end of travel (X: board front x {fmt(X_ENDSTOP.board_front_x)}, head x "
-            f"{fmt(X_ENDSTOP.head_x_min)})",
+            f"Y drive: idler axle y {_join_numbers(Y_DRIVE.idler_y)} (slot ±{_join_numbers(Y_DRIVE.idler_slot / 2)}), "
+            f"motor axis y {_join_numbers(Y_DRIVE.motor_y)}; endstop board front y "
+            f"{_join_numbers(Y_ENDSTOP.board_front_y)}, trigger tip y {_join_numbers(Y_ENDSTOP.trigger_tip_y)} at the "
+            f"end of travel (X: board front x {_join_numbers(X_ENDSTOP.board_front_x)}, head x "
+            f"{_join_numbers(X_ENDSTOP.head_x_min)})",
         ]
     )

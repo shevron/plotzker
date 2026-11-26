@@ -47,34 +47,21 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
     top = max(0.0, ymax)
     width, height = max(0.0, xmax) - left, top - bottom
 
-    def xy(point: Point) -> str:
-        return f"{_n(point.x)} {_n(top - point.y)}"
-
-    def segment(edge: _Edge, forward: bool) -> str:
-        end = edge.end if forward else edge.start
-        geometry = edge.primitive.geometry
-        if isinstance(geometry, Line):
-            return f"L {xy(end)}"
-        assert isinstance(geometry, Arc)
-        radius = _n(geometry.r * scale)
-        large = int(geometry.sweep > math.pi)
-        return f"A {radius} {radius} 0 {large} {0 if forward else 1} {xy(end)}"
-
     filled: list[str] = []
     for loop in loops:
         first, forward = loop[0]
-        commands = [f"M {xy(first.start if forward else first.end)}"]
-        commands += [segment(edge, forward) for edge, forward in loop]
+        commands = [f"M {_svg_point(first.start if forward else first.end, top)}"]
+        commands += [_segment(edge, forward, scale, top) for edge, forward in loop]
         filled.append(" ".join(commands) + " Z")
     for primitive in circles:
         circle = primitive.geometry
         assert isinstance(circle, Circle)
         cx, cy, radius = circle.cx * scale, circle.cy * scale, circle.r * scale
         east, west = Point(cx + radius, cy), Point(cx - radius, cy)
-        filled.append(
-            f"M {xy(east)} A {_n(radius)} {_n(radius)} 0 1 0 {xy(west)} A {_n(radius)} {_n(radius)} 0 1 0 {xy(east)} Z"
-        )
-    stroked = [f"M {xy(e.start)} {segment(e, True)}" for e in open_edges]
+        start, middle = _svg_point(east, top), _svg_point(west, top)
+        half = f"A {_n(radius)} {_n(radius)} 0 1 0"
+        filled.append(f"M {start} {half} {middle} {half} {start} Z")
+    stroked = [f"M {_svg_point(e.start, top)} {_segment(e, True, scale, top)}" for e in open_edges]
 
     title = solved.sketch.metadata.get("title", ("",))[0]
     lines = [
@@ -90,6 +77,23 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
         lines.append(f'  <path fill="none" stroke="black" stroke-width="0.2" d="{" ".join(stroked)}"/>')
     lines.append("</svg>")
     return "\n".join(lines) + "\n"
+
+
+def _svg_point(point: Point, top: float) -> str:
+    """SVG coordinates of a sketch point: SVG's y runs down from the sketch's ``top``."""
+    return f"{_n(point.x)} {_n(top - point.y)}"
+
+
+def _segment(edge: _Edge, forward: bool, scale: float, top: float) -> str:
+    """The SVG path command that draws ``edge`` in the given direction."""
+    end = edge.end if forward else edge.start
+    geometry = edge.primitive.geometry
+    if isinstance(geometry, Line):
+        return f"L {_svg_point(end, top)}"
+    assert isinstance(geometry, Arc)
+    radius = _n(geometry.r * scale)
+    large = int(geometry.sweep > math.pi)
+    return f"A {radius} {radius} 0 {large} {0 if forward else 1} {_svg_point(end, top)}"
 
 
 def svg_origin(solved: SolvedSketch) -> tuple[float, float]:

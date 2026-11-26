@@ -5,6 +5,7 @@ Everything works on the solid's mesh, so no STL export is needed.
 
 import itertools
 from collections.abc import Iterable, Iterator
+from functools import partial
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -46,6 +47,14 @@ def bounding_box(solid: Solid) -> Box:
     )
 
 
+def _group_root(parent: list[int], i: int) -> int:
+    """Root of ``i``'s group, with path compression."""
+    while parent[i] != i:
+        parent[i] = parent[parent[i]]
+        i = parent[i]
+    return i
+
+
 def shell_count(solid: Solid) -> int:
     """Number of separate closed surfaces of a solid.
 
@@ -54,12 +63,7 @@ def shell_count(solid: Solid) -> int:
     points, faces = solid.mesh()
     parent = list(range(len(points)))
 
-    def find(i: int) -> int:
-        """Root of ``i``'s group, with path compression."""
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
+    find = partial(_group_root, parent)
 
     for face in faces:
         for vertex in face[1:]:

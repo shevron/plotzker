@@ -82,6 +82,11 @@ def _body() -> Solid:
     return column | block | yoke | lug
 
 
+def _bore(dia: float, bottom_z: float, top_z: float) -> Solid:
+    """A teardrop bore around the rod's axis."""
+    return linear_extrude(teardrop(dia), height=top_z - bottom_z).translate([PEN.rod_x, PEN.rod_depth, bottom_z])
+
+
 def _cuts() -> list[Solid]:
     """Sleeve bores with the relief between them, the V-block's pen space, the slot, the
     key groove and the thumbscrew hole with its nut pocket."""
@@ -89,13 +94,10 @@ def _cuts() -> list[Solid]:
     bore_dia = TOL.slide_dia(PEN.rod_dia)
     relief_dia = bore_dia + 1.2
 
-    def bore(depth: float, bottom_z: float, top_z: float) -> Solid:
-        return linear_extrude(teardrop(depth), height=top_z - bottom_z).translate([PEN.rod_x, PEN.rod_depth, bottom_z])
-
     cuts = [
-        bore(bore_dia, z0 - 1, z0 + PEN.sleeve_length),
-        bore(relief_dia, z0 + PEN.sleeve_length - 0.01, z1 - PEN.sleeve_length + 0.01),
-        bore(bore_dia, z1 - PEN.sleeve_length, z1 + 1),
+        _bore(bore_dia, z0 - 1, z0 + PEN.sleeve_length),
+        _bore(relief_dia, z0 + PEN.sleeve_length - 0.01, z1 - PEN.sleeve_length + 0.01),
+        _bore(bore_dia, z1 - PEN.sleeve_length, z1 + 1),
     ]
     slot_x0, slot_x1 = PEN.slot_x
     cuts.append(

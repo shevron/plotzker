@@ -9,6 +9,8 @@ Limits are the sum of the members' own limits (nothing new is decided): both par
 their budget at most, and play is an extra that must fit in it.
 """
 
+from functools import partial
+
 from cadder.assembly import AssemblyCheck, AssemblyLimit, AssemblyTerm
 
 #: Per-part limits of the tensioner's mount and slider (floating_idler.slider_fem / mount_fem)
@@ -18,6 +20,17 @@ _OTHER_MM = 0.1
 _SOURCE = "limits: sum of the members' limits (0.3 mm along the belt, 0.1 mm otherwise)"
 
 
+def _axle_limit(
+    slider: str, mount: str, mount_prefix: str, direction: str, one_part_mm: float, what: str
+) -> AssemblyLimit:
+    """The idler axle's limit in one direction: the slider's flex plus the mount's."""
+    terms = (
+        AssemblyTerm(f"slider flex, {what}", slider, f"idler_axle_{direction}"),
+        AssemblyTerm(f"mount flex, {what}", mount, f"{mount_prefix}_{direction}"),
+    )
+    return AssemblyLimit(f"idler_axle_{direction}", 2 * one_part_mm, terms)
+
+
 def tensioner_assembly(name: str, description: str, mount: str, slider: str, mount_prefix: str) -> AssemblyCheck:
     """Mount + slider of one floating belt idler, judged on the idler axle's total displacement.
 
@@ -25,12 +38,7 @@ def tensioner_assembly(name: str, description: str, mount: str, slider: str, mou
     two parts' deflections.
     """
 
-    def limit(direction: str, one_part_mm: float, what: str) -> AssemblyLimit:
-        terms = (
-            AssemblyTerm(f"slider flex, {what}", slider, f"idler_axle_{direction}"),
-            AssemblyTerm(f"mount flex, {what}", mount, f"{mount_prefix}_{direction}"),
-        )
-        return AssemblyLimit(f"idler_axle_{direction}", 2 * one_part_mm, terms)
+    limit = partial(_axle_limit, slider, mount, mount_prefix)
 
     return AssemblyCheck(
         name,

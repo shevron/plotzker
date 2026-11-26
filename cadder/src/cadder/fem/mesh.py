@@ -2,7 +2,7 @@
 
 import math
 import subprocess
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -176,6 +176,12 @@ def read_msh(path: Path, size: float) -> Mesh:
     return Mesh(nodes, tets, _oriented_faces(nodes, tets, tris), size)
 
 
+def _remap_elements(elements: list[tuple[int, ...]], remap: Mapping[int, int]) -> list[tuple[int, ...]]:
+    """The elements with their nodes remapped, without those that collapse."""
+    remapped = (tuple(remap[node] for node in element) for element in elements)
+    return [element for element in remapped if len(set(element)) == len(element)]
+
+
 def _merge_coincident_nodes(
     nodes: dict[int, Vec3], tets: list[tuple[int, ...]], tris: list[tuple[int, ...]]
 ) -> tuple[dict[int, Vec3], list[tuple[int, ...]], list[tuple[int, ...]]]:
@@ -203,18 +209,10 @@ def _merge_coincident_nodes(
         if target == node:
             grid.setdefault(key, []).append(node)
 
-    def fix(elements: list[tuple[int, ...]], corners: int) -> list[tuple[int, ...]]:
-        out = []
-        for element in elements:
-            mapped = tuple(remap[node] for node in element)
-            if len(set(mapped)) == len(mapped):
-                out.append(mapped)
-        return out
-
-    merged_tets = fix(tets, 4)
+    merged_tets = _remap_elements(tets, remap)
     used = {node for tet in merged_tets for node in tet}
     kept = {node: position for node, position in nodes.items() if remap[node] == node and node in used}
-    return kept, merged_tets, [t for t in fix(tris, 3) if all(node in kept for node in t)]
+    return kept, merged_tets, [t for t in _remap_elements(tris, remap) if all(node in kept for node in t)]
 
 
 def _oriented_faces(nodes: dict[int, Vec3], tets: list[tuple[int, ...]], tris: list[tuple[int, ...]]) -> list[TriFace]:

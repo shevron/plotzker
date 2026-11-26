@@ -204,6 +204,13 @@ def test_round_trip_keeps_comments_extensions_and_unknown_content():
         assert kept in first, kept
 
 
+def test_descendants_walk_every_element_in_document_order():
+    child = cpsk_core.element("point", id="a")
+    extension = cpsk_core.Element("note", children=[child, cpsk_core.Comment("skipped")], namespace="urn:other")
+    root = cpsk_core.Element("sketch", children=[extension, cpsk_core.element("point", id="b")])
+    assert list(root.descendants()) == [extension, child, root.children[1]]
+
+
 def test_documents_built_in_code_compile():
     built = cpsk_core.Document.new(unit_length="mm")
     geometry = built.container("geometry", create=True)

@@ -224,16 +224,13 @@ class _Exporter:
         """Remove generated ids of primitives that had none, where nothing references them."""
         if not self.anonymous:
             return
-        used: set[str] = set()
-
-        def walk(parent: Element) -> None:
-            for child in parent.children:
-                if isinstance(child, Element):
-                    if child.name in OPERANDS:
-                        used.update(v.split(".")[0] for k, v in child.attrs.items() if k[0] is None)
-                    walk(child)
-
-        walk(document.root)
+        used = {
+            value.split(".")[0]
+            for el in document.root.descendants()
+            if el.name in OPERANDS
+            for (namespace, _), value in el.attrs.items()
+            if namespace is None
+        }
         geometry = document.container("geometry")
         for primitive in geometry.elements() if geometry is not None else ():
             if primitive.get("id") in self.anonymous - used:

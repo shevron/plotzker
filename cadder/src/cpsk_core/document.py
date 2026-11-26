@@ -68,6 +68,13 @@ class Element:
             if isinstance(child, Element) and child.ours and (name is None or child.name == name):
                 yield child
 
+    def descendants(self) -> Iterator[Element]:
+        """Every element below this one, extensions included, in document order."""
+        for child in self.children:
+            if isinstance(child, Element):
+                yield child
+                yield from child.descendants()
+
     def first(self, name: str) -> Element | None:
         """The first CPSK child element called ``name``."""
         return next(self.elements(name), None)
@@ -107,7 +114,7 @@ class Document:
         found = self.root.first(name)
         if found is not None or not create:
             return found
-        element = Element(name)
+        created = Element(name)
         rank = CONTAINERS.index(name)
         position = len(self.root.children)
         for index, child in enumerate(self.root.children):
@@ -116,8 +123,8 @@ class Document:
             if CONTAINERS.index(child.name) > rank:
                 position = index
                 break
-        self.root.children.insert(position, element)
-        return element
+        self.root.children.insert(position, created)
+        return created
 
 
 # ----- Building elements in code -----
@@ -240,43 +247,39 @@ def save(document: Document, path: str | Path) -> None:
     Path(path).write_text(write(document), encoding="utf-8")
 
 
-def _namespaces(element: Element) -> Iterator[str]:
-    if element.namespace is not None:
-        yield element.namespace
-    for namespace, _ in element.attrs:
-        if namespace is not None:
-            yield namespace
-    for child in element.children:
-        if isinstance(child, Element):
-            yield from _namespaces(child)
+def _namespaces(root: Element) -> Iterator[str]:
+    for node in (root, *root.descendants()):
+        if node.namespace is not None:
+            yield node.namespace
+        yield from (namespace for namespace, _ in node.attrs if namespace is not None)
 
 
 def _write(
-    element: Element,
+    node: Element,
     depth: int,
     lines: list[str],
     prefixes: dict[str, str],
     declarations: Sequence[str] = (),
 ) -> None:
     indent = _INDENT * depth
-    name = _name(element.namespace, element.name, prefixes)
+    name = _name(node.namespace, node.name, prefixes)
     attrs = [*declarations] + [
-        f'{_name(ns, local, prefixes)}="{_attr(value)}"' for (ns, local), value in element.attrs.items()
+        f'{_name(ns, local, prefixes)}="{_attr(value)}"' for (ns, local), value in node.attrs.items()
     ]
     opening = f"{indent}<{' '.join([name, *attrs])}"
-    if not element.children:
-        text = element.text.strip()
+    if not node.children:
+        text = node.text.strip()
         lines.append(f"{opening}>{_text(text)}</{name}>" if text else f"{opening}/>")
         return
     lines.append(f"{opening}>")
-    separated = element.namespace == NAMESPACE and element.name in ("sketch", "geometry")
+    separated = node.namespace == NAMESPACE and node.name in ("sketch", "geometry")
     previous: Element | None = None
     pending: list[str] = []
-    for child in element.children:
+    for child in node.children:
         if isinstance(child, Comment):
             pending.append(f"{indent}{_INDENT}<!--{child.text}-->")
             continue
-        if previous is not None and separated and (element.name == "sketch" or previous.children or child.children):
+        if previous is not None and separated and (node.name == "sketch" or previous.children or child.children):
             lines.append("")
         lines += pending
         pending = []

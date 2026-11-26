@@ -19,7 +19,7 @@ import pytest
 
 from cadder import cpsk
 from cadder.tools import find_tool
-from cpsk_core import Comment, CpskExportError, CpskLoadError, Document, Element
+from cpsk_core import Comment, CpskExportError, CpskLoadError, Document
 from cpsk_core.document import parse, read, write
 from cpsk_core.formula import parse as parse_formula
 from cpsk_freecad import FREECAD_NAMESPACE, from_document, to_document
@@ -183,16 +183,9 @@ def test_cases_map_without_freecad(case: dict[str, Any]) -> None:
 
 
 def _value_of(document: Document, identifier: str) -> str | None:
-    def walk(element: Any) -> Any:
-        if element.get("id") == identifier:
-            return element.get("value")
-        for child in element.elements():
-            found = walk(child)
-            if found is not None:
-                return found
-        return None
-
-    return walk(document.root)  # type: ignore[no-any-return]
+    elements = (document.root, *document.root.descendants())
+    values = (element.get("value") for element in elements if element.ours and element.get("id") == identifier)
+    return next((value for value in values if value is not None), None)
 
 
 def test_inactive_constraints_are_kept_in_the_extension_namespace() -> None:
@@ -349,14 +342,9 @@ def test_freecad_file_menu_entry_points(tmp_path: Path) -> None:
 
 
 def _without_comments(document: Document) -> str:
-    def strip(element: Element) -> None:
-        element.children = [c for c in element.children if not isinstance(c, Comment)]
-        for child in element.children:
-            if isinstance(child, Element):
-                strip(child)
-
     document.prolog = []
-    strip(document.root)
+    for element in (document.root, *document.root.descendants()):
+        element.children = [child for child in element.children if not isinstance(child, Comment)]
     return write(document)
 
 

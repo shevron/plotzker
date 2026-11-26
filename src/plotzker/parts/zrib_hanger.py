@@ -79,9 +79,9 @@ def _box(u0: float, u1: float, v0: float, v1: float, z0: float, z1: float) -> So
     return cube([u1 - u0, v1 - v0, z1 - z0]).translate([u0, v0, z0])
 
 
-def _hole_z(d: float, u: float, v: float, z0: float, z1: float) -> Solid:
+def _hole_z(dia: float, u: float, v: float, z0: float, z1: float) -> Solid:
     """Hole along z: a teardrop pointing +v (up in the print)."""
-    return linear_extrude(teardrop(d), height=z1 - z0).translate([u, v, z0])
+    return linear_extrude(teardrop(dia), height=z1 - z0).translate([u, v, z0])
 
 
 def zrib_hanger_mount() -> Solid:
@@ -90,44 +90,44 @@ def zrib_hanger_mount() -> Solid:
     leg_out = ZMOUNT.leg_u[1]
     rail = _box(-leg_out, leg_out, v0, v1, -ZMOUNT.rail_thickness, 0)
     body = rail
-    for sx in (-1, 1):
-        u_in, u_out = sorted((sx * ZMOUNT.leg_u[0], sx * ZMOUNT.leg_u[1]))
+    for sign_x in (-1, 1):
+        u_in, u_out = sorted((sign_x * ZMOUNT.leg_u[0], sign_x * ZMOUNT.leg_u[1]))
         body = body | _box(u_in, u_out, v0, v0 + ZMOUNT.leg_thickness, ZMOUNT.strap_top_z, 0)
         post = cylinder(d=ZMOUNT.post_dia, h=ZMOUNT.post_height + 0.01, fn=FN_HOLE).translate(
-            [sx * ZRIB_SPEC.hole_pitch[0] / 2, ZMOUNT.post_v, -ZMOUNT.rail_thickness - ZMOUNT.post_height]
+            [sign_x * ZRIB_SPEC.hole_pitch[0] / 2, ZMOUNT.post_v, -ZMOUNT.rail_thickness - ZMOUNT.post_height]
         )
         boss = cylinder(d=ZMOUNT.boss_dia, h=WOOD_SCREW.boss_thickness, fn=FN_HOLE).translate(
-            [sx * ZMOUNT.wood_screw_u, ZMOUNT.post_v + ZMOUNT.wood_screw_v, -WOOD_SCREW.boss_thickness]
+            [sign_x * ZMOUNT.wood_screw_u, ZMOUNT.post_v + ZMOUNT.wood_screw_v, -WOOD_SCREW.boss_thickness]
         )
         body = body | post | boss
 
     nut_thickness, nut_across_corners = TOL.nut_trap_height(3), TOL.nut_trap_across_corners(3)
-    for sx in (-1, 1):
-        u = sx * ZRIB_SPEC.hole_pitch[0] / 2
+    for sign_x in (-1, 1):
+        u = sign_x * ZRIB_SPEC.hole_pitch[0] / 2
         body = body - _hole_z(
             TOL.bolt_hole_dia(3), u, ZMOUNT.post_v, -ZMOUNT.rail_thickness - ZMOUNT.post_height - 1, 1
         )  # board screw, through post and rail
         body = body - cylinder(d=nut_across_corners, h=nut_thickness + 1, fn=6).translate(
             [u, ZMOUNT.post_v, -nut_thickness]
         )
-        us = sx * ZMOUNT.wood_screw_u
-        vs = ZMOUNT.post_v + ZMOUNT.wood_screw_v
-        body = body - _hole_z(WOOD_SCREW.hole_dia, us, vs, -WOOD_SCREW.boss_thickness - 1, 1)
+        screw_u = sign_x * ZMOUNT.wood_screw_u
+        screw_v = ZMOUNT.post_v + ZMOUNT.wood_screw_v
+        body = body - _hole_z(WOOD_SCREW.hole_dia, screw_u, screw_v, -WOOD_SCREW.boss_thickness - 1, 1)
         # countersink (90°), wide end on the boss's underside
         body = body - cylinder(
             d1=WOOD_SCREW.sink_dia + 2, d2=WOOD_SCREW.hole_dia, h=WOOD_SCREW.sink_height + 1, fn=FN_HOLE
-        ).translate([us, vs, -WOOD_SCREW.boss_thickness - 1])
+        ).translate([screw_u, screw_v, -WOOD_SCREW.boss_thickness - 1])
         # strap screw: hole up the leg, nut slot pressed in from the outer face
-        us = sx * ZMOUNT.strap_screw_u
+        screw_u = sign_x * ZMOUNT.strap_screw_u
         body = body - _hole_z(
             TOL.bolt_hole_dia(3),
-            us,
+            screw_u,
             ZMOUNT.strap_screw_v,
             ZMOUNT.strap_top_z - 1,
             ZMOUNT.strap_nut_z + nut_thickness + 5,
         )
         body = body - nut_slot(3, ZMOUNT.strap_screw_v - v0 + 1, "z", "-y", tol=TOL).translate(
-            [us, ZMOUNT.strap_screw_v, ZMOUNT.strap_nut_z + nut_thickness / 2]
+            [screw_u, ZMOUNT.strap_screw_v, ZMOUNT.strap_nut_z + nut_thickness / 2]
         )
     return set_handles(body, **_handles())
 

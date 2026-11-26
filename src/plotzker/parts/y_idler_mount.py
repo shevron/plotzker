@@ -107,10 +107,10 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     endstop_tower = cube(
         [Y_ENDSTOP.tower_x[1] - Y_ENDSTOP.tower_x[0], Y_ENDSTOP.tower_y[1] - Y_ENDSTOP.tower_y[0], z_top]
     ).translate([Y_ENDSTOP.tower_x[0], Y_ENDSTOP.tower_y[0], 0])
-    zc = Y_ENDSTOP.board_z_center(u_z)
+    center_z = Y_ENDSTOP.board_z_center(u_z)
     board_holes = []
-    for sz in (-1, 1):
-        y, z = Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v, zc + sz * ENDSTOP_SPEC.hole_pitch / 2
+    for sign_z in (-1, 1):
+        y, z = Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v, center_z + sign_z * ENDSTOP_SPEC.hole_pitch / 2
         # M3 clearance through the tower, and a hex pocket for the nut in its outboard face
         # (corners up: no support needed)
         board_holes.append(
@@ -135,16 +135,16 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
             [
                 Y_ENDSTOP.board_x0 - Y_ENDSTOP.relief_depth - 1,
                 Y_ENDSTOP.board_front_y + ENDSTOP_SPEC.hole_v,
-                zc + sz * ENDSTOP_SPEC.hole_pitch / 2,
+                center_z + sign_z * ENDSTOP_SPEC.hole_pitch / 2,
             ]
         )
-        for sz in (-1, 1)
+        for sign_z in (-1, 1)
     ]
     mount = (
         (foot | endstop_tower | pocket_frame) - pocket_cut - holes - board_holes - (relief - union(*lands))
     ) | idler_tower
     board = frame_handle(
-        [Y_ENDSTOP.board_x0, Y_ENDSTOP.board_front_y, zc], [0, 0, u_z], [0, 1, 0], [1, 0, 0]
+        [Y_ENDSTOP.board_x0, Y_ENDSTOP.board_front_y, center_z], [0, 0, u_z], [0, 1, 0], [1, 0, 0]
     )  #: the endstop board's frame (the board is chiral: its u axis follows the side)
     return set_handles(mount, axle=axle_handle(side), tension_screw=TENSION_SCREW, board=board)
 

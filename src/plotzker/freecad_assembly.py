@@ -77,76 +77,76 @@ def _shift(items: list[Solid], offset: list[float]) -> list[Solid]:
     return [translate(item, offset) for item in items]
 
 
-def _fixed_parts(ex: Components) -> None:
+def _fixed_parts(components: Components) -> None:
     """Baseboard and everything screwed to it."""
-    bb = baseboard
-    items = bb.fixed_assembly()
-    ex.add("baseboard", bb.baseboard(), "base", WOOD, transparency=60)
+    board_assembly = baseboard
+    items = board_assembly.fixed_assembly()
+    components.add("baseboard", board_assembly.baseboard(), "base", WOOD, transparency=60)
 
-    runners = bb.runners()
+    runners = board_assembly.runners()
     per_runner = 1 + 2 * len(params.BASEBOARD.runner_screw_x)
     assert len(runners) == per_runner * len(params.BASEBOARD.runner_y)
     for i in range(len(params.BASEBOARD.runner_y)):
-        ex.add(f"runner_{i}", runners[i * per_runner], "base", ALU, shape="vslot_2040")
-    ex.add(
+        components.add(f"runner_{i}", runners[i * per_runner], "base", ALU, shape="vslot_2040")
+    components.add(
         "runner_fasteners",
         [s for i, s in enumerate(runners) if i % per_runner],
         "base",
         FASTENER,
     )
 
-    shafts = bb.shafts_and_supports()
+    shafts = board_assembly.shafts_and_supports()
     per_shaft = 1 + len(Y_AXIS.sk10_y) * (1 + 4 * len(params.BASEBOARD.sk10_hole_x))
     assert len(shafts) == 2 * per_shaft
     fasteners: list[Solid] = []
     for side, label in enumerate("LR"):
         chunk = shafts[side * per_shaft : (side + 1) * per_shaft]
-        ex.add(f"y_shaft_{label}", chunk[0], "base", SILVER)
+        components.add(f"y_shaft_{label}", chunk[0], "base", SILVER)
         step = 1 + 4 * len(params.BASEBOARD.sk10_hole_x)
         for j in range(len(Y_AXIS.sk10_y)):
             block = chunk[1 + j * step : 1 + (j + 1) * step]
-            ex.add(f"sk10_{label}{j}", block[0], "base", STEEL)
+            components.add(f"sk10_{label}{j}", block[0], "base", STEEL)
             fasteners += block[1:]
-    ex.add("sk10_fasteners", fasteners, "base", FASTENER)
+    components.add("sk10_fasteners", fasteners, "base", FASTENER)
 
-    bed = bb.bed()
-    ex.add("bed_panel", bed[0], "base", BED, transparency=60)
-    ex.add("bed_steel", bed[1], "base", STEEL)
-    ex.add("bed_posts", bed[2:], "base", FASTENER)
+    bed = board_assembly.bed()
+    components.add("bed_panel", bed[0], "base", BED, transparency=60)
+    components.add("bed_steel", bed[1], "base", STEEL)
+    components.add("bed_posts", bed[2:], "base", FASTENER)
 
-    zrib = bb.zrib()
+    zrib = board_assembly.zrib()
     assert len(zrib) == 25
-    ex.add("zrib_hanger_0", zrib[0], "base", PRINTED_PEN)
-    ex.add("zrib_hanger_1", zrib[1], "base", PRINTED_PEN)
-    ex.add("zrib_board", zrib[2], "base", BOARD)
-    ex.add("zrib_guard_0", zrib[13], "base", PRINTED)
-    ex.add("zrib_guard_1", zrib[24], "base", PRINTED)
-    ex.add(
+    components.add("zrib_hanger_0", zrib[0], "base", PRINTED_PEN)
+    components.add("zrib_hanger_1", zrib[1], "base", PRINTED_PEN)
+    components.add("zrib_board", zrib[2], "base", BOARD)
+    components.add("zrib_guard_0", zrib[13], "base", PRINTED)
+    components.add("zrib_guard_1", zrib[24], "base", PRINTED)
+    components.add(
         "zrib_fasteners",
         [s for i, s in enumerate(zrib) if i >= 3 and i not in (13, 24)],
         "base",
         FASTENER,
     )
-    n_psu = _psu_parts(ex)
+    n_psu = _psu_parts(components)
     assert len(items) == 1 + len(runners) + len(shafts) + len(bed) + len(zrib) + n_psu
 
 
-def _psu_parts(ex: Components) -> int:
+def _psu_parts(components: Components) -> int:
     """The PSU, its brackets and its hood with the inlet and the XT60; returns the number of
     solids (as in ``psu_mount.psu_mount_assembly``)."""
-    ex.add("psu", placed(psu()), "base", SILVER)
+    components.add("psu", placed(psu()), "base", SILVER)
     brackets = [placed(item) for item in brackets_local()]
     per_bracket = 1 + len(PSU_SPEC.bottom_hole_x) + len(params.PSU_MOUNT.wood_screw_z)
     assert len(brackets) == per_bracket * len(PSU_SPEC.hole_y)
     for i in range(len(PSU_SPEC.hole_y)):
-        ex.add(f"psu_bracket_{i}", brackets[i * per_bracket], "base", PRINTED_PEN)
+        components.add(f"psu_bracket_{i}", brackets[i * per_bracket], "base", PRINTED_PEN)
     # hood_local: hood, inlet, inlet screws, inlet nuts, XT60, hood screws
     hood = [placed(item) for item in hood_local()]
     xt60 = 2 + 2 * len(C14_INLET_SPEC.hole_xy)
-    ex.add("psu_hood", hood[0], "base", PRINTED)
-    ex.add("c14_inlet", hood[1], "base", DARK)
-    ex.add("xt60", hood[xt60], "base", GOLD)
-    ex.add(
+    components.add("psu_hood", hood[0], "base", PRINTED)
+    components.add("c14_inlet", hood[1], "base", DARK)
+    components.add("xt60", hood[xt60], "base", GOLD)
+    components.add(
         "psu_fasteners",
         [s for i, s in enumerate(brackets) if i % per_bracket]
         + [s for i, s in enumerate(hood) if i not in (0, 1, xt60)],
@@ -156,7 +156,7 @@ def _psu_parts(ex: Components) -> int:
     return 1 + len(brackets) + len(hood)
 
 
-def _y_drive_parts(ex: Components, gantry_y: float) -> None:
+def _y_drive_parts(components: Components, gantry_y: float) -> None:
     """Y motor and idler ends, endstops and the static lower belt run on each side."""
     sides = ((Side.LEFT, "L", Y_AXIS.shaft_x[0], False), (Side.RIGHT, "R", Y_AXIS.shaft_x[1], True))
     for side, label, shaft_x, mirrored in sides:
@@ -168,20 +168,20 @@ def _y_drive_parts(ex: Components, gantry_y: float) -> None:
             return _mirror_x(items, x) if flip else _shift(items, [x, 0, 0])
 
         i = place(idler)
-        m = place(motor)
-        ex.add(f"y_idler_mount_{label}", i[0], "base", PRINTED)
-        ex.add(f"y_idler_slider_{label}", i[1], "base", PRINTED)
-        ex.add(f"y_idler_{label}", i[2], "base", ALU, shape="gt2_idler")
-        ex.add(f"y_idler_fasteners_{label}", i[3:], "base", FASTENER)
-        ex.add(f"y_motor_mount_{label}", m[0], "base", PRINTED)
-        ex.add(f"y_motor_{label}", m[1], "base", MOTOR, shape="nema17")
-        ex.add(f"y_pulley_{label}", m[2], "base", SILVER, shape="gt2_pulley")
-        ex.add(f"y_motor_screws_{label}", m[3:], "base", FASTENER)
-        ex.add(f"y_belt_lower_{label}", place(runs[:1])[0], "base", DARK)
-        ex.add(f"y_endstop_{label}", y_endstop_board(side), "base", BOARD, shape="endstop_board")
+        placed_motor = place(motor)
+        components.add(f"y_idler_mount_{label}", i[0], "base", PRINTED)
+        components.add(f"y_idler_slider_{label}", i[1], "base", PRINTED)
+        components.add(f"y_idler_{label}", i[2], "base", ALU, shape="gt2_idler")
+        components.add(f"y_idler_fasteners_{label}", i[3:], "base", FASTENER)
+        components.add(f"y_motor_mount_{label}", placed_motor[0], "base", PRINTED)
+        components.add(f"y_motor_{label}", placed_motor[1], "base", MOTOR, shape="nema17")
+        components.add(f"y_pulley_{label}", placed_motor[2], "base", SILVER, shape="gt2_pulley")
+        components.add(f"y_motor_screws_{label}", placed_motor[3:], "base", FASTENER)
+        components.add(f"y_belt_lower_{label}", place(runs[:1])[0], "base", DARK)
+        components.add(f"y_endstop_{label}", y_endstop_board(side), "base", BOARD, shape="endstop_board")
 
 
-def _gantry_parts(ex: Components, gantry_y: float) -> None:
+def _gantry_parts(components: Components, gantry_y: float) -> None:
     """Both gantry ends, the beam, and the X belt's upper run."""
     left_x, right_x = Y_AXIS.shaft_x
     n_front = len(get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "block_bolts_front"))
@@ -199,16 +199,16 @@ def _gantry_parts(ex: Components, gantry_y: float) -> None:
         items = _mirror_x(items, shaft_x) if mirrored else _shift(items, [shaft_x, 0, 0])
         cursor = 0
 
-        def take(n: int, items: list[Solid] = items) -> list[Solid]:
+        def take(index_n: int, items: list[Solid] = items) -> list[Solid]:
             nonlocal cursor
-            chunk = items[cursor : cursor + n]
-            cursor += n
+            chunk = items[cursor : cursor + index_n]
+            cursor += index_n
             return chunk
 
-        ex.add(f"gantry_bracket_{label}", take(1)[0], "gantry", PRINTED)
+        components.add(f"gantry_bracket_{label}", take(1)[0], "gantry", PRINTED)
         blocks = take(2)
-        ex.add(f"scs10uu_{label}0", blocks[0], "gantry", STEEL)
-        ex.add(f"scs10uu_{label}1", blocks[1], "gantry", STEEL)
+        components.add(f"scs10uu_{label}0", blocks[0], "gantry", STEEL)
+        components.add(f"scs10uu_{label}1", blocks[1], "gantry", STEEL)
         fasteners = take(n_front + n_rear)
         drive = take(n_drive)
         fasteners += take(n_beam)
@@ -219,11 +219,11 @@ def _gantry_parts(ex: Components, gantry_y: float) -> None:
             anchor = take(1)
             fasteners += take(len(items) - cursor)
         assert cursor == len(items), (cursor, len(items))
-        ex.add(f"gantry_fasteners_{label}", fasteners, "gantry", FASTENER)
+        components.add(f"gantry_fasteners_{label}", fasteners, "gantry", FASTENER)
         if anchor:
-            ex.add("loom_anchor", anchor[0], "gantry", PRINTED)
-        ex.add(f"y_belt_clamps_{label}", clamps[0::2], "gantry", GOLD)
-        ex.add(f"y_belt_clamped_{label}", clamps[1::2], "gantry", DARK)
+            components.add("loom_anchor", anchor[0], "gantry", PRINTED)
+        components.add(f"y_belt_clamps_{label}", clamps[0::2], "gantry", GOLD)
+        components.add(f"y_belt_clamped_{label}", clamps[1::2], "gantry", DARK)
         names: tuple[str, ...]
         colors: tuple[tuple[int, int, int], ...]
         if side is Side.LEFT:
@@ -242,14 +242,14 @@ def _gantry_parts(ex: Components, gantry_y: float) -> None:
             names = ("x_motor_mount", "x_motor", "x_pulley")
             colors = (PRINTED, MOTOR, SILVER)
         for name, solid, color in zip(names, drive, colors, strict=True):
-            ex.add(name, solid, "gantry", color)
+            components.add(name, solid, "gantry", color)
 
     belt = _x_belt_return(gantry_y)
-    ex.add("x_belt_upper", belt, "gantry", DARK)
+    components.add("x_belt_upper", belt, "gantry", DARK)
     beam = vslot_x(BEAM.length, BEAM.size).translate(
         [left_x + BEAM.end_offset, gantry_y - BEAM.depth / 2, BEAM.bottom_z]
     )
-    ex.add("gantry_beam", beam, "gantry", ALU)
+    components.add("gantry_beam", beam, "gantry", ALU)
 
 
 def _x_belt_return(gantry_y: float) -> Solid:
@@ -269,21 +269,21 @@ def _x_belt_return(gantry_y: float) -> Solid:
     )
 
 
-def _carriage_parts(ex: Components, gantry_y: float, carriage_x: float) -> None:
+def _carriage_parts(components: Components, gantry_y: float, carriage_x: float) -> None:
     """X carriage with wheels, fasteners and the pen holder."""
     items = _shift(carriage_assembly(), [carriage_x, gantry_y, 0])
     assert len(items) == 17
-    ex.add("x_carriage", items[0], "carriage", GREEN)
+    components.add("x_carriage", items[0], "carriage", GREEN)
     fasteners: list[Solid] = []
     for k, label in enumerate(("L", "R")):
         chunk = items[1 + 5 * k : 6 + 5 * k]
-        ex.add(f"vwheel_{label}_top", chunk[0], "carriage", (40, 40, 40))
-        ex.add(f"vwheel_{label}_bottom", chunk[2], "carriage", (40, 40, 40))
+        components.add(f"vwheel_{label}_top", chunk[0], "carriage", (40, 40, 40))
+        components.add(f"vwheel_{label}_bottom", chunk[2], "carriage", (40, 40, 40))
         fasteners += [chunk[1], chunk[3], chunk[4]]
-    ex.add("carriage_fasteners", fasteners, "carriage", FASTENER)
-    ex.add("x_belt_clamps", [items[11], items[13]], "carriage", GOLD)
-    ex.add("x_belt_clamped", [items[12], items[14]], "carriage", DARK)
-    ex.add("x_trigger", items[15:17], "carriage", FASTENER)
+    components.add("carriage_fasteners", fasteners, "carriage", FASTENER)
+    components.add("x_belt_clamps", [items[11], items[13]], "carriage", GOLD)
+    components.add("x_belt_clamped", [items[12], items[14]], "carriage", DARK)
+    components.add("x_trigger", items[15:17], "carriage", FASTENER)
 
     head = pen_holder_items(pen_up=True)
 
@@ -291,19 +291,19 @@ def _carriage_parts(ex: Components, gantry_y: float, carriage_x: float) -> None:
         placed = solid.mirror([0, 1, 0]).translate([0, CARRIAGE.plate_front_y, 0])
         return translate(placed, [carriage_x, gantry_y, 0])
 
-    ex.add("pen_body", place(head["body"]), "carriage", PRINTED_PEN)
-    ex.add("pen_servo", place(head["servo"]), "carriage", MOTOR)
-    ex.add(
+    components.add("pen_body", place(head["body"]), "carriage", PRINTED_PEN)
+    components.add("pen_servo", place(head["servo"]), "carriage", MOTOR)
+    components.add(
         "pen_clamp_screws",
         [place(head["clamp_screw_0"]), place(head["clamp_screw_1"])],
         "carriage",
         FASTENER,
     )
-    ex.add("pen_horn", [place(head["horn"]), place(head["pin"])], "carriage", SILVER)
-    ex.add("pen_slide", place(head["slide"]), "slide", PRINTED)
-    ex.add("pen_rod", place(head["rod"]), "slide", SILVER)
-    ex.add("pen", place(head["pen"]), "slide", RED)
-    ex.add(
+    components.add("pen_horn", [place(head["horn"]), place(head["pin"])], "carriage", SILVER)
+    components.add("pen_slide", place(head["slide"]), "slide", PRINTED)
+    components.add("pen_rod", place(head["rod"]), "slide", SILVER)
+    components.add("pen", place(head["pen"]), "slide", RED)
+    components.add(
         "pen_thumbscrew",
         [place(head["thumbscrew"]), place(head["thumbscrew_nut"])],
         "slide",
@@ -352,10 +352,10 @@ def _axes(gantry_y: float, carriage_x: float) -> dict[str, Any]:
         },
     }
     for k, label in enumerate("LR"):
-        sx = -1 if k == 0 else 1
+        sign = -1 if k == 0 else 1
         for z, pos in zip(CARRIAGE.wheel_z, ("top", "bottom"), strict=True):
             axes[f"vwheel_{label}_{pos}"] = {
-                "origin": [carriage_x + sx * WHEEL_X, gantry_y, z],
+                "origin": [carriage_x + sign * WHEEL_X, gantry_y, z],
                 "dir": [0, 1, 0],
             }
     return axes
@@ -366,12 +366,12 @@ def components() -> Components:
     params.check_design()
     gantry_y = gantry_y_at(GANTRY_POS)
     carriage_x = carriage_x_at(CARRIAGE_POS)
-    ex = Components()
-    _fixed_parts(ex)
-    _y_drive_parts(ex, gantry_y)
-    _gantry_parts(ex, gantry_y)
-    _carriage_parts(ex, gantry_y, carriage_x)
-    return ex
+    collected = Components()
+    _fixed_parts(collected)
+    _y_drive_parts(collected, gantry_y)
+    _gantry_parts(collected, gantry_y)
+    _carriage_parts(collected, gantry_y, carriage_x)
+    return collected
 
 
 def joints() -> list[Joint]:

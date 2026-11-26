@@ -125,24 +125,24 @@ ENDSTOP_SPEC = EndstopSpec()
 
 def endstop(pressed: bool = False) -> Solid:
     """Endstop board in the model frame (see the module docstring); lever at rest or pressed."""
-    length, width, t = ENDSTOP_SPEC.pcb
+    length, width, thickness = ENDSTOP_SPEC.pcb
     holes = [
-        cylinder(d=ENDSTOP_SPEC.hole_dia, h=t + 2, fn=16).translate(
+        cylinder(d=ENDSTOP_SPEC.hole_dia, h=thickness + 2, fn=16).translate(
             [su * ENDSTOP_SPEC.hole_pitch / 2, ENDSTOP_SPEC.hole_v, -1]
         )
         for su in (-1, 1)
     ]
-    pcb = (cube([width, length, t]).translate([-width / 2, -length, 0]) - holes).color("Black")
+    pcb = (cube([width, length, thickness]).translate([-width / 2, -length, 0]) - holes).color("Black")
     body_width, body_height, body_depth = ENDSTOP_SPEC.body
     body = (
         cube([body_width, body_height, body_depth])
-        .translate([ENDSTOP_SPEC.body_u - body_width / 2, ENDSTOP_SPEC.body_overhang - body_height, t])
+        .translate([ENDSTOP_SPEC.body_u - body_width / 2, ENDSTOP_SPEC.body_overhang - body_height, thickness])
         .color("#222")
     )
     connector_width, connector_length, connector_height = ENDSTOP_SPEC.connector
     connector = (
         cube([connector_width, connector_length, connector_height])
-        .translate([-connector_width / 2, -length - ENDSTOP_SPEC.connector_overhang, t])
+        .translate([-connector_width / 2, -length - ENDSTOP_SPEC.connector_overhang, thickness])
         .color("White")
     )
     protrusion = ENDSTOP_SPEC.pressed_protrusion if pressed else ENDSTOP_SPEC.rest_protrusion

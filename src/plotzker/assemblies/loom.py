@@ -33,29 +33,31 @@ def _arc(
     """Points of an arc of radius ``LOOM.bend_radius`` around ``center``, in the plane spanned by
     the unit vectors ``axes`` (angle measured from the first toward the second)."""
     u, v = axes
-    n = max(2, round(abs(end_deg - start_deg) / BEND_STEP_DEG) + 1)
+    point_count = max(2, round(abs(end_deg - start_deg) / BEND_STEP_DEG) + 1)
     points = []
-    for i in range(n):
-        a = math.radians(start_deg + (end_deg - start_deg) * i / (n - 1))
-        points.append([center[k] + LOOM.bend_radius * (math.cos(a) * u[k] + math.sin(a) * v[k]) for k in range(3)])
+    for i in range(point_count):
+        angle = math.radians(start_deg + (end_deg - start_deg) * i / (point_count - 1))
+        points.append(
+            [center[k] + LOOM.bend_radius * (math.cos(angle) * u[k] + math.sin(angle) * v[k]) for k in range(3)]
+        )
     return points
 
 
 def y_loom_path(gantry_y: float) -> list[Point]:
     """Axis of the loom for the gantry at ``gantry_y``, from the anchor groove to the hole."""
-    r, z0 = LOOM.bend_radius, LOOM.lying_z
-    mx, sx = LOOM.moving_x, LOOM.hole_x
-    ye = gantry_y + LOOM.exit_dy  #: the anchor's groove axis (y)
+    radius, z0 = LOOM.bend_radius, LOOM.lying_z
+    moving_x, static_x = LOOM.moving_x, LOOM.hole_x
+    exit_y = gantry_y + LOOM.exit_dy  #: the anchor's groove axis (y)
     shaft_x = Y_AXIS.shaft_x[1]
     groove_x0 = shaft_x - LOOM.anchor_x[1]  #: inboard end of the groove (right bracket: mirrored)
-    gz = Y_AXIS.scs_top_z + LOOM.groove_z
-    ys = LOOM.fold_y(gantry_y)
-    path: list[Point] = [[groove_x0, ye, gz], [mx - r, ye, gz]]
-    path += _arc((mx - r, ye, gz - r), ((0, 0, 1), (1, 0, 0)), 0, 90)  # out, then down
-    path += _arc((mx, ye + r, z0 + r), ((0, -1, 0), (0, 0, -1)), 0, 90)  # down, then back (+y)
-    path.append([mx, ys, z0])
-    path += _arc(((mx + sx) / 2, ys, z0), ((-1, 0, 0), (0, 1, 0)), 0, 180)  # U fold
-    path += [[sx, LOOM.hole_y, z0], [sx, LOOM.hole_y, -UNDER_BOARD]]
+    groove_z = Y_AXIS.scs_top_z + LOOM.groove_z
+    fold_y = LOOM.fold_y(gantry_y)
+    path: list[Point] = [[groove_x0, exit_y, groove_z], [moving_x - radius, exit_y, groove_z]]
+    path += _arc((moving_x - radius, exit_y, groove_z - radius), ((0, 0, 1), (1, 0, 0)), 0, 90)  # out, then down
+    path += _arc((moving_x, exit_y + radius, z0 + radius), ((0, -1, 0), (0, 0, -1)), 0, 90)  # down, then back (+y)
+    path.append([moving_x, fold_y, z0])
+    path += _arc(((moving_x + static_x) / 2, fold_y, z0), ((-1, 0, 0), (0, 1, 0)), 0, 180)  # U fold
+    path += [[static_x, LOOM.hole_y, z0], [static_x, LOOM.hole_y, -UNDER_BOARD]]
     return path
 
 

@@ -35,23 +35,23 @@ def loom_anchor_installed() -> Solid:
     x0, x1 = LOOM.anchor_x
     y0, y1 = LOOM.anchor_y
     z0, z1 = BRACKET.base_thickness, BRACKET.base_thickness + LOOM.anchor_height
-    cy, gz = LOOM.anchor_cy, LOOM.groove_z
+    center_y, groove_z = LOOM.anchor_cy, LOOM.groove_z
     block = cube([x1 - x0, y1 - y0, z1 - z0]).translate([x0, y0, z0])
     groove_dia = TOL.slide_dia(LOOM.dia)
-    groove = cylinder(d=groove_dia, h=x1 - x0 + 2, fn=FN_HOLE).rotate([0, 90, 0]).translate([x0 - 1, cy, gz]) | cube(
-        [x1 - x0 + 2, groove_dia, z1 - gz + 1]
-    ).translate([x0 - 1, cy - groove_dia / 2, gz])
-    xc = (x0 + x1) / 2
+    groove = cylinder(d=groove_dia, h=x1 - x0 + 2, fn=FN_HOLE).rotate([0, 90, 0]).translate(
+        [x0 - 1, center_y, groove_z]
+    ) | cube([x1 - x0 + 2, groove_dia, z1 - groove_z + 1]).translate([x0 - 1, center_y - groove_dia / 2, groove_z])
+    center_x = (x0 + x1) / 2
     tie_length = LOOM.tie_width + 1
     tie_width = LOOM.tie_thickness + 0.5
     slots = [
         cube([tie_length, tie_width, LOOM.anchor_height + 2]).translate(
-            [xc - tie_length / 2, cy + s * TIE_SLOT_DY - tie_width / 2, z0 - 1]
+            [center_x - tie_length / 2, center_y + s * TIE_SLOT_DY - tie_width / 2, z0 - 1]
         )
         for s in (-1, 1)
     ]
     channel = cube([tie_length, 2 * TIE_SLOT_DY + tie_width, CHANNEL_H + EPS]).translate(
-        [xc - tie_length / 2, cy - TIE_SLOT_DY - tie_width / 2, z0 - EPS]
+        [center_x - tie_length / 2, center_y - TIE_SLOT_DY - tie_width / 2, z0 - EPS]
     )
     holes = [
         cylinder(d=TOL.bolt_hole_dia(3), h=LOOM.anchor_height + 2, fn=FN_HOLE).translate(
@@ -61,7 +61,7 @@ def loom_anchor_installed() -> Solid:
     ]
     # the loom starts to bend down inside the block: carve its path
     ball = sphere(d=groove_dia, fn=16)
-    arc = [ball.translate([x, cy, z]) for x, z in LOOM.drop_arc()]
+    arc = [ball.translate([x, center_y, z]) for x, z in LOOM.drop_arc()]
     relief = [hull(a, b) for a, b in itertools.pairwise(arc)]
     return block - groove - relief - slots - channel - holes
 

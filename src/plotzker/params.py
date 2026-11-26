@@ -423,8 +423,8 @@ class PenHolder:
     @property
     def servo_center_z(self) -> float:
         """Servo body center along z (the tab holes are symmetrical about it)."""
-        lo, hi = self.servo_body_z
-        return (lo + hi) / 2
+        low, high = self.servo_body_z
+        return (low + high) / 2
 
     @property
     def wall_z(self) -> tuple[float, float]:
@@ -716,14 +716,14 @@ class PsuMount:
     @property
     def xt60_window(self) -> tuple[float, float]:
         """The lip's window: along x (the connector's height) and along y (its width)."""
-        w, h = XT60_SPEC.front
-        return h + 2 * self.xt60_window_fit, w + 2 * self.xt60_window_long_fit
+        width, height = XT60_SPEC.front
+        return height + 2 * self.xt60_window_fit, width + 2 * self.xt60_window_long_fit
 
     @property
     def xt60_pocket(self) -> tuple[float, float]:
         """The pocket gripping the collar behind the lip: along x and along y."""
-        w, h = XT60_SPEC.collar
-        return h + 2 * self.xt60_pocket_fit, w + 2 * self.xt60_pocket_long_fit
+        width, height = XT60_SPEC.collar
+        return height + 2 * self.xt60_pocket_fit, width + 2 * self.xt60_pocket_long_fit
 
     @property
     def terminal_y(self) -> float:
@@ -763,8 +763,8 @@ class PsuMount:
     @property
     def counterbore(self) -> tuple[float, float]:
         """M4 head counterbore in the upright: diameter, depth."""
-        m4 = metric(4)
-        return m4.head_dia + 2 * TOL.bolt, m4.head_height + TOL.bolt
+        screw_m4 = metric(4)
+        return screw_m4.head_dia + 2 * TOL.bolt, screw_m4.head_height + TOL.bolt
 
     @property
     def psu_screw_depth(self) -> float:
@@ -779,14 +779,24 @@ class PsuMount:
     @property
     def hood_x(self) -> tuple[float, float, float, float]:
         """Hood in PSU x: outer and inner faces (outer0, inner0, inner1, outer1)."""
-        c, t = self.clearance, self.wall_thickness
-        return -c - t, -c, PSU_SPEC.size[0] + c, PSU_SPEC.size[0] + c + t
+        clearance, thickness = self.clearance, self.wall_thickness
+        return (
+            -clearance - thickness,
+            -clearance,
+            PSU_SPEC.size[0] + clearance,
+            PSU_SPEC.size[0] + clearance + thickness,
+        )
 
     @property
     def hood_z(self) -> tuple[float, float, float, float]:
         """Hood in PSU z: outer and inner faces (outer0, inner0, inner1, outer1)."""
-        c, t = self.clearance, self.wall_thickness
-        return -c - t, -c, PSU_SPEC.size[2] + c, PSU_SPEC.size[2] + c + t
+        clearance, thickness = self.clearance, self.wall_thickness
+        return (
+            -clearance - thickness,
+            -clearance,
+            PSU_SPEC.size[2] + clearance,
+            PSU_SPEC.size[2] + clearance + thickness,
+        )
 
     @property
     def brace_z(self) -> float:
@@ -796,8 +806,8 @@ class PsuMount:
     @property
     def pilot_xy(self) -> tuple[tuple[float, float], ...]:
         """Pilot holes for the brackets' wood screws, in the machine frame (from below)."""
-        ox, oy, _ = self.origin
-        return tuple((ox + z, oy + y) for y in PSU_SPEC.hole_y for z in self.wood_screw_z)
+        origin_x, origin_y, _ = self.origin
+        return tuple((origin_x + z, origin_y + y) for y in PSU_SPEC.hole_y for z in self.wood_screw_z)
 
 
 PSU_MOUNT = PsuMount()
@@ -1195,8 +1205,8 @@ class XEndstopMount:
     @property
     def board_y(self) -> tuple[float, float]:
         """Board extent in y: the lever hinge is at +y, its tip toward -y."""
-        yc = CARRIAGE.trig_y + ENDSTOP_SPEC.contact_u
-        return yc - ENDSTOP_SPEC.pcb[1] / 2, yc + ENDSTOP_SPEC.pcb[1] / 2
+        center_y = CARRIAGE.trig_y + ENDSTOP_SPEC.contact_u
+        return center_y - ENDSTOP_SPEC.pcb[1] / 2, center_y + ENDSTOP_SPEC.pcb[1] / 2
 
     @property
     def board_bottom_z(self) -> float:
@@ -1259,8 +1269,8 @@ class XDrive:
     @property
     def bolt_rows(self) -> tuple[float, float]:
         """Rear SCS bolt rows (y)."""
-        p, c = Y_AXIS.scs_pitch, SCS10UU_SPEC.hole_pitch_y
-        return p / 2 - c / 2, p / 2 + c / 2
+        pitch, hole_pitch = Y_AXIS.scs_pitch, SCS10UU_SPEC.hole_pitch_y
+        return pitch / 2 - hole_pitch / 2, pitch / 2 + hole_pitch / 2
 
     @property
     def plate_y0(self) -> float:
@@ -1270,8 +1280,8 @@ class XDrive:
     @property
     def foot_y(self) -> tuple[float, float]:
         """Y range of the foot under the SCS block."""
-        p, length = Y_AXIS.scs_pitch, SCS10UU_SPEC.length
-        return p / 2 - length / 2, p / 2 + length / 2
+        pitch, length = Y_AXIS.scs_pitch, SCS10UU_SPEC.length
+        return pitch / 2 - length / 2, pitch / 2 + length / 2
 
     @property
     def motor_face_y(self) -> float:
@@ -1470,8 +1480,8 @@ class YEndstopMount:
 
     def board_z(self, u_z: int) -> tuple[float, float]:
         """Board extent in z."""
-        zc = self.board_z_center(u_z)
-        return zc - ENDSTOP_SPEC.pcb[1] / 2, zc + ENDSTOP_SPEC.pcb[1] / 2
+        center_z = self.board_z_center(u_z)
+        return center_z - ENDSTOP_SPEC.pcb[1] / 2, center_z + ENDSTOP_SPEC.pcb[1] / 2
 
 
 Y_ENDSTOP = YEndstopMount()
@@ -1669,9 +1679,9 @@ class Baseboard:
     def post_xy(self) -> tuple[tuple[float, float], ...]:
         """Bed post axes: four points near the panel corners."""
         x0, y0 = FRAME.bed_origin
-        bx, by = FRAME.bed_size
+        bed_x, bed_y = FRAME.bed_size
         i = self.post_inset
-        return tuple((x, y) for x in (x0 + i, x0 + bx - i) for y in (y0 + i, y0 + by - i))
+        return tuple((x, y) for x in (x0 + i, x0 + bed_x - i) for y in (y0 + i, y0 + bed_y - i))
 
     @property
     def zrib_center(self) -> tuple[float, float]:
@@ -1684,10 +1694,10 @@ class Baseboard:
     @property
     def zrib_pilot_xy(self) -> tuple[tuple[float, float], ...]:
         """Pilot holes for the hangers' wood screws (mount frame u → x, v → y)."""
-        cx, cy = self.zrib_center
-        u = ZMOUNT.wood_screw_u
-        v = abs(ZMOUNT.post_v + ZMOUNT.wood_screw_v)
-        return tuple((cx + su * u, cy + sv * v) for sv in (-1, 1) for su in (-1, 1))
+        center_x, center_y = self.zrib_center
+        offset_u = ZMOUNT.wood_screw_u
+        offset_v = abs(ZMOUNT.post_v + ZMOUNT.wood_screw_v)
+        return tuple((center_x + su * offset_u, center_y + sv * offset_v) for sv in (-1, 1) for su in (-1, 1))
 
     @property
     def post_stud_z(self) -> float:
@@ -1697,9 +1707,9 @@ class Baseboard:
     @property
     def nut_top_z(self) -> float:
         """Top of the post's nut at the highest panel setting."""
-        m5 = metric(5)
+        screw_m5 = metric(5)
         top_panel = FRAME.bed_adjust_gap + self.post_adjust + FRAME.bed_panel_thickness
-        return top_panel + m5.washer_thickness + m5.nut_height
+        return top_panel + screw_m5.washer_thickness + screw_m5.nut_height
 
 
 BASEBOARD = Baseboard()
@@ -1771,8 +1781,8 @@ class FloatingIdler:
     @property
     def nut_y(self) -> float:
         """Start (lowest y) of the axle nut's hex pocket, in the outer face of the nut-side arm."""
-        h = TOL.nut_trap_height(self.axle_screw_size)
-        return self.width / 2 - h if self.head_side < 0 else -self.width / 2 - 1
+        height = TOL.nut_trap_height(self.axle_screw_size)
+        return self.width / 2 - height if self.head_side < 0 else -self.width / 2 - 1
 
     @property
     def nut_seat_y(self) -> float:
@@ -1936,7 +1946,7 @@ Y_IDLER = FloatingIdler(
 
 def design_checks() -> Iterator[tuple[bool, str]]:
     """Yield ``(passed, description)`` for every design rule."""
-    m5 = metric(5)
+    screw_m5 = metric(5)
     yield (
         Y_AXIS.travel_avail >= REQ.y_travel,
         (f"Y travel too short: {Y_AXIS.travel_avail:g} < {REQ.y_travel:g}"),
@@ -1968,7 +1978,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     yield CARRIAGE.plate_back_y < -BEAM.depth / 2 - 2, "Carriage plate too close to the beam"
     yield (
-        TOOL_PLATE.width / 2 + 1 <= CARRIAGE.wheel_pitch_x / 2 - m5.washer_outer_dia / 2,
+        TOOL_PLATE.width / 2 + 1 <= CARRIAGE.wheel_pitch_x / 2 - screw_m5.washer_outer_dia / 2,
         "Bottom wheel bolt heads overlap the tool plate",
     )
     yield (
@@ -2021,7 +2031,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         X_IDLER.slider_s0 + X_IDLER.web_thickness <= X_IDLER.wall_end_s
         and X_IDLER.wall_end_s <= X_ENDSTOP.plug_x0 - 0.5
         and X_IDLER.wall_end_s <= X_DRIVE.foot_x0 - 0.5
-        and X_IDLER.wall_end_s <= -SCS10UU_SPEC.hole_pitch_x / 2 - m5.head_dia / 2 - 1,
+        and X_IDLER.wall_end_s <= -SCS10UU_SPEC.hole_pitch_x / 2 - screw_m5.head_dia / 2 - 1,
         "X idler tower's walls don't cover the slider's wall or hit the foot or the bolt heads",
     )
     yield (
@@ -2151,14 +2161,14 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         PSU_MOUNT.origin[0] + PSU_MOUNT.brace_z - (LOOM.hole_x + LOOM.dia / 2) >= 1.5,
         "PSU bracket: the brace over the board's top comes within 1.5 mm of the Y loom",
     )
-    cl, cs = C14_INLET_SPEC.cutout  # long side along x, short along y
+    cutout_long, cutout_short = C14_INLET_SPEC.cutout  # long side along x, short along y
     flange_length, flange_width = C14_INLET_SPEC.flange  # across the flats (x), across the points (y)
     ox0, ix0, ix1, ox1 = PSU_MOUNT.hood_x
     yield (
-        ix0 + 0.5 <= PSU_MOUNT.inlet_x - cl / 2
-        and PSU_MOUNT.inlet_x + cl / 2 <= ix1 - 0.5
-        and -PSU_MOUNT.depth + PSU_MOUNT.wall_thickness + 0.5 <= PSU_MOUNT.inlet_y - cs / 2
-        and PSU_MOUNT.inlet_y + cs / 2 <= -0.5,
+        ix0 + 0.5 <= PSU_MOUNT.inlet_x - cutout_long / 2
+        and PSU_MOUNT.inlet_x + cutout_long / 2 <= ix1 - 0.5
+        and -PSU_MOUNT.depth + PSU_MOUNT.wall_thickness + 0.5 <= PSU_MOUNT.inlet_y - cutout_short / 2
+        and PSU_MOUNT.inlet_y + cutout_short / 2 <= -0.5,
         "PSU hood: the inlet's cutout is not inside the hood in front of the PSU",
     )
     yield (
@@ -2175,7 +2185,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     xt_y0 = PSU_MOUNT.xt60_y - pocket_y / 2 - PSU_MOUNT.wall_thickness - PSU_MOUNT.xt60_sleeve
     xt_y1 = PSU_MOUNT.xt60_y + pocket_y / 2 + PSU_MOUNT.xt60_pocket_relief + PSU_MOUNT.wall_thickness
     yield (
-        PSU_MOUNT.inlet_x + cl / 2 + 2 <= xt_x0,
+        PSU_MOUNT.inlet_x + cutout_long / 2 + 2 <= xt_x0,
         "PSU hood: the inlet is over the XT60, which reaches far into the hood",
     )
     yield (
@@ -2206,23 +2216,23 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "holes, or leaves the open strip in front of the cover",
     )
     # --- baseboard layout (T3.7)
-    bx, by, _ = FRAME.board_size
+    board_x, board_y, _ = FRAME.board_size
     yield (
         BASEBOARD.runner_x[0] >= 0
-        and BASEBOARD.runner_x[1] <= bx
+        and BASEBOARD.runner_x[1] <= board_x
         and BASEBOARD.runner_y[0] - BASEBOARD.runner_width / 2 >= 0
-        and BASEBOARD.runner_y[2] + BASEBOARD.runner_width / 2 <= by,
+        and BASEBOARD.runner_y[2] + BASEBOARD.runner_width / 2 <= board_y,
         "A runner hangs over the baseboard edge",
     )
     zrib_half_v = abs(ZMOUNT.plate_v[0])
     yield (
         BASEBOARD.runner_pitch / 2 - BASEBOARD.runner_width / 2 - zrib_half_v >= 5
-        and BASEBOARD.zrib_center[0] + ZMOUNT.leg_u[1] <= bx,
+        and BASEBOARD.zrib_center[0] + ZMOUNT.leg_u[1] <= board_x,
         "The ZRIB mount does not fit between the runners or on the baseboard",
     )
     zx0, zx1 = BASEBOARD.zrib_center[0] - ZMOUNT.leg_u[1], BASEBOARD.zrib_center[0] + ZMOUNT.leg_u[1]
     zy0, zy1 = BASEBOARD.zrib_center[1] - zrib_half_v, BASEBOARD.zrib_center[1] + zrib_half_v
-    head_radius = m5.washer_outer_dia / 2 + 2  #: bolt head and washer under the board, plus room
+    head_radius = screw_m5.washer_outer_dia / 2 + 2  #: bolt head and washer under the board, plus room
     yield (
         all(
             abs(y - ry) >= BASEBOARD.runner_width / 2 + head_radius
@@ -2239,8 +2249,8 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "A bed post bolt head hits the ZRIB mount",
     )
     yield (
-        FRAME.steel_margin >= BASEBOARD.post_inset + m5.washer_outer_dia / 2 + 1
-        and BASEBOARD.post_inset >= m5.washer_outer_dia / 2 + 3,
+        FRAME.steel_margin >= BASEBOARD.post_inset + screw_m5.washer_outer_dia / 2 + 1
+        and BASEBOARD.post_inset >= screw_m5.washer_outer_dia / 2 + 3,
         "The bed post nuts hit the steel sheet or hang over the panel edge",
     )
     yield (
@@ -2251,7 +2261,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         BASEBOARD.post_stud_z + BASEBOARD.post_bolt_length >= BASEBOARD.nut_top_z + 1
         and FRAME.bed_adjust_gap - BASEBOARD.post_adjust >= 1
         and BASEBOARD.spring_length >= FRAME.bed_adjust_gap + BASEBOARD.post_adjust
-        and BASEBOARD.spring_id >= m5.size + 0.5,
+        and BASEBOARD.spring_id >= screw_m5.size + 0.5,
         "Bed post: stud too short, panel too low, or spring too short at the highest setting",
     )
     yield (
@@ -2264,17 +2274,18 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     pen_y_hi = Y_AXIS.gantry_y_range[1] + CARRIAGE.plate_front_y - PEN.pen_axis_depth(pen_lo)
     a3_x, a3_y = REQ.media_a3
     yield (
-        pen_x_lo <= (bx - a3_x) / 2 and pen_x_hi >= (bx + a3_x) / 2,
+        pen_x_lo <= (board_x - a3_x) / 2 and pen_x_hi >= (board_x + a3_x) / 2,
         f"The pen cannot reach all of A3 along X ({pen_x_lo:g}…{pen_x_hi:g})",
     )
     yield (
-        pen_y_lo <= (by - a3_y) / 2 and pen_y_hi >= (by + a3_y) / 2,
+        pen_y_lo <= (board_y - a3_y) / 2 and pen_y_hi >= (board_y + a3_y) / 2,
         f"The pen cannot reach all of A3 along Y ({pen_y_lo:g}…{pen_y_hi:g})",
     )
     # --- Y loom (T3.8)
     yield LOOM.fold_width >= 2 * LOOM.bend_radius, "The loom fold is tighter than the loom's bend radius"
     yield (
-        LOOM.moving_x - LOOM.dia / 2 >= LOOM.rail_x + 1 and bx - (LOOM.hole_x + max(LOOM.dia, LOOM.hole_dia) / 2) >= 3,
+        LOOM.moving_x - LOOM.dia / 2 >= LOOM.rail_x + 1
+        and board_x - (LOOM.hole_x + max(LOOM.dia, LOOM.hole_dia) / 2) >= 3,
         "The loom legs don't fit between the rail and the baseboard edge",
     )
     yield (

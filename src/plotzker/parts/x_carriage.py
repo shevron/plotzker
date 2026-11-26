@@ -123,29 +123,29 @@ def _body() -> Solid:
 def _wheel_axle_holes() -> list[Solid]:
     """Wheel axle holes."""
     holes = []
-    for sx in (-1, 1):
+    for sign_x in (-1, 1):
         # top wheels: M5 clearance through plate and stand-off
         holes.append(
             cylinder(d=TOL.bolt_hole_dia(5), h=CARRIAGE.plate_thickness + ECCENTRIC_SPEC.stack + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[0]])
+            .translate([sign_x * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[0]])
         )
         # bottom wheels: hole for the eccentric boss (the M5 moves ±offset inside it)
         holes.append(
             cylinder(d=TOL.slide_dia(ECCENTRIC_SPEC.boss_dia), h=CARRIAGE.plate_thickness + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[1]])
+            .translate([sign_x * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[1]])
         )
         # counterbore for the bolt head and washer on the front face
         holes.append(
             cylinder(d=TOL.slide_dia(metric(5).washer_outer_dia), h=CARRIAGE.head_recess + 1, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[0]])
+            .translate([sign_x * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[0]])
         )
         holes.append(
             cylinder(d=TOL.slide_dia(metric(5).washer_outer_dia), h=CARRIAGE.head_recess + 1, fn=FN_HOLE)
             .rotate([-90, 0, 0])
-            .translate([sx * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[1]])
+            .translate([sign_x * WHEEL_X, CARRIAGE.plate_front_y - 1, CARRIAGE.wheel_z[1]])
         )
     return holes
 
@@ -173,8 +173,8 @@ def _tool_plate_interface() -> list[Solid]:
     nut_thickness = TOL.nut_trap_height(3)
     screw_zc = TOOL_PLATE.bottom_z + TOOL_PLATE.screw_z
     nuts = []
-    for sx in (-1, 1):
-        x = sx * TOOL_PLATE.screw_pitch / 2
+    for sign_x in (-1, 1):
+        x = sign_x * TOOL_PLATE.screw_pitch / 2
         nuts.append(
             cylinder(d=TOL.bolt_hole_dia(3), h=CARRIAGE.plate_thickness + 2, fn=FN_HOLE)
             .rotate([-90, 0, 0])
@@ -212,10 +212,10 @@ def _belt_clamp_cutouts() -> list[Solid]:
     """Belt clamp screw holes and nut slots (the rear block's top is flat)."""
     nut_z = X_BELT.back_z - CLAMP.nut_z - TOL.nut_trap_height(3) / 2  #: nut center (roof above it)
     cuts = []
-    for sx in (-1, 1):
-        x = sx * CLAMP_X
-        for sy in (-1, 1):
-            y = X_BELT.y + sy * CLAMP.screw_dx
+    for sign_x in (-1, 1):
+        x = sign_x * CLAMP_X
+        for sign_y in (-1, 1):
+            y = X_BELT.y + sign_y * CLAMP.screw_dx
             cuts.append(
                 cylinder(d=TOL.bolt_hole_dia(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate(
                     [x, y, X_BELT.back_z + EPS - CLAMP.nut_z - 1]
@@ -223,10 +223,10 @@ def _belt_clamp_cutouts() -> list[Solid]:
             )
             # each nut has its own pocket: the rear one is pressed in from the back face, the
             # front one from the block's end (the nearer one), flat-first (T3.13)
-            if sy > 0:
+            if sign_y > 0:
                 slot = nut_slot(3, REAR_Y1 + 1 - y, "z", "+y", tol=TOL)
             else:
-                slot = nut_slot(3, CARRIAGE.rear_width / 2 + 1 - CLAMP_X, "z", "+x" if sx > 0 else "-x", tol=TOL)
+                slot = nut_slot(3, CARRIAGE.rear_width / 2 + 1 - CLAMP_X, "z", "+x" if sign_x > 0 else "-x", tol=TOL)
             cuts.append(slot.translate([x, y, nut_z]))
     return cuts
 

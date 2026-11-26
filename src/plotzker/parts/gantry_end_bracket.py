@@ -136,9 +136,9 @@ def _body(side: Side) -> Solid:
         )
         for y0 in BRACKET.rib_y0
     ]
-    bx, by, bz = BRACKET.trig_boss
-    boss = cube([bx, by, bz + EPS]).translate(
-        [BRACKET.trig_x - bx / 2, -BRACKET.length_y / 2, BRACKET.base_thickness - EPS]
+    boss_x, boss_y, boss_z = BRACKET.trig_boss
+    boss = cube([boss_x, boss_y, boss_z + EPS]).translate(
+        [BRACKET.trig_x - boss_x / 2, -BRACKET.length_y / 2, BRACKET.base_thickness - EPS]
     )
     return base | face | ribs | boss
 

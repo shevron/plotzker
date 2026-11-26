@@ -30,79 +30,85 @@ if TYPE_CHECKING:
     from pythonscad import Solid
 
 
-def slider_local(t: FloatingIdler) -> Solid:
+def slider_local(idler: FloatingIdler) -> Solid:
     """The slider with its rear face at x = 0 and its middle at y = 0."""
-    w, zb, top = t.width, t.z_bottom, t.arm_top
+    width, bottom_z, top = idler.width, idler.z_bottom, idler.arm_top
     arms = []
-    for sy in (-1, 1):
-        y0 = -(t.gap_y / 2 + t.arm_thickness) if sy < 0 else t.gap_y / 2
+    for sign_y in (-1, 1):
+        y0 = -(idler.gap_y / 2 + idler.arm_thickness) if sign_y < 0 else idler.gap_y / 2
         # the top front corner is a straight 45° line, tangent to the round end: printed upside
         # down it is no overhang that droops, so a slicer doesn't flip the part to avoid it
         arms.append(
             hull(
-                cube([EPS, t.arm_thickness, top - zb]).translate([0, y0, zb]),
-                cube([t.axle_x - t.arm_end_radius, t.arm_thickness, EPS]).translate([0, y0, zb]),
-                cube([EPS, t.arm_thickness, EPS]).translate([t.chamfer_x, y0, top - EPS]),
-                cylinder(d=2 * t.arm_end_radius, h=t.arm_thickness, fn=FN)
+                cube([EPS, idler.arm_thickness, top - bottom_z]).translate([0, y0, bottom_z]),
+                cube([idler.axle_x - idler.arm_end_radius, idler.arm_thickness, EPS]).translate([0, y0, bottom_z]),
+                cube([EPS, idler.arm_thickness, EPS]).translate([idler.chamfer_x, y0, top - EPS]),
+                cylinder(d=2 * idler.arm_end_radius, h=idler.arm_thickness, fn=FN)
                 .rotate([-90, 0, 0])
-                .translate([t.axle_x, y0, t.axle_z]),
+                .translate([idler.axle_x, y0, idler.axle_z]),
             )
         )
-    web = cube([t.web_thickness, w, top - zb]).translate([0, -w / 2, zb])
+    web = cube([idler.web_thickness, width, top - bottom_z]).translate([0, -width / 2, bottom_z])
     body = web | arms[0] | arms[1]
     # printed upside down (the top on the bed, +z down): the holes along y and x lie flat, so
     # their teardrops point to -z (print up); the nut pocket has a flat on that side (a 4.6 mm
     # bridge: a corner there would be a 30° overhang)
     axle_hole = (
-        teardrop_y(TOL.bolt_hole_dia(t.axle_screw_size), w + 2).rotate([180, 0, 0]).translate([t.axle_x, 0, t.axle_z])
+        teardrop_y(TOL.bolt_hole_dia(idler.axle_screw_size), width + 2)
+        .rotate([180, 0, 0])
+        .translate([idler.axle_x, 0, idler.axle_z])
     )
     axle_nut = (
-        cylinder(d=TOL.nut_trap_across_corners(t.axle_screw_size), h=TOL.nut_trap_height(t.axle_screw_size) + 1, fn=6)
+        cylinder(
+            d=TOL.nut_trap_across_corners(idler.axle_screw_size),
+            h=TOL.nut_trap_height(idler.axle_screw_size) + 1,
+            fn=6,
+        )
         .rotate([-90, 0, 0])
-        .translate([t.axle_x, t.nut_y, t.axle_z])
+        .translate([idler.axle_x, idler.nut_y, idler.axle_z])
     )
-    screw_nut = nut_slot(t.screw_size, top - t.screw_z + 1, "x", "+z", t.nut_slot_extra, tol=TOL).translate(
-        [TOL.nut_wall + t.nut_thickness / 2, 0, t.screw_z]
-    )
+    screw_nut = nut_slot(
+        idler.screw_size, top - idler.screw_z + 1, "x", "+z", idler.nut_slot_extra, tol=TOL
+    ).translate([TOL.nut_wall + idler.nut_thickness / 2, 0, idler.screw_z])
     # the screw's hole through the thrust wall and on into the blind tunnel for its tip
     tunnel = (
-        teardrop_x(TOL.bolt_hole_dia(t.screw_size), t.tunnel_end + 1)
+        teardrop_x(TOL.bolt_hole_dia(idler.screw_size), idler.tunnel_end + 1)
         .rotate([180, 0, 0])
-        .translate([(t.tunnel_end - 1) / 2, 0, t.screw_z])
+        .translate([(idler.tunnel_end - 1) / 2, 0, idler.screw_z])
     )
     return body - axle_hole - axle_nut - screw_nut - tunnel
 
 
-def slider_for_print(t: FloatingIdler) -> Solid:
+def slider_for_print(idler: FloatingIdler) -> Solid:
     """Print orientation: upside down, the slider's flat top on the bed. The layers then lie in
     the xy plane, parallel to both the belt's pull (x) and the axle's and the nut's tightening
     directions (y, x); the build direction is ``(0, 0, -1)`` in the tensioner frame."""
-    return slider_local(t).rotate([180, 0, 0]).translate([0, 0, t.arm_top])
+    return slider_local(idler).rotate([180, 0, 0]).translate([0, 0, idler.arm_top])
 
 
-def tower(t: FloatingIdler) -> Solid:
+def tower(idler: FloatingIdler) -> Solid:
     """The tower: a plate with the tension screw's hole and two side walls, standing on
     ``floor_z`` (sunk 1 mm into it). Pockets in the walls take the axle bolt's head (head side)
     and its tip (the other side) over the slider's travel."""
-    half = t.tower_half
-    z0 = t.floor_z - 1  # sunk into the floor: no sliver where the outer faces are flush
-    h = t.tower_top - z0
-    inner = t.width / 2 + t.wall_gap
-    plate = cube([t.plate_thickness, 2 * half, h]).translate([0, -half, z0])
-    walls = [cube([t.wall_length, half - inner, h]).translate([0, lo, z0]) for lo in (inner, -half)]
+    half = idler.tower_half
+    z0 = idler.floor_z - 1  # sunk into the floor: no sliver where the outer faces are flush
+    height = idler.tower_top - z0
+    inner = idler.width / 2 + idler.wall_gap
+    plate = cube([idler.plate_thickness, 2 * half, height]).translate([0, -half, z0])
+    walls = [cube([idler.wall_length, half - inner, height]).translate([0, lo, z0]) for lo in (inner, -half)]
     # round, not a teardrop: a teardrop's apex was the highest stress in the plate (a 3.4 mm hole
     # prints flat enough lying on its side)
     hole = (
-        cylinder(d=TOL.bolt_hole_dia(t.screw_size), h=t.plate_thickness + 2, fn=FN_HOLE)
+        cylinder(d=TOL.bolt_hole_dia(idler.screw_size), h=idler.plate_thickness + 2, fn=FN_HOLE)
         .rotate([0, 90, 0])
-        .translate([-1, 0, t.screw_z])
+        .translate([-1, 0, idler.screw_z])
     )
     pockets = []
-    for sign, (radius, depth) in ((t.head_side, t.head_pocket), (-t.head_side, t.tip_pocket)):
-        x_lo, x_hi = t.sweep(radius)
+    for sign, (radius, depth) in ((idler.head_side, idler.head_pocket), (-idler.head_side, idler.tip_pocket)):
+        x_lo, x_hi = idler.sweep(radius)
         face = sign * inner
         y_lo, y_hi = (face - 1, face + depth) if sign > 0 else (face - depth, face + 1)
-        pockets.append(cube([x_hi - x_lo, y_hi - y_lo, 2 * radius + 4]).translate([x_lo, y_lo, t.axle_z - radius]))
+        pockets.append(cube([x_hi - x_lo, y_hi - y_lo, 2 * radius + 4]).translate([x_lo, y_lo, idler.axle_z - radius]))
     return (plate | walls[0] | walls[1]) - hole - pockets[0] - pockets[1]
 
 
@@ -123,41 +129,43 @@ class FloatingRegions:
     tower_seat: Cylinder  #: the screw hole's wall in the tower plate
 
 
-def regions(t: FloatingIdler) -> FloatingRegions:
+def regions(idler: FloatingIdler) -> FloatingRegions:
     """The regions of idler ``t``."""
-    r0 = t.rear_mid
-    axle = (t.axle_rel, 0.0, t.axle_z)
-    bore_radius = TOL.bolt_hole_dia(t.axle_screw_size) / 2 + 0.3
-    hole_radius = TOL.bolt_hole_dia(t.screw_size) / 2
+    rear_mid = idler.rear_mid
+    axle = (idler.axle_rel, 0.0, idler.axle_z)
+    bore_radius = TOL.bolt_hole_dia(idler.axle_screw_size) / 2 + 0.3
+    hole_radius = TOL.bolt_hole_dia(idler.screw_size) / 2
     return FloatingRegions(
-        bore_load=Cylinder(axle, (0, 1, 0), bore_radius, t.width / 2, facing=(-1, 0, 0), facing_tol_deg=60),
-        bore=Cylinder(axle, (0, 1, 0), bore_radius, t.width / 2),
+        bore_load=Cylinder(axle, (0, 1, 0), bore_radius, idler.width / 2, facing=(-1, 0, 0), facing_tol_deg=60),
+        bore=Cylinder(axle, (0, 1, 0), bore_radius, idler.width / 2),
         nut_seat=Box(
-            (r0 + TOL.nut_wall - 0.3, -3, t.screw_z - 3),
-            (r0 + TOL.nut_wall + 0.3, 3, t.screw_z + 3),
+            (rear_mid + TOL.nut_wall - 0.3, -3, idler.screw_z - 3),
+            (rear_mid + TOL.nut_wall + 0.3, 3, idler.screw_z + 3),
             facing=(1, 0, 0),
         ),
         tunnel=Cylinder(
-            (r0 + t.tunnel_end / 2, 0, t.screw_z),
+            (rear_mid + idler.tunnel_end / 2, 0, idler.screw_z),
             (1, 0, 0),
             hole_radius + 0.3,
-            t.tunnel_end / 2,
+            idler.tunnel_end / 2,
             inner_radius=hole_radius - 0.3,
         ),
         guide=Box(
-            (r0, -t.width / 2 - 0.3, t.z_bottom),
-            (r0 + t.web_thickness, -t.width / 2 + 0.3, t.arm_top),
+            (rear_mid, -idler.width / 2 - 0.3, idler.z_bottom),
+            (rear_mid + idler.web_thickness, -idler.width / 2 + 0.3, idler.arm_top),
             facing=(0, -1, 0),
         ),
         head_seat=Cylinder(
-            (0, 0, t.screw_z),
+            (0, 0, idler.screw_z),
             (1, 0, 0),
-            t.washer_outer_dia / 2,
+            idler.washer_outer_dia / 2,
             0.3,
             inner_radius=hole_radius,
             facing=(-1, 0, 0),
         ),
-        tower_seat=Cylinder((t.plate_thickness / 2, 0, t.screw_z), (1, 0, 0), 2.6, t.plate_thickness / 2 + 0.5),
+        tower_seat=Cylinder(
+            (idler.plate_thickness / 2, 0, idler.screw_z), (1, 0, 0), 2.6, idler.plate_thickness / 2 + 0.5
+        ),
     )
 
 
@@ -167,20 +175,20 @@ def axes(place: Placement, flags: tuple[bool, bool, bool]) -> tuple[bool, bool, 
     return abs(mapped[0]) > 0.5, abs(mapped[1]) > 0.5, abs(mapped[2]) > 0.5
 
 
-def head_load(t: FloatingIdler, place: Placement, pull: float) -> Force:
+def head_load(idler: FloatingIdler, place: Placement, pull: float) -> Force:
     """The screw's head pushing the tower with the idler's whole pull (the screw is in line)."""
-    return Force(place.region(regions(t).head_seat), place.vector((pull, 0, 0)))
+    return Force(place.region(regions(idler).head_seat), place.vector((pull, 0, 0)))
 
 
 def tower_limits(
-    t: FloatingIdler,
+    idler: FloatingIdler,
     place: Placement,
     prefix: str = "tower_seat",
     along_belt: float = 0.3,
     other: float = 0.1,
 ) -> tuple[DisplacementLimit, ...]:
     """Directional limits on the tower plate's screw hole: along the belt, across and vertical."""
-    seat = place.region(regions(t).tower_seat)
+    seat = place.region(regions(idler).tower_seat)
     return (
         DisplacementLimit(f"{prefix}_along_belt", seat, along_belt, place.vector((1, 0, 0))),
         DisplacementLimit(f"{prefix}_sideways", seat, other, place.vector((0, 1, 0))),
@@ -188,11 +196,11 @@ def tower_limits(
     )
 
 
-def slider_fem(t: FloatingIdler, place: Placement, belt: BeltLoads, source: str) -> FemSpec:
+def slider_fem(idler: FloatingIdler, place: Placement, belt: BeltLoads, source: str) -> FemSpec:
     """FEM spec of a floating slider: the belt pulls the axle bore; the screw nut's seat holds it
     along x, the screw in its hole and tunnel sideways and vertically, one face stands for a
     tower wall (roll, no load)."""
-    r = regions(t)
+    parts_regions = regions(idler)
     cases = []
     for name, run_n, sustained in (
         ("belt_preload", belt.preload_n, True),
@@ -203,30 +211,30 @@ def slider_fem(t: FloatingIdler, place: Placement, belt: BeltLoads, source: str)
                 name,
                 f"Two belt runs of {run_n:g} N pull the idler along the belt; the tension screw, "
                 "in line with the axle, holds the slider: no couple",
-                (Force(place.region(r.bore_load), place.vector((2 * run_n, 0, 0)), bearing=True),),
+                (Force(place.region(parts_regions.bore_load), place.vector((2 * run_n, 0, 0)), bearing=True),),
                 source,
                 sustained=sustained,
             )
         )
-    bore = place.region(r.bore)
+    bore = place.region(parts_regions.bore)
     return FemSpec(
         load_cases=tuple(cases),
         supports=(
             Support(
                 "screw_nut_seat",
-                place.region(r.nut_seat),
+                place.region(parts_regions.nut_seat),
                 "Tension screw's nut seat: holds the slider along the belt",
                 constrain=axes(place, (True, False, False)),
             ),
             Support(
                 "screw_tunnel",
-                place.region(r.tunnel),
+                place.region(parts_regions.tunnel),
                 "The screw in the thrust wall's hole and the tunnel: holds sideways and vertically",
                 constrain=axes(place, (False, True, True)),
             ),
             Support(
                 "guide_wall",
-                place.region(r.guide),
+                place.region(parts_regions.guide),
                 "Tower wall beside the slider: stops the roll (no load)",
                 constrain=axes(place, (False, True, False)),
             ),
@@ -240,7 +248,7 @@ def slider_fem(t: FloatingIdler, place: Placement, belt: BeltLoads, source: str)
 
 
 def mount_fem(
-    t: FloatingIdler,
+    idler: FloatingIdler,
     place: Placement,
     belt: BeltLoads,
     source: str,
@@ -258,9 +266,9 @@ def mount_fem(
                 name,
                 f"Two belt runs of {run_n:g} N pull the idler along the belt; the tension screw's "
                 "head pushes the tower plate with the same force, at the axle's height",
-                (head_load(t, place, 2 * run_n),),
+                (head_load(idler, place, 2 * run_n),),
                 source,
                 sustained=sustained,
             )
         )
-    return FemSpec(load_cases=tuple(cases), supports=supports, displacement_limits=tower_limits(t, place))
+    return FemSpec(load_cases=tuple(cases), supports=supports, displacement_limits=tower_limits(idler, place))

@@ -71,10 +71,12 @@ def psu_mount_assembly() -> list[Solid]:
 
 def board_piece() -> Solid:
     """The corner of the baseboard the mount hangs from (machine frame)."""
-    bx, _, t = FRAME.board_size
+    board_x, _, board_thickness = FRAME.board_size
     y0 = PSU_MOUNT.terminal_y - PSU_MOUNT.depth - 20
     length = PSU_SPEC.size[1] + PSU_MOUNT.depth + 40
-    return cube([120, length, t]).translate([bx - 120, y0, -t]).color("BurlyWood", 0.5)
+    return (
+        cube([120, length, board_thickness]).translate([board_x - 120, y0, -board_thickness]).color("BurlyWood", 0.5)
+    )
 
 
 def psu_mount_fit_check() -> list[Solid]:

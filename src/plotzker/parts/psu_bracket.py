@@ -62,23 +62,25 @@ HOOD_MASS_KG = 0.08
 CG_Z = PSU_SPEC.size[2] / 2
 
 
-def _hole_x(d: float, x0: float, x1: float, z: float) -> Solid:
+def _hole_x(dia: float, x0: float, x1: float, z: float) -> Solid:
     """Hole along x from ``x0`` to ``x1`` at (y = 0, z): teardrop pointing +y (up in print)."""
-    return linear_extrude(teardrop(d), height=x1 - x0).rotate([0, 90, 0]).translate([x0, 0, z])
+    return linear_extrude(teardrop(dia), height=x1 - x0).rotate([0, 90, 0]).translate([x0, 0, z])
 
 
-def _hole_z(d: float, x: float, z0: float, z1: float) -> Solid:
+def _hole_z(dia: float, x: float, z0: float, z1: float) -> Solid:
     """Hole along z from ``z0`` to ``z1`` at (x, y = 0): teardrop pointing +y."""
-    return linear_extrude(teardrop(d), height=z1 - z0).translate([x, 0, z0])
+    return linear_extrude(teardrop(dia), height=z1 - z0).translate([x, 0, z0])
 
 
 def _corner_fillet() -> Solid:
     """Fillet in the corner between the upright and the flange (the board's eased edge sits in
     it), as a solid along y."""
-    r, x0, z0 = PSU_MOUNT.corner_radius, PSU_MOUNT.board_x[1], PSU_MOUNT.edge_z
-    profile = square([r, r]).translate([x0 - r, z0 - r]) - circle(r=r, fn=FN_HOLE).translate([x0 - r, z0 - r])
-    w = PSU_MOUNT.bracket_width
-    return linear_extrude(profile, height=w).rotate([90, 0, 0]).translate([0, w / 2, 0])
+    radius, x0, z0 = PSU_MOUNT.corner_radius, PSU_MOUNT.board_x[1], PSU_MOUNT.edge_z
+    profile = square([radius, radius]).translate([x0 - radius, z0 - radius]) - circle(r=radius, fn=FN_HOLE).translate(
+        [x0 - radius, z0 - radius]
+    )
+    width = PSU_MOUNT.bracket_width
+    return linear_extrude(profile, height=width).rotate([90, 0, 0]).translate([0, width / 2, 0])
 
 
 def _handles() -> dict[str, Matrix | list[Matrix]]:
@@ -95,13 +97,13 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
 
 def psu_bracket_installed() -> Solid:
     """The bracket in the PSU frame, centered on y = 0."""
-    w = PSU_MOUNT.bracket_width
+    width = PSU_MOUNT.bracket_width
     x_top, x_bot = PSU_MOUNT.upright_x
     flange_x0 = PSU_MOUNT.board_x[1]
-    upright = box(x_top, -w / 2, PSU_MOUNT.edge_z, x_bot, w / 2, 0)
-    flange = box(flange_x0, -w / 2, PSU_MOUNT.edge_z - PSU_MOUNT.flange_reach, x_bot, w / 2, PSU_MOUNT.edge_z)
+    upright = box(x_top, -width / 2, PSU_MOUNT.edge_z, x_bot, width / 2, 0)
+    flange = box(flange_x0, -width / 2, PSU_MOUNT.edge_z - PSU_MOUNT.flange_reach, x_bot, width / 2, PSU_MOUNT.edge_z)
     # above the board the upright grows inward and rests on the board's top
-    brace = box(x_top, -w / 2, PSU_MOUNT.brace_z, PSU_MOUNT.board_x[0], w / 2, PSU_MOUNT.edge_z)
+    brace = box(x_top, -width / 2, PSU_MOUNT.brace_z, PSU_MOUNT.board_x[0], width / 2, PSU_MOUNT.edge_z)
     body = upright | flange | brace | _corner_fillet()
     counterbore_dia, counterbore_height = PSU_MOUNT.counterbore
     for x in PSU_SPEC.bottom_hole_x:

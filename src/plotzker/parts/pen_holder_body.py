@@ -74,18 +74,18 @@ def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> So
     return cube([x1 - x0, d1 - d0, z1 - z0]).translate([x0, d0, z0])
 
 
-def _hole_dia(d: float, x: float, z: float, d0: float, d1: float) -> Solid:
+def _hole_dia(dia: float, x: float, z: float, d0: float, d1: float) -> Solid:
     """Hole along d from ``d0`` to ``d1``: a teardrop pointing +x (up in the print)."""
     return (
-        linear_extrude(teardrop(d).rotate([0, 0, -90]), height=d1 - d0, center=True)
+        linear_extrude(teardrop(dia).rotate([0, 0, -90]), height=d1 - d0, center=True)
         .rotate([90, 0, 0])
         .translate([x, (d0 + d1) / 2, z])
     )
 
 
-def _hole_z(d: float, x: float, depth_position: float, z0: float, z1: float) -> Solid:
+def _hole_z(dia: float, x: float, depth_position: float, z0: float, z1: float) -> Solid:
     """Hole along z from ``z0`` to ``z1``: a teardrop pointing +x (up in the print)."""
-    return linear_extrude(teardrop(d).rotate([0, 0, -90]), height=z1 - z0).translate([x, depth_position, z0])
+    return linear_extrude(teardrop(dia).rotate([0, 0, -90]), height=z1 - z0).translate([x, depth_position, z0])
 
 
 def _plate_and_lip() -> Solid:
@@ -115,8 +115,8 @@ def _screw_holes() -> list[Solid]:
     d0, d1 = PEN.plate_depth
     z = TOOL_PLATE.bottom_z + TOOL_PLATE.screw_z
     cuts = []
-    for sx in (-1, 1):
-        x = sx * TOOL_PLATE.screw_pitch / 2
+    for sign_x in (-1, 1):
+        x = sign_x * TOOL_PLATE.screw_pitch / 2
         cuts.append(_hole_dia(TOL.bolt_hole_dia(3), x, z, d0 - 1, d1 + 1))
         cuts.append(_hole_dia(TOL.counterbore_dia(3), x, z, d1 - 3, d1 + 1))
     return cuts
@@ -158,17 +158,17 @@ def _servo_bracket() -> tuple[list[Solid], list[Solid]]:
         _box(x0, web_x1, plate_front, depth_front, z1 - PEN.web_thickness, z1),
     ]
     length, width, _ = FT90M_SPEC.body
-    zc, c = PEN.servo_center_z, PEN.servo_clear
+    center_z, clearance = PEN.servo_center_z, PEN.servo_clear
     window = _box(
-        PEN.servo_x - width / 2 - c,
-        PEN.servo_x + width / 2 + c,
+        PEN.servo_x - width / 2 - clearance,
+        PEN.servo_x + width / 2 + clearance,
         depth_back - 1,
         depth_front + 1,
-        zc - length / 2 - c,
-        zc + length / 2 + c,
+        center_z - length / 2 - clearance,
+        center_z + length / 2 + clearance,
     )
     pilots = [
-        _hole_dia(PILOT_D, PEN.servo_x, zc + sz * FT90M_SPEC.hole_pitch / 2, depth_back - 1, depth_front + 1)
+        _hole_dia(PILOT_D, PEN.servo_x, center_z + sz * FT90M_SPEC.hole_pitch / 2, depth_back - 1, depth_front + 1)
         for sz in (-1, 1)
     ]
     return [wall, rib, *webs], [window, *pilots]

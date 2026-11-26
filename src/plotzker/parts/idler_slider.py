@@ -72,8 +72,8 @@ def x_idler_slider_installed() -> Solid:
 def y_idler_slider_installed(side: Side = Side.LEFT) -> Solid:
     """The slider in the left side frame at mid-travel (the right one is the left frame's
     mirror image like the rest of the right side, so its head is on the other arm there)."""
-    t = idler_for(side)
-    return to_side_frame(slider_local(t).translate([t.rear_mid, 0, 0]))
+    idler = idler_for(side)
+    return to_side_frame(slider_local(idler).translate([idler.rear_mid, 0, 0]))
 
 
 def idler_slider() -> Solid:

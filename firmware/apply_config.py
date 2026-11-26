@@ -35,8 +35,8 @@ def apply(path: Path, settings: dict[str, str]) -> None:
         def replace(m: re.Match[str], name: str = name, value: str = value) -> str:
             return f"{m[1]}#define {name} {value}{m[3] or ''}".rstrip()
 
-        text, n = pattern.subn(replace, text, count=1)
-        if n != 1:
+        text, count = pattern.subn(replace, text, count=1)
+        if count != 1:
             typer.secho(f"{path.name}: no #define {name}", fg=typer.colors.RED, err=True)
             raise typer.Exit(1)
     path.write_text(text)

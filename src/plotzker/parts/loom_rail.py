@@ -33,13 +33,13 @@ def screw_y() -> tuple[float, float]:
 
 def loom_rail() -> Solid:
     """One rail segment."""
-    t, w = LOOM.rail_thickness, LOOM.foot_width
-    wall = cube([t, LOOM.rail_length, LOOM.rail_height]).translate([-t, 0, 0])
-    foot = cube([w, LOOM.rail_length, FOOT_T]).translate([-t - w, 0, 0])
-    xs = -t - w / 2
+    thickness, width = LOOM.rail_thickness, LOOM.foot_width
+    wall = cube([thickness, LOOM.rail_length, LOOM.rail_height]).translate([-thickness, 0, 0])
+    foot = cube([width, LOOM.rail_length, FOOT_T]).translate([-thickness - width, 0, 0])
+    screw_x = -thickness - width / 2
     body = wall | foot
     for y in screw_y():
-        body = body | wood_screw_boss(xs, y)
+        body = body | wood_screw_boss(screw_x, y)
     for y in screw_y():
-        body = body - wood_screw_hole(xs, y)
+        body = body - wood_screw_hole(screw_x, y)
     return body

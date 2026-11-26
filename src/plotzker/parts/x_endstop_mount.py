@@ -86,8 +86,8 @@ def x_endstop_mount_installed() -> Solid:
     # its underside (the foot above it takes the pull)
     nut_thickness = TOL.nut_trap_height(3)
     board_holes = []
-    for sv in (-1, 1):
-        y = BOARD_YC + sv * ENDSTOP_SPEC.hole_pitch / 2
+    for sign_v in (-1, 1):
+        y = BOARD_YC + sign_v * ENDSTOP_SPEC.hole_pitch / 2
         board_holes.append(
             cylinder(d=TOL.bolt_hole_dia(3), h=X_DRIVE.foot_thickness + 2, fn=FN_HOLE).translate(
                 [X_ENDSTOP.hole_x, y, FOOT_Z0 - 1]
@@ -117,11 +117,11 @@ def x_endstop_mount_installed() -> Solid:
         cylinder(d=X_ENDSTOP.land_dia, h=X_ENDSTOP.relief_depth + 3, fn=FN_HOLE).translate(
             [
                 X_ENDSTOP.hole_x,
-                BOARD_YC + sv * ENDSTOP_SPEC.hole_pitch / 2,
+                BOARD_YC + sign_v * ENDSTOP_SPEC.hole_pitch / 2,
                 FOOT_Z0 + X_DRIVE.foot_thickness - X_ENDSTOP.relief_depth - 1,
             ]
         )
-        for sv in (-1, 1)
+        for sign_v in (-1, 1)
     ]
     relief = relief - union(*lands)
     mount = foot - bolts - board_holes - relief

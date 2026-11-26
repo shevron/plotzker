@@ -66,7 +66,6 @@ class AssemblyCheck:
     limits: tuple[AssemblyLimit, ...]
     source: str = ""  #: where the limits and the play model come from
 
-
-def assembly_to_dict(assembly: AssemblyCheck) -> dict[str, object]:
-    """The assembly check as plain JSON-ready data."""
-    return plain(assembly)  # type: ignore[return-value]
+    def to_dict(self) -> dict[str, object]:
+        """The assembly check as plain JSON-ready data."""
+        return plain(self)  # type: ignore[return-value]

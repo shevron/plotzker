@@ -10,12 +10,12 @@ from pathlib import Path
 
 from cadder.fem.runner import FemResult, export_part_stl
 from cadder.fem.stl import clean_stl
-from cadder.part import MaterialPart, Part, part_to_dict
+from cadder.part import MaterialPart, Part
 
 
 def spec_hash(part: MaterialPart) -> str:
     """Hash of everything the check depends on besides geometry (part properties)."""
-    return hashlib.sha256(json.dumps(part_to_dict(part), sort_keys=True).encode()).hexdigest()[:16]
+    return hashlib.sha256(json.dumps(part.to_dict(), sort_keys=True).encode()).hexdigest()[:16]
 
 
 def file_hash(path: Path) -> str:
@@ -100,29 +100,24 @@ def status_lines(
             recorded = tomllib.load(f)
     lines = []
     for name in names:
-        part = parts.get(name)
-        if not isinstance(part, MaterialPart):
-            state = "no material or FEM data yet"
-        elif not part.structural:
-            state = "not structural"
-        elif part.mirror_of:
-            state = f"covered by {part.mirror_of}"
-        elif part.fem is None:
-            state = "NEEDS A SPEC"
-        elif name not in recorded:
-            state = "never checked"
-        else:
-            entry = recorded[name]
-            stale = []
-            if entry.get("spec") != spec_hash(part):
-                stale.append("spec")
-            if check_geometry and entry.get("geometry") != current_geometry_hash(part, project):
-                stale.append("geometry")
-            changed = " and ".join(stale)
-            state = (
-                f"STALE ({changed} changed since {entry['date']}; was {entry['verdict']})"
-                if stale
-                else f"{entry['verdict']} ({entry['date']})"
-            )
+        match parts.get(name):
+            case MaterialPart() as part if part.unchecked_state() is None:
+                if name not in recorded:
+                    state = "never checked"
+                else:
+                    entry = recorded[name]
+                    stale = []
+                    if entry.get("spec") != spec_hash(part):
+                        stale.append("spec")
+                    if check_geometry and entry.get("geometry") != current_geometry_hash(part, project):
+                        stale.append("geometry")
+                    changed = " and ".join(stale)
+                    state = (
+                        f"STALE ({changed} changed since {entry['date']}; was {entry['verdict']})"
+                        if stale
+                        else f"{entry['verdict']} ({entry['date']})"
+                    )
+            case part:
+                state = (part.unchecked_state() if part else None) or "no material or FEM data yet"
         lines.append(f"{name:<28} {state}")
     return lines

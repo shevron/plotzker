@@ -20,7 +20,7 @@ import pytest
 from cadder import cpsk
 from cadder.tools import find_tool
 from cpsk_core import Comment, CpskExportError, CpskLoadError, Document
-from cpsk_core.document import parse, read, write
+from cpsk_core.document import parse, read
 from cpsk_core.formula import parse as parse_formula
 from cpsk_freecad import FREECAD_NAMESPACE, from_document, to_document
 from cpsk_freecad.expressions import Path as FcPath
@@ -191,7 +191,7 @@ def _value_of(document: Document, identifier: str) -> str | None:
 def test_inactive_constraints_are_kept_in_the_extension_namespace() -> None:
     case = next(c for c in X if c["name"] == "inactive_constraint")
     document, _ = to_document(_data(case))
-    text = write(document)
+    text = document.write()
     assert f'xmlns:freecad="{FREECAD_NAMESPACE}"' in text
     assert '<freecad:inactive>\n      <distance id="old" of="edge2" value="7"/>' in text
     assert "old" not in {c.id for c in cpsk.compile_document(document).constraints}
@@ -345,7 +345,7 @@ def _without_comments(document: Document) -> str:
     document.prolog = []
     for element in (document.root, *document.root.descendants()):
         element.children = [child for child in element.children if not isinstance(child, Comment)]
-    return write(document)
+    return document.write()
 
 
 @pytest.mark.parametrize(
@@ -395,15 +395,15 @@ def test_unitless_numbers_in_sums_get_document_units(cpsk_formula: str, expected
 def test_documents_round_trip_without_freecad(path: Path) -> None:
     data, _ = from_document(read(path), is_unit=FREECAD_UNITS.__contains__)
     document, _ = to_document(data)
-    assert write(document) == _without_comments(read(path))
+    assert document.write() == _without_comments(read(path))
 
 
 @pytest.mark.parametrize("case", EXPORTED, ids=[c["name"] for c in EXPORTED])
 def test_freecad_cases_round_trip_without_freecad(case: dict[str, Any]) -> None:
     first, _ = to_document(_data(case))
-    data, _ = from_document(parse(write(first)), is_unit=FREECAD_UNITS.__contains__)
+    data, _ = from_document(parse(first.write()), is_unit=FREECAD_UNITS.__contains__)
     second, _ = to_document(data)
-    assert write(second) == write(first)
+    assert second.write() == first.write()
 
 
 def test_import_renames_unit_names_where_freecad_needs_them() -> None:

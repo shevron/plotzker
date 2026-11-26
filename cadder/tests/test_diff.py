@@ -202,6 +202,8 @@ def test_assembly_instances_matched_by_geometry(tmp_path: Path) -> None:
     assert by_status[InstanceStatus.MOVED].label == "bar"  # labelled by the part with the same volume
     assert by_status[InstanceStatus.MODIFIED].after is not None
     assert by_status[InstanceStatus.ADDED].before is None
+    assert by_status[InstanceStatus.ADDED].label == "item 3 (1 mm³)"  # no part has its volume
+    assert not by_status[InstanceStatus.ADDED].printed
     assert by_status[InstanceStatus.REMOVED].after is None
 
 

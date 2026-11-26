@@ -72,6 +72,14 @@ class Box:
         size = [self.hi[i] - self.lo[i] for i in range(3)]
         return cube(size).translate(list(self.lo))
 
+    def placed(self, placement: Placement) -> Box:
+        """The box moved from a part-local frame into the part's frame."""
+        facing = None if self.facing is None else placement.vector(self.facing)
+        a, b = placement.point(self.lo), placement.point(self.hi)
+        low = (min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2]))
+        high = (max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2]))
+        return Box(low, high, facing, self.facing_tol_deg)
+
 
 @dataclass(frozen=True)
 class Cylinder:
@@ -117,6 +125,20 @@ class Cylinder:
         if self.inner_radius > 0:
             body = body - cylinder(d=2 * self.inner_radius, h=length + 2, fn=FN_HOLE).translate([0, 0, -1])
         return body.translate([0, 0, -self.half_length]).rotate(list(_AXES[self.axis])).translate(list(self.center))
+
+    def placed(self, placement: Placement) -> Cylinder:
+        """The cylinder moved from a part-local frame into the part's frame."""
+        facing = None if self.facing is None else placement.vector(self.facing)
+        axis = placement.vector(self.axis)
+        return Cylinder(
+            placement.point(self.center),
+            (abs(round(axis[0])) * 1.0, abs(round(axis[1])) * 1.0, abs(round(axis[2])) * 1.0),
+            self.radius,
+            self.half_length,
+            self.inner_radius,
+            facing,
+            self.facing_tol_deg,
+        )
 
 
 Region = Box | Cylinder
@@ -168,22 +190,7 @@ class Placement:
 
     def region(self, region: Region) -> Region:
         """The region in the part's frame."""
-        facing = None if region.facing is None else self.vector(region.facing)
-        if isinstance(region, Box):
-            a, b = self.point(region.lo), self.point(region.hi)
-            low = (min(a[0], b[0]), min(a[1], b[1]), min(a[2], b[2]))
-            high = (max(a[0], b[0]), max(a[1], b[1]), max(a[2], b[2]))
-            return Box(low, high, facing, region.facing_tol_deg)
-        axis = self.vector(region.axis)
-        return Cylinder(
-            self.point(region.center),
-            (abs(round(axis[0])) * 1.0, abs(round(axis[1])) * 1.0, abs(round(axis[2])) * 1.0),
-            region.radius,
-            region.half_length,
-            region.inner_radius,
-            facing,
-            region.facing_tol_deg,
-        )
+        return region.placed(self)
 
 
 #: DESIGN: radius of the friction zone around a clamping screw (about twice the head diameter):

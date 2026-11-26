@@ -144,10 +144,10 @@ def rectify_command(
     Writes PHOTO.rect.png and PHOTO.rect.json, or PHOTO.h<H>.rect.* with --height H.
     With --region, the pose comes from the target corners nearest the region (curled paper).
     """
-    from cadder.photo.target import Board, rectify, summary, with_square
+    from cadder.photo.target import Board, rectify
 
     squares_x, squares_y = (int(v) for v in squares.lower().split("x"))
-    board = with_square(Board(squares_x, squares_y, nominal_square, nominal_marker), square)
+    board = Board(squares_x, squares_y, nominal_square, nominal_marker).with_square(square)
     box: tuple[float, float, float, float] | None = None
     if region:
         x0, y0, x1, y1 = (float(v) for v in region.split(","))
@@ -156,7 +156,7 @@ def rectify_command(
 
     cam = Camera.load(camera) if camera else None
     rect = rectify(photo, out or photo.parent, board, height, box, ppmm, focal, cam)
-    typer.echo(summary(rect))
+    typer.echo(rect.summary())
 
 
 @app.command("calibrate")
@@ -174,9 +174,9 @@ def calibrate_command(
     result with `rectify --camera`. Phones change lens and focal length with the zoom: one
     camera file per zoom setting.
     """
-    from cadder.photo.target import DEFAULT_BOARD, calibrate, with_square
+    from cadder.photo.target import DEFAULT_BOARD, calibrate
 
-    cam = calibrate(photos, with_square(DEFAULT_BOARD, square))
+    cam = calibrate(photos, DEFAULT_BOARD.with_square(square))
     out.write_text(cam.to_json())
     k = cam.camera_matrix
     typer.echo(
@@ -473,10 +473,10 @@ def check_command(
 ) -> None:
     """Are these photos good enough to measure on? A verdict per photo, in seconds."""
     from cadder.photo.check import check
-    from cadder.photo.target import DEFAULT_BOARD, Camera, with_square
+    from cadder.photo.target import DEFAULT_BOARD, Camera
 
     cam = Camera.load(camera) if camera else None
-    result = check(photos, with_square(DEFAULT_BOARD, square), cam)
+    result = check(photos, DEFAULT_BOARD.with_square(square), cam)
     for photo in result.photos:
         fit = "-" if photo.fit_mm is None else f"{photo.fit_mm:.2f} mm"
         tilt = "-" if photo.tilt_deg is None else f"{photo.tilt_deg:.0f}°"

@@ -35,7 +35,7 @@ from cadder.fem.mesh import (
 from cadder.fem.solve import Forces, Solved, solve_cases
 from cadder.fem.stl import CleanStl, clean_stl
 from cadder.fem.viz import node_utilization, render, write_case_data
-from cadder.part import MaterialPart, part_to_dict
+from cadder.part import MaterialPart
 from cadder.regions import Region
 
 #: Facet count for the part's STL: coarse holes keep the mesher fast.
@@ -533,7 +533,7 @@ def analyze(
     result.seconds = round(time.time() - started, 1)
     _keep_only(work, tag)
     (work / "result.json").write_text(json.dumps(result.to_dict(), indent=2))
-    (work / "part.json").write_text(json.dumps(part_to_dict(part), indent=2))
+    (work / "part.json").write_text(json.dumps(part.to_dict(), indent=2))
     return result
 
 

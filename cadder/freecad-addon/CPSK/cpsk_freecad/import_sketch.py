@@ -506,17 +506,7 @@ def _is_inactive(node: Node) -> bool:
 
 
 def _geometry(primitive: cpsk.Primitive) -> Geometry:
-    geometry = primitive.geometry
-    coords: tuple[float, ...]
-    if isinstance(geometry, cpsk.Point):
-        coords = (geometry.x, geometry.y)
-    elif isinstance(geometry, cpsk.Line):
-        coords = (geometry.x1, geometry.y1, geometry.x2, geometry.y2)
-    elif isinstance(geometry, cpsk.Circle):
-        coords = (geometry.cx, geometry.cy, geometry.r)
-    else:
-        coords = (geometry.cx, geometry.cy, geometry.r, geometry.start_angle, geometry.end_angle)
-    return Geometry(primitive.kind, coords, primitive.construction)
+    return Geometry(primitive.kind, primitive.geometry.coordinates, primitive.construction)
 
 
 def _geo_position(operand: cpsk.Operand) -> list[int]:

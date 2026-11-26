@@ -5,7 +5,6 @@ import json
 import pytest
 from cadder.part import (
     MaterialPart,
-    part_to_dict,
 )
 from cadder.regions import Box
 from cadder.testing import volume
@@ -46,7 +45,7 @@ SPECIFIED = {name: part for name, part in PRINTED.items() if part.fem is not Non
 def test_part_is_registered_and_serializes(name):
     part = PRINTED[name]
     assert PARTS[part.name] is part
-    data = json.loads(json.dumps(part_to_dict(part)))
+    data = json.loads(json.dumps(part.to_dict()))
     if part.mirror_of:
         assert part.mirror_of in SPECIFIED
         assert data["fem_status"] == f"mirror of {part.mirror_of}"
@@ -70,7 +69,7 @@ def test_region_touches_the_part(name, label, region):
 
 
 def test_strength_only_parts_state_no_default_displacement_limit():
-    data = part_to_dict(PARTS["pen_holder_body"])
+    data = PARTS["pen_holder_body"].to_dict()
     assert data["fem"]["default_displacement_limit_mm"] is None  # type: ignore[index]
 
 

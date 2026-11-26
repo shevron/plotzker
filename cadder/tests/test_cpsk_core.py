@@ -174,7 +174,7 @@ def test_empty_containers_may_be_omitted():
 def test_example_is_canonical():
     """The spec example reads and writes back unchanged (plan phase 1)."""
     text = EXAMPLE.read_text()
-    assert document.write(document.parse(text)) == text
+    assert document.parse(text).write() == text
 
 
 def test_round_trip_keeps_comments_extensions_and_unknown_content():
@@ -186,8 +186,8 @@ def test_round_trip_keeps_comments_extensions_and_unknown_content():
         '<radius value="w &lt; 2 ? 1 : 2" fc:label="1"/><future/></circle><spline/></geometry>'
         "</sketch>"
     )
-    first = document.write(document.parse(text))
-    assert document.write(document.parse(first)) == first
+    first = document.parse(text).write()
+    assert document.parse(first).write() == first
     for kept in [
         "<!-- before -->",
         "<!-- the hole -->",
@@ -220,12 +220,12 @@ def test_documents_built_in_code_compile():
     circle = geometry.append(cpsk_core.element("circle", id="c", cx=1, cy=0.1, r=2.5))
     circle.append(cpsk_core.element("radius", value="r"))
     geometry.append(cpsk_core.element("arc", cx=0, cy=0, r=1, start_angle=0, end_angle=90.5))
-    text = document.write(built)
+    text = built.write()
     assert '<arc cx="0" cy="0" r="1" start-angle="0" end-angle="90.5"/>' in text
     sketch = cpsk_core.loads(text)
     assert sketch.constraints[0].value == 2.5
     assert sketch.document is not None
-    assert document.write(sketch.document) == text
+    assert sketch.document.write() == text
 
 
 @pytest.mark.parametrize(
@@ -273,7 +273,7 @@ def test_constraints_are_nested_canonically():
     </sketch>"""
     parsed = document.parse(text)
     cpsk_core.nest_constraints(parsed)
-    written = document.write(parsed)
+    written = parsed.write()
     assert "<constraints>" not in written
     assert (
         """\

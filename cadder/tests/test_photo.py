@@ -16,12 +16,10 @@ from cadder.photo.measure import Scale, crop, edges, holes  # noqa: E402
 from cadder.photo.target import (  # noqa: E402
     Board,
     Rectification,
-    _to_cv,
     detect,
     make_target,
     rectify,
     target_page,
-    with_square,
 )
 
 BOARD = Board()
@@ -56,7 +54,7 @@ def _pose() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Camera matrix, rvec and tvec (OpenCV board frame) of the synthetic camera."""
     k = np.array([[FOCAL, 0, SIZE[0] / 2], [0, FOCAL, SIZE[1] / 2], [0, 0, 1]])
     rotation, _ = cv2.Rodrigues(np.array([math.radians(12), math.radians(-5), 0.1]))
-    center_cv = _to_cv(BOARD, CAMERA[None, :])[0]
+    center_cv = BOARD.flip_frame(CAMERA[None, :])[0]
     rvec, _ = cv2.Rodrigues(rotation)
     return k, rvec, -rotation @ center_cv
 
@@ -67,7 +65,7 @@ def photo(tmp_path_factory: pytest.TempPathFactory) -> Path:
     folder = tmp_path_factory.mktemp("photo")
     k, rvec, tvec = _pose()
     corners = np.array([[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]])
-    img_px, _ = cv2.projectPoints(_to_cv(BOARD, corners), rvec, tvec, k, np.zeros(5))
+    img_px, _ = cv2.projectPoints(BOARD.flip_frame(corners), rvec, tvec, k, np.zeros(5))
     width, height = BOARD.width * PPM, BOARD.height * PPM
     art_px = np.array([[0, height], [width, height], [width, 0], [0, 0]], np.float32) - 0.5  # pixel centers
     homography = cv2.getPerspectiveTransform(art_px, img_px.reshape(-1, 2).astype(np.float32))
@@ -148,7 +146,7 @@ def test_triangulate_finds_the_height(rect: Rectification) -> None:
     # a second camera, 60 mm to the side: same intrinsics, pose from moving the center
     _, rvec, _ = _pose()
     rotation, _ = cv2.Rodrigues(rvec)
-    other_center = _to_cv(BOARD, (CAMERA + np.array([60.0, -20.0, 0.0]))[None, :])[0]
+    other_center = BOARD.flip_frame((CAMERA + np.array([60.0, -20.0, 0.0]))[None, :])[0]
     other = replace(rect, rvec=rect.rvec, tvec=(-rotation @ other_center).tolist())
     views = [(v, v.to_plane(v.project(truth), 0.0)[0]) for v in (rect, other)]
     point, miss = triangulate(views)
@@ -161,9 +159,9 @@ def _render(path: Path, center: np.ndarray, angles: tuple[float, float, float]) 
     k = np.array([[FOCAL, 0, SIZE[0] / 2], [0, FOCAL, SIZE[1] / 2], [0, 0, 1]])
     rotation, _ = cv2.Rodrigues(np.radians(np.array(angles)))
     rvec, _ = cv2.Rodrigues(rotation)
-    tvec = -rotation @ _to_cv(BOARD, center[None, :])[0]
+    tvec = -rotation @ BOARD.flip_frame(center[None, :])[0]
     corners = np.array([[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]])
-    img_px, _ = cv2.projectPoints(_to_cv(BOARD, corners), rvec, tvec, k, np.zeros(5))
+    img_px, _ = cv2.projectPoints(BOARD.flip_frame(corners), rvec, tvec, k, np.zeros(5))
     width, height = BOARD.width * PPM, BOARD.height * PPM
     art_px = np.array([[0, height], [width, height], [width, 0], [0, 0]], np.float32) - 0.5
     homography = cv2.getPerspectiveTransform(art_px, img_px.reshape(-1, 2).astype(np.float32))
@@ -226,10 +224,10 @@ def test_height_scan_finds_a_raised_face(tmp_path: Path) -> None:
         k = np.array([[FOCAL, 0, SIZE[0] / 2], [0, FOCAL, SIZE[1] / 2], [0, 0, 1]])
         rotation, _ = cv2.Rodrigues(np.radians(np.array(angles)))
         rvec, _ = cv2.Rodrigues(rotation)
-        tvec = -rotation @ _to_cv(BOARD, center[None, :])[0]
+        tvec = -rotation @ BOARD.flip_frame(center[None, :])[0]
         x0, y0, x1, y1 = face
         quad = np.array([[x0, y1, lift], [x1, y1, lift], [x1, y0, lift], [x0, y0, lift]])
-        px, _ = cv2.projectPoints(_to_cv(BOARD, quad), rvec, tvec, k, np.zeros(5))
+        px, _ = cv2.projectPoints(BOARD.flip_frame(quad), rvec, tvec, k, np.zeros(5))
         homography = cv2.getPerspectiveTransform(
             np.array([[0, 0], [300, 0], [300, 300], [0, 300]], np.float32) - 0.5,
             px.reshape(-1, 2).astype(np.float32),
@@ -260,10 +258,10 @@ def test_overlay_on_another_photo_cropped(photo: Path, rect: Rectification) -> N
 
 
 def test_measured_square_scales_the_board() -> None:
-    board = with_square(BOARD, 14.85)
+    board = BOARD.with_square(14.85)
     assert board.square_mm == 14.85
     assert board.marker_mm == pytest.approx(11 * 14.85 / 15)
-    assert with_square(BOARD, None) is BOARD
+    assert BOARD.with_square(None) is BOARD
 
 
 def test_target_pdf_and_its_board_is_detected(tmp_path: Path) -> None:

@@ -63,8 +63,9 @@ The project's goals, design and working process are in [`README.md`](README.md).
 - **Prefer polymorphism to type checks.** Behavior that depends on an object's class, or
   mainly works on its data, is a method of that class, and subclasses extend or override it.
   Treat `isinstance` on our own classes as a code smell. A method must not pull a higher
-  layer into the class (a solver, an exporter, a renderer or the CLI): code there that
-  dispatches on type uses `match`. `isinstance` is fine for validating outside input, for
+  layer into the class (a solver, an exporter, a renderer or the CLI): there, dispatching
+  with `isinstance` is fine. Use `match` only when its patterns take values apart and that
+  makes the code clearer. `isinstance` is also fine for validating outside input, for
   built-in and library types, and for picking out members of a mixed collection.
 - Don't give a function the same name as its module inside a package `__init__`
   (`from .x_carriage import x_carriage` shadows the submodule); import modules there.

@@ -124,6 +124,29 @@ class FemSpec:
             if limit.limit_mm <= 0 or not set(limit.load_cases) <= known:
                 raise ValueError(f"displacement limit {limit.name}: bad limit or load case name")
 
+    def describe(self) -> list[str]:
+        """Its lines in a part's summary."""
+        lines = [f"  safety factor {self.safety_factor:g}"]
+        for case in self.load_cases:
+            kind = "sustained" if case.sustained else "peak"
+            lines.append(f"  load case {case.name} ({kind}): {case.description}")
+        lines += [f"  support {s.name}: {s.description}" for s in self.supports]
+        for limit in self.displacement_limits:
+            along = f"along {limit.direction}" if limit.direction else "magnitude"
+            lines.append(f"  limit {limit.name}: {limit.limit_mm:g} mm {along}")
+        return lines
+
+    def to_dict(self) -> dict[str, object]:
+        """The specification as JSON-ready data."""
+        limits = self.displacement_limits
+        return {
+            "safety_factor": self.safety_factor,
+            "load_cases": plain(self.load_cases),
+            "supports": plain(self.supports),
+            "displacement_limits": plain(limits),
+            "default_displacement_limit_mm": None if limits else self.default_displacement_limit_mm,
+        }
+
 
 @dataclass(frozen=True, kw_only=True)
 class Part:
@@ -138,6 +161,36 @@ class Part:
     def fem_status(self) -> str:
         """FEM state for listings: a part without a material has no data for a check."""
         return "no material or FEM data yet"
+
+    def unchecked_state(self) -> str | None:
+        """Why no FEM verdict applies to this part, or ``None`` if one should."""
+        return self.fem_status
+
+    def analysis_geometry(self) -> Solid:
+        """The part in its analysis frame."""
+        return self.build()
+
+    def listing(self) -> str:
+        """Its line in the list of parts."""
+        return f"{self.name:<28} ({self.fem_status})"
+
+    def describe(self) -> list[str]:
+        """A readable summary, line by line."""
+        return [f"{self.name}: {self.description}", f"  {self.fem_status}"]
+
+    def to_dict(self) -> dict[str, object]:
+        """Everything an FEM check (or its reviewer) needs about the part, as JSON-ready data.
+
+        Hashed for the FEM verdicts: keep the keys and their order stable.
+        """
+        return {**self._header(), "fem_status": self.fem_status}
+
+    def _header(self) -> dict[str, object]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "units": "mm, N, MPa, degrees, mm/s²; displacement and loads in the analysis frame",
+        }
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -174,8 +227,22 @@ class MaterialPart(Part):
         return self.material_axis or (0.0, 0.0, 1.0)
 
     def effective_properties(self) -> dict[str, float]:
-        """Material values of the real part (the solid values, no knockdowns)."""
-        return effective_properties(self.material)
+        """Material values of the real part: the solid values, scaled by its knockdowns."""
+        stiffness, strength = self._knockdowns()
+        material = self.material
+        return {
+            "e_in_plane_mpa": material.e_in_plane_mpa * stiffness,
+            "e_build_mpa": material.e_build_mpa * stiffness,
+            "g_build_mpa": material.g_build_mpa * stiffness,
+            "strength_in_plane_mpa": material.strength_in_plane_mpa * strength,
+            "strength_build_mpa": material.strength_build_mpa * strength,
+            "sustained_strength_in_plane_mpa": material.strength_in_plane_mpa * strength * material.sustained_factor,
+            "sustained_strength_build_mpa": material.strength_build_mpa * strength * material.sustained_factor,
+        }
+
+    def _knockdowns(self) -> tuple[float, float]:
+        """Stiffness and strength factors on the solid material values: none for a solid part."""
+        return 1.0, 1.0
 
     def assumed_inputs(self) -> list[str]:
         """Inputs of the check that are assumptions, for its report."""
@@ -191,6 +258,62 @@ class MaterialPart(Part):
         if self.mirror_of:
             return f"mirror of {self.mirror_of}"
         return "specified" if self.fem else "missing"
+
+    def unchecked_state(self) -> str | None:
+        """Why no FEM verdict applies to this part, or ``None`` if one should."""
+        if not self.structural:
+            return "not structural"
+        if self.mirror_of:
+            return f"covered by {self.mirror_of}"
+        return None if self.fem else "NEEDS A SPEC"
+
+    @property
+    def frame_name(self) -> str:
+        """The analysis frame as reports and the serialized form call it."""
+        return self.frame
+
+    def listing(self) -> str:
+        return f"{self.name:<28} {self._setup_label()} FEM: {self.fem_status}"
+
+    def describe(self) -> list[str]:
+        assumed = " (assumed values)" if self.material.assumed else ""
+        lines = [
+            f"{self.name}: {self.description}",
+            *self._setup_lines(),
+            f"  material {self.material.name}: {self.material.description}{assumed}",
+            f"  FEM: {self.fem_status}",
+        ]
+        if self.fem:
+            lines += self.fem.describe()
+        return lines
+
+    def _setup_label(self) -> str:
+        return f"{self.material.name:<14}"
+
+    def _setup_lines(self) -> list[str]:
+        return [f"  analysis frame: {self.frame}; material axis {self.material_axis}"]
+
+    def to_dict(self) -> dict[str, object]:
+        data = {
+            **self._header(),
+            "frame": self.frame_name,
+            **self._axis_entry(),
+            "structural": self.structural,
+            "fem_status": self.fem_status,
+            "mirror_of": self.mirror_of,
+            **self._profile_entry(),
+            "material": plain(self.material),
+            "effective_properties": self.effective_properties(),
+        }
+        if self.fem is not None:
+            data["fem"] = self.fem.to_dict()
+        return data
+
+    def _axis_entry(self) -> dict[str, object]:
+        return {"material_axis": None if self.material_axis is None else list(self.material_axis)}
+
+    def _profile_entry(self) -> dict[str, object]:
+        return {}
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -210,9 +333,27 @@ class PrintedPart(MaterialPart):
         object.__setattr__(self, "material_axis", self.build_direction)
         super().__post_init__()
 
-    def effective_properties(self) -> dict[str, float]:
-        """Material values of the real part: scaled by the profile's knockdowns."""
-        return effective_properties(self.material, self.profile)
+    @property
+    def frame_name(self) -> str:
+        return self.OUTPUT_FRAME if self.frame == "output" else self.frame
+
+    def _knockdowns(self) -> tuple[float, float]:
+        return self.profile.stiffness_factor, self.profile.strength_factor
+
+    def _setup_label(self) -> str:
+        return f"{self.profile.name}/{self.material.name:<6}"
+
+    def _setup_lines(self) -> list[str]:
+        return [
+            f"  analysis frame: {self.frame_name}; build direction {self.build_direction}",
+            f"  print profile '{self.profile.name}': {self.profile.description}",
+        ]
+
+    def _axis_entry(self) -> dict[str, object]:
+        return {"build_direction": list(self.build_direction)}
+
+    def _profile_entry(self) -> dict[str, object]:
+        return {"profile": plain(self.profile)}
 
     def assumed_inputs(self) -> list[str]:
         """The material's assumptions and the profile's knockdown factors."""
@@ -220,21 +361,6 @@ class PrintedPart(MaterialPart):
             *super().assumed_inputs(),
             f"print profile {self.profile.name}: infill knockdown factors",
         ]
-
-
-def effective_properties(material: Material, profile: PrintProfile | None = None) -> dict[str, float]:
-    """Material values of a real part: the solid values, scaled by a print profile's knockdowns
-    when there is one."""
-    k_e, k_s = (profile.stiffness_factor, profile.strength_factor) if profile else (1.0, 1.0)
-    return {
-        "e_in_plane_mpa": material.e_in_plane_mpa * k_e,
-        "e_build_mpa": material.e_build_mpa * k_e,
-        "g_build_mpa": material.g_build_mpa * k_e,
-        "strength_in_plane_mpa": material.strength_in_plane_mpa * k_s,
-        "strength_build_mpa": material.strength_build_mpa * k_s,
-        "sustained_strength_in_plane_mpa": material.strength_in_plane_mpa * k_s * material.sustained_factor,
-        "sustained_strength_build_mpa": material.strength_build_mpa * k_s * material.sustained_factor,
-    }
 
 
 def plain(obj: object) -> object:
@@ -249,42 +375,3 @@ def plain(obj: object) -> object:
     if isinstance(obj, dict):
         return {k: plain(v) for k, v in obj.items()}
     return obj
-
-
-def part_to_dict(part: Part) -> dict[str, object]:
-    """Everything an FEM check (or its reviewer) needs about ``part``, as JSON-ready data.
-
-    Hashed for the FEM verdicts: keep the keys and their order stable.
-    """
-    data: dict[str, object] = {
-        "name": part.name,
-        "description": part.description,
-        "units": "mm, N, MPa, degrees, mm/s²; displacement and loads in the analysis frame",
-    }
-    if not isinstance(part, MaterialPart):
-        data["fem_status"] = part.fem_status
-        return data
-    printed = isinstance(part, PrintedPart)
-    data["frame"] = PrintedPart.OUTPUT_FRAME if printed and part.frame == "output" else part.frame
-    if isinstance(part, PrintedPart):
-        data["build_direction"] = list(part.build_direction)
-    else:
-        data["material_axis"] = None if part.material_axis is None else list(part.material_axis)
-    data["structural"] = part.structural
-    data["fem_status"] = part.fem_status
-    data["mirror_of"] = part.mirror_of
-    if isinstance(part, PrintedPart):
-        data["profile"] = plain(part.profile)
-    data["material"] = plain(part.material)
-    data["effective_properties"] = part.effective_properties()
-    if part.fem is not None:
-        spec = part.fem
-        limits = spec.displacement_limits
-        data["fem"] = {
-            "safety_factor": spec.safety_factor,
-            "load_cases": plain(spec.load_cases),
-            "supports": plain(spec.supports),
-            "displacement_limits": plain(limits),
-            "default_displacement_limit_mm": None if limits else spec.default_displacement_limit_mm,
-        }
-    return data

@@ -27,6 +27,11 @@ class Point:
     x: float
     y: float
 
+    @property
+    def coordinates(self) -> tuple[float, ...]:
+        """The numbers that define it, in the order of the constructor."""
+        return self.x, self.y
+
 
 @dataclass(frozen=True)
 class Line:
@@ -36,6 +41,11 @@ class Line:
     y1: float
     x2: float
     y2: float
+
+    @property
+    def coordinates(self) -> tuple[float, ...]:
+        """The numbers that define it, in the order of the constructor."""
+        return self.x1, self.y1, self.x2, self.y2
 
     @property
     def start(self) -> Point:
@@ -57,6 +67,11 @@ class Circle:
     r: float
 
     @property
+    def coordinates(self) -> tuple[float, ...]:
+        """The numbers that define it, in the order of the constructor."""
+        return self.cx, self.cy, self.r
+
+    @property
     def center(self) -> Point:
         """The center."""
         return Point(self.cx, self.cy)
@@ -72,6 +87,11 @@ class Arc:
     start_angle: float
     end_angle: float
     units: Units = field(default=Units(), compare=False, repr=False)
+
+    @property
+    def coordinates(self) -> tuple[float, ...]:
+        """The numbers that define it, in the order of the constructor."""
+        return self.cx, self.cy, self.r, self.start_angle, self.end_angle
 
     @property
     def center(self) -> Point:

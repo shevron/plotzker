@@ -2,7 +2,7 @@
 
 Parsing keeps formulas as written, attribute order, comments, metadata text, unknown elements and
 extension content (other namespaces), so a document can be read, changed and written back. The
-writer produces the canonical layout described in :func:`write`. The compiler
+writer produces the canonical layout described in :meth:`Document.write`. The compiler
 (:mod:`cpsk_core.reader`) turns a document into a :class:`cpsk_core.model.Sketch`.
 """
 
@@ -126,6 +126,30 @@ class Document:
         self.root.children.insert(position, created)
         return created
 
+    def write(self) -> str:
+        """The document as canonical XML text.
+
+        Layout: an XML declaration, the prolog comments, then one element per line indented by two
+        spaces, attributes in their stored order on the element's line, a blank line between the
+        root's children and between geometry primitives that have nested constraints. Text is kept
+        only in elements without child elements (metadata). Extension namespaces are declared on the
+        root with their source prefixes (or ``ns1``, ``ns2``, …).
+        """
+        prefixes = dict(self.prefixes)
+        used = sorted({ns for ns in _namespaces(self.root) if ns != NAMESPACE})
+        for uri in used:
+            if uri not in prefixes:
+                prefixes[uri] = f"ns{len(prefixes) + 1}"
+        lines = ['<?xml version="1.0" encoding="UTF-8"?>']
+        lines += [f"<!--{c.text}-->" for c in self.prolog]
+        declarations = [f'xmlns="{NAMESPACE}"'] + [f'xmlns:{prefixes[u]}="{_attr(u)}"' for u in used]
+        _write(self.root, 0, lines, prefixes, declarations)
+        return "\n".join(lines) + "\n"
+
+    def save(self, path: str | Path) -> None:
+        """Write a document to a file (see :meth:`write`)."""
+        Path(path).write_text(self.write(), encoding="utf-8")
+
 
 # ----- Building elements in code -----
 
@@ -219,32 +243,6 @@ def read(path: str | Path) -> Document:
 # ----- Writing -----
 
 _INDENT = "  "
-
-
-def write(document: Document) -> str:
-    """The document as canonical XML text.
-
-    Layout: an XML declaration, the prolog comments, then one element per line indented by two
-    spaces, attributes in their stored order on the element's line, a blank line between the
-    root's children and between geometry primitives that have nested constraints. Text is kept
-    only in elements without child elements (metadata). Extension namespaces are declared on the
-    root with their source prefixes (or ``ns1``, ``ns2``, …).
-    """
-    prefixes = dict(document.prefixes)
-    used = sorted({ns for ns in _namespaces(document.root) if ns != NAMESPACE})
-    for uri in used:
-        if uri not in prefixes:
-            prefixes[uri] = f"ns{len(prefixes) + 1}"
-    lines = ['<?xml version="1.0" encoding="UTF-8"?>']
-    lines += [f"<!--{c.text}-->" for c in document.prolog]
-    declarations = [f'xmlns="{NAMESPACE}"'] + [f'xmlns:{prefixes[u]}="{_attr(u)}"' for u in used]
-    _write(document.root, 0, lines, prefixes, declarations)
-    return "\n".join(lines) + "\n"
-
-
-def save(document: Document, path: str | Path) -> None:
-    """Write a document to a file (see :func:`write`)."""
-    Path(path).write_text(write(document), encoding="utf-8")
 
 
 def _namespaces(root: Element) -> Iterator[str]:

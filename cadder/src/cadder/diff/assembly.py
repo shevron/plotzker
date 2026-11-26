@@ -54,6 +54,22 @@ class Item:
     size: tuple[float, float, float]  #: bounding-box extents, mm
     hash: str
 
+    def distance_to(self, other: Item) -> float:
+        """Between the bounding-box centers, mm."""
+        return float(np.linalg.norm(np.subtract(self.centroid, other.centroid)))
+
+    def shift_to(self, other: Item) -> tuple[float, float, float]:
+        """The move of the bounding-box center to ``other``'s, mm."""
+        d = np.subtract(other.centroid, self.centroid)
+        return float(d[0]), float(d[1]), float(d[2])
+
+    def label(self, labels: dict[float, str]) -> tuple[str, bool]:
+        """Its name, and whether it matches a printable part's volume."""
+        for volume, name in labels.items():
+            if _close(volume, self.volume):
+                return name, True
+        return f"item {self.index} ({self.volume:.0f} mm³)", False
+
 
 @dataclass(frozen=True)
 class InstanceChange:
@@ -111,15 +127,6 @@ def _close(a: float, b: float) -> bool:
     return abs(a - b) <= REL_TOL * max(abs(a), abs(b), 1e-9)
 
 
-def _dist(a: Item, b: Item) -> float:
-    return float(np.linalg.norm(np.subtract(a.centroid, b.centroid)))
-
-
-def _shift(a: Item, b: Item) -> tuple[float, float, float]:
-    d = np.subtract(b.centroid, a.centroid)
-    return float(d[0]), float(d[1]), float(d[2])
-
-
 def match_items(a_items: list[Item], b_items: list[Item]) -> list[tuple[InstanceStatus, Item | None, Item | None]]:
     """Pair the items of two revisions of an assembly (see the module docstring)."""
     pairs: list[tuple[InstanceStatus, Item | None, Item | None]] = []
@@ -143,7 +150,7 @@ def match_items(a_items: list[Item], b_items: list[Item]) -> list[tuple[Instance
     # 2. same shape somewhere else: nearest first
     candidates = sorted(
         (
-            (_dist(a, b), a.index, b.index, a, b)
+            (a.distance_to(b), a.index, b.index, a, b)
             for a in rest_a
             for b in rest_b
             if _close(a.volume, b.volume) and _close(a.area, b.area)
@@ -160,8 +167,8 @@ def match_items(a_items: list[Item], b_items: list[Item]) -> list[tuple[Instance
         for b in rest_b:
             ratio = max(a.volume, b.volume) / max(min(a.volume, b.volume), 1e-9)
             reach = max(MIN_MODIFIED_DISTANCE_MM, 0.5 * float(np.linalg.norm(a.size)))
-            if ratio <= MAX_VOLUME_RATIO and _dist(a, b) <= reach:
-                near.append((_dist(a, b), a.index, b.index, a, b))
+            if ratio <= MAX_VOLUME_RATIO and a.distance_to(b) <= reach:
+                near.append((a.distance_to(b), a.index, b.index, a, b))
     near.sort(key=lambda t: t[:3])
     pairs += _take(near, InstanceStatus.MODIFIED, rest_a, rest_b)
     rest_a = [i for i in rest_a if not _used(i, pairs, 0)]
@@ -208,13 +215,6 @@ def part_labels(volumes: Mapping[str, float]) -> dict[float, str]:
     return labels
 
 
-def _label(item: Item, labels: dict[float, str]) -> tuple[str, bool]:
-    for volume, name in labels.items():
-        if _close(volume, item.volume):
-            return name, True
-    return f"item {item.index} ({item.volume:.0f} mm³)", False
-
-
 def compare_assembly(name: str, before: Path | None, after: Path | None, labels: dict[float, str]) -> AssemblyChange:
     """Compare one assembly given the item files of both revisions (None: it does not exist)."""
     change = AssemblyChange(name)
@@ -223,11 +223,11 @@ def compare_assembly(name: str, before: Path | None, after: Path | None, labels:
     for status, item_before, item_after in match_items(a_items, b_items):
         ref = item_after or item_before
         assert ref is not None
-        label, printed = _label(ref, labels)
+        label, printed = ref.label(labels)
         shift = None
         rotated = False
         if status is not InstanceStatus.UNCHANGED and item_before and item_after:
-            shift = _shift(item_before, item_after)
+            shift = item_before.shift_to(item_after)
             rotated = status is InstanceStatus.MOVED and not np.allclose(item_before.size, item_after.size, atol=1e-2)
         change.instances.append(InstanceChange(status, label, printed, item_before, item_after, shift, rotated))
     change.instances.sort(key=lambda i: (i.before or i.after).index if (i.before or i.after) else 0)  # type: ignore[union-attr]

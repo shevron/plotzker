@@ -46,19 +46,18 @@ class Scale:
         """Image pixels per user unit."""
         return self.rect.px_per_mm if self.rect else 1.0
 
-
-def _box_px(scale: Scale, box: tuple[float, float, float, float], shape: tuple[int, ...]) -> tuple[int, int, int, int]:
-    """A box in user coordinates → integer pixel bounds clipped to the image."""
-    (u0, v0), (u1, v1) = scale.to_px(np.array([box[:2], box[2:]]))
-    lo_u, hi_u = sorted((u0, u1))
-    lo_v, hi_v = sorted((v0, v1))
-    image_height, image_width = shape[:2]
-    return (
-        max(0, math.floor(lo_u)),
-        max(0, math.floor(lo_v)),
-        min(image_width, math.ceil(hi_u)),
-        min(image_height, math.ceil(hi_v)),
-    )
+    def box_px(self, box: tuple[float, float, float, float], shape: tuple[int, ...]) -> tuple[int, int, int, int]:
+        """A box in user coordinates → integer pixel bounds clipped to the image."""
+        (u0, v0), (u1, v1) = self.to_px(np.array([box[:2], box[2:]]))
+        lo_u, hi_u = sorted((u0, u1))
+        lo_v, hi_v = sorted((v0, v1))
+        image_height, image_width = shape[:2]
+        return (
+            max(0, math.floor(lo_u)),
+            max(0, math.floor(lo_v)),
+            min(image_width, math.ceil(hi_u)),
+            min(image_height, math.ceil(hi_v)),
+        )
 
 
 def nice_step(span: float) -> float:
@@ -79,7 +78,7 @@ def crop(
     labeled grid every ``grid`` units (default: about 10 lines); every 5th line is red."""
     import cv2
 
-    u0, v0, u1, v1 = _box_px(scale, box, image.shape)
+    u0, v0, u1, v1 = scale.box_px(box, image.shape)
     if u1 <= u0 or v1 <= v0:
         raise ValueError("the crop box is outside the image")
     part = image[v0:v1, u0:u1]
@@ -376,7 +375,7 @@ def holes(
     """
     import cv2
 
-    u0, v0, u1, v1 = _box_px(scale, box, image.shape)
+    u0, v0, u1, v1 = scale.box_px(box, image.shape)
     gray = cv2.cvtColor(image[v0:v1, u0:u1], cv2.COLOR_BGR2GRAY)
     radius_min = max(2.0, dia_min * scale.px_per_unit / 2)
     radius_max = max(radius_min + 1, dia_max * scale.px_per_unit / 2)
@@ -622,7 +621,7 @@ def outline(
     """
     import cv2
 
-    u0, v0, u1, v1 = _box_px(scale, box, image.shape)
+    u0, v0, u1, v1 = scale.box_px(box, image.shape)
     gray = cv2.cvtColor(image[v0:v1, u0:u1], cv2.COLOR_BGR2GRAY)
     unit = scale.px_per_unit  # px per user unit
     open_px = max(3, round(3.0 * unit)) if scale.rect else 15  # ~3 mm: drops levers, shadows

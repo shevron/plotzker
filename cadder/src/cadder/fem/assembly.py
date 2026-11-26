@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from cadder.assembly import AssemblyCheck, assembly_to_dict
+from cadder.assembly import AssemblyCheck
 from cadder.fem.evaluate import Status, status_for, worst
 from cadder.part import MaterialPart
 
@@ -164,7 +164,7 @@ def spec_hash(assembly: AssemblyCheck, parts: Mapping[str, MaterialPart], verdic
     """Hash of the assembly's definition and of the member verdicts it was computed from."""
     recorded = _recorded(verdicts)
     members = {m: recorded.get(_base(parts, m), {}) for m in assembly.members}
-    text = json.dumps([assembly_to_dict(assembly), members], sort_keys=True)
+    text = json.dumps([assembly.to_dict(), members], sort_keys=True)
     return hashlib.sha256(text.encode()).hexdigest()[:16]
 
 

@@ -87,6 +87,20 @@ class Board:
             text += ", field " + ",".join(str(v) for v in self.field)
         return text
 
+    def flip_frame(self, points: Points) -> Points:
+        """Points between the target frame (x right, y up, z up) and OpenCV's board frame (y down,
+        z in): the same flip both ways."""
+        p = np.asarray(points, dtype=np.float64).reshape(-1, 3).copy()
+        p[:, 1] = self.height - p[:, 1]
+        p[:, 2] = -p[:, 2]
+        return p
+
+    def with_square(self, square_mm: float | None) -> Board:
+        """The board with the printed (measured) square size; the marker scales with it."""
+        if not square_mm:
+            return self
+        return replace(self, square_mm=square_mm, marker_mm=self.marker_mm * square_mm / self.square_mm)
+
 
 DEFAULT_BOARD = Board()  #: the board ``cadder photo target`` prints by default
 
@@ -165,19 +179,6 @@ def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: floa
     return page
 
 
-def _to_cv(board: Board, points: Points) -> Points:
-    """Target-frame points (x right, y up, z up) → OpenCV board frame (y down, z in)."""
-    p = np.asarray(points, dtype=np.float64).reshape(-1, 3).copy()
-    p[:, 1] = board.height - p[:, 1]
-    p[:, 2] = -p[:, 2]
-    return p
-
-
-def _from_cv(board: Board, points: Points) -> Points:
-    """OpenCV board-frame points → target frame (the same flip both ways)."""
-    return _to_cv(board, points)
-
-
 def detect(image: BGR, board: Board) -> tuple[Points, Points]:
     """The board corners found in ``image``: target-frame points (N × 3) and pixels (N × 2)."""
     import cv2
@@ -216,7 +217,7 @@ def detect(image: BGR, board: Board) -> tuple[Points, Points]:
     corners = pts
     obj, img = cast(Any, board.opencv()).matchImagePoints(corners, ids)  # stubs: list only
     board_points = np.asarray(obj, dtype=np.float64).reshape(-1, 3)
-    return _from_cv(board, board_points), np.asarray(img, dtype=np.float64).reshape(-1, 2)
+    return board.flip_frame(board_points), np.asarray(img, dtype=np.float64).reshape(-1, 2)
 
 
 @dataclass
@@ -261,7 +262,7 @@ class Rectification:
         """Target-frame points (N × 3, mm) → photo pixels (N × 2)."""
         import cv2
 
-        obj = _to_cv(self.board, points)
+        obj = self.board.flip_frame(points)
         px, _ = cv2.projectPoints(obj, np.asarray(self.rvec), np.asarray(self.tvec), self._k(), self._d())
         return np.asarray(px, dtype=np.float64).reshape(-1, 2)
 
@@ -282,7 +283,7 @@ class Rectification:
         z = -height  # board frame: z into the paper
         ray_length = (z - center[2]) / dirs[:, 2]
         hit = center + dirs * ray_length[:, None]
-        return _from_cv(self.board, hit)[:, :2]
+        return self.board.flip_frame(hit)[:, :2]
 
     def ray(self, pixels: Points) -> tuple[Points, Points]:
         """Camera rays through photo pixels, in the target frame: origin (3,) and unit
@@ -300,7 +301,7 @@ class Rectification:
     def camera_center(self) -> Points:
         """Camera position in the target frame (mm)."""
         rotation, translation = self._rt()
-        return np.asarray(_from_cv(self.board, -rotation.T @ translation)[0], dtype=np.float64)
+        return np.asarray(self.board.flip_frame(-rotation.T @ translation)[0], dtype=np.float64)
 
     @property
     def tilt_deg(self) -> float:
@@ -382,6 +383,32 @@ class Rectification:
         """Read a sidecar file."""
         return cls.from_json(path.read_text())
 
+    def summary(self) -> str:
+        """A few lines describing a rectification."""
+        eye_x, eye_y, eye_z = self.camera_center
+        f = self.focal
+
+        lines = [
+            f"photo {self.source}: {self.corners} target corners, reprojection {self.rms_px:.2f} px",
+            f"focal {_whole_pixels(f['used'])} px ({f['source']}; exif {_whole_pixels(f['exif'])}, "
+            + (f"fit {_whole_pixels(f['fit'])})" if self.tilt_deg > 10 else "fit: view too square-on to tell)"),
+            f"camera at ({eye_x:.0f}, {eye_y:.0f}, {eye_z:.0f}) mm, tilt {self.tilt_deg:.1f}°",
+            f"rectified plane z = {self.plane_height:g} mm, {self.px_per_mm:g} px/mm, region "
+            + ", ".join(f"{v:g}" for v in self.region)
+            + f" mm → {self.image}",
+        ]
+        lines += [f"note: {n}" for n in self.notes]
+        return "\n".join(lines)
+
+    @property
+    def rms_mm(self) -> float:
+        """The reprojection error in mm on the paper, at the board's center."""
+        center = np.array([self.board.width / 2, self.board.height / 2, 0.0])
+        steps = np.array([[0.0, 0, 0], [1, 0, 0], [0, 1, 0]])
+        a, b, c = self.project(center + steps)
+        px_per_mm = math.sqrt(float(np.linalg.norm(b - a) * np.linalg.norm(c - a)))
+        return self.rms_px / px_per_mm
+
 
 def triangulate(views: list[tuple[Rectification, Points]]) -> tuple[Points, float]:
     """A feature's 3D position (target frame) from where it is seen in two or more photos:
@@ -456,7 +483,7 @@ def solve_pose(
     import cv2
 
     distortion = np.zeros(5) if dist is None else dist
-    obj_b = _to_cv(board, obj)
+    obj_b = board.flip_frame(obj)
     ok, rvec, tvec = cv2.solvePnP(obj_b, img, k, distortion, flags=cv2.SOLVEPNP_ITERATIVE)
     if not ok:
         raise ValueError("could not solve the camera pose from the target")
@@ -700,30 +727,5 @@ def rectify(
     return rect
 
 
-def with_square(board: Board, square_mm: float | None) -> Board:
-    """``board`` with the printed (measured) square size; the marker scales with it."""
-    if not square_mm:
-        return board
-    return replace(board, square_mm=square_mm, marker_mm=board.marker_mm * square_mm / board.square_mm)
-
-
 def _whole_pixels(value: float | str | None) -> str:
     return "-" if value is None else f"{float(value):.0f}"
-
-
-def summary(rect: Rectification) -> str:
-    """A few lines describing a rectification."""
-    eye_x, eye_y, eye_z = rect.camera_center
-    f = rect.focal
-
-    lines = [
-        f"photo {rect.source}: {rect.corners} target corners, reprojection {rect.rms_px:.2f} px",
-        f"focal {_whole_pixels(f['used'])} px ({f['source']}; exif {_whole_pixels(f['exif'])}, "
-        + (f"fit {_whole_pixels(f['fit'])})" if rect.tilt_deg > 10 else "fit: view too square-on to tell)"),
-        f"camera at ({eye_x:.0f}, {eye_y:.0f}, {eye_z:.0f}) mm, tilt {rect.tilt_deg:.1f}°",
-        f"rectified plane z = {rect.plane_height:g} mm, {rect.px_per_mm:g} px/mm, region "
-        + ", ".join(f"{v:g}" for v in rect.region)
-        + f" mm → {rect.image}",
-    ]
-    lines += [f"note: {n}" for n in rect.notes]
-    return "\n".join(lines)

@@ -95,14 +95,6 @@ def camera_pose(photo: Path, board: Board, camera: Camera | None = None) -> Rect
     return replace(pose, corners=int(keep.sum()))
 
 
-def _fit_mm(rect: Rectification) -> float:
-    center = np.array([rect.board.width / 2, rect.board.height / 2, 0.0])
-    steps = np.array([[0.0, 0, 0], [1, 0, 0], [0, 1, 0]])
-    a, b, c = rect.project(center + steps)
-    px_per_mm = math.sqrt(float(np.linalg.norm(b - a) * np.linalg.norm(c - a)))
-    return rect.rms_px / px_per_mm
-
-
 def check(photos: list[Path], board: Board = DEFAULT_BOARD, camera: Camera | None = None) -> SetCheck:
     """Look at each photo's target and at how different the viewing angles are."""
     results, directions = [], []
@@ -112,7 +104,7 @@ def check(photos: list[Path], board: Board = DEFAULT_BOARD, camera: Camera | Non
         except ValueError as exc:
             results.append(PhotoCheck(photo.name, "fail", reasons=[str(exc)]))
             continue
-        result = PhotoCheck(photo.name, "ok", rect.corners, _fit_mm(rect), rect.tilt_deg)
+        result = PhotoCheck(photo.name, "ok", rect.corners, rect.rms_mm, rect.tilt_deg)
         assert result.fit_mm is not None
         if result.corners < MIN_CORNERS:
             result.verdict = "fail"

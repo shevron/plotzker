@@ -7,9 +7,8 @@ from cadder.part import (
     FemSpec,
     LoadCase,
     MaterialPart,
+    PrintedPart,
     Support,
-    effective_properties,
-    part_to_dict,
 )
 from cadder.regions import Box, Cylinder, select_faces
 
@@ -23,7 +22,15 @@ def test_unknown_profile_and_material_are_reported():
 
 def test_effective_properties_apply_the_knockdowns():
     material, profile = LIBRARY.material("petg"), LIBRARY.profile()
-    eff = effective_properties(material, profile)
+    part = PrintedPart(
+        name="p",
+        description="",
+        build=lambda: None,  # type: ignore[arg-type, return-value]
+        material=material,
+        profile=profile,
+        build_direction=(0, 0, 1),
+    )
+    eff = part.effective_properties()
     assert eff["e_in_plane_mpa"] == pytest.approx(material.e_in_plane_mpa * profile.stiffness_factor)
     assert eff["sustained_strength_build_mpa"] == pytest.approx(
         material.strength_build_mpa * profile.strength_factor * material.sustained_factor
@@ -66,7 +73,7 @@ def test_cylinder_ring_excludes_the_hole():
 
 
 def test_moment_load_is_a_plain_dataclass_in_json():
-    data = part_to_dict(BLOCK)
+    data = BLOCK.to_dict()
     kinds = {
         load["type"]
         for case in data["fem"]["load_cases"]  # type: ignore[index]

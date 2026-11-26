@@ -46,7 +46,6 @@ from cpsk_core import (
     format_number,
     nest_constraints,
 )
-from cpsk_core.document import save
 from cpsk_core.errors import error, warning
 from cpsk_core.formula import IDENTIFIER_RE
 from cpsk_freecad.expressions import Path, UnsupportedExpressionError, translate
@@ -87,7 +86,7 @@ def export_sketch(sketch: Any, path: str | FilePath) -> list[Diagnostic]:
     written then.
     """
     document, warnings = to_document(snapshot(sketch))
-    save(document, path)
+    document.save(path)
     return warnings
 
 

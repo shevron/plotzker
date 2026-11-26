@@ -59,6 +59,23 @@ class PartChange:
             return new[0] - old[0], new[1] - old[1], new[2] - old[2]
         return None
 
+    def detail(self) -> str:
+        """What changed, in a few words."""
+        if self.status is Status.CHANGED:
+            volume_change, size_change, shift = self.volume_delta, self.size_delta, self.shift
+            assert volume_change is not None and size_change is not None and shift is not None
+            parts = [f"volume {volume_change:+.1f} mm³"]
+            if any(abs(x) > 1e-3 for x in size_change):
+                parts.append("size " + " ".join(f"{x:+.2f}" for x in size_change))
+            if any(abs(x) > 1e-3 for x in shift):
+                parts.append("origin " + " ".join(f"{x:+.2f}" for x in shift))
+            return ", ".join(parts)
+        if self.status is Status.ADDED and self.after:
+            return f"{self.after.volume:.1f} mm³"
+        if self.status is Status.REMOVED and self.before:
+            return f"{self.before.volume:.1f} mm³"
+        return self.note
+
 
 def _stats(path: Path | None) -> tuple[MeshStats | None, str]:
     if path is None:
@@ -151,22 +168,5 @@ def format_report(before: Snapshot, after: Snapshot, changes: list[PartChange], 
     for change in changes:
         if change.status is Status.UNCHANGED and not show_all:
             continue
-        lines.append(f"  {change.status.value:<9} {change.name:<28} {_detail(change)}".rstrip())
+        lines.append(f"  {change.status.value:<9} {change.name:<28} {change.detail()}".rstrip())
     return "\n".join(lines)
-
-
-def _detail(change: PartChange) -> str:
-    if change.status is Status.CHANGED:
-        volume_change, size_change, shift = change.volume_delta, change.size_delta, change.shift
-        assert volume_change is not None and size_change is not None and shift is not None
-        parts = [f"volume {volume_change:+.1f} mm³"]
-        if any(abs(x) > 1e-3 for x in size_change):
-            parts.append("size " + " ".join(f"{x:+.2f}" for x in size_change))
-        if any(abs(x) > 1e-3 for x in shift):
-            parts.append("origin " + " ".join(f"{x:+.2f}" for x in shift))
-        return ", ".join(parts)
-    if change.status is Status.ADDED and change.after:
-        return f"{change.after.volume:.1f} mm³"
-    if change.status is Status.REMOVED and change.before:
-        return f"{change.before.volume:.1f} mm³"
-    return change.note

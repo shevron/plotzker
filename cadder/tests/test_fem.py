@@ -27,7 +27,6 @@ from cadder.part import (
     LoadCase,
     PrintedPart,
     Support,
-    effective_properties,
 )
 from cadder.regions import Box, Cylinder, Placement
 from cadder.tools import tools_available
@@ -98,7 +97,7 @@ def test_cantilever_matches_timoshenko(tmp_path, build, modulus):
         log=lambda _: None,
         stl=stl,
     )
-    eff = effective_properties(LIBRARY.material("petg"), LIBRARY.profile())
+    eff = beam_part(build).effective_properties()
     expected = expected_tip(eff[modulus], eff["g_build_mpa"])
     tip = next(c for c in result.criteria if c.name == "tip")
     assert tip.value == pytest.approx(expected, rel=0.03)

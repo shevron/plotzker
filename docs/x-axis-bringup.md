@@ -211,8 +211,49 @@ The board's processor is a GD32F303, which runs the STM32F103 build: flashed and
 
 ## 5. Tests
 
-Type each command in the serial monitor. `M112` is the emergency stop; the PSU switch is
-the real one.
+Run the guided test from the project folder, with 24 V on and any serial monitor closed:
+
+```bash
+uv run firmware/x_axis_test.py
+```
+
+[`firmware/x_axis_test.py`](../firmware/x_axis_test.py) runs the checks below in order, pauses
+where you have to press, look, mark or measure, offers to correct and save X steps/mm, stops if
+the endstop or direction is wrong, and saves a report in `build/`. Hand on the PSU switch: the
+script can't be relied on to stop a move.
+
+To repeat only part of it (the connection check always runs):
+
+```bash
+uv run firmware/x_axis_test.py --from steps
+```
+
+```bash
+uv run firmware/x_axis_test.py --only travel
+```
+
+The step names are `endstop`, `margin`, `direction`, `homing`, `steps`, `repeat` and `travel`;
+`--only` can be given several times. Skip `endstop` and `direction` only while nothing in the
+wiring or firmware has changed since they last passed.
+
+### Where to measure (calipers)
+
+All distances are one measurement: **the gap at the left end of the beam**, between the left
+gantry bracket and the carriage's front plate, with the calipers' inside jaws.
+
+![Front view of the left end: the gap runs from the bracket's inner face to the carriage plate's left edge](x-axis-measure.svg)
+
+- **From:** the flat inner face of the left bracket's upright plate (the one the beam end bolts to).
+- **To:** the left side edge of the carriage's front plate (the flat printed face, 8 mm thick).
+  **Not the V-wheel** behind it, which sticks out 3 mm further.
+- **Where:** from the front, jaws level and parallel to the beam, about the middle of the beam's
+  height. Same two spots every time. Don't push the carriage with the jaws.
+
+The gap grows by exactly what the carriage moves right. The faces are from the CAD: check the
+jaws seat squarely on yours.
+
+**The same by hand** (for troubleshooting): type each command in the serial monitor. `M112` is the
+emergency stop; the PSU switch is the real one.
 
 | # | Do | Expect |
 |---|----|--------|
@@ -220,7 +261,7 @@ the real one.
 | 2 | `M119`, then again with the X lever pressed | `x_min: open`, then `TRIGGERED` (empty inputs read `TRIGGERED`) |
 | 3 | Power on 24 V, `M17`, try the shaft at once (motors release after 2 min idle) | Motor holds (hard to turn by hand), driver warm not hot |
 | 4 | `M211 S0` (soft limits off, since nothing is homed), `G91`, `G1 X10 F1200` | Carriage moves 10 mm **toward the motor (right)** |
-| 5 | `G1 X100 F3000`, measure; then `G1 X-110 F3000`, `G90`, `M211 S1` | Moves 100 mm (±1); if not, `M92 X<80 × 100/measured>`, `M500` |
+| 5 | After the endstop checks below: `G90`, `M211 S1`, `G28 X`, `G1 X20 F3000`, measure the gap; `G1 X120 F3000`, measure again | The gap grows by 100 mm (±0.3); if not, `M92 X<80 × 100/difference>`, `M500` |
 | 6 | Endstop and homing: see below | |
 
 **Direction.** If step 4 moved the carriage left, set `INVERT_X_DIR true`, rebuild and
@@ -230,16 +271,17 @@ reflash (or power off and flip the motor plug).
 
 1. Press the lever by hand and run `M119`: expect `x_min: TRIGGERED`, released: `open`. If
    it is the other way round, flip the endstop's logic in `Configuration.h` and reflash.
-2. Push the carriage slowly to the left by hand while repeating `M119`: it must trigger
-   from the trigger screw's head with at least 3 mm of carriage travel left before the
-   carriage hits anything. Adjust the screw's depth and tighten its lock nut.
+2. Push the carriage slowly to the left by hand while repeating `M119`. Where it first reads
+   `TRIGGERED`, the gap (above) must be **at least 6 mm**: the V-wheel reaches the bracket 3 mm
+   before the plate does, so that leaves 3 mm of travel. Adjust the trigger screw's depth and
+   tighten its lock nut.
 
 **Homing.** Park the carriage in the middle (mid-beam is about X = 200). `G28 X` at the
 slow homing speed: the carriage goes left, clicks, backs off a few mm, approaches slowly,
 stops. `M114` then shows X:0.00. Hand on the switch; if anything is wrong, cut the power.
 
-Finish with repeatability: `G1 X200 F3000`, `G28 X`, ten times; mark the carriage against a
-fixed point each time. Then `G1 X400 F3000` (soft limit now active), `G28 X`, and `M211`
+Finish with repeatability, ten times: `G1 X200 F3000`, `G28 X`, `G1 X20 F3000`, measure the
+gap; the readings should agree within 0.1 mm. Then `G1 X400 F3000` (soft limit now active), `G28 X`, and `M211`
 to confirm the limits are on.
 
 **Success:** the X axis is smooth over the whole travel, the carriage homes onto the endstop
@@ -266,9 +308,9 @@ at least 10 times in a row at the same spot (±0.1 mm), and it stays within the 
 
 ## 7. Report back
 
-So that T2.1–T2.3 can be closed from this session, write down:
+So that T2.1–T2.3 can be closed from this session, send the test script's report and write down:
 
 - the PSU label, the factory and final Vref, the motor's label, the Marlin tag;
 - what worked and what didn't (with photos of any failure);
-- the measured steps/mm, the trip point (mm of carriage travel from click to the bracket), and the repeatability;
+- the measured steps/mm, the gap where the switch clicks, and the repeatability;
 - which endstop logic setting was right, and which connector is X−.

@@ -21,7 +21,16 @@ Flash from a FAT32 microSD card: copy `vendor/Marlin/.pio/build/STM32F103RE_crea
 folder and power the board on (guide [`x-axis-bringup.md`](../docs/x-axis-bringup.md) §4). Then
 `pio device monitor -b 115200`, and `M502`, `M500`.
 
-## What the script sets (X-axis bring-up)
+## X-axis test and calibration
+
+`uv run firmware/x_axis_test.py` walks through the bring-up tests over USB (endstop, trigger margin,
+direction, homing, steps/mm with `M92`/`M500`, repeatability, travel and soft limit) and writes a
+report to `build/`. Distances are caliper readings of the gap between the left bracket and the
+carriage plate ([picture](../docs/x-axis-measure.svg)). `--from STEP` and `--only STEP` repeat part
+of the test. `--port` and `--cycles` override the defaults. Close the serial monitor first.
+Tested against a simulated board (`tests/test_x_axis_test.py`), not yet on the real one.
+
+## What `apply_config.py` sets (X-axis bring-up)
 
 | Setting | Value | Why |
 |---------|-------|-----|

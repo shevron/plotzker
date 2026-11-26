@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Front view of the left gantry end, in mm from the CAD (params.py): x right, y = 135 - z.
+     Bracket inner face at x = 0; drawn with a 30 mm gap. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-62 -22 180 152" width="900" height="760" font-family="Helvetica, Arial, sans-serif" font-size="4.6">
+  <rect x="-62" y="-22" width="180" height="152" fill="#fff"/>
+  <text x="-58" y="-12" font-size="6.5" font-weight="bold">Where to measure: front view, left end of the beam</text>
+  <!-- beam (behind the carriage plate) -->
+  <rect x="-1.5" y="37" width="107" height="40" fill="#555"/>
+  <text x="2" y="74" fill="#fff">beam (black)</text>
+  <!-- bracket: upright face plate and base -->
+  <rect x="-8" y="34" width="8" height="67.5" fill="#f08a24"/>
+  <polygon points="-8,34 -34,91.5 -34,101.5 -8,101.5" fill="#f6b36f"/>
+  <rect x="-34" y="91.5" width="26" height="10" fill="#f08a24"/>
+  <!-- carriage front plate, cut off on the right -->
+  <path d="M30 12.15 H103 L99 42 L106 70 L101 101.85 H30 Z" fill="#f08a24" fill-opacity="0.9" stroke="#8a4a0c" stroke-width="0.5"/>
+  <text x="52" y="58" font-size="5.5">carriage front plate</text>
+  <!-- V-wheels behind the plate -->
+  <g fill="none" stroke="#222" stroke-width="0.6" stroke-dasharray="2 1.4">
+    <circle cx="39" cy="27.15" r="12"/>
+    <circle cx="39" cy="86.85" r="12"/>
+  </g>
+  <!-- measuring faces -->
+  <path d="M0 40 V74" stroke="#d00" stroke-width="1.4"/>
+  <path d="M30 40 V74" stroke="#d00" stroke-width="1.4"/>
+  <!-- gap arrow -->
+  <path d="M1 55 H29" stroke="#d00" stroke-width="1.2"/>
+  <polygon points="0.7,55 6,52.6 6,57.4" fill="#d00"/>
+  <polygon points="29.3,55 24,52.6 24,57.4" fill="#d00"/>
+  <rect x="7" y="45" width="16" height="7" fill="#fff"/>
+  <text x="15" y="50.3" text-anchor="middle" fill="#d00" font-weight="bold">GAP</text>
+  <!-- labels -->
+  <g stroke="#000" stroke-width="0.35" fill="none">
+    <path d="M0 66 L-12 114"/>
+    <path d="M30 66 L44 112"/>
+    <path d="M27.5 25 L8 14"/>
+  </g>
+  <text x="-58" y="119" font-weight="bold" fill="#d00">FROM: the bracket's flat inner face</text>
+  <text x="-58" y="125">(the plate the beam end bolts to)</text>
+  <text x="36" y="117" font-weight="bold" fill="#d00">TO: the plate's left side edge</text>
+  <text x="36" y="123">(flat printed face, 8 mm thick)</text>
+  <text x="-58" y="8">NOT the V-wheel (dashed, behind the plate):</text>
+  <text x="-58" y="13.5">it sticks out 3 mm further</text>
+</svg>

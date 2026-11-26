@@ -15,9 +15,12 @@ requirements, the high-level design and the coding standards are in
 > toolchain) deferred until the machine runs. cadder gained the CPSK parametric sketch format
 > (draft spec, reader, solver) and a FreeCAD import/export addon (T3.27, T3.28).
 >
-> **Next:** Phase 2 starts with **T2.7** (X-axis bench bring-up: print and assemble the gantry
-> and carriage, wire the X motor and endstop to the Creality board (D41), flash Marlin, home X; guide in
-> [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md)). T3.8 X cable (the ribbon festoon mock-up
+> **Next:** T2.7 (X-axis bench bring-up on the Creality board, D41) is done: the X axis homes and
+> travels. Phase 2 continues once the user has printed and checked the parts and built both Y
+> assemblies: Y motors and endstops (Y on the Y driver, Y2 on E0, Y2 endstop on Z−), which needs
+> T2.2's dual-Y configuration (`firmware/apply_config.py` sets up X only). T2.4 (servo) can be
+> done any time.
+> T3.8 X cable (the ribbon festoon mock-up
 > decides; the Y loom is modeled) can run in parallel; the baseboard drilling (T4.1) is unblocked.
 
 **Contents:** 1 Work plan · 2 Open questions · 3 Decision log · 4 Inventory ·
@@ -69,16 +72,16 @@ any new decisions in §3, and update the status line at the top.
 - [ ] **T2.5 Driver current (Vref).** Set Vref for the motors in use; both Y drivers identical.
 - [ ] **T2.6 (Optional) TFT35-E3.** Make an adapter from the board's LCD connector (UART3) and
   connect the TFT in touch mode.
-- [ ] **T2.7 X-axis bench bring-up (first milestone, user's choice).** Print and assemble the
+- [x] **T2.7 X-axis bench bring-up (first milestone, user's choice).** Print and assemble the
   gantry and X carriage on four SCS blocks (no Y axis, baseboard or servo), wire the X motor and
   X− endstop to the Creality board and the 24 V PSU, flash a minimal Marlin, and check that the carriage
   moves, stops at the endstop and homes (`G28 X`). Guide: [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md).
   It covers the X part of T2.1 to T2.3 and T2.5; T2.2's full configuration (dual Y, servo, SD) and
   `firmware/` follow it. `firmware/apply_config.py` applies the X-axis settings to Marlin 2.1.2.5
-  (built with `pio run -e STM32F103RE_creality` and flashed, 2026-11-26). 2026-11-26: the X motor holds and moves in the right direction and
-  `G28 X` homes; still open: ten-homing repeatability, travel and soft limits, steps/mm. *Done when:* the success criteria at the end of the guide's §5 are met,
-  the user's readings (§7 of the guide) are recorded in §4 and `docs/controller.md`, and the
-  endstop and direction settings found on the bench are recorded in `firmware/README.md`.
+  (built with `pio run -e STM32F103RE_creality` and flashed). **Done 2026-11-26:** homes with
+  the endstop wired normally closed, ten homings within 0.1 mm, travel to X = 410 with the soft
+  limit holding, steps/mm consistent with the design 80. Test: `firmware/x_axis_test.py`; readings
+  in `docs/controller.md`. Motor `42H-22012L-23BD` (`YUX 20180912`), Vref 0.88 V.
 
 #### Phase 3 — Mechanical CAD (PythonSCAD; conventions in README §7.4, workflow in README §6)
 
@@ -716,7 +719,7 @@ hard to get, we adjust.
 | Ø10 mm smooth (optical-axis) shafts | 2 | **700 mm**, hardened → Y axis | — |
 | SK10 shaft supports | 4 | End supports, shaft center **20 mm** above the mounting surface; 2 × M5 on 32 mm, 42 W × 37.5 H × 14 L ([`docs/hardware.md`](docs/hardware.md)) | — |
 | SCS10UU linear bearing blocks | 4 | 2 per shaft; 35 L × 40 W × 26.5 H mm, shaft center 13 mm above the base, 4 × M5 top holes on 28 × 21 mm, top: two 10 mm raised flats (holes in them) with a 17 mm × 1 mm recess between, 92 g ([`docs/hardware.md`](docs/hardware.md)) | — |
-| NEMA17 stepper motors | ≥ 3 (+1 for optional Z) | Standard 3D-printer type; sizes vary: typical 39.2 mm body / 22.6 mm shaft, short 33.5 / 19 | — |
+| NEMA17 stepper motors | ≥ 3 (+1 for optional Z) | Standard 3D-printer type; sizes vary: typical 39.2 mm body / 22.6 mm shaft, short 33.5 / 19 | Rated current of the X motor unknown (label `42H-22012L-23BD`, `YUX 20180912`; no datasheet found) |
 | GT2 belt, pulleys, idlers | assorted | 6 mm belt (plenty); common 3D-printer 20T pulleys and idlers | Exact pulley/idler sizes (design for common, adjust) |
 | Lead screws, linear bearings, misc. bearings | assorted | No LM6UU/LM8UU found yet | Only needed for a stepper Z experiment or the pen slide upgrade |
 | Ø6 rod | 1 | ~200 mm, cuttable; the pen holder's rod needs 63 mm | — |

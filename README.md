@@ -383,6 +383,7 @@ Plotter/
 ├── docs/
 │   ├── controller.md    ← controller board, pin map, bring-up checklist
 │   ├── x-axis-bringup.md ← first bench bring-up: assemble the gantry, wire the X motor and endstop, flash, home X
+│   ├── x-axis-measure.svg ← where to put the calipers in the X-axis test
 │   ├── hardware.md      ← vendor part dimensions for CAD
 │   ├── fem.md           ← the plotter's FEM checks: which parts, data, modeling choices
 │   ├── fem-subagent-plan.md ← design and history of the FEM tooling and the plotter's checks

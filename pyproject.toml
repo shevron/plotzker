@@ -12,6 +12,7 @@ license-files = ["LICENSE", "LICENSES/CC-BY-SA-4.0.txt"]
 requires-python = ">=3.14"
 dependencies = [
     "cadder",
+    "pyserial>=3.5",
     "pythonscad>=1.1",
     "typer>=0.29.2",
 ]
@@ -19,7 +20,12 @@ dependencies = [
 [project.optional-dependencies]
 diff = ["cadder[diff]"]
 photo = ["cadder[photo]"]  # measuring parts from photos (docs/photo-measurement.md)
-dev = ["mypy>=1.10", "pytest>=8", "ruff>=0.6"]
+dev = [
+    "mypy>=1.10",
+    "pytest>=8",
+    "ruff>=0.6",
+    "types-pyserial>=3.5.0.20261122",
+]
 
 [project.scripts]
 plotzker = "plotzker.cli:main"
@@ -38,7 +44,8 @@ python-preference = "only-system"  # use the pyenv interpreter (.python-version)
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "cadder/tests"]
-pythonpath = ["cadder/freecad-addon/CPSK"]  # the FreeCAD addon's package, tested without FreeCAD
+# the FreeCAD addon's package (tested without FreeCAD) and the firmware scripts
+pythonpath = ["cadder/freecad-addon/CPSK", "firmware"]
 addopts = "-ra"
 
 # Ruff: these settings cover src/ and tests/; cadder/ has its own (cadder/pyproject.toml).

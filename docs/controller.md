@@ -58,6 +58,11 @@ for a pen changer.
 - X endstop on X−: reads `open` released, `TRIGGERED` pressed once wired to V and S on the
   module (`X_MIN_ENDSTOP_INVERTING false`). With the cable's wires as delivered it read inverted.
 - `G28 X` homes.
+- X motor label: `42H-22012L-23BD`, `YUX 20180912`; rated current unknown (no datasheet found).
+- Guided test (`firmware/x_axis_test.py`): trigger gap 6.2 mm; ten homings within 0.1 mm; travel
+  reaches X = 410 and the soft limit holds. The distance readings (100 mm move) are consistent with
+  the design 80 steps/mm to within the caliper method's few tenths of a mm; **80 is saved** on the
+  board (`M92 X80`, `M500`).
 
 ## To verify on the bench
 

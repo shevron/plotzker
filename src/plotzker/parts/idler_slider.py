@@ -57,9 +57,7 @@ if TYPE_CHECKING:
 
 X = X_IDLER
 #: Idler axle: bolt head seat on the +y (rear) arm, shank toward -y
-AXLE: Matrix = handle(
-    [X.axle_pos, X.belt_pos + X.head_side * X.width / 2, X.axle_z], [X.axle_head_rot, 0, 0]
-)
+AXLE: Matrix = handle([X.axle_pos, X.belt_pos + X.head_side * X.width / 2, X.axle_z], [X.axle_head_rot, 0, 0])
 #: The tensioner frame in the left bracket-local frame (tower's outer face, belt line)
 PLACEMENT = Placement(0, (X.tower_s0, X.belt_pos, 0.0))
 

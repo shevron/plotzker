@@ -42,16 +42,12 @@ class Diagnostic:
         return f"{self.severity} ({self.code}): {where}{self.message}"
 
 
-def error(
-    stage: Stage, code: str, message: str, *, ids: Iterable[str] = (), line: int | None = None
-) -> Diagnostic:
+def error(stage: Stage, code: str, message: str, *, ids: Iterable[str] = (), line: int | None = None) -> Diagnostic:
     """An error diagnostic."""
     return Diagnostic(Severity.ERROR, stage, code, message, tuple(ids), line)
 
 
-def warning(
-    stage: Stage, code: str, message: str, *, ids: Iterable[str] = (), line: int | None = None
-) -> Diagnostic:
+def warning(stage: Stage, code: str, message: str, *, ids: Iterable[str] = (), line: int | None = None) -> Diagnostic:
     """A warning diagnostic."""
     return Diagnostic(Severity.WARNING, stage, code, message, tuple(ids), line)
 

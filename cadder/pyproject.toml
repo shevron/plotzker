@@ -33,7 +33,7 @@ pythonpath = ["freecad-addon/CPSK"]  # the FreeCAD addon's package, tested witho
 addopts = "-ra"
 
 [tool.ruff]
-line-length = 100
+line-length = 119
 target-version = "py314"
 src = ["src", "tests", "freecad-addon/CPSK"]
 # cpsk_core runs in FreeCAD's Python too (plan D1): keep it to Python 3.11 syntax

@@ -192,9 +192,7 @@ class _Reader:
 
     def read(self, root: Element) -> None:
         if not root.ours or root.name != "sketch":
-            self.error(
-                "structure", f"the root must be <sketch> in namespace {NAMESPACE}", root.line
-            )
+            self.error("structure", f"the root must be <sketch> in namespace {NAMESPACE}", root.line)
             return
         self.check_attrs(root, ("version", "unit-length", "unit-angle"))
         self.read_version(root)
@@ -359,9 +357,7 @@ class _Reader:
             allowed = (*allowed, "value", "driving")
         self.check_attrs(element, allowed)
         attrs = {
-            name: value
-            for (namespace, name), value in element.attrs.items()
-            if namespace is None and name in allowed
+            name: value for (namespace, name), value in element.attrs.items() if namespace is None and name in allowed
         }
         raw = _RawConstraint(element.name, attrs, element.line, parent, element)
         self.register_id(raw.id, raw.line)
@@ -460,9 +456,7 @@ class _Reader:
                 continue
             low, high = variable.low, variable.high
             if (low is not None and result < low) or (high is not None and result > high):
-                bounds = (
-                    f"[{'' if low is None else f'{low:g}'}, {'' if high is None else f'{high:g}'}]"
-                )
+                bounds = f"[{'' if low is None else f'{low:g}'}, {'' if high is None else f'{high:g}'}]"
                 message = f"variable {id!r} = {result:g} is outside {bounds}"
                 self.error("limits", message, variable.line, (id,))
         anonymous: dict[int, float] = {}
@@ -543,9 +537,7 @@ class _Reader:
             if omitted:
                 given[omitted] = "self"
             elif not any(text.split(".")[0] == "self" for text in given.values()):
-                message = (
-                    f"nested <{raw.type}> must reference its parent: omit an operand or use 'self'"
-                )
+                message = f"nested <{raw.type}> must reference its parent: omit an operand or use 'self'"
                 self.error("nesting", message, raw.line)
                 return None
         operands: dict[str, Operand] = {}
@@ -557,9 +549,7 @@ class _Reader:
         if not self.check_operands(raw, operands):
             return None
         id = raw.id if raw.id in self.ids else None
-        return Constraint(
-            raw.type, operands, value, raw.driving, id, raw.line, raw.parent, raw.element
-        )
+        return Constraint(raw.type, operands, value, raw.driving, id, raw.line, raw.parent, raw.element)
 
     def parent_kind(self, operand: Operand) -> Kind | None:
         """The kind of primitive a point operand belongs to (``None`` for implicit references)."""
@@ -601,9 +591,7 @@ class _Reader:
                 else:
                     ok = pair is not None and "point" not in pair and pair != ("line", "line")
             case "equal":
-                ok = pair == ("line", "line") or (
-                    pair is not None and set(pair) <= {"circle", "arc"}
-                )
+                ok = pair == ("line", "line") or (pair is not None and set(pair) <= {"circle", "arc"})
             case "symmetric":
                 found = kinds("a", "b", "about")
                 ok = found in (("point", "point", "point"), ("point", "point", "line"))

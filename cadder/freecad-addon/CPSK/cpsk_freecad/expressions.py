@@ -24,9 +24,7 @@ from cpsk_core.document import format_number
 UNITS = {"mm": "mm", "cm": "cm", "m": "m", "in": "in", "deg": "deg", "°": "deg", "rad": "rad"}
 """FreeCAD unit → CPSK unit."""
 
-FUNCTIONS = frozenset(
-    {"abs", "sqrt", "min", "max", "sin", "cos", "tan", "asin", "acos", "atan", "atan2"}
-)
+FUNCTIONS = frozenset({"abs", "sqrt", "min", "max", "sin", "cos", "tan", "asin", "acos", "atan", "atan2"})
 CONSTANTS = frozenset({"pi"})
 
 _TOKEN_RE = re.compile(
@@ -119,9 +117,7 @@ class _Parser:
             raise UnsupportedExpressionError(f"incomplete expression {self.source!r}")
         text = self.tokens[self.index][1]
         if expected is not None and text != expected:
-            raise UnsupportedExpressionError(
-                f"expected {expected!r}, found {text!r} in {self.source!r}"
-            )
+            raise UnsupportedExpressionError(f"expected {expected!r}, found {text!r} in {self.source!r}")
         self.index += 1
         return text
 
@@ -159,11 +155,7 @@ class _Parser:
             node = self.sum()
             self.take(")")
             return node
-        if (
-            kind == "name"
-            and self.index + 1 < len(self.tokens)
-            and self.tokens[self.index + 1][1] == "("
-        ):
+        if kind == "name" and self.index + 1 < len(self.tokens) and self.tokens[self.index + 1][1] == "(":
             return self.call()
         if kind == "name" and text in CONSTANTS:
             self.take()
@@ -316,9 +308,7 @@ class _Writer:
                 return f"{_paren(lt, ll, 1)} {op} {_paren(rt, rl, 2)}", 1, ld or rd
         raise AssertionError(node)
 
-    def call(
-        self, function: str, args: tuple[cpsk_formula.Node, ...]
-    ) -> tuple[str, int, Dimension]:
+    def call(self, function: str, args: tuple[cpsk_formula.Node, ...]) -> tuple[str, int, Dimension]:
         if function in ("min", "max", "abs"):
             written = self.matched(list(args))
             dim = next((d for _, _, d in written if d is not None), None)
@@ -342,9 +332,7 @@ class _Writer:
                 result.append((text, level, own))
             elif isinstance(node, cpsk_formula.Number) and text != "pi":
                 result.append((f"{text} {unit}", 5, dim))
-            elif isinstance(node, cpsk_formula.Unary) and isinstance(
-                node.operand, cpsk_formula.Number
-            ):
+            elif isinstance(node, cpsk_formula.Unary) and isinstance(node.operand, cpsk_formula.Number):
                 result.append((f"{text} {unit}", 4, dim))
             else:
                 result.append((f"{_paren(text, level, 2)} * 1 {unit}", 2, dim))

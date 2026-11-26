@@ -120,9 +120,7 @@ def _shift(a: Item, b: Item) -> tuple[float, float, float]:
     return float(d[0]), float(d[1]), float(d[2])
 
 
-def match_items(
-    a_items: list[Item], b_items: list[Item]
-) -> list[tuple[InstanceStatus, Item | None, Item | None]]:
+def match_items(a_items: list[Item], b_items: list[Item]) -> list[tuple[InstanceStatus, Item | None, Item | None]]:
     """Pair the items of two revisions of an assembly (see the module docstring)."""
     pairs: list[tuple[InstanceStatus, Item | None, Item | None]] = []
     rest_a, rest_b = list(a_items), list(b_items)
@@ -193,9 +191,7 @@ def _take(
     return out
 
 
-def _used(
-    item: Item, pairs: list[tuple[InstanceStatus, Item | None, Item | None]], side: int
-) -> bool:
+def _used(item: Item, pairs: list[tuple[InstanceStatus, Item | None, Item | None]], side: int) -> bool:
     return any(p[1 + side] is item for p in pairs)
 
 
@@ -219,9 +215,7 @@ def _label(item: Item, labels: dict[float, str]) -> tuple[str, bool]:
     return f"item {item.index} ({item.volume:.0f} mm³)", False
 
 
-def compare_assembly(
-    name: str, a: Path | None, b: Path | None, labels: dict[float, str]
-) -> AssemblyChange:
+def compare_assembly(name: str, a: Path | None, b: Path | None, labels: dict[float, str]) -> AssemblyChange:
     """Compare one assembly given the item files of both revisions (None: it does not exist)."""
     change = AssemblyChange(name)
     a_items = load_items(a) if a else []
@@ -234,9 +228,7 @@ def compare_assembly(
         rotated = False
         if status is not InstanceStatus.UNCHANGED and ia and ib:
             shift = _shift(ia, ib)
-            rotated = status is InstanceStatus.MOVED and not np.allclose(
-                ia.size, ib.size, atol=1e-2
-            )
+            rotated = status is InstanceStatus.MOVED and not np.allclose(ia.size, ib.size, atol=1e-2)
         change.instances.append(InstanceChange(status, label, printed, ia, ib, shift, rotated))
     change.instances.sort(key=lambda i: (i.before or i.after).index if (i.before or i.after) else 0)  # type: ignore[union-attr]
     if a is None:
@@ -248,9 +240,7 @@ def compare_assembly(
     return change
 
 
-def compare_assemblies(
-    a: Snapshot, b: Snapshot, volumes: Mapping[str, float]
-) -> list[AssemblyChange]:
+def compare_assemblies(a: Snapshot, b: Snapshot, volumes: Mapping[str, float]) -> list[AssemblyChange]:
     """Compare every assembly that exists in either snapshot (sorted by name).
 
     ``volumes`` are the printable parts' volumes (mm³), used to name instances.
@@ -264,9 +254,7 @@ def compare_assemblies(
             note = errors[0].strip().splitlines()[-1] if errors else "no data"
             changes.append(AssemblyChange(name, status="error", note=note))
             continue
-        changes.append(
-            compare_assembly(name, fa.path if fa else None, fb.path if fb else None, labels)
-        )
+        changes.append(compare_assembly(name, fa.path if fa else None, fb.path if fb else None, labels))
     return changes
 
 
@@ -296,11 +284,7 @@ def format_assemblies(changes: list[AssemblyChange], show_all: bool) -> str:
                 continue
             extra = ""
             if i.shift and any(abs(x) > SHIFT_EPS_MM for x in i.shift):
-                extra = (
-                    "moved "
-                    + " ".join(f"{x:+.2f}" for x in i.shift)
-                    + (" (turned)" if i.rotated else "")
-                )
+                extra = "moved " + " ".join(f"{x:+.2f}" for x in i.shift) + (" (turned)" if i.rotated else "")
             lines.append(f"      {i.status.value:<9} {i.label:<30} {extra}".rstrip())
     if not shown:
         lines.append("  no assembly changed")

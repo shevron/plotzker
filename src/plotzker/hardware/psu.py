@@ -144,9 +144,7 @@ def psu() -> Solid:
     case = cube([sx, sy, sz])
     # open end: the cover stops short on the fan side, the block sits inside the walls
     pocket = box(1, -1, 1, sx - 1, p.cover_setback, sz + 1)
-    block = box(
-        p.block_x[0], p.block_front_y, p.block_z[0], p.block_x[1], p.block_back_y, p.block_z[1]
-    )
+    block = box(p.block_x[0], p.block_front_y, p.block_z[0], p.block_x[1], p.block_back_y, p.block_z[1])
     xs = p.terminal_xs
     lugs = union(
         *(
@@ -205,21 +203,13 @@ def xt60_female() -> Solid:
     front = linear_extrude(outline, height=x.front_len).rotate([90, 0, 0])
 
     def section(size: tuple[float, float], start: float, length: float) -> Solid:
-        return cube([size[0], length, size[1]]).translate(
-            [-size[0] / 2, -start - length, -size[1] / 2]
-        )
+        return cube([size[0], length, size[1]]).translate([-size[0] / 2, -start - length, -size[1] / 2])
 
     # the collar, its two corners on the chamfered (+x) side rounded
     cw, ch, r = *x.collar, x.collar_r
-    corners = union(
-        *(circle(r=r, fn=32).translate([cw / 2 - r, sz * (ch / 2 - r)]) for sz in (-1, 1))
-    )
+    corners = union(*(circle(r=r, fn=32).translate([cw / 2 - r, sz * (ch / 2 - r)]) for sz in (-1, 1)))
     collar_2d = hull(union(square([cw - r, ch]).translate([-cw / 2, -ch / 2]), corners))
-    collar = (
-        linear_extrude(collar_2d, height=x.collar_len)
-        .rotate([90, 0, 0])
-        .translate([0, -x.front_len, 0])
-    )
+    collar = linear_extrude(collar_2d, height=x.collar_len).rotate([90, 0, 0]).translate([0, -x.front_len, 0])
 
     collar_end = x.front_len + x.collar_len
     rear = collar_end + x.flange_len

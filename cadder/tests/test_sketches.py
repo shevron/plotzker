@@ -85,9 +85,7 @@ def test_teardrop_covers_the_hole_and_peaks_at_45_degrees():
 def cpsk_file(tmp_path, geometry: str) -> Path:
     """A CPSK sketch file with this ``<geometry>`` content."""
     path = tmp_path / "sketch.cpsk"
-    path.write_text(
-        f'<sketch xmlns="{cpsk.NAMESPACE}" version="0.1"><geometry>{geometry}</geometry></sketch>'
-    )
+    path.write_text(f'<sketch xmlns="{cpsk.NAMESPACE}" version="0.1"><geometry>{geometry}</geometry></sketch>')
     return path
 
 

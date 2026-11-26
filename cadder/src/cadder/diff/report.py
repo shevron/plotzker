@@ -165,9 +165,7 @@ def write_report(
     """Write ``<out_dir>/<a>..<b>/index.html``; returns its path."""
     folder = out_dir / f"{_safe(a.label)}..{_safe(b.label)}"
     folder.mkdir(parents=True, exist_ok=True)
-    data = json.dumps(
-        report_data(a, b, changes, assemblies, source), separators=(",", ":")
-    ).replace("</", "<\\/")
+    data = json.dumps(report_data(a, b, changes, assemblies, source), separators=(",", ":")).replace("</", "<\\/")
     html = VIEWER.read_text().replace(_PLACEHOLDER, data)
     path = folder / "index.html"
     path.write_text(html)

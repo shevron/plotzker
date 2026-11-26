@@ -74,9 +74,7 @@ class Board:
         import cv2
 
         dictionary = cv2.aruco.getPredefinedDictionary(getattr(cv2.aruco, self.dictionary))
-        return cv2.aruco.CharucoBoard(
-            (self.squares_x, self.squares_y), self.square_mm, self.marker_mm, dictionary
-        )
+        return cv2.aruco.CharucoBoard((self.squares_x, self.squares_y), self.square_mm, self.marker_mm, dictionary)
 
     def label(self) -> str:
         """One-line description printed under the board."""
@@ -92,9 +90,7 @@ class Board:
 DEFAULT_BOARD = Board()  #: the board ``cadder photo target`` prints by default
 
 
-def make_target(
-    path: Path, board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: float = 20.0
-) -> Path:
+def make_target(path: Path, board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: float = 20.0) -> Path:
     """Write a printable PDF of ``board`` on ``paper``, centered, with a label and a scale bar.
 
     Print it at 100 % (no "fit to page"), then measure 10 squares with a caliper.
@@ -107,9 +103,7 @@ def make_target(
     return path
 
 
-def target_page(
-    board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: float = 20.0
-) -> npt.NDArray[np.uint8]:
+def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: float = 20.0) -> npt.NDArray[np.uint8]:
     """The target page as a grayscale image at ``px_per_mm``."""
     import cv2
 
@@ -150,9 +144,7 @@ def target_page(
     )
     origin = "origin (0,0): this corner, x right, y up, z up"
     if board.field_mm:
-        origin += "; white field x {:g}-{:g}, y {:g}-{:g} mm".format(
-            *board.field_mm[::2], *board.field_mm[1::2]
-        )
+        origin += "; white field x {:g}-{:g}, y {:g}-{:g} mm".format(*board.field_mm[::2], *board.field_mm[1::2])
     text(origin, left_mm, bottom_mm + 13, 0.75)
     bar_y = round((bottom_mm + 17) * px_per_mm)
     bar_x0 = x0
@@ -199,11 +191,7 @@ def detect(image: BGR, board: Board) -> tuple[Points, Points]:
     # and keep the one that finds the most corners, then refine those at full size.
     best: tuple[int, Any, Any, float] = (0, None, None, 1.0)
     for scale in (1.0, 0.5, 0.35, 0.25):
-        img_s = (
-            gray
-            if scale == 1
-            else cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
-        )
+        img_s = gray if scale == 1 else cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
         corners, ids, _, _ = detector.detectBoard(img_s)
         n = 0 if ids is None else len(ids)
         if n > best[0]:
@@ -266,9 +254,7 @@ class Rectification:
         import cv2
 
         obj = _to_cv(self.board, points)
-        px, _ = cv2.projectPoints(
-            obj, np.asarray(self.rvec), np.asarray(self.tvec), self._k(), self._d()
-        )
+        px, _ = cv2.projectPoints(obj, np.asarray(self.rvec), np.asarray(self.tvec), self._k(), self._d())
         return np.asarray(px, dtype=np.float64).reshape(-1, 2)
 
     def to_plane(self, pixels: Points, height: float = 0.0) -> Points:
@@ -348,9 +334,7 @@ class Rectification:
         grid = np.stack(np.meshgrid(us, vs), axis=-1).reshape(-1, 2)
         photo = self.rect_to_photo(grid).reshape(len(vs), len(us), 2).astype(np.float32)
         # sample the coarse grid bilinearly at u / step, v / step for every output pixel
-        cu, cv = np.meshgrid(
-            np.arange(w, dtype=np.float32) / step, np.arange(h, dtype=np.float32) / step
-        )
+        cu, cv = np.meshgrid(np.arange(w, dtype=np.float32) / step, np.arange(h, dtype=np.float32) / step)
         map_x = cv2.remap(photo[..., 0], cu, cv, cv2.INTER_LINEAR)
         map_y = cv2.remap(photo[..., 1], cu, cv, cv2.INTER_LINEAR)
         return map_x, map_y
@@ -552,9 +536,7 @@ def calibrate(photos: list[Path], board: Board = DEFAULT_BOARD) -> Camera:
     if sum(len(o) for o in objs) < 150:
         flags |= cv2.CALIB_FIX_K3
     for _ in range(4):  # drop misplaced corners (found next to the part) and fit again
-        rms, k, dist, rvecs, tvecs = cv2.calibrateCamera(
-            objs, imgs, size, k0.copy(), np.zeros(5), flags=flags
-        )
+        rms, k, dist, rvecs, tvecs = cv2.calibrateCamera(objs, imgs, size, k0.copy(), np.zeros(5), flags=flags)
         errors = []
         for o, i, rv, tv in zip(objs, imgs, rvecs, tvecs, strict=True):
             proj, _ = cv2.projectPoints(o, rv, tv, k, dist)
@@ -610,18 +592,12 @@ def rectify(
         x0, y0, x1, y1 = region
         for squares in (2, 3, 4, 6):  # widen until there are enough (a white field has none)
             m = squares * board.square_mm
-            near = (
-                (obj[:, 0] >= x0 - m)
-                & (obj[:, 0] <= x1 + m)
-                & (obj[:, 1] >= y0 - m)
-                & (obj[:, 1] <= y1 + m)
-            )
+            near = (obj[:, 0] >= x0 - m) & (obj[:, 0] <= x1 + m) & (obj[:, 1] >= y0 - m) & (obj[:, 1] <= y1 + m)
             if near.sum() >= 20:
                 break
         if near.sum() >= 12 and near.sum() < len(obj):
             notes.append(
-                f"pose from the {int(near.sum())} of {len(obj)} corners within {squares} squares "
-                "of the region"
+                f"pose from the {int(near.sum())} of {len(obj)} corners within {squares} squares of the region"
             )
             obj, img = obj[near], img[near]
     exif_f = info(photo).focal_px
@@ -703,9 +679,7 @@ def with_square(board: Board, square_mm: float | None) -> Board:
     """``board`` with the printed (measured) square size; the marker scales with it."""
     if not square_mm:
         return board
-    return replace(
-        board, square_mm=square_mm, marker_mm=board.marker_mm * square_mm / board.square_mm
-    )
+    return replace(board, square_mm=square_mm, marker_mm=board.marker_mm * square_mm / board.square_mm)
 
 
 def summary(rect: Rectification) -> str:

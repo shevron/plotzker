@@ -17,9 +17,7 @@ if TYPE_CHECKING:
     from pythonscad import Solid
 
 
-def pen_holder_at(
-    gantry_pos: float = 0.5, carriage_pos: float = 0.5, pen_up: bool = True
-) -> list[Solid]:
+def pen_holder_at(gantry_pos: float = 0.5, carriage_pos: float = 0.5, pen_up: bool = True) -> list[Solid]:
     """The pen holder on the carriage at the given travel fractions (0..1)."""
     return [
         translate(item, [carriage_x_at(carriage_pos), gantry_y_at(gantry_pos), 0])
@@ -27,9 +25,7 @@ def pen_holder_at(
     ]
 
 
-def machine_assembly(
-    gantry_pos: float = 0.5, carriage_pos: float = 0.5, pen_up: bool = True
-) -> list[Solid]:
+def machine_assembly(gantry_pos: float = 0.5, carriage_pos: float = 0.5, pen_up: bool = True) -> list[Solid]:
     """Everything, with the gantry and carriage at the given travel fractions (0..1)."""
     return [
         *baseboard.fixed_assembly(),

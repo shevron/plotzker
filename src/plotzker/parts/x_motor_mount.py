@@ -77,12 +77,10 @@ def x_motor_mount_left() -> Solid:
     foot = cube([foot_x1 - foot_x0, d.motor_foot_y[1] - d.motor_foot_y[0], d.foot_t]).translate(
         [foot_x0, d.motor_foot_y[0], FOOT_Z0]
     )
-    plate = cube([NEMA17.width, d.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate(
-        [PLATE_X[0], d.plate_y0, FOOT_Z0]
+    plate = cube([NEMA17.width, d.motor_plate_t, PLATE_TOP - FOOT_Z0]).translate([PLATE_X[0], d.plate_y0, FOOT_Z0])
+    rib = cube([d.motor_rib_t, d.foot_y[1] - d.motor_face_y + EPS, MOTOR_BOTTOM - 0.5 - FOOT_Z0]).translate(
+        [d.motor_x - d.motor_rib_t / 2, d.motor_face_y - EPS, FOOT_Z0]
     )
-    rib = cube(
-        [d.motor_rib_t, d.foot_y[1] - d.motor_face_y + EPS, MOTOR_BOTTOM - 0.5 - FOOT_Z0]
-    ).translate([d.motor_x - d.motor_rib_t / 2, d.motor_face_y - EPS, FOOT_Z0])
     bolts = [
         cylinder(d=TOL.bolt_hole_d(5), h=d.foot_t + 2, fn=FN_HOLE).translate(
             [hx * SCS10UU.hole_pitch_x / 2, y, FOOT_Z0 - 1]
@@ -98,9 +96,7 @@ def x_motor_mount_left() -> Solid:
         for y in d.bolt_rows[:1]
     ]
     plate_mid_y = d.plate_y0 + d.motor_plate_t / 2
-    boss = teardrop_y(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate(
-        [d.motor_x, plate_mid_y, AXIS_Z]
-    )
+    boss = teardrop_y(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate([d.motor_x, plate_mid_y, AXIS_Z])
     screws = [
         teardrop_y(TOL.bolt_hole_d(3), d.motor_plate_t + 2).translate(
             [
@@ -154,9 +150,7 @@ FOOT_BEARING = Box(
 
 
 #: Friction around each front bolt: the foot's underside is bonded to the bracket within BOND_RADIUS
-BOND_ZONES = [
-    bond_zone((hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0)) for hx in (-1, 1)
-]
+BOND_ZONES = [bond_zone((hx * SCS10UU.hole_pitch_x / 2, X_DRIVE.bolt_rows[0], FOOT_Z0)) for hx in (-1, 1)]
 
 
 def _case(name: str, jam: bool) -> LoadCase:
@@ -165,11 +159,7 @@ def _case(name: str, jam: bool) -> LoadCase:
         name,
         "Two belt runs pull the pulley inboard (+x); the motor's weight; "
         + ("a jam adds the stall torque and the peak run tension" if jam else "preload tension"),
-        tuple(
-            motor_loads(
-                MOTOR_FACE, X_BELT_LOADS, jam, PULLEY_POINT, FACE_POINT, (1, 0, 0), (0, -1, 0)
-            )
-        ),
+        tuple(motor_loads(MOTOR_FACE, X_BELT_LOADS, jam, PULLEY_POINT, FACE_POINT, (1, 0, 0), (0, -1, 0))),
         "loads.X_BELT_LOADS, loads.MOTOR_LOADS",
         sustained=not jam,
     )

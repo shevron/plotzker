@@ -100,15 +100,11 @@ BLOCK_BOLTS_REAR = _block_bolts(1)
 #: Beam bolts: on the outboard face, axis along +x (heads outboard)
 BEAM_BOLTS = [handle([FACE_OUT_X, 0, z], [0, -90, 0]) for z in BEAM_BOLT_Z]
 #: Belt clamps (front, rear): on the flat underside, belt center, clamp start, running +y
-BELT_CLAMPS = [
-    handle([Y_AXIS.belt_x, y0, 0]) for y0 in (-BRACKET.len_y / 2, BRACKET.len_y / 2 - CLAMP.length)
-]
+BELT_CLAMPS = [handle([Y_AXIS.belt_x, y0, 0]) for y0 in (-BRACKET.len_y / 2, BRACKET.len_y / 2 - CLAMP.length)]
 #: Loom anchor screws (right bracket): on the base top, axis along z (head up)
 LOOM_ANCHOR = [handle([LOOM.anchor_screw_x, y, BRACKET.base_t]) for y in LOOM.anchor_screw_y]
 #: Y endstop trigger screw: head behind the boss, axis along +y (tip forward, -y)
-TRIGGER_SCREW = handle(
-    [BRACKET.trig_x, -BRACKET.len_y / 2 + BRACKET.trig_boss[1], BRACKET.trig_z], [-90, 0, 0]
-)
+TRIGGER_SCREW = handle([BRACKET.trig_x, -BRACKET.len_y / 2 + BRACKET.trig_boss[1], BRACKET.trig_z], [-90, 0, 0])
 
 
 def _tower() -> Solid:
@@ -124,13 +120,9 @@ def _body(side: Side) -> Solid:
     if side is Side.LEFT:
         # shelf under the X idler's tower (T3.19, T3.22)
         y0, y1 = b.shelf_y
-        base = base | cube([b.x_out - b.shelf_x + EPS, y1 - y0, b.base_t]).translate(
-            [b.shelf_x, y0, 0]
-        )
+        base = base | cube([b.x_out - b.shelf_x + EPS, y1 - y0, b.base_t]).translate([b.shelf_x, y0, 0])
         base = base | _tower()
-    face = cube([b.face_t, b.face_y[1] - b.face_y[0], FACE_TOP]).translate(
-        [FACE_OUT_X, b.face_y[0], 0]
-    )
+    face = cube([b.face_t, b.face_y[1] - b.face_y[0], FACE_TOP]).translate([FACE_OUT_X, b.face_y[0], 0])
     # ribs: wedges from the face plate down to the outboard edge of the base
     ribs = [
         hull(
@@ -151,14 +143,8 @@ def _loom_cutouts() -> list[Solid]:
     cuts = []
     for h in LOOM_ANCHOR:
         x, y = h[0][3], h[1][3]
-        cuts.append(
-            cylinder(d=TOL.bolt_hole_d(3), h=BRACKET.base_t, fn=FN_HOLE).translate([x, y, 0])
-        )
-        cuts.append(
-            nut_slot(3, x - BRACKET.x_out + 1, "z", "-x", tol=TOL).translate(
-                [x, y, top - nut_t / 2]
-            )
-        )
+        cuts.append(cylinder(d=TOL.bolt_hole_d(3), h=BRACKET.base_t, fn=FN_HOLE).translate([x, y, 0]))
+        cuts.append(nut_slot(3, x - BRACKET.x_out + 1, "z", "-x", tol=TOL).translate([x, y, top - nut_t / 2]))
     return cuts
 
 
@@ -169,9 +155,7 @@ def _cutouts() -> list[Solid]:
     # carriage notch: between the blocks the base stops at the face plate
     cuts.append(cube([b.x_in, 2 * b.notch_y, b.base_t + 2]).translate([FACE_IN_X, -b.notch_y, -1]))
     cuts += [
-        cylinder(d=TOL.bolt_hole_d(5), h=b.base_t + 2, fn=FN_HOLE)
-        .translate([0, 0, -b.base_t - 1])
-        .align(bolt)
+        cylinder(d=TOL.bolt_hole_d(5), h=b.base_t + 2, fn=FN_HOLE).translate([0, 0, -b.base_t - 1]).align(bolt)
         for bolt in (*BLOCK_BOLTS_FRONT, *BLOCK_BOLTS_REAR)
     ]
     clr = TOL.slide
@@ -181,9 +165,7 @@ def _cutouts() -> list[Solid]:
         )
     )
     cuts += [
-        teardrop_x(TOL.bolt_hole_d(b.beam_bolt_m), b.face_t + 2).translate(
-            [(FACE_IN_X + FACE_OUT_X) / 2, 0, z]
-        )
+        teardrop_x(TOL.bolt_hole_d(b.beam_bolt_m), b.face_t + 2).translate([(FACE_IN_X + FACE_OUT_X) / 2, 0, z])
         for z in BEAM_BOLT_Z
     ]
     # belt clamp caps: M3 clearance hole up from the flat underside, and a hex shaft from the
@@ -191,9 +173,7 @@ def _cutouts() -> list[Solid]:
     cuts += [
         (
             cylinder(d=TOL.bolt_hole_d(3), h=CLAMP.nut_z + 1, fn=FN_HOLE).translate([0, 0, -EPS])
-            | cylinder(d=TOL.nut_trap_ac(3), h=FACE_TOP + 1 - CLAMP.nut_z, fn=6).translate(
-                [0, 0, CLAMP.nut_z]
-            )
+            | cylinder(d=TOL.nut_trap_ac(3), h=FACE_TOP + 1 - CLAMP.nut_z, fn=6).translate([0, 0, CLAMP.nut_z])
         )
         .translate([sx * CLAMP.screw_dx, CLAMP.length / 2, 0])
         .align(clamp)
@@ -202,16 +182,8 @@ def _cutouts() -> list[Solid]:
     ]
     # Y endstop trigger: M3 along -y through the boss, captive nut from the top
     boss_mid_y = -b.len_y / 2 + b.trig_boss[1] / 2
-    cuts.append(
-        teardrop_y(TOL.bolt_hole_d(3), b.trig_boss[1] + 2).translate(
-            [b.trig_x, boss_mid_y, b.trig_z]
-        )
-    )
-    cuts.append(
-        nut_slot(3, FACE_TOP + 1 - b.trig_z, "y", "+z", tol=TOL).translate(
-            [b.trig_x, boss_mid_y, b.trig_z]
-        )
-    )
+    cuts.append(teardrop_y(TOL.bolt_hole_d(3), b.trig_boss[1] + 2).translate([b.trig_x, boss_mid_y, b.trig_z]))
+    cuts.append(nut_slot(3, FACE_TOP + 1 - b.trig_z, "y", "+z", tol=TOL).translate([b.trig_x, boss_mid_y, b.trig_z]))
     return cuts
 
 
@@ -368,9 +340,7 @@ def _spec(side: Side) -> FemSpec:
         ),
         supports=(
             *(
-                Support(
-                    f"block_bolt_{i + 1}", ring, "M5 bolt into an SCS block: washer ring, fixed"
-                )
+                Support(f"block_bolt_{i + 1}", ring, "M5 bolt into an SCS block: washer ring, fixed")
                 for i, ring in enumerate(_BOLT_RINGS)
             ),
             Support(

@@ -33,9 +33,7 @@ def brackets_local() -> list[Solid]:
     for y in PSU.hole_y:
         bracket = psu_bracket_installed().translate([0, y, 0])
         items.append(bracket.color("SteelBlue"))
-        items += [
-            shcs(PSU.hole_m, m.psu_screw_len).align(h) for h in get_handles(bracket, "psu_screws")
-        ]
+        items += [shcs(PSU.hole_m, m.psu_screw_len).align(h) for h in get_handles(bracket, "psu_screws")]
         items += [
             countersunk_screw(WOOD_SCREW.m, WOOD_SCREW.length, WOOD_SCREW.head_d).align(h)
             for h in get_handles(bracket, "wood_screws")

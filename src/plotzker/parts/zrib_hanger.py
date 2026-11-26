@@ -52,27 +52,16 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
     return {
         "board": handle([0, 0, m.board_z], [0, 180, 0]),
         #: M3×12 up through the post and rail, head under the board's solder side
-        "board_screws": [
-            handle([sx * ZRIB.hole_pitch[0] / 2, m.post_v, board_bottom], [180, 0, 0])
-            for sx in sides
-        ],
-        "post_nuts": [
-            handle([sx * ZRIB.hole_pitch[0] / 2, m.post_v, -TOL.nut_trap_h(3)]) for sx in sides
-        ],
+        "board_screws": [handle([sx * ZRIB.hole_pitch[0] / 2, m.post_v, board_bottom], [180, 0, 0]) for sx in sides],
+        "post_nuts": [handle([sx * ZRIB.hole_pitch[0] / 2, m.post_v, -TOL.nut_trap_h(3)]) for sx in sides],
         "wood_screws": [
-            handle(
-                [sx * m.wood_screw_u, m.post_v + m.wood_screw_v, -WOOD_SCREW.boss_t], [180, 0, 0]
-            )
-            for sx in sides
+            handle([sx * m.wood_screw_u, m.post_v + m.wood_screw_v, -WOOD_SCREW.boss_t], [180, 0, 0]) for sx in sides
         ],
         "strap_screws": [
-            handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_bottom_z], [180, 0, 0])
-            for sx in sides
+            handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_bottom_z], [180, 0, 0]) for sx in sides
         ],
         #: corners along u (a flat leads into the slot, README §7.4)
-        "strap_nuts": [
-            handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_nut_z]) for sx in sides
-        ],
+        "strap_nuts": [handle([sx * m.strap_screw_u, m.strap_screw_v, m.strap_nut_z]) for sx in sides],
         "strap": handle([0, m.strap_screw_v - m.leg_t / 2, m.strap_bottom_z]),
     }
 
@@ -121,9 +110,7 @@ def zrib_hanger_mount() -> Solid:
         ).translate([us, vs, -WOOD_SCREW.boss_t - 1])
         # strap screw: hole up the leg, nut slot pressed in from the outer face
         us = sx * m.strap_screw_u
-        body = body - _hole_z(
-            TOL.bolt_hole_d(3), us, m.strap_screw_v, m.strap_top_z - 1, m.strap_nut_z + nut_t + 5
-        )
+        body = body - _hole_z(TOL.bolt_hole_d(3), us, m.strap_screw_v, m.strap_top_z - 1, m.strap_nut_z + nut_t + 5)
         body = body - nut_slot(3, m.strap_screw_v - v0 + 1, "z", "-y", tol=TOL).translate(
             [us, m.strap_screw_v, m.strap_nut_z + nut_t / 2]
         )

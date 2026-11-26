@@ -38,9 +38,9 @@ def loom_anchor_installed() -> Solid:
     cy, gz = LOOM.anchor_cy, LOOM.groove_z
     block = cube([x1 - x0, y1 - y0, z1 - z0]).translate([x0, y0, z0])
     groove_d = TOL.slide_d(LOOM.d)
-    groove = cylinder(d=groove_d, h=x1 - x0 + 2, fn=FN_HOLE).rotate([0, 90, 0]).translate(
-        [x0 - 1, cy, gz]
-    ) | cube([x1 - x0 + 2, groove_d, z1 - gz + 1]).translate([x0 - 1, cy - groove_d / 2, gz])
+    groove = cylinder(d=groove_d, h=x1 - x0 + 2, fn=FN_HOLE).rotate([0, 90, 0]).translate([x0 - 1, cy, gz]) | cube(
+        [x1 - x0 + 2, groove_d, z1 - gz + 1]
+    ).translate([x0 - 1, cy - groove_d / 2, gz])
     xc = (x0 + x1) / 2
     tie_len = LOOM.tie_w + 1
     tie_w = LOOM.tie_t + 0.5
@@ -54,9 +54,7 @@ def loom_anchor_installed() -> Solid:
         [xc - tie_len / 2, cy - TIE_SLOT_DY - tie_w / 2, z0 - EPS]
     )
     holes = [
-        cylinder(d=TOL.bolt_hole_d(3), h=LOOM.anchor_h + 2, fn=FN_HOLE).translate(
-            [LOOM.anchor_screw_x, y, z0 - 1]
-        )
+        cylinder(d=TOL.bolt_hole_d(3), h=LOOM.anchor_h + 2, fn=FN_HOLE).translate([LOOM.anchor_screw_x, y, z0 - 1])
         for y in LOOM.anchor_screw_y
     ]
     # the loom starts to bend down inside the block: carve its path

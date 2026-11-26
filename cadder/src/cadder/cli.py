@@ -55,9 +55,7 @@ class Refine(StrEnum):
 
 
 OutDir = Annotated[Path | None, typer.Option(help="Output folder.")]
-PythonscadBinary = Annotated[
-    str | None, typer.Option("--pythonscad", help="Path to the PythonSCAD binary.")
-]
+PythonscadBinary = Annotated[str | None, typer.Option("--pythonscad", help="Path to the PythonSCAD binary.")]
 
 
 def check(project: Project) -> None:
@@ -89,14 +87,9 @@ def run_fem(
     # an assembly is judged from its members' results, so after them
     wanted = [n for n in names if n in checks]
     wanted += [
-        a.name
-        for a in checks.values()
-        if a.name not in wanted and part_names and set(a.members) <= set(part_names)
+        a.name for a in checks.values() if a.name not in wanted and part_names and set(a.members) <= set(part_names)
     ]
-    statuses += [
-        r.status.value
-        for r in run_assemblies(checks, wanted, parts, out, project.verdicts, record=record)
-    ]
+    statuses += [r.status.value for r in run_assemblies(checks, wanted, parts, out, project.verdicts, record=record)]
     return all(s in ("PASS", "MARGINAL") for s in statuses)
 
 
@@ -192,9 +185,7 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
     @app.command("stl")
     @reports_errors
     def stl_command(
-        names: Annotated[
-            list[str] | None, typer.Argument(help="Part names (default: all).")
-        ] = None,
+        names: Annotated[list[str] | None, typer.Argument(help="Part names (default: all).")] = None,
         out: OutDir = None,
     ) -> None:
         """Export parts to STL."""
@@ -203,16 +194,11 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
     @app.command("render")
     @reports_errors
     def render_command(
-        names: Annotated[
-            list[str] | None, typer.Argument(help="Part or assembly names (default: all).")
-        ] = None,
+        names: Annotated[list[str] | None, typer.Argument(help="Part or assembly names (default: all).")] = None,
         out: OutDir = None,
         inspect: Annotated[
             bool,
-            typer.Option(
-                help="Render all views (iso, rear iso, front, rear, left, right, top) "
-                "to renders/inspect/."
-            ),
+            typer.Option(help="Render all views (iso, rear iso, front, rear, left, right, top) to renders/inspect/."),
         ] = False,
         pythonscad: PythonscadBinary = None,
     ) -> None:
@@ -225,9 +211,7 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
         name: Annotated[str | None, typer.Argument(help="Part name.")] = None,
         list_all: Annotated[bool, typer.Option("--list", help="List all parts.")] = False,
         as_json: Annotated[bool, typer.Option("--json", help="Print as JSON.")] = False,
-        stl: Annotated[
-            Path | None, typer.Option(help="Write the part (analysis frame) to this STL file.")
-        ] = None,
+        stl: Annotated[Path | None, typer.Option(help="Write the part (analysis frame) to this STL file.")] = None,
     ) -> None:
         """Show a part's print profile, material and FEM properties."""
         from cadder import report
@@ -250,9 +234,7 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
                 "results; checks whose members were all just checked are included)."
             ),
         ],
-        size: Annotated[
-            float | None, typer.Option(help="Element size near loads in mm (default by size).")
-        ] = None,
+        size: Annotated[float | None, typer.Option(help="Element size near loads in mm (default by size).")] = None,
         refine: Annotated[
             Refine,
             typer.Option(help="Solve a finer second mesh: only near a limit, always, or never."),
@@ -264,8 +246,7 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
             bool,
             typer.Option(
                 "--no-record",
-                help="Diagnostic run: leave the verdicts file alone (use --out to keep results "
-                "apart).",
+                help="Diagnostic run: leave the verdicts file alone (use --out to keep results apart).",
             ),
         ] = False,
         out: OutDir = None,
@@ -292,21 +273,11 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
     @reports_errors
     def diff_command(
         rev_a: Annotated[str, typer.Argument(help="Base revision.")] = "HEAD",
-        rev_b: Annotated[
-            str, typer.Argument(help="Revision to compare (default: working tree).")
-        ] = "WORKTREE",
-        all_parts: Annotated[
-            bool, typer.Option("--all", help="Also list unchanged parts.")
-        ] = False,
-        as_json: Annotated[
-            bool, typer.Option("--json", help="Print the comparison as JSON.")
-        ] = False,
-        open_report: Annotated[
-            bool, typer.Option("--open", help="Open the HTML report in the browser.")
-        ] = False,
-        serve_report: Annotated[
-            bool, typer.Option("--serve", help="Serve the report on localhost.")
-        ] = False,
+        rev_b: Annotated[str, typer.Argument(help="Revision to compare (default: working tree).")] = "WORKTREE",
+        all_parts: Annotated[bool, typer.Option("--all", help="Also list unchanged parts.")] = False,
+        as_json: Annotated[bool, typer.Option("--json", help="Print the comparison as JSON.")] = False,
+        open_report: Annotated[bool, typer.Option("--open", help="Open the HTML report in the browser.")] = False,
+        serve_report: Annotated[bool, typer.Option("--serve", help="Serve the report on localhost.")] = False,
         port: Annotated[int, typer.Option(help="Port for --serve.")] = 8765,
         no_html: Annotated[bool, typer.Option("--no-html", help="Skip the HTML report.")] = False,
         out: OutDir = None,
@@ -329,9 +300,7 @@ def make_app(project: Project, prog_name: str = "cadder") -> typer.Typer:
     @app.command("freecad")
     @reports_errors
     def freecad_command(
-        names: Annotated[
-            list[str] | None, typer.Argument(help="FreeCAD assembly names (default: all).")
-        ] = None,
+        names: Annotated[list[str] | None, typer.Argument(help="FreeCAD assembly names (default: all).")] = None,
         export_only: Annotated[
             bool, typer.Option("--export-only", help="Write STLs and manifest, skip FreeCAD.")
         ] = False,
@@ -383,8 +352,7 @@ def main() -> None:
     spec = spec or find_spec()
     if not spec:
         typer.secho(
-            "No project: pass --project package.module:PROJECT or set [tool.cadder] project in "
-            "pyproject.toml.",
+            "No project: pass --project package.module:PROJECT or set [tool.cadder] project in pyproject.toml.",
             fg=typer.colors.RED,
             err=True,
         )

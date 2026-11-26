@@ -16,11 +16,7 @@ FREECAD_ONLY = {
 
 
 def test_every_module_imports_without_any_project() -> None:
-    modules = [
-        m.name
-        for m in pkgutil.walk_packages(cadder.__path__, "cadder.")
-        if m.name not in FREECAD_ONLY
-    ]
+    modules = [m.name for m in pkgutil.walk_packages(cadder.__path__, "cadder.") if m.name not in FREECAD_ONLY]
     code = (
         "import importlib, sys\n"
         "class Block:\n"

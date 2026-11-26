@@ -50,9 +50,7 @@ def select(names: Iterable[str] | None, available: Collection[str]) -> list[str]
         return list(available)
     unknown = [n for n in names if n not in available]
     if unknown:
-        raise SystemExit(
-            f"Unknown name(s): {', '.join(unknown)}. Available: {', '.join(available)}"
-        )
+        raise SystemExit(f"Unknown name(s): {', '.join(unknown)}. Available: {', '.join(available)}")
     return list(names)
 
 
@@ -166,9 +164,7 @@ def render_pngs(
                 cmd.append(str(driver))
                 result = subprocess.run(cmd, capture_output=True, text=True, check=False)
                 if render_failed(result.returncode, path, result.stdout + result.stderr):
-                    raise RuntimeError(
-                        f"Render of {name} {view} failed:\n{result.stdout}\n{result.stderr}"
-                    )
+                    raise RuntimeError(f"Render of {name} {view} failed:\n{result.stdout}\n{result.stderr}")
                 log(f"wrote {shown(project, path)}")
                 written.append(path)
     return written

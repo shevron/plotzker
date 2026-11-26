@@ -64,9 +64,7 @@ class PrintProfile:
     def __post_init__(self) -> None:
         """Reject values that cannot be a real print setup."""
         if min(self.nozzle_mm, self.layer_height_mm, self.perimeters) <= 0:
-            raise ValueError(
-                f"profile {self.name}: nozzle, layer height and perimeters must be > 0"
-            )
+            raise ValueError(f"profile {self.name}: nozzle, layer height and perimeters must be > 0")
         if not 0 <= self.infill_percent <= 100:
             raise ValueError(f"profile {self.name}: infill_percent must be in [0, 100]")
         if not (0 < self.stiffness_factor <= 1 and 0 < self.strength_factor <= 1):
@@ -123,9 +121,7 @@ class MaterialLibrary:
     def _load_profile(self, name: str) -> PrintProfile:
         path = self.profiles_dir / f"{name}.toml"
         if not path.is_file():
-            raise KeyError(
-                f"Unknown print profile {name!r}. Available: {', '.join(self.profile_names())}"
-            )
+            raise KeyError(f"Unknown print profile {name!r}. Available: {', '.join(self.profile_names())}")
         with path.open("rb") as f:
             data = tomllib.load(f)
         fem = data.pop("fem", {})
@@ -137,6 +133,4 @@ class MaterialLibrary:
                 **data,
             )
         except (TypeError, KeyError) as exc:
-            raise ValueError(
-                f"{self.profiles_dir.name}/{name}.toml: missing or unexpected field {exc}"
-            ) from exc
+            raise ValueError(f"{self.profiles_dir.name}/{name}.toml: missing or unexpected field {exc}") from exc

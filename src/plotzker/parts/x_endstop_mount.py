@@ -58,14 +58,12 @@ def x_endstop_mount_installed() -> Solid:
     """The mount in the left bracket-local frame."""
     d = X_DRIVE
     x0 = d.foot_x0
-    foot = cube([SCS10UU.width / 2 - x0, d.foot_y[1] - d.foot_y[0], d.foot_t]).translate(
-        [x0, d.foot_y[0], FOOT_Z0]
-    )
+    foot = cube([SCS10UU.width / 2 - x0, d.foot_y[1] - d.foot_y[0], d.foot_t]).translate([x0, d.foot_y[0], FOOT_Z0])
     # the board overhangs the foot's front edge: a shelf under it
     e = X_ENDSTOP
-    shelf = cube(
-        [e.board_x[1] - e.board_x[0] + 2, d.foot_y[0] - e.board_y[0] + 1 + EPS, d.foot_t]
-    ).translate([e.board_x[0] - 1, e.board_y[0] - 1, FOOT_Z0])
+    shelf = cube([e.board_x[1] - e.board_x[0] + 2, d.foot_y[0] - e.board_y[0] + 1 + EPS, d.foot_t]).translate(
+        [e.board_x[0] - 1, e.board_y[0] - 1, FOOT_Z0]
+    )
     foot = foot | shelf
     # clamped by the rear bolt row; the front row's heads stay flush with the foot top (the
     # endstop plug needs the space), in clearance holes
@@ -87,13 +85,9 @@ def x_endstop_mount_installed() -> Solid:
     for sv in (-1, 1):
         y = BOARD_YC + sv * ENDSTOP.hole_pitch / 2
         board_holes.append(
-            cylinder(d=TOL.bolt_hole_d(3), h=d.foot_t + 2, fn=FN_HOLE).translate(
-                [e.hole_x, y, FOOT_Z0 - 1]
-            )
+            cylinder(d=TOL.bolt_hole_d(3), h=d.foot_t + 2, fn=FN_HOLE).translate([e.hole_x, y, FOOT_Z0 - 1])
         )
-        board_holes.append(
-            cylinder(d=TOL.nut_trap_ac(3), h=nut_t + 1, fn=6).translate([e.hole_x, y, FOOT_Z0 - 1])
-        )
+        board_holes.append(cylinder(d=TOL.nut_trap_ac(3), h=nut_t + 1, fn=6).translate([e.hole_x, y, FOOT_Z0 - 1]))
     # solder relief: the board's underside has joints and pins sticking out up to 1.8 mm, so
     # the foot under it is recessed except for a land round each screw hole (T3.14)
     relief = cube(

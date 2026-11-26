@@ -35,9 +35,7 @@ def pen_holder_items(pen_up: bool = False, pen_d: float = 10.0) -> dict[str, Sol
     items = {
         "body": body.color("SteelBlue"),
         "slide": slide.color("Orange"),
-        "rod": cylinder(d=p.rod_d, h=p.rod_len, fn=32)
-        .align(get_handle(body, "rod"))
-        .color("Silver"),
+        "rod": cylinder(d=p.rod_d, h=p.rod_len, fn=32).align(get_handle(body, "rod")).color("Silver"),
         "servo": servo_ft90m().align(get_handle(body, "servo")),
         "horn": servo_horn().rotate([0, 0, -angle]).align(horn),
         "pin": cylinder(d=p.pin_d, h=p.pin_reach + p.horn_t, fn=16)

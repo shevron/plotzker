@@ -22,9 +22,7 @@ def _cover(mesh: Mesh, region: Region, what: str) -> list[Cover]:
     return covers
 
 
-def force_on_region(
-    mesh: Mesh, region: Region, vector: Vec3, what: str, bearing: bool = False
-) -> dict[int, Vec3]:
+def force_on_region(mesh: Mesh, region: Region, vector: Vec3, what: str, bearing: bool = False) -> dict[int, Vec3]:
     """A total force spread over the covered area (consistent nodal forces)."""
     face_weight = None
     if bearing:
@@ -39,10 +37,7 @@ def force_on_region(
     total = sum(weights.values())
     if total <= 0:
         raise SpecError(f"{what}: no covered face takes the load")
-    return {
-        n: (vector[0] * w / total, vector[1] * w / total, vector[2] * w / total)
-        for n, w in weights.items()
-    }
+    return {n: (vector[0] * w / total, vector[1] * w / total, vector[2] * w / total) for n, w in weights.items()}
 
 
 def moment_on_region(mesh: Mesh, region: Region, vector: Vec3, what: str) -> dict[int, Vec3]:
@@ -98,8 +93,7 @@ def _one_load(mesh: Mesh, load: Load, what: str) -> dict[int, Vec3] | Vec3:
 def support_nodes(mesh: Mesh, supports: Sequence[Support]) -> list[Supports]:
     """The constrained node sets of a part's supports."""
     return [
-        Supports(frozenset(covered_nodes(_cover(mesh, s.region, f"support {s.name}"))), s.constrain)
-        for s in supports
+        Supports(frozenset(covered_nodes(_cover(mesh, s.region, f"support {s.name}"))), s.constrain) for s in supports
     ]
 
 

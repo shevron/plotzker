@@ -37,9 +37,7 @@ class FileChange:
 
 
 def _git(repo: Path, *args: str) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(repo), *args], capture_output=True, text=True, check=False
-    )
+    result = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout
@@ -112,9 +110,7 @@ def _verdicts(repo: Path, rev: str, path: str) -> dict[str, dict[str, Any]]:
         return {}
 
 
-def fem_hints(
-    repo: Path, a: str, b: str, changed: list[str], verdicts: str = "fem/verdicts.toml"
-) -> dict[str, str]:
+def fem_hints(repo: Path, a: str, b: str, changed: list[str], verdicts: str = "fem/verdicts.toml") -> dict[str, str]:
     """A one-line FEM note for each changed part that has a verdict in either revision.
 
     "re-checked" if the verdict entry differs between the revisions; "not re-run" if the part

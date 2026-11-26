@@ -77,34 +77,21 @@ REAR_Y_FULL = REAR_Y0 + (CARRIAGE.rear_w - CARRIAGE.bridge_w) / 2  #: the 45° f
 CLAMP_X = CARRIAGE.rear_w / 2 - CLAMP.length / 2  #: X belt clamp centers (±)
 
 #: Wheel axle bolts (top pair, bottom pair): on the plate's front face, along +y into the plate
-WHEEL_AXLES_TOP = [
-    handle([sx * WHEEL_X, CARRIAGE.plate_front_y, CARRIAGE.wheel_z[0]], [90, 0, 0])
-    for sx in (-1, 1)
-]
+WHEEL_AXLES_TOP = [handle([sx * WHEEL_X, CARRIAGE.plate_front_y, CARRIAGE.wheel_z[0]], [90, 0, 0]) for sx in (-1, 1)]
 WHEEL_AXLES_BOTTOM = [
-    handle([sx * WHEEL_X, CARRIAGE.plate_front_y, CARRIAGE.wheel_z[1]], [90, 0, 0])
-    for sx in (-1, 1)
+    handle([sx * WHEEL_X, CARRIAGE.plate_front_y, CARRIAGE.wheel_z[1]], [90, 0, 0]) for sx in (-1, 1)
 ]
 #: X belt clamps (left, right): upside down on the rear block's flat top, belt center, along x
-BELT_CLAMPS = [
-    handle([sx * CLAMP_X - CLAMP.length / 2, X_BELT.y, X_BELT.back_z], [180, 0, 90])
-    for sx in (-1, 1)
-]
+BELT_CLAMPS = [handle([sx * CLAMP_X - CLAMP.length / 2, X_BELT.y, X_BELT.back_z], [180, 0, 90]) for sx in (-1, 1)]
 #: X endstop trigger screw: on the rear block's left end, along +x into the block
-TRIGGER_SCREW: Matrix = handle(
-    [-CARRIAGE.rear_w / 2, CARRIAGE.trig_y, CARRIAGE.trig_z], [0, -90, 0]
-)
+TRIGGER_SCREW: Matrix = handle([-CARRIAGE.rear_w / 2, CARRIAGE.trig_y, CARRIAGE.trig_z], [0, -90, 0])
 
 
 def _body() -> Solid:
     """Carriage solid before the holes and cutouts."""
     c = CARRIAGE
-    plate = cube([c.plate_w, c.plate_t, c.top_z - c.bottom_z]).translate(
-        [-c.plate_w / 2, c.plate_front_y, c.bottom_z]
-    )
-    tab = cube([c.tab_w, c.plate_t, c.tab_h + EPS]).translate(
-        [-c.tab_w / 2, c.plate_front_y, c.top_z - EPS]
-    )
+    plate = cube([c.plate_w, c.plate_t, c.top_z - c.bottom_z]).translate([-c.plate_w / 2, c.plate_front_y, c.bottom_z])
+    tab = cube([c.tab_w, c.plate_t, c.tab_h + EPS]).translate([-c.tab_w / 2, c.plate_front_y, c.top_z - EPS])
     standoffs = [
         cylinder(d=c.top_boss_d, h=ECCENTRIC.stack + EPS, fn=32)
         .rotate([-90, 0, 0])
@@ -120,9 +107,7 @@ def _body() -> Solid:
         cube([c.bridge_w, EPS, c.bridge_h]).translate([-c.bridge_w / 2, REAR_Y0, c.bridge_z]),
         cube([c.rear_w, EPS, c.rear_h]).translate([-c.rear_w / 2, REAR_Y_FULL, c.block_z]),
     )
-    rear = cube([c.rear_w, REAR_Y1 - REAR_Y_FULL, c.rear_h]).translate(
-        [-c.rear_w / 2, REAR_Y_FULL, c.block_z]
-    )
+    rear = cube([c.rear_w, REAR_Y1 - REAR_Y_FULL, c.rear_h]).translate([-c.rear_w / 2, REAR_Y_FULL, c.block_z])
     return plate | tab | standoffs | bridge | widening | rear
 
 
@@ -234,9 +219,7 @@ def _belt_clamp_cutouts() -> list[Solid]:
             if sy > 0:
                 slot = nut_slot(3, REAR_Y1 + 1 - y, "z", "+y", tol=TOL)
             else:
-                slot = nut_slot(
-                    3, CARRIAGE.rear_w / 2 + 1 - CLAMP_X, "z", "+x" if sx > 0 else "-x", tol=TOL
-                )
+                slot = nut_slot(3, CARRIAGE.rear_w / 2 + 1 - CLAMP_X, "z", "+x" if sx > 0 else "-x", tol=TOL)
             cuts.append(slot.translate([x, y, nut_z]))
     return cuts
 
@@ -368,9 +351,7 @@ _OPERATING = ("belt_preload", "belt_peak", "weight_accel")
 
 def _limits(axis_name: str, direction: Vec3) -> DisplacementLimit:
     """The tool plate's allowed movement along an axis under the operating cases."""
-    return DisplacementLimit(
-        f"tool_plate_{axis_name}", TOOL_PLATE_NODES, 0.05, direction, _OPERATING
-    )
+    return DisplacementLimit(f"tool_plate_{axis_name}", TOOL_PLATE_NODES, 0.05, direction, _OPERATING)
 
 
 PART = PrintedPart(

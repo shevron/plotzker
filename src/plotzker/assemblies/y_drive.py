@@ -50,9 +50,7 @@ def y_idler_end_local(side: Side = Side.LEFT) -> list[Solid]:
             ]
         ),
         shcs(t.screw_m, t.screw_len).align(get_handle(mount, "tension_screw")),
-        hex_nut(t.screw_m)
-        .rotate([-90, 0, 0])
-        .translate([Y_AXIS.belt_x, slider_rear_y + TOL.nut_wall, t.screw_z]),
+        hex_nut(t.screw_m).rotate([-90, 0, 0]).translate([Y_AXIS.belt_x, slider_rear_y + TOL.nut_wall, t.screw_z]),
     ]
 
 
@@ -81,10 +79,7 @@ def y_belt_runs(gantry_y: float) -> list[Solid]:
     upper_z = Y_AXIS.belt_back_z - GT2.thickness
     runs = [(d.idler_y, d.motor_y, lower_z)]
     runs += [(d.idler_y, front_clamp_start, upper_z), (rear_clamp_end, d.motor_y, upper_z)]
-    return [
-        cube([GT2.width, y1 - y0, GT2.thickness]).translate([x0, y0, z]).color("#111")
-        for y0, y1, z in runs
-    ]
+    return [cube([GT2.width, y1 - y0, GT2.thickness]).translate([x0, y0, z]).color("#111") for y0, y1, z in runs]
 
 
 def _y_endstop_frame(side: Side) -> tuple[list[float], list[float], list[float], list[float]]:

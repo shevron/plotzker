@@ -1143,13 +1143,7 @@ class XBelt:
     def pulley_axis_z(self) -> float:
         """X motor shaft / idler axle (abs z). DESIGN: as low as the motor allows: its body
         clears the rear bolt heads (the foot clamps only the front row) by ``motor_clear``."""
-        return (
-            Y_AXIS.scs_top_z
-            + BRACKET.base_t
-            + metric(5).head_h
-            + self.motor_clear
-            + NEMA17.width / 2
-        )
+        return Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h + self.motor_clear + NEMA17.width / 2
 
 
 X_BELT = XBelt()
@@ -1174,13 +1168,7 @@ class XEndstopMount:
     @property
     def head_x_min(self) -> float:
         """Trigger screw head face at the carriage's end of travel (bracket-local x)."""
-        return (
-            CARRIAGE.end_keepout
-            + CARRIAGE.w / 2
-            - CARRIAGE.rear_w / 2
-            - metric(3).nut_h
-            - metric(3).head_h
-        )
+        return CARRIAGE.end_keepout + CARRIAGE.w / 2 - CARRIAGE.rear_w / 2 - metric(3).nut_h - metric(3).head_h
 
     @property
     def board_front_x(self) -> float:
@@ -1803,12 +1791,7 @@ class FloatingIdler:
     def screw_len(self) -> float:
         """Shortest standard screw (5 mm steps): reaches the nut at full slack."""
         need = (
-            self.plate_t
-            + self.stop_gap
-            + self.travel
-            + TOL.nut_wall
-            + self.nut_t
-            + 0.5  # thread beyond the nut
+            self.plate_t + self.stop_gap + self.travel + TOL.nut_wall + self.nut_t + 0.5  # thread beyond the nut
         )
         return float(5 * math.ceil(need / 5))
 
@@ -1949,8 +1932,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield BEAM.bottom_z >= BEAM.bottom_z_min, "Carriage would hit 15 mm media"
     yield DRIVE.steps_per_mm == 80, "Steps/mm changed — update STATUS.md §5"
     yield (
-        CLAMP.channel_w > GT2.width
-        and CLAMP.screw_dx - TOL.bolt_hole_d(3) / 2 >= CLAMP.channel_w / 2 + 0.5,
+        CLAMP.channel_w > GT2.width and CLAMP.screw_dx - TOL.bolt_hole_d(3) / 2 >= CLAMP.channel_w / 2 + 0.5,
         "Belt clamp screws would cut into the belt groove",
     )
     yield -Y_AXIS.belt_x - GT2.width / 2 >= SK10.width / 2 + 3, "Y belt too close to the SK10"
@@ -1976,8 +1958,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "Carriage wheels hit the gantry bracket",
     )
     yield (
-        X_BELT.pulley_axis_z - NEMA17.width / 2
-        >= Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h,
+        X_BELT.pulley_axis_z - NEMA17.width / 2 >= Y_AXIS.scs_top_z + BRACKET.base_t + metric(5).head_h,
         "X motor hits the rear bolt heads",
     )
     yield (
@@ -1994,8 +1975,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     xi = X_IDLER
     yield (
-        abs(xi.axle_z - (X_BELT.pulley_axis_z - Y_AXIS.scs_top_z)) < 1e-6
-        and xi.screw_z == xi.axle_z,
+        abs(xi.axle_z - (X_BELT.pulley_axis_z - Y_AXIS.scs_top_z)) < 1e-6 and xi.screw_z == xi.axle_z,
         "X idler's axle or tension screw is off the X belt line",
     )
     yield (
@@ -2123,8 +2103,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     pm = PSU_MOUNT
     table_z = -FRAME.board_size[2] - BASEBOARD.runner_h
     yield (
-        3 <= pm.psu_screw_depth <= PSU.max_screw_depth
-        and 2.5 <= pm.hood_screw_depth <= PSU.max_screw_depth,
+        3 <= pm.psu_screw_depth <= PSU.max_screw_depth and 2.5 <= pm.hood_screw_depth <= PSU.max_screw_depth,
         f"PSU screws enter the case {pm.psu_screw_depth:g} (bracket) and "
         f"{pm.hood_screw_depth:g} mm (hood): too shallow to hold, or deeper than "
         f"{PSU.max_screw_depth:g}",
@@ -2136,14 +2115,12 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     yield (
         PSU.bottom_hole_x[1] + pm.counterbore[0] / 2 <= pm.board_x[1]
         and pm.board_x[0] > PSU.bottom_hole_x[0] + pm.counterbore[0] / 2,
-        "PSU bracket: the lower M4's counterbore runs into the flange, or the upper one is not "
-        "above the board",
+        "PSU bracket: the lower M4's counterbore runs into the flange, or the upper one is not above the board",
     )
     yield (
         pm.origin[0] + pm.edge_z - pm.flange_reach > BASEBOARD.runner_x[1] + 5
         and all(
-            math.hypot(x - LOOM.hole_x, y - LOOM.hole_y)
-            >= (LOOM.hole_d + WOOD_SCREW.boss_d) / 2 + 2
+            math.hypot(x - LOOM.hole_x, y - LOOM.hole_y) >= (LOOM.hole_d + WOOD_SCREW.boss_d) / 2 + 2
             for x, y in pm.pilot_xy
         ),
         "PSU bracket flange reaches a runner, or a wood screw lands on the loom hole",
@@ -2180,10 +2157,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "PSU hood: the inlet is over the XT60, which reaches far into the hood",
     )
     yield (
-        ix0 <= xt_x0
-        and xt_x1 <= ix1
-        and -pm.depth + pm.wall_t <= xt_y0
-        and xt_y1 <= -(PSU.crimp_reach + 2),
+        ix0 <= xt_x0 and xt_x1 <= ix1 and -pm.depth + pm.wall_t <= xt_y0 and xt_y1 <= -(PSU.crimp_reach + 2),
         "PSU hood: the XT60's sleeve runs into a wall or the wire lugs",
     )
     yield (
@@ -2217,8 +2191,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     )
     zrib_half_v = abs(zm.plate_v[0])
     yield (
-        bb.runner_pitch / 2 - bb.runner_w / 2 - zrib_half_v >= 5
-        and bb.zrib_center[0] + zm.leg_u[1] <= bx,
+        bb.runner_pitch / 2 - bb.runner_w / 2 - zrib_half_v >= 5 and bb.zrib_center[0] + zm.leg_u[1] <= bx,
         "The ZRIB mount does not fit between the runners or on the baseboard",
     )
     zx0, zx1 = bb.zrib_center[0] - zm.leg_u[1], bb.zrib_center[0] + zm.leg_u[1]
@@ -2229,15 +2202,11 @@ def design_checks() -> Iterator[tuple[bool, str]]:
         "A bed post bolt head sits under a runner",
     )
     yield (
-        not any(
-            zx0 - head_r < x < zx1 + head_r and zy0 - head_r < y < zy1 + head_r
-            for x, y in bb.post_xy
-        ),
+        not any(zx0 - head_r < x < zx1 + head_r and zy0 - head_r < y < zy1 + head_r for x, y in bb.post_xy),
         "A bed post bolt head hits the ZRIB mount",
     )
     yield (
-        FRAME.steel_margin >= bb.post_inset + m5.washer_od / 2 + 1
-        and bb.post_inset >= m5.washer_od / 2 + 3,
+        FRAME.steel_margin >= bb.post_inset + m5.washer_od / 2 + 1 and bb.post_inset >= m5.washer_od / 2 + 3,
         "The bed post nuts hit the steel sheet or hang over the panel edge",
     )
     yield (
@@ -2272,8 +2241,7 @@ def design_checks() -> Iterator[tuple[bool, str]]:
     lm = LOOM
     yield lm.fold_width >= 2 * lm.bend_r, "The loom fold is tighter than the loom's bend radius"
     yield (
-        lm.moving_x - lm.d / 2 >= lm.rail_x + 1
-        and bx - (lm.hole_x + max(lm.d, lm.hole_d) / 2) >= 3,
+        lm.moving_x - lm.d / 2 >= lm.rail_x + 1 and bx - (lm.hole_x + max(lm.d, lm.hole_d) / 2) >= 3,
         "The loom legs don't fit between the rail and the baseboard edge",
     )
     yield (

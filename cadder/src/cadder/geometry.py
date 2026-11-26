@@ -81,9 +81,7 @@ def load_sketch(
     return sketch.translate([*offset, 0]) if offset != (0.0, 0.0) else sketch
 
 
-def _solve_cpsk(
-    path: Path, params: Mapping[str, float | str], strict: bool
-) -> tuple[Path, tuple[float, float]]:
+def _solve_cpsk(path: Path, params: Mapping[str, float | str], strict: bool) -> tuple[Path, tuple[float, float]]:
     """Solve a CPSK sketch into a cached SVG file; returns it and the shift to undo on import.
 
     The importer reads its file only when the geometry is evaluated, so the SVG must outlive

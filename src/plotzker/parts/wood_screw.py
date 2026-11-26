@@ -24,8 +24,6 @@ def wood_screw_hole(x: float, y: float) -> Solid:
     w = WOOD_SCREW
     top = w.boss_t
     through = cylinder(d=w.hole_d, h=top + 2, fn=FN_HOLE).translate([x, y, -1])
-    cone = cylinder(d1=w.hole_d, d2=w.sink_d, h=w.sink_h, fn=FN_HOLE).translate(
-        [x, y, top - w.sink_h]
-    )
+    cone = cylinder(d1=w.hole_d, d2=w.sink_d, h=w.sink_h, fn=FN_HOLE).translate([x, y, top - w.sink_h])
     above = cylinder(d=w.sink_d, h=1, fn=FN_HOLE).translate([x, y, top])
     return through | cone | above

@@ -15,9 +15,7 @@ FONT = "Helvetica, Arial, sans-serif"
 INK = "#222"
 
 
-def stroke(
-    color: str = "#000", width: float = 0.4, dash: str | None = None, fill: str = "none"
-) -> str:
+def stroke(color: str = "#000", width: float = 0.4, dash: str | None = None, fill: str = "none") -> str:
     """SVG attributes of an outline: ``fill``, ``stroke``, ``stroke-width`` and an optional
     ``stroke-dasharray``."""
     style = f'fill="{fill}" stroke="{color}" stroke-width="{width:g}"'
@@ -52,10 +50,7 @@ class SvgDrawing:
         label_size: float = 7,
     ) -> None:
         """A rectangle between two corners, with an optional label centered in it."""
-        self.raw(
-            f'<rect x="{x0:g}" y="{self.y(y1):g}" width="{x1 - x0:g}" height="{y1 - y0:g}" '
-            f"{style}/>"
-        )
+        self.raw(f'<rect x="{x0:g}" y="{self.y(y1):g}" width="{x1 - x0:g}" height="{y1 - y0:g}" {style}/>')
         if label:
             self.text((x0 + x1) / 2, (y0 + y1) / 2, label, anchor="middle", size=label_size)
 
@@ -66,9 +61,7 @@ class SvgDrawing:
             f'font-family="{FONT}" fill="{INK}">{s}</text>'
         )
 
-    def line(
-        self, x1: float, y1: float, x2: float, y2: float, color: str = "#000", width: float = 0.4
-    ) -> None:
+    def line(self, x1: float, y1: float, x2: float, y2: float, color: str = "#000", width: float = 0.4) -> None:
         """A straight line."""
         self.raw(
             f'<line x1="{x1:g}" y1="{self.y(y1):g}" x2="{x2:g}" y2="{self.y(y2):g}" '
@@ -79,9 +72,7 @@ class SvgDrawing:
         """A circle of radius ``r``."""
         self.raw(f'<circle cx="{x:g}" cy="{self.y(y):g}" r="{r:g}" {style}/>')
 
-    def crosshair(
-        self, x: float, y: float, half: float = 6, color: str = "#000", width: float = 0.3
-    ) -> None:
+    def crosshair(self, x: float, y: float, half: float = 6, color: str = "#000", width: float = 0.3) -> None:
         """A center mark: a cross of arms ``half`` long."""
         cy = self.y(y)
         self.raw(

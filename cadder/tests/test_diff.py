@@ -21,9 +21,7 @@ _FACES = [
 
 def box(x: float, y: float, z: float, at: float = 0.0) -> np.ndarray:
     """Triangles of a box with one corner at (at, 0, 0)."""
-    c = np.array(
-        [[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]]
-    )
+    c = np.array([[0, 0, 0], [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]])
     c = c * np.array([x, y, z]) + np.array([at, 0, 0])
     return np.array([[c[i], c[j], c[k]] for i, j, k in _FACES], dtype=np.float64)
 
@@ -40,9 +38,7 @@ def write_ascii(path: Path, tris: np.ndarray) -> Path:
 
 
 def write_binary(path: Path, tris: np.ndarray) -> Path:
-    body = b"".join(
-        struct.pack("<3f", 0, 0, 0) + struct.pack("<9f", *t.flatten()) + b"\0\0" for t in tris
-    )
+    body = b"".join(struct.pack("<3f", 0, 0, 0) + struct.pack("<9f", *t.flatten()) + b"\0\0" for t in tris)
     path.write_bytes(b"\0" * 80 + struct.pack("<I", len(tris)) + body)
     return path
 
@@ -115,16 +111,12 @@ def test_snapshot_of_a_commit_leaves_no_worktree(tmp_path: Path) -> None:
     subprocess.run([*run, "init", "-q"], check=True)
     (repo / "f.txt").write_text("x")
     subprocess.run([*run, "add", "."], check=True)
-    subprocess.run(
-        [*run, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "c"], check=True
-    )
+    subprocess.run([*run, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "c"], check=True)
     config = BuildConfig("nothing.project:PROJECT")
     result = take_snapshot(repo, "HEAD", tmp_path / "cache", config)
     assert result.parts == {}
     assert result.error
-    worktrees = subprocess.run(
-        [*run, "worktree", "list"], capture_output=True, text=True, check=True
-    ).stdout
+    worktrees = subprocess.run([*run, "worktree", "list"], capture_output=True, text=True, check=True).stdout
     assert len(worktrees.strip().splitlines()) == 1
 
 
@@ -231,9 +223,7 @@ def _git_repo(tmp_path: Path) -> tuple[Path, str, str]:
     def commit(msg: str) -> str:
         subprocess.run([*run, "add", "."], check=True)
         subprocess.run([*run, "commit", "-qm", msg], check=True)
-        return subprocess.run(
-            [*run, "rev-parse", "HEAD"], capture_output=True, text=True, check=True
-        ).stdout.strip()
+        return subprocess.run([*run, "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
 
     (repo / "src/demo/params.py").write_text("W = 1\n")
     (repo / "src/demo/parts/p.py").write_text("T = 2\n")

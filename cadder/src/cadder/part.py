@@ -222,9 +222,7 @@ class PrintedPart(MaterialPart):
         ]
 
 
-def effective_properties(
-    material: Material, profile: PrintProfile | None = None
-) -> dict[str, float]:
+def effective_properties(material: Material, profile: PrintProfile | None = None) -> dict[str, float]:
     """Material values of a real part: the solid values, scaled by a print profile's knockdowns
     when there is one."""
     k_e, k_s = (profile.stiffness_factor, profile.strength_factor) if profile else (1.0, 1.0)
@@ -234,12 +232,8 @@ def effective_properties(
         "g_build_mpa": material.g_build_mpa * k_e,
         "strength_in_plane_mpa": material.strength_in_plane_mpa * k_s,
         "strength_build_mpa": material.strength_build_mpa * k_s,
-        "sustained_strength_in_plane_mpa": material.strength_in_plane_mpa
-        * k_s
-        * material.sustained_factor,
-        "sustained_strength_build_mpa": material.strength_build_mpa
-        * k_s
-        * material.sustained_factor,
+        "sustained_strength_in_plane_mpa": material.strength_in_plane_mpa * k_s * material.sustained_factor,
+        "sustained_strength_build_mpa": material.strength_build_mpa * k_s * material.sustained_factor,
     }
 
 

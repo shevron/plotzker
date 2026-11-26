@@ -87,9 +87,7 @@ def test_example_solves_fully_constrained():
 
 def test_example_overrides_change_derived_values():
     solved = cpsk.solve(cpsk.load(EXAMPLE, overrides={"width": "8cm", "height": 30}))
-    assert solved.primitive("bottom").geometry.end == cpsk.Point(
-        pytest.approx(80), pytest.approx(0)
-    )
+    assert solved.primitive("bottom").geometry.end == cpsk.Point(pytest.approx(80), pytest.approx(0))
     assert solved.primitive("hole").geometry.r == pytest.approx(5)
 
 
@@ -235,27 +233,19 @@ def test_block_keeps_stored_coordinates():
 
 
 def test_solve_warnings_and_strict_mode():
-    under = cpsk.loads(
-        doc('<geometry><line x1="0" y1="0" x2="1" y2="0"><horizontal/></line></geometry>')
-    )
+    under = cpsk.loads(doc('<geometry><line x1="0" y1="0" x2="1" y2="0"><horizontal/></line></geometry>'))
     solved = cpsk.solve(under)
     assert solved.dof == 3
     assert {d.code for d in solved.warnings} == {"degrees-of-freedom"}
     with pytest.raises(cpsk.CpskSolveError):
         cpsk.solve(under, strict=True)
 
-    redundant = cpsk.loads(
-        doc(RECTANGLE.replace("<vertical/>\n  </line>", "<vertical/><vertical/>\n  </line>"))
-    )
+    redundant = cpsk.loads(doc(RECTANGLE.replace("<vertical/>\n  </line>", "<vertical/><vertical/>\n  </line>")))
     assert "redundant" in {d.code for d in cpsk.solve(redundant).warnings}
 
 
 def test_conflicting_constraints_are_named():
-    text = doc(
-        RECTANGLE.replace(
-            '<distance value="h"/>', '<distance value="h"/><distance id="bad" value="25"/>'
-        )
-    )
+    text = doc(RECTANGLE.replace('<distance value="h"/>', '<distance value="h"/><distance id="bad" value="25"/>'))
     with pytest.raises(cpsk.CpskSolveError) as info:
         cpsk.solve(cpsk.loads(text))
     assert codes(info.value) == {"conflicting"}
@@ -266,9 +256,7 @@ def test_conflicting_constraints_are_named():
 
 
 def test_open_wire_is_an_export_error_unless_allowed():
-    solved = cpsk.solve(
-        cpsk.loads(doc('<geometry><line x1="0" y1="0" x2="10" y2="0"/></geometry>'))
-    )
+    solved = cpsk.solve(cpsk.loads(doc('<geometry><line x1="0" y1="0" x2="10" y2="0"/></geometry>')))
     with pytest.raises(cpsk.CpskExportError) as info:
         cpsk.to_svg(solved)
     assert codes(info.value) == {"open-wire"}
@@ -295,7 +283,5 @@ def test_construction_geometry_is_not_exported():
 
 
 def test_nested_constraint_in_anonymous_primitive():
-    sketch = cpsk.loads(
-        doc('<geometry><circle cx="0" cy="0" r="2"><diameter value="3"/></circle></geometry>')
-    )
+    sketch = cpsk.loads(doc('<geometry><circle cx="0" cy="0" r="2"><diameter value="3"/></circle></geometry>'))
     assert cpsk.solve(sketch).primitives[0].geometry.r == pytest.approx(1.5)

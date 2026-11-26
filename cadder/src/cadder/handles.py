@@ -34,9 +34,7 @@ def handle(position: Sequence[float], rotation: Sequence[float] = (0, 0, 0)) -> 
     ]
 
 
-def frame_handle(
-    origin: Sequence[float], u: Sequence[float], v: Sequence[float], w: Sequence[float]
-) -> Matrix:
+def frame_handle(origin: Sequence[float], u: Sequence[float], v: Sequence[float], w: Sequence[float]) -> Matrix:
     """A handle from an origin and three axis vectors (the columns of its rotation). Unlike
     :func:`handle` the axes may be left-handed: a mirrored, chiral part keeps its own frame."""
     return [[u[i], v[i], w[i], origin[i]] for i in range(3)] + [[0, 0, 0, 1]]

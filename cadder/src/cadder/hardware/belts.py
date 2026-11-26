@@ -99,9 +99,7 @@ def gt2_idler() -> Solid:
     i = IDLER
     body = cylinder(d=i.pd - 0.5, h=i.width, center=True, fn=40)
     for sz in (-1, 1):
-        body |= cylinder(d=i.flange_d, h=1, center=True, fn=40).translate(
-            [0, 0, sz * (i.width / 2 - 0.5)]
-        )
+        body |= cylinder(d=i.flange_d, h=1, center=True, fn=40).translate([0, 0, sz * (i.width / 2 - 0.5)])
     bore = cylinder(d=i.bore, h=i.width + 2, center=True, fn=20)
     return (body - bore).color("Gold")
 

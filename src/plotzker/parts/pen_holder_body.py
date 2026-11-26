@@ -136,9 +136,7 @@ def _rod_arms() -> tuple[list[Solid], list[Solid]]:
 
     hole_d = TOL.press_d(p.rod_d)
     cuts = [
-        _hole_z(
-            hole_d, p.rod_x, p.rod_d_pos, p.lower_arm_top - p.rod_seat_depth, p.lower_arm_top + 1
-        ),
+        _hole_z(hole_d, p.rod_x, p.rod_d_pos, p.lower_arm_top - p.rod_seat_depth, p.lower_arm_top + 1),
         _hole_z(hole_d, p.rod_x, p.rod_d_pos, p.upper_arm_bottom - 1, p.upper_arm_top + 1),
     ]
     return [
@@ -172,10 +170,7 @@ def _servo_bracket() -> tuple[list[Solid], list[Solid]]:
         zc - length / 2 - c,
         zc + length / 2 + c,
     )
-    pilots = [
-        _hole_d(PILOT_D, p.servo_x, zc + sz * FT90M.hole_pitch / 2, d_back - 1, d_front + 1)
-        for sz in (-1, 1)
-    ]
+    pilots = [_hole_d(PILOT_D, p.servo_x, zc + sz * FT90M.hole_pitch / 2, d_back - 1, d_front + 1) for sz in (-1, 1)]
     return [wall, rib, *webs], [window, *pilots]
 
 

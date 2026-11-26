@@ -83,13 +83,9 @@ def y_motor_mount_installed() -> Solid:
         for y in (y0, y1 - d.gusset_t)
     ]
     plate_cx = (x0 + x1) / 2
-    boss = teardrop_x(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate(
-        [plate_cx, d.motor_y, AXIS_Z]
-    )
+    boss = teardrop_x(NEMA17.boss_d + 0.4, d.motor_plate_t + 2).translate([plate_cx, d.motor_y, AXIS_Z])
     screws = [
-        teardrop_x(TOL.bolt_hole_d(3), d.motor_plate_t + 2).translate(
-            [plate_cx, screw[1][3], screw[2][3]]
-        )
+        teardrop_x(TOL.bolt_hole_d(3), d.motor_plate_t + 2).translate([plate_cx, screw[1][3], screw[2][3]])
         for screw in MOTOR_SCREWS
     ]
     foot_x = d.motor_foot_x0 + WOOD_SCREW.boss_d / 2
@@ -145,11 +141,7 @@ def _case(name: str, jam: bool) -> LoadCase:
         name,
         "Two belt runs pull the pulley forward (-y); the motor's weight; "
         + ("a jam adds the stall torque and the peak run tension" if jam else "preload tension"),
-        tuple(
-            motor_loads(
-                MOTOR_FACE, Y_BELT_LOADS, jam, PULLEY_POINT, FACE_POINT, (0, -1, 0), (-1, 0, 0)
-            )
-        ),
+        tuple(motor_loads(MOTOR_FACE, Y_BELT_LOADS, jam, PULLEY_POINT, FACE_POINT, (0, -1, 0), (-1, 0, 0))),
         "loads.Y_BELT_LOADS, loads.MOTOR_LOADS",
         sustained=not jam,
     )

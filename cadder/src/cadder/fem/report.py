@@ -35,8 +35,7 @@ def markdown(result: FemResult) -> str:
     ]
     for c in result.criteria:
         lines.append(
-            f"| {c.name} | {c.case} | {c.value:g} | {c.limit:g} {c.unit} | {c.utilization:.0%} "
-            f"| {c.status.value} |"
+            f"| {c.name} | {c.case} | {c.value:g} | {c.limit:g} {c.unit} | {c.utilization:.0%} | {c.status.value} |"
         )
     lines += ["", "Details:", ""]
     lines += [f"- {c.name} ({c.case}): {c.detail}" for c in result.criteria if c.detail]

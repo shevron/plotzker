@@ -46,11 +46,7 @@ def main():
     grounded = next(b["root"] for b in manifest["bodies"] if b["grounded"])
     body_of = {c["name"]: c["body"] for c in manifest["components"]}
     #: second ends of explicit joints inside their own body: they move, so they are not Fixed
-    moving = {
-        j["b"]
-        for j in manifest["joints"]
-        if j["kind"] != "Fixed" and body_of[j["a"]] == body_of[j["b"]]
-    }
+    moving = {j["b"] for j in manifest["joints"] if j["kind"] != "Fixed" and body_of[j["a"]] == body_of[j["b"]]}
 
     doc = App.newDocument(manifest["name"])
     asm = doc.addObject("Assembly::AssemblyObject", "Assembly")
@@ -71,10 +67,7 @@ def main():
 
     def make_part(container, name, entry):
         """A part holding the mesh of ``entry``, with its display color and transparency."""
-        if container is doc:
-            part = doc.addObject("App::Part", name)
-        else:
-            part = container.newObject("App::Part", name)
+        part = doc.addObject("App::Part", name) if container is doc else container.newObject("App::Part", name)
         feature = part.newObject("Mesh::Feature", f"{name}_mesh")
         feature.Mesh = load_mesh(entry["stl"])
         part.addProperty("App::PropertyIntegerList", "RGB", label, "Display color (RGB)")
@@ -101,11 +94,7 @@ def main():
         uses.setdefault(entry["stl"], []).append(entry)
     parts_group = doc.addObject("App::DocumentObjectGroup", "Parts")
     parts_group.Label = "Parts"
-    masters = {
-        stl: make_part(parts_group, stl, entries[0])
-        for stl, entries in uses.items()
-        if len(entries) > 1
-    }
+    masters = {stl: make_part(parts_group, stl, entries[0]) for stl, entries in uses.items() if len(entries) > 1}
 
     parts = {}
     bodies = {}
@@ -176,10 +165,7 @@ def main():
 
     doc.recompute()
     status = asm.solve()
-    print(
-        f"solve() -> {status}; {len(parts)} components ({len(masters)} shared shapes), "
-        f"{len(joints.Group)} joints"
-    )
+    print(f"solve() -> {status}; {len(parts)} components ({len(masters)} shared shapes), {len(joints.Group)} joints")
 
     doc.saveAs(out)
     add_gui_state(out, doc, masters)
@@ -244,9 +230,7 @@ def add_gui_state(path, doc, masters):
     draw). Hidden: joints, the "Parts" group, the masters, and every origin (objects without an
     entry open hidden).
     """
-    tree = etree.parse(
-        os.path.join(HERE, "gui_document.xml"), etree.XMLParser(remove_comments=True)
-    )
+    tree = etree.parse(os.path.join(HERE, "gui_document.xml"), etree.XMLParser(remove_comments=True))
     data = tree.getroot().find("ViewProviderData")
     prototypes = {vp.get("template"): vp for vp in data.findall("ViewProvider")}
     for vp in prototypes.values():

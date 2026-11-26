@@ -45,9 +45,7 @@ class Scale:
         return self.rect.px_per_mm if self.rect else 1.0
 
 
-def _box_px(
-    scale: Scale, box: tuple[float, float, float, float], shape: tuple[int, ...]
-) -> tuple[int, int, int, int]:
+def _box_px(scale: Scale, box: tuple[float, float, float, float], shape: tuple[int, ...]) -> tuple[int, int, int, int]:
     """A box in user coordinates → integer pixel bounds clipped to the image."""
     (u0, v0), (u1, v1) = scale.to_px(np.array([box[:2], box[2:]]))
     lo_u, hi_u = sorted((u0, u1))
@@ -84,9 +82,7 @@ def crop(
         raise ValueError("the crop box is outside the image")
     part = image[v0:v1, u0:u1]
     k = max_side / max(part.shape[:2])
-    out = cv2.resize(
-        part, None, fx=k, fy=k, interpolation=cv2.INTER_CUBIC if k > 1 else cv2.INTER_AREA
-    )
+    out = cv2.resize(part, None, fx=k, fy=k, interpolation=cv2.INTER_CUBIC if k > 1 else cv2.INTER_AREA)
     (x0, y0), (x1, y1) = scale.from_px(np.array([[u0, v0], [u1, v1]], dtype=np.float64))
     xs, ys = sorted((x0, x1)), sorted((y0, y1))
     step = grid or nice_step(max(xs[1] - xs[0], ys[1] - ys[0]))
@@ -161,11 +157,7 @@ def edges(
     step = length / (n - 1)
     grad = np.gradient(profile) / step
     mag = np.abs(grad)
-    peaks = [
-        i
-        for i in range(1, n - 1)
-        if mag[i] >= mag[i - 1] and mag[i] > mag[i + 1] and mag[i] >= min_strength
-    ]
+    peaks = [i for i in range(1, n - 1) if mag[i] >= mag[i - 1] and mag[i] > mag[i + 1] and mag[i] >= min_strength]
     if polarity in ("rising", "falling"):
         peaks = [i for i in peaks if (grad[i] > 0) == (polarity == "rising")]
     elif polarity is not None:
@@ -314,11 +306,7 @@ def _ransac_circles(
         edge = edge[rng.choice(len(edge), 4000, replace=False)]
     idx = rng.integers(0, len(edge), size=(trials, 3))
     a, b, c = edge[idx[:, 0]], edge[idx[:, 1]], edge[idx[:, 2]]
-    d = 2 * (
-        a[:, 0] * (b[:, 1] - c[:, 1])
-        + b[:, 0] * (c[:, 1] - a[:, 1])
-        + c[:, 0] * (a[:, 1] - b[:, 1])
-    )
+    d = 2 * (a[:, 0] * (b[:, 1] - c[:, 1]) + b[:, 0] * (c[:, 1] - a[:, 1]) + c[:, 0] * (a[:, 1] - b[:, 1]))
     ok = np.abs(d) > 1e-6
     a, b, c, d = a[ok], b[ok], c[ok], d[ok]
     sa, sb, sc = (a**2).sum(1), (b**2).sum(1), (c**2).sum(1)
@@ -386,9 +374,7 @@ def holes(
         candidates.append((gray.shape[1] / 2, gray.shape[0] / 2, r_min + frac * (r_max - r_min)))
     blur = cv2.GaussianBlur(gray.astype(np.float32), (0, 0), max(1.0, (r_min + r_max) / 200))
     mag = np.asarray(
-        cv2.magnitude(
-            cv2.Sobel(blur, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(blur, cv2.CV_32F, 0, 1, ksize=3)
-        ),
+        cv2.magnitude(cv2.Sobel(blur, cv2.CV_32F, 1, 0, ksize=3), cv2.Sobel(blur, cv2.CV_32F, 0, 1, ksize=3)),
         dtype=np.float32,
     )
     fits: list[Hole] = []
@@ -400,8 +386,7 @@ def holes(
     unique: list[Hole] = []
     for h in fits:  # best-supported first; one per circle (another center, or another ring)
         if all(
-            math.hypot(h.x - o.x, h.y - o.y) > 0.25 * o.diameter
-            or abs(h.diameter - o.diameter) > 0.10 * o.diameter
+            math.hypot(h.x - o.x, h.y - o.y) > 0.25 * o.diameter or abs(h.diameter - o.diameter) > 0.10 * o.diameter
             for o in unique
         ):
             unique.append(h)
@@ -531,13 +516,7 @@ def fit_rectangle(
         nn = normals(theta)
         offsets = {
             name: float(
-                np.mean(
-                    [
-                        nn[name][0] @ p
-                        for (tag, p), ok in zip(pts, keep, strict=True)
-                        if tag == name and ok
-                    ]
-                )
+                np.mean([nn[name][0] @ p for (tag, p), ok in zip(pts, keep, strict=True) if tag == name and ok])
             )
             for name in names
         }
@@ -558,23 +537,12 @@ def fit_rectangle(
             break
     nn = normals(theta)
     offsets = {
-        name: float(
-            np.mean(
-                [
-                    nn[name][0] @ p
-                    for (tag, p), ok in zip(pts, keep, strict=True)
-                    if tag == name and ok
-                ]
-            )
-        )
+        name: float(np.mean([nn[name][0] @ p for (tag, p), ok in zip(pts, keep, strict=True) if tag == name and ok]))
         for name in names
     }
-    resid = np.array(
-        [nn[tag][0] @ p - offsets[tag] for (tag, p), ok in zip(pts, keep, strict=True) if ok]
-    )
+    resid = np.array([nn[tag][0] @ p - offsets[tag] for (tag, p), ok in zip(pts, keep, strict=True) if ok])
     counts = {
-        name: int(sum(1 for (tag, _), ok in zip(pts, keep, strict=True) if tag == name and ok))
-        for name in names
+        name: int(sum(1 for (tag, _), ok in zip(pts, keep, strict=True) if tag == name and ok)) for name in names
     }
     return theta, offsets, resid, counts
 
@@ -617,9 +585,7 @@ def outline(
     if guess:
         gx, gy, glen, gwid, gang = guess
         (gcx, gcy), tip = scale.to_px(
-            np.array(
-                [[gx, gy], [gx + math.cos(math.radians(gang)), gy + math.sin(math.radians(gang))]]
-            )
+            np.array([[gx, gy], [gx + math.cos(math.radians(gang)), gy + math.sin(math.radians(gang))]])
         )
         theta = math.atan2(tip[1] - gcy, tip[0] - gcx)
         n1 = np.array([math.cos(theta), math.sin(theta)])
@@ -660,9 +626,7 @@ def outline(
     out_px, in_px = max(4.0, search[0] * unit), max(6.0, search[1] * unit)
     avoid_px = [
         (min(a[0], a[2]), min(a[1], a[3]), max(a[0], a[2]), max(a[1], a[3]))
-        for a in (
-            tuple(scale.to_px(np.array([[b[0], b[1]], [b[2], b[3]]])).ravel()) for b in avoid or []
-        )
+        for a in (tuple(scale.to_px(np.array([[b[0], b[1]], [b[2], b[3]]])).ravel()) for b in avoid or [])
     ]
 
     def avoided(q: npt.NDArray[np.float64]) -> bool:
@@ -680,12 +644,8 @@ def outline(
             base = center + along * f * half_along + normal * half[name]
             if avoided(base):
                 continue
-            s_user, e_user = scale.from_px(
-                np.array([base + normal * out_px, base - normal * in_px])
-            )
-            found = edges(
-                image, scale, tuple(s_user), tuple(e_user), band, 1, min_strength, True, polarity
-            )
+            s_user, e_user = scale.from_px(np.array([base + normal * out_px, base - normal * in_px]))
+            found = edges(image, scale, tuple(s_user), tuple(e_user), band, 1, min_strength, True, polarity)
             if found:
                 pts.append(scale.to_px(np.array([[found[0].x, found[0].y]]))[0])
         fine[name] = pts
@@ -699,8 +659,7 @@ def outline(
     len_b = offsets["+b"] + offsets["-b"]  # extent along n2
     center_px = n1 * (offsets["+a"] - offsets["-a"]) / 2 + n2 * (offsets["+b"] - offsets["-b"]) / 2
     corners_px = [
-        center_px + n1 * sa * len_a / 2 + n2 * sb * len_b / 2
-        for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))
+        center_px + n1 * sa * len_a / 2 + n2 * sb * len_b / 2 for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))
     ]
     k = scale.px_per_unit
     center = scale.from_px(center_px[None, :])[0]

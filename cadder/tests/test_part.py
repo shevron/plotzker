@@ -24,9 +24,7 @@ def test_unknown_profile_and_material_are_reported():
 def test_effective_properties_apply_the_knockdowns():
     material, profile = LIBRARY.material("petg"), LIBRARY.profile()
     eff = effective_properties(material, profile)
-    assert eff["e_in_plane_mpa"] == pytest.approx(
-        material.e_in_plane_mpa * profile.stiffness_factor
-    )
+    assert eff["e_in_plane_mpa"] == pytest.approx(material.e_in_plane_mpa * profile.stiffness_factor)
     assert eff["sustained_strength_build_mpa"] == pytest.approx(
         material.strength_build_mpa * profile.strength_factor * material.sustained_factor
     )

@@ -18,9 +18,7 @@ ANGLE_UNITS: dict[str, float] = {"deg": math.pi / 180, "rad": 1.0}
 
 UNITS = frozenset(LENGTH_UNITS) | frozenset(ANGLE_UNITS)
 CONSTANTS: dict[str, float] = {"pi": math.pi}
-FUNCTIONS = frozenset(
-    {"abs", "sqrt", "min", "max", "sin", "cos", "tan", "asin", "acos", "atan", "atan2"}
-)
+FUNCTIONS = frozenset({"abs", "sqrt", "min", "max", "sin", "cos", "tan", "asin", "acos", "atan", "atan2"})
 
 _UNSIGNED = r"(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?"
 _NUMBER = rf"[+-]?{_UNSIGNED}"
@@ -35,9 +33,7 @@ IDENTIFIER_RE = re.compile(_IDENTIFIER)
 """An identifier (spec §3.1)."""
 
 # In formulas a sign is an operator, so numbers are unsigned tokens.
-_TOKEN_RE = re.compile(
-    rf"\s*(?:(?P<number>{_UNSIGNED})|(?P<name>{_IDENTIFIER})|(?P<op>[-+*/^(),.]))"
-)
+_TOKEN_RE = re.compile(rf"\s*(?:(?P<number>{_UNSIGNED})|(?P<name>{_IDENTIFIER})|(?P<op>[-+*/^(),.]))")
 
 
 class FormulaError(ValueError):

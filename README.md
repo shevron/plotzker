@@ -624,7 +624,7 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
 ### 7.5 Python coding standards
 
 - PEP 8, enforced by `ruff format` and `ruff check` (config in `pyproject.toml`, and in
-  `cadder/pyproject.toml` for cadder; line length 100).
+  `cadder/pyproject.toml` for cadder; line length 119).
 - No star imports (`from x import *`): import names explicitly
   (`from pythonscad import cube, cylinder`). The one exception is a package `__init__`
   republishing another package's whole public API, marked `# noqa: F403` with the reason.

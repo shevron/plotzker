@@ -44,9 +44,7 @@ if TYPE_CHECKING:
 #: Thumbscrew: on the yoke bar's front face (pen side), along +d toward the pen
 THUMBSCREW: Matrix = handle([PEN.pen_x, PEN.yoke_bar_d[1], sum(PEN.yoke_z) / 2], [-90, 0, 0])
 #: Its nut: pressed into the yoke bar from the front, same axis
-THUMBSCREW_NUT: Matrix = handle(
-    [PEN.pen_x, PEN.yoke_bar_d[1] - TOL.nut_trap_h(5), sum(PEN.yoke_z) / 2], [-90, 0, 0]
-)
+THUMBSCREW_NUT: Matrix = handle([PEN.pen_x, PEN.yoke_bar_d[1] - TOL.nut_trap_h(5), sum(PEN.yoke_z) / 2], [-90, 0, 0])
 
 
 def _box(x0: float, x1: float, d0: float, d1: float, z0: float, z1: float) -> Solid:
@@ -59,9 +57,9 @@ def _body() -> Solid:
     p = PEN
     z0, z1 = p.slide_z0, p.slide_z0 + p.slide_h
     r = p.sleeve_od / 2
-    column = cylinder(d=p.sleeve_od, h=p.slide_h, fn=FN_HOLE).translate(
-        [p.rod_x, p.rod_d_pos, z0]
-    ) | _box(p.rod_x - r, p.rod_x + r, p.slide_d0, p.rod_d_pos, z0, z1)
+    column = cylinder(d=p.sleeve_od, h=p.slide_h, fn=FN_HOLE).translate([p.rod_x, p.rod_d_pos, z0]) | _box(
+        p.rod_x - r, p.rod_x + r, p.slide_d0, p.rod_d_pos, z0, z1
+    )
     h = p.block_half_w
     v_profile = polygon(
         [
@@ -129,9 +127,7 @@ def _cuts() -> list[Solid]:
     )
     nut_t = TOL.nut_trap_h(5)
     cuts.append(
-        cylinder(d=TOL.nut_trap_ac(5), h=nut_t + 1, fn=6)
-        .rotate([-90, 0, 0])
-        .translate([p.pen_x, bar_d1 - nut_t, zc])
+        cylinder(d=TOL.nut_trap_ac(5), h=nut_t + 1, fn=6).rotate([-90, 0, 0]).translate([p.pen_x, bar_d1 - nut_t, zc])
     )
     return cuts
 

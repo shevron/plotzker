@@ -77,9 +77,7 @@ def _corner_fillet() -> Solid:
     it), as a solid along y."""
     m = PSU_MOUNT
     r, x0, z0 = m.corner_r, m.board_x[1], m.edge_z
-    profile = square([r, r]).translate([x0 - r, z0 - r]) - circle(r=r, fn=FN_HOLE).translate(
-        [x0 - r, z0 - r]
-    )
+    profile = square([r, r]).translate([x0 - r, z0 - r]) - circle(r=r, fn=FN_HOLE).translate([x0 - r, z0 - r])
     w = m.bracket_w
     return linear_extrude(profile, height=w).rotate([90, 0, 0]).translate([0, w / 2, 0])
 
@@ -89,9 +87,7 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
     m = PSU_MOUNT
     return {
         #: M4 heads on the counterbore floors, shanks toward +z (into the PSU)
-        "psu_screws": [
-            handle([x, 0, m.edge_z + m.counterbore[1]], [180, 0, 0]) for x in PSU.bottom_hole_x
-        ],
+        "psu_screws": [handle([x, 0, m.edge_z + m.counterbore[1]], [180, 0, 0]) for x in PSU.bottom_hole_x],
         #: wood screw heads flush with the flange's underside, shanks toward -x (up)
         "wood_screws": [handle([m.upright_x[1], 0, z], [0, 90, 0]) for z in m.wood_screw_z],
     }
@@ -116,12 +112,10 @@ def psu_bracket_installed() -> Solid:
     for z in m.wood_screw_z:
         body = body - _hole_x(ws.hole_d, flange_x0 - 1, x_bot + 1, z)
         # 90° countersink, wide end on the flange's underside (x = x_bot)
-        body = body - cylinder(d1=ws.hole_d, d2=ws.sink_d, h=ws.sink_h, fn=FN_HOLE).rotate(
-            [0, 90, 0]
-        ).translate([x_bot - ws.sink_h, 0, z])
-        body = body - cylinder(d=ws.sink_d, h=1, fn=FN_HOLE).rotate([0, 90, 0]).translate(
-            [x_bot, 0, z]
+        body = body - cylinder(d1=ws.hole_d, d2=ws.sink_d, h=ws.sink_h, fn=FN_HOLE).rotate([0, 90, 0]).translate(
+            [x_bot - ws.sink_h, 0, z]
         )
+        body = body - cylinder(d=ws.sink_d, h=1, fn=FN_HOLE).rotate([0, 90, 0]).translate([x_bot, 0, z])
     return set_handles(body, **_handles())
 
 
@@ -134,9 +128,7 @@ def psu_bracket() -> Solid:
 
 _M = PSU_MOUNT
 _W = _M.bracket_w
-PSU_FACE = Box(
-    lo=(_M.upright_x[0], -_W / 2, -0.3), hi=(_M.upright_x[1], _W / 2, 0.3), facing=(0, 0, 1)
-)
+PSU_FACE = Box(lo=(_M.upright_x[0], -_W / 2, -0.3), hi=(_M.upright_x[1], _W / 2, 0.3), facing=(0, 0, 1))
 #: The PSU hangs outboard, so the bracket pries about the flange's inner end: the board can only
 #: push there (the upright pulls away from the board's edge, which holds nothing)
 PRY_STRIP = 8
@@ -158,10 +150,7 @@ SCREW_SEATS = [
     for z in _M.wood_screw_z
 ]
 #: Friction round each wood screw: the flange is clamped to the board's underside
-BOND_ZONES = [
-    Cylinder((_M.board_x[1], 0, z), (1, 0, 0), BOND_RADIUS, 0.3, facing=(-1, 0, 0))
-    for z in _M.wood_screw_z
-]
+BOND_ZONES = [Cylinder((_M.board_x[1], 0, z), (1, 0, 0), BOND_RADIUS, 0.3, facing=(-1, 0, 0)) for z in _M.wood_screw_z]
 
 #: Each bracket carries half the PSU and hood; x is down (machine -z)
 _WEIGHT_N = (PSU.mass_kg + HOOD_MASS_KG) * G / 2
@@ -210,8 +199,7 @@ PART = PrintedPart(
             Support(
                 "board_underside",
                 BOARD_UNDERSIDE,
-                "Flange's inner end bearing on the board's underside (the pivot of the pry): "
-                "held in x (machine z)",
+                "Flange's inner end bearing on the board's underside (the pivot of the pry): held in x (machine z)",
                 constrain=(True, False, False),
             ),
             Support("screw_zone_inner", BOND_ZONES[1], "Friction round the inner screw: bonded"),

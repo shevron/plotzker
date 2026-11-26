@@ -56,13 +56,9 @@ def test_formula_values(formula, expected):
     assert evaluate(parse(formula), Units(), lambda name: 0.0) == pytest.approx(expected)
 
 
-@pytest.mark.parametrize(
-    "formula", ["1 +", "mm", "sin(1, 2)", "min(1)", "2 3", "(1", "a..b", "1 $ 2"]
-)
+@pytest.mark.parametrize("formula", ["1 +", "mm", "sin(1, 2)", "min(1)", "2 3", "(1", "a..b", "1 $ 2"])
 def test_malformed_formulas(formula):
-    assert load_error(doc(f'<variables><variable id="v" value="{formula}"/></variables>')) == {
-        "formula"
-    }
+    assert load_error(doc(f'<variables><variable id="v" value="{formula}"/></variables>')) == {"formula"}
 
 
 @pytest.mark.parametrize(
@@ -102,10 +98,7 @@ def test_reserved_words_are_not_identifiers(id):
 
 
 def test_duplicate_identifiers():
-    body = (
-        '<variables><variable id="a" value="1"/></variables>'
-        '<geometry><point id="a" x="0" y="0"/></geometry>'
-    )
+    body = '<variables><variable id="a" value="1"/></variables><geometry><point id="a" x="0" y="0"/></geometry>'
     assert load_error(doc(body)) == {"duplicate-id"}
 
 
@@ -342,7 +335,5 @@ def test_perpendicular_nests_in_arcs_and_circles():
       <arc cx="13" cy="0" r="3" start-angle="180" end-angle="270">
         <perpendicular a="self.start" b="l.end"/></arc>
       <circle cx="20" cy="0" r="2"><perpendicular b="l"/></circle></geometry>"""
-    kinds = [
-        tuple(op.kind for op in c.operands.values()) for c in cpsk_core.loads(doc(body)).constraints
-    ]
+    kinds = [tuple(op.kind for op in c.operands.values()) for c in cpsk_core.loads(doc(body)).constraints]
     assert [sorted(k) for k in kinds] == [["point", "point"], ["circle", "line"]]

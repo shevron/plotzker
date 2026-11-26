@@ -157,9 +157,7 @@ def build(sketch: Any, varset: Any, data: SketchData, *, label: str) -> None:
     if varset is not None:
         _store_formulas(data.kept, "v:", varset)
     geometry_ids = [sketch.getGeometryId(i) for i in range(len(sketch.Geometry))]
-    sketch.addProperty(
-        "App::PropertyString", KEPT_PROPERTY, "CPSK", "CPSK round-trip data", 0, False, True
-    )
+    sketch.addProperty("App::PropertyString", KEPT_PROPERTY, "CPSK", "CPSK round-trip data", 0, False, True)
     setattr(sketch, KEPT_PROPERTY, data.kept.to_json(geometry_ids))
 
 
@@ -271,9 +269,7 @@ class _Importer:
             kept=kept,
         )
         for constraint in compiled.constraints:
-            data.constraints.append(
-                self._constraint(constraint, id(constraint.element) in inactive)
-            )
+            data.constraints.append(self._constraint(constraint, id(constraint.element) in inactive))
             formula = self._formula(constraint)
             if formula is not None and constraint.driving:
                 name = self._fc_name(constraint, data)

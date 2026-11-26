@@ -115,22 +115,14 @@ class Cylinder:
         length = 2 * self.half_length
         body = cylinder(d=2 * self.radius, h=length, fn=FN_HOLE)
         if self.inner_radius > 0:
-            body = body - cylinder(d=2 * self.inner_radius, h=length + 2, fn=FN_HOLE).translate(
-                [0, 0, -1]
-            )
-        return (
-            body.translate([0, 0, -self.half_length])
-            .rotate(list(_AXES[self.axis]))
-            .translate(list(self.center))
-        )
+            body = body - cylinder(d=2 * self.inner_radius, h=length + 2, fn=FN_HOLE).translate([0, 0, -1])
+        return body.translate([0, 0, -self.half_length]).rotate(list(_AXES[self.axis])).translate(list(self.center))
 
 
 Region = Box | Cylinder
 
 
-def select_faces(
-    region: Region, points: Sequence[Sequence[float]], faces: Sequence[Sequence[int]]
-) -> list[int]:
+def select_faces(region: Region, points: Sequence[Sequence[float]], faces: Sequence[Sequence[int]]) -> list[int]:
     """Indices of the mesh faces that belong to ``region`` (centroid and normal tests)."""
     selected = []
     for index, face in enumerate(faces):

@@ -128,9 +128,7 @@ class Snapshot:
 
 
 def _git(repo: Path, *args: str) -> str:
-    result = subprocess.run(
-        ["git", "-C", str(repo), *args], capture_output=True, text=True, check=False
-    )
+    result = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"git {' '.join(args)} failed: {result.stderr.strip()}")
     return result.stdout.strip()
@@ -149,9 +147,7 @@ def _build(tree: Path, out_dir: Path, config: BuildConfig) -> Snapshot:
         driver = Path(tmp) / "driver.py"
         driver.write_text(_DRIVER)
         # the driver puts the tree's source folders first on sys.path
-        settings = json.dumps(
-            {"spec": config.spec, "source_dirs": config.source_dirs, "legacy": config.legacy}
-        )
+        settings = json.dumps({"spec": config.spec, "source_dirs": config.source_dirs, "legacy": config.legacy})
         proc = subprocess.run(
             [sys.executable, str(driver), str(tree), str(out_dir), settings],
             cwd=tree,
@@ -187,9 +183,7 @@ def take_snapshot(repo: Path, rev: str, cache_dir: Path, config: BuildConfig) ->
         snap = _build(repo, out, config)
     else:
         out = cache_dir / commit
-        if (out / "parts.json").exists() and json.loads((out / "parts.json").read_text()).get(
-            "version", 1
-        ) >= 2:
+        if (out / "parts.json").exists() and json.loads((out / "parts.json").read_text()).get("version", 1) >= 2:
             snap = _read_manifest(out)
         else:
             with tempfile.TemporaryDirectory() as tmp:

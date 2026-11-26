@@ -177,9 +177,7 @@ def overlay(
         if f.get("kind") not in KINDS:
             continue
         color = COLORS.get(str(f.get("source", "")).split()[0], (255, 255, 255))
-        drawn.append(
-            (str(f.get("name", "")), color, [to_img(ff.to_photo(line)) for line in _outline(f)])
-        )
+        drawn.append((str(f.get("name", "")), color, [to_img(ff.to_photo(line)) for line in _outline(f)]))
     x0 = y0 = 0
     if crop is not None and drawn:
         allp = np.vstack([p for _, _, lines in drawn for p in lines])
@@ -236,9 +234,7 @@ def table(ff: FeatureFile) -> str:
             pos = " → ".join(f"({_fmt(p)})" for p in f.get("points", []))
         else:
             pos = f"({_fmt(f.get('center', ''))})"
-        size = (
-            _fmt(f.get("size", "")) if kind == "box" else (f"Ø{_fmt(f['d'])}" if "d" in f else "")
-        )
+        size = _fmt(f.get("size", "")) if kind == "box" else (f"Ø{_fmt(f['d'])}" if "d" in f else "")
         rows.append(
             f"| {f.get('name', '')} | {kind} | {pos} | {size} | {f.get('source', '')} "
             f"| {_fmt(f.get('band', ''))} | {f.get('notes', '')} |"

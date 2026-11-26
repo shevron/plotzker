@@ -97,16 +97,9 @@ def sk10() -> Solid:
         cube([s.width, s.length, s.base_t - c]).translate([-s.width / 2, -s.length / 2, 0]),
     )
     body = base | cube([s.body_w, s.length, s.height]).translate([-s.body_w / 2, -s.length / 2, 0])
-    bore = (
-        cylinder(d=s.shaft_d, h=s.length + 2, center=True, fn=32)
-        .rotate([90, 0, 0])
-        .translate([0, 0, s.shaft_h])
-    )
+    bore = cylinder(d=s.shaft_d, h=s.length + 2, center=True, fn=32).rotate([90, 0, 0]).translate([0, 0, s.shaft_h])
     slit = cube([1, s.length + 2, s.height]).translate([-0.5, -s.length / 2 - 1, s.shaft_h])
-    holes = [
-        cylinder(d=s.hole_d, h=s.base_t + 2, fn=24).translate([sx * s.hole_pitch / 2, 0, -1])
-        for sx in (-1, 1)
-    ]
+    holes = [cylinder(d=s.hole_d, h=s.base_t + 2, fn=24).translate([sx * s.hole_pitch / 2, 0, -1]) for sx in (-1, 1)]
     return (body - bore - slit - holes).color("Gainsboro")
 
 
@@ -123,18 +116,11 @@ def scs10uu() -> Solid:
         ]
     ).translate([0, s.height, 0])
     edge_chamfers = [
-        polygon([[0, EPS], [-sx * c, EPS], [0, -c]]).translate([sx * s.width / 2, s.height, 0])
-        for sx in (-1, 1)
+        polygon([[0, EPS], [-sx * c, EPS], [0, -c]]).translate([sx * s.width / 2, s.height, 0]) for sx in (-1, 1)
     ]
-    top_cuts = linear_extrude([recess, *edge_chamfers], height=s.length + 2, center=True).rotate(
-        [90, 0, 0]
-    )
+    top_cuts = linear_extrude([recess, *edge_chamfers], height=s.length + 2, center=True).rotate([90, 0, 0])
     # the block is modeled with its LM10UU bushing in place, so the bore is the shaft's
-    bore = (
-        cylinder(d=s.shaft_d, h=s.length + 2, center=True, fn=40)
-        .rotate([90, 0, 0])
-        .translate([0, 0, s.shaft_h])
-    )
+    bore = cylinder(d=s.shaft_d, h=s.length + 2, center=True, fn=40).rotate([90, 0, 0]).translate([0, 0, s.shaft_h])
     holes = [
         cylinder(d=s.top_hole_m * 0.85, h=s.top_hole_depth + 1, fn=16).translate(
             [sx * s.hole_pitch_x / 2, sy * s.hole_pitch_y / 2, s.height - s.top_hole_depth]

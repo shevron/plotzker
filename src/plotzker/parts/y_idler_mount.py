@@ -97,9 +97,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     foot = cube([x1 - x0, y1 - y0, d.foot_t]).translate([x0, y0, 0])
     # the tower's pad: under both walls, along the slider
     pad_x = (T.belt_pos - T.tower_half, T.belt_pos + T.tower_half)
-    foot = foot | cube([pad_x[1] - pad_x[0], T.wall_end_s - y0, d.foot_t]).translate(
-        [pad_x[0], y0, 0]
-    )
+    foot = foot | cube([pad_x[1] - pad_x[0], T.wall_end_s - y0, d.foot_t]).translate([pad_x[0], y0, 0])
     pocket_frame, pocket_cut = sk10_pocket(PocketEnd.FRONT, x1)
     idler_tower = to_side_frame(tower(idler_for(side)))
     screw_ys = (y0 + SCREW_INSET, y1 - SCREW_INSET)
@@ -109,9 +107,9 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
     # endstop tower (not the idler's): the board stands against its inboard face
     u_z = -1 if side is Side.LEFT else 1
     z_top = e.board_z(u_z)[1]
-    endstop_tower = cube(
-        [e.tower_x[1] - e.tower_x[0], e.tower_y[1] - e.tower_y[0], z_top]
-    ).translate([e.tower_x[0], e.tower_y[0], 0])
+    endstop_tower = cube([e.tower_x[1] - e.tower_x[0], e.tower_y[1] - e.tower_y[0], z_top]).translate(
+        [e.tower_x[0], e.tower_y[0], 0]
+    )
     zc = e.board_z_center(u_z)
     board_holes = []
     for sz in (-1, 1):
@@ -130,9 +128,9 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         )
     # solder relief: only a land round each board screw hole touches the board (T3.14)
     zb0, zb1 = e.board_z(u_z)
-    relief = cube(
-        [e.relief_depth + 1, e.board_y[1] - e.board_y[0] + 0.6, zb1 - zb0 - 0.5]
-    ).translate([e.board_x0 - e.relief_depth, e.board_y[0] - 0.3, zb0 - 0.3])
+    relief = cube([e.relief_depth + 1, e.board_y[1] - e.board_y[0] + 0.6, zb1 - zb0 - 0.5]).translate(
+        [e.board_x0 - e.relief_depth, e.board_y[0] - 0.3, zb0 - 0.3]
+    )
     lands = [
         cylinder(d=e.land_d, h=e.relief_depth + 3, fn=FN_HOLE)
         .rotate([0, 90, 0])
@@ -146,11 +144,7 @@ def y_idler_mount_installed(side: Side = Side.LEFT) -> Solid:
         for sz in (-1, 1)
     ]
     mount = (
-        (foot | endstop_tower | pocket_frame)
-        - pocket_cut
-        - holes
-        - board_holes
-        - (relief - union(*lands))
+        (foot | endstop_tower | pocket_frame) - pocket_cut - holes - board_holes - (relief - union(*lands))
     ) | idler_tower
     board = frame_handle(
         [e.board_x0, e.board_front_y, zc], [0, 0, u_z], [0, 1, 0], [1, 0, 0]
@@ -184,9 +178,7 @@ SCREW_SEATS = [
     for y in _SCREW_YS
 ]
 #: The foot's underside resting on the baseboard
-FOOT_BEARING = Box(
-    lo=(_FOOT_X[0], _FOOT_Y[0], -0.3), hi=(_FOOT_X[1], _FOOT_Y[1], 0.3), facing=(0, 0, -1)
-)
+FOOT_BEARING = Box(lo=(_FOOT_X[0], _FOOT_Y[0], -0.3), hi=(_FOOT_X[1], _FOOT_Y[1], 0.3), facing=(0, 0, -1))
 
 #: Friction around each wood screw: the foot's underside is bonded to the baseboard
 BOND_ZONES = [bond_zone((_SCREW_X, y, 0.0)) for y in _SCREW_YS]
@@ -206,9 +198,7 @@ PART_LEFT = PrintedPart(
         Y_BELT_LOADS,
         "loads.Y_BELT_LOADS",
         supports=(
-            Support(
-                "wood_screw_front", SCREW_SEATS[0], "Front wood screw: countersink seat, fixed"
-            ),
+            Support("wood_screw_front", SCREW_SEATS[0], "Front wood screw: countersink seat, fixed"),
             Support("wood_screw_rear", SCREW_SEATS[1], "Rear wood screw: countersink seat, fixed"),
             Support(
                 "foot_bearing",

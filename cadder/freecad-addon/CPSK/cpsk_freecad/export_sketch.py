@@ -311,11 +311,7 @@ class _Exporter:
             return t.lower(), named("a", "b")
         if t == "Perpendicular" and sorted(kinds) in (["circle", "line"], ["arc", "line"]):
             return "perpendicular", named("a", "b")  # the line through the centre
-        if (
-            t == "Perpendicular"
-            and kinds == ["point", "point"]
-            and self._line_and_arc_ends(operands)
-        ):
+        if t == "Perpendicular" and kinds == ["point", "point"] and self._line_and_arc_ends(operands):
             return "perpendicular", named("a", "b")
         if t == "Tangent" and len(kinds) == 2 and set(kinds) <= _CURVES and kinds != ["line"] * 2:
             return "tangent", named("a", "b")
@@ -323,11 +319,7 @@ class _Exporter:
             return "tangent", named("a", "b")
         if t == "Equal" and kinds in (["line", "line"], *_ROUND_PAIRS):
             return "equal", named("a", "b")
-        if (
-            t == "Symmetric"
-            and kinds[:2] == ["point", "point"]
-            and kinds[2:] in (["line"], ["point"])
-        ):
+        if t == "Symmetric" and kinds[:2] == ["point", "point"] and kinds[2:] in (["line"], ["point"]):
             return "symmetric", named("a", "b", "about")
         if t == "Block" and len(kinds) == 1 and operands[0][1] == 0:
             return "block", named("of")

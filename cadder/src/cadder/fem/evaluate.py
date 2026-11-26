@@ -50,10 +50,7 @@ def to_local(stress: Tensor, build: Vec3) -> list[list[float]]:
     sxx, syy, szz, sxy, syz, szx = stress
     s = [[sxx, sxy, szx], [sxy, syy, syz], [szx, syz, szz]]
     return [
-        [
-            sum(axes[i][a] * s[a][b] * axes[j][b] for a in range(3) for b in range(3))
-            for j in range(3)
-        ]
+        [sum(axes[i][a] * s[a][b] * axes[j][b] for a in range(3) for b in range(3)) for j in range(3)]
         for i in range(3)
     ]
 
@@ -132,9 +129,7 @@ def near_nodes(mesh: Mesh, seeds: set[int], radius: float) -> set[int]:
             for dy in (-1, 0, 1):
                 for dz in (-1, 0, 1):
                     for q in grid.get((cx + dx, cy + dy, cz + dz), ()):
-                        if (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (
-                            p[2] - q[2]
-                        ) ** 2 <= radius**2:
+                        if (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2 <= radius**2:
                             found.add(n)
     return found
 
@@ -150,11 +145,7 @@ def displacement_value(
     best = (-1.0, nodes[0])
     for n in nodes:
         u = displacement[n]
-        value = (
-            math.sqrt(sum(c * c for c in u))
-            if unit is None
-            else abs(sum(u[i] * unit[i] for i in range(3)))
-        )
+        value = math.sqrt(sum(c * c for c in u)) if unit is None else abs(sum(u[i] * unit[i] for i in range(3)))
         if value > best[0]:
             best = (value, n)
     return best

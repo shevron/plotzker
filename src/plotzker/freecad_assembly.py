@@ -184,9 +184,7 @@ def _y_drive_parts(ex: Components, gantry_y: float) -> None:
 def _gantry_parts(ex: Components, gantry_y: float) -> None:
     """Both gantry ends, the beam, and the X belt's upper run."""
     left_x, right_x = Y_AXIS.shaft_x
-    n_front = len(
-        get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "block_bolts_front")
-    )
+    n_front = len(get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "block_bolts_front"))
     n_rear = len(get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "block_bolts_rear"))
     n_beam = len(get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "beam_bolts"))
     n_clamps = len(get_handles(gantry_end_bracket.gantry_end_bracket(Side.LEFT), "belt_clamps"))
@@ -260,9 +258,7 @@ def _x_belt_return(gantry_y: float) -> Solid:
     from pythonscad import cube
 
     left_x, _ = Y_AXIS.shaft_x
-    return cube(
-        [Y_AXIS.shaft_spacing - X_DRIVE.idler_x - X_DRIVE.motor_x, GT2.width, GT2.thickness]
-    ).translate(
+    return cube([Y_AXIS.shaft_spacing - X_DRIVE.idler_x - X_DRIVE.motor_x, GT2.width, GT2.thickness]).translate(
         [
             left_x + X_DRIVE.idler_x,
             gantry_y + X_BELT.y - GT2.width / 2,
@@ -412,9 +408,7 @@ def joints() -> list[Joint]:
             limits=(x_lo - carriage_x, x_hi - carriage_x),
         ),
         # pen up at the reference pose, so it can only go down
-        joint(
-            "Slider", "pen_body", "pen_slide", "pen_slide", "Pen slide (Z)", limits=(-PEN.lift, 0.0)
-        ),
+        joint("Slider", "pen_body", "pen_slide", "pen_slide", "Pen slide (Z)", limits=(-PEN.lift, 0.0)),
     ]
     for side in "LR":
         found += [

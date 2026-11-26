@@ -62,9 +62,7 @@ class _Shape:
         hi = [max(p[k] for p in points) for k in range(3)]
         self.center = tuple((a + b) / 2 for a, b in zip(lo, hi, strict=True))
         self.extents = tuple(round(b - a, 2) for a, b in zip(lo, hi, strict=True))
-        self.points = [
-            (p[0] - self.center[0], p[1] - self.center[1], p[2] - self.center[2]) for p in points
-        ]
+        self.points = [(p[0] - self.center[0], p[1] - self.center[1], p[2] - self.center[2]) for p in points]
         self.signature = (len(points), facets, tuple(sorted(self.extents)))
 
     @classmethod
@@ -83,9 +81,7 @@ class _Shape:
         cell = 4 * _TOL
         grid: dict[tuple[int, int, int], list[tuple[float, float, float]]] = {}
         for p in other.points:
-            grid.setdefault(
-                (round(p[0] / cell), round(p[1] / cell), round(p[2] / cell)), []
-            ).append(p)
+            grid.setdefault((round(p[0] / cell), round(p[1] / cell), round(p[2] / cell)), []).append(p)
         for x, y, z in self.points:
             q = tuple(r[0] * x + r[1] * y + r[2] * z for r in rotation)
             key = (round(q[0] / cell), round(q[1] / cell), round(q[2] / cell))
@@ -129,9 +125,7 @@ def shared_name(first: Component, size: int) -> str:
     return re.sub(r"(_[LR])?(_(top|bottom))?(_?\d+)?$", "", first.name)
 
 
-def export_assembly(
-    assembly: FreeCadAssembly, out_dir: Path, log: Callable[[str], None] = print
-) -> Path:
+def export_assembly(assembly: FreeCadAssembly, out_dir: Path, log: Callable[[str], None] = print) -> Path:
     """Write the assembly's STLs and manifest into ``out_dir/<name>/``; returns the manifest."""
     from pythonscad import export
 
@@ -200,15 +194,12 @@ def build_assembly(manifest: Path, log: Callable[[str], None] = print) -> Path:
     freecadcmd = find_tool("freecadcmd")
     builder = Path(__file__).with_name("build.py")
     env = {**os.environ, "CADDER_FREECAD_MANIFEST": str(manifest.resolve())}
-    result = subprocess.run(
-        [str(freecadcmd), str(builder)], capture_output=True, text=True, env=env, check=False
-    )
+    result = subprocess.run([str(freecadcmd), str(builder)], capture_output=True, text=True, env=env, check=False)
     output = Path(json.loads(manifest.read_text())["output"])
     summary = [ln for ln in result.stdout.splitlines() if ln.startswith(("solve()", "wrote"))]
     if result.returncode != 0 or not any(ln.startswith("wrote") for ln in summary):
         raise RuntimeError(
-            f"FreeCAD build of {manifest.parent.name} failed:\n"
-            f"{result.stdout[-2000:]}\n{result.stderr[-2000:]}"
+            f"FreeCAD build of {manifest.parent.name} failed:\n{result.stdout[-2000:]}\n{result.stderr[-2000:]}"
         )
     for line in summary:
         log(line)

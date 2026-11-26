@@ -34,9 +34,7 @@ for path in os.environ["CPSK_IMPORT_IN"].split(os.pathsep):
         result["import_warnings"] = [[d.code, list(d.ids)] for d in warnings]
         result["dof"] = sketch.solve() == 0 and int(sketch.DoF)
         result["label"] = sketch.Label
-        result["constraints"] = [
-            [c.Type, c.Name, c.Driving, c.IsActive] for c in sketch.Constraints
-        ]
+        result["constraints"] = [[c.Type, c.Name, c.Driving, c.IsActive] for c in sketch.Constraints]
         result["expressions"] = [list(item) for item in sketch.ExpressionEngine]
         varsets = [o for o in doc.Objects if o.TypeId == "App::VarSet"]
         result["varsets"] = [

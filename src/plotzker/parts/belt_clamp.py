@@ -52,9 +52,7 @@ def belt_clamp() -> Solid:
         for i in range(math.floor(c.length / GT2.pitch))
     ]
     holes = [
-        cylinder(d=TOL.bolt_hole_d(3), h=c.total_t + 2, fn=FN_HOLE).translate(
-            [sx * c.screw_dx, c.length / 2, -1]
-        )
+        cylinder(d=TOL.bolt_hole_d(3), h=c.total_t + 2, fn=FN_HOLE).translate([sx * c.screw_dx, c.length / 2, -1])
         for sx in (-1, 1)
     ]
     # "mount": the rail tops, where the cap meets the flat underside it clamps against

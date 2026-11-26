@@ -37,9 +37,7 @@ def _arc(
     points = []
     for i in range(n):
         a = math.radians(start_deg + (end_deg - start_deg) * i / (n - 1))
-        points.append(
-            [center[k] + LOOM.bend_r * (math.cos(a) * u[k] + math.sin(a) * v[k]) for k in range(3)]
-        )
+        points.append([center[k] + LOOM.bend_r * (math.cos(a) * u[k] + math.sin(a) * v[k]) for k in range(3)])
     return points
 
 
@@ -65,16 +63,11 @@ def y_loom(gantry_y: float) -> list[Solid]:
     """The loom as capsules along :func:`y_loom_path`."""
     path = y_loom_path(gantry_y)
     ball = sphere(d=LOOM.d, fn=12)
-    return [
-        hull(ball.translate(a), ball.translate(b)).color("#333")
-        for a, b in itertools.pairwise(path)
-    ]
+    return [hull(ball.translate(a), ball.translate(b)).color("#333") for a, b in itertools.pairwise(path)]
 
 
 def rails() -> list[Solid]:
     """The six inner rail segments on the baseboard, wall face 42 mm from the shaft."""
     from plotzker.parts.loom_rail import loom_rail
 
-    return [
-        loom_rail().translate([LOOM.rail_x, y0, 0]).color("SteelBlue") for y0 in LOOM.rail_starts
-    ]
+    return [loom_rail().translate([LOOM.rail_x, y0, 0]).color("SteelBlue") for y0 in LOOM.rail_starts]

@@ -40,9 +40,7 @@ def geometry(g):
         return Part.Circle(V(g[1], g[2], 0), Z, g[3])
     if kind == "ellipse":
         return Part.Ellipse(V(g[1], g[2], 0), g[3], g[4])
-    return Part.ArcOfCircle(
-        Part.Circle(V(g[1], g[2], 0), Z, g[3]), math.radians(g[4]), math.radians(g[5])
-    )
+    return Part.ArcOfCircle(Part.Circle(V(g[1], g[2], 0), Z, g[3]), math.radians(g[4]), math.radians(g[5]))
 
 
 def dump(geo):

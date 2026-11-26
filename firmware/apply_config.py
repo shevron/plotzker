@@ -30,9 +30,7 @@ def apply(path: Path, settings: dict[str, str]) -> None:
     """
     text = path.read_text()
     for name, value in settings.items():
-        pattern = re.compile(
-            rf"^(\s*)(?://\s*)?#define {name}\b[ \t]*([^\n/]*?)([ \t]*//[^\n]*)?$", re.MULTILINE
-        )
+        pattern = re.compile(rf"^(\s*)(?://\s*)?#define {name}\b[ \t]*([^\n/]*?)([ \t]*//[^\n]*)?$", re.MULTILINE)
 
         def replace(m: re.Match[str], name: str = name, value: str = value) -> str:
             return f"{m[1]}#define {name} {value}{m[3] or ''}".rstrip()
@@ -45,9 +43,7 @@ def apply(path: Path, settings: dict[str, str]) -> None:
 
 
 def main(
-    marlin: Annotated[
-        Path, typer.Argument(help="Path to the Marlin checkout.", exists=True)
-    ] = MARLIN_DIR,
+    marlin: Annotated[Path, typer.Argument(help="Path to the Marlin checkout.", exists=True)] = MARLIN_DIR,
 ) -> None:
     """Apply the plotter's Marlin settings (X-axis bring-up) to a Marlin checkout."""
     apply(

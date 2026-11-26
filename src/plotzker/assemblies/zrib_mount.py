@@ -31,9 +31,7 @@ def zrib_mount_assembly() -> list[Solid]:
             countersunk_screw(WOOD_SCREW.m, WOOD_SCREW.length, WOOD_SCREW.head_d).align(h)
             for h in get_handles(side, "wood_screws")
         ]
-        items += [
-            shcs(3, ZMOUNT.strap_screw_len).align(h) for h in get_handles(side, "strap_screws")
-        ]
+        items += [shcs(3, ZMOUNT.strap_screw_len).align(h) for h in get_handles(side, "strap_screws")]
         items += [hex_nut(3).align(h) for h in get_handles(side, "strap_nuts")]
         items.append(zrib_guard().align(get_handle(side, "strap")).color("Orange"))
     # components down: flip the board about the v axis (y stays toward the rear edge)

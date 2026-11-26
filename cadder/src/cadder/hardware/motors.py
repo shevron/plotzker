@@ -61,9 +61,7 @@ FT90M = ServoSpec()
 def nema17(length: float = NEMA17.length) -> Solid:
     """NEMA17. Origin: center of the mounting face (base of the boss); shaft +Z, body -Z."""
     n = NEMA17
-    outline = square([n.width - 2 * n.chamfer] * 2, center=True).offset(
-        delta=n.chamfer, chamfer=True
-    )
+    outline = square([n.width - 2 * n.chamfer] * 2, center=True).offset(delta=n.chamfer, chamfer=True)
     body = linear_extrude(outline, height=length).translate([0, 0, -length])
     holes = [
         cylinder(d=3, h=n.hole_depth + 1, fn=12).translate(
@@ -84,15 +82,9 @@ def servo_ft90m() -> Solid:
     length, width, height = s.body
     body = cube([length, width, height]).translate([-length / 2, -width / 2, 0])
     tab_holes = [
-        cylinder(d=s.hole_d, h=s.tab_t + 2, fn=12).translate(
-            [sx * s.hole_pitch / 2, 0, s.tab_z - 1]
-        )
-        for sx in (-1, 1)
+        cylinder(d=s.hole_d, h=s.tab_t + 2, fn=12).translate([sx * s.hole_pitch / 2, 0, s.tab_z - 1]) for sx in (-1, 1)
     ]
-    tabs = (
-        cube([s.tab_len, width, s.tab_t]).translate([-s.tab_len / 2, -width / 2, s.tab_z])
-        - tab_holes
-    )
+    tabs = cube([s.tab_len, width, s.tab_t]).translate([-s.tab_len / 2, -width / 2, s.tab_z]) - tab_holes
     shaft_x = length / 2 - s.shaft_offset
     gear_housing = cylinder(d=width, h=s.top_h, fn=32).translate([shaft_x, 0, height])
     spline = cylinder(d=4.8, h=s.shaft_h, fn=16).translate([shaft_x, 0, height + s.top_h])

@@ -56,9 +56,7 @@ class Mesh:
             ux, uy, uz = (p1[i] - p0[i] for i in range(3))
             vx, vy, vz = (p2[i] - p0[i] for i in range(3))
             wx, wy, wz = (p3[i] - p0[i] for i in range(3))
-            total += abs(
-                ux * (vy * wz - vz * wy) - uy * (vx * wz - vz * wx) + uz * (vx * wy - vy * wx)
-            )
+            total += abs(ux * (vy * wz - vz * wy) - uy * (vx * wz - vz * wx) + uz * (vx * wy - vy * wx))
         return total / 6
 
 
@@ -119,9 +117,7 @@ def write_geo(stl: Path, field: SizeField, geo: Path, algorithm: int = 1) -> Non
     geo.write_text("\n".join(lines) + "\n")
 
 
-def mesh_stl(
-    stl: Path, field: SizeField, workdir: Path, name: str, first_strategy: int = 0
-) -> Mesh:
+def mesh_stl(stl: Path, field: SizeField, workdir: Path, name: str, first_strategy: int = 0) -> Mesh:
     """Mesh ``stl`` to the size field, retrying other settings if gmsh fails."""
     geo, msh = workdir / f"{name}.geo", workdir / f"{name}.msh"
     last = ""
@@ -199,9 +195,7 @@ def _merge_coincident_nodes(
                 for dz in (-1, 0, 1):
                     for m in grid.get((key[0] + dx, key[1] + dy, key[2] + dz), ()):
                         q = nodes[m]
-                        if (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (
-                            p[2] - q[2]
-                        ) ** 2 <= MERGE_TOL**2:
+                        if (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2 <= MERGE_TOL**2:
                             target = m
         remap[n] = target
         if target == n:
@@ -221,9 +215,7 @@ def _merge_coincident_nodes(
     return kept, merged_tets, [t for t in fix(tris, 3) if all(n in kept for n in t)]
 
 
-def _oriented_faces(
-    nodes: dict[int, Vec3], tets: list[tuple[int, ...]], tris: list[tuple[int, ...]]
-) -> list[TriFace]:
+def _oriented_faces(nodes: dict[int, Vec3], tets: list[tuple[int, ...]], tris: list[tuple[int, ...]]) -> list[TriFace]:
     """Boundary triangles with outward normals (flipped away from the tetrahedron behind)."""
     opposite: dict[frozenset[int], int] = {}
     for tet in tets:
@@ -304,10 +296,7 @@ def cover_region(mesh: Mesh, region: Region, n: int = SAMPLES) -> list[Cover]:
     covers = []
     for face in mesh.faces:
         a, b, c = (mesh.nodes[k] for k in face.nodes[:3])
-        if any(
-            max(a[i], b[i], c[i]) < lo[i] - 1e-6 or min(a[i], b[i], c[i]) > hi[i] + 1e-6
-            for i in range(3)
-        ):
+        if any(max(a[i], b[i], c[i]) < lo[i] - 1e-6 or min(a[i], b[i], c[i]) > hi[i] + 1e-6 for i in range(3)):
             continue
         samples = tuple(
             ((la, lb, lc), face.area / (n * n))

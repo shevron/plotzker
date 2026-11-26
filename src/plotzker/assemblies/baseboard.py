@@ -70,16 +70,10 @@ def runners() -> list[Solid]:
     items: list[Solid] = []
     for ry in bb.runner_y:
         items.append(
-            vslot_x(bb.runner_len, _RUNNER_SIZE).translate(
-                [bb.runner_x[0], ry - bb.runner_w / 2, -t - bb.runner_h]
-            )
+            vslot_x(bb.runner_len, _RUNNER_SIZE).translate([bb.runner_x[0], ry - bb.runner_w / 2, -t - bb.runner_h])
         )
         for x in bb.runner_screw_x:
-            items.append(
-                countersunk_screw(5, bb.runner_screw_len, bb.runner_screw_head_d).translate(
-                    [x, ry, 0]
-                )
-            )
+            items.append(countersunk_screw(5, bb.runner_screw_len, bb.runner_screw_head_d).translate([x, ry, 0]))
             items.append(t_nut(5, bb.tnut_t).translate([x, ry, -t - bb.slot_lip_t]))
     return items
 
@@ -96,9 +90,7 @@ def shafts_and_supports() -> list[Solid]:
             items.append(sk10().translate([x, y, 0]))
             for dx in bb.sk10_hole_x:
                 hx = x + dx
-                items.append(
-                    shcs(5, bb.sk10_bolt_len).translate([hx, y, SK10.base_t + m5.washer_t])
-                )
+                items.append(shcs(5, bb.sk10_bolt_len).translate([hx, y, SK10.base_t + m5.washer_t]))
                 items.append(washer(5).translate([hx, y, SK10.base_t]))
                 items.append(washer(5).translate([hx, y, -t - m5.washer_t]))
                 items.append(hex_nut(5).translate([hx, y, -t - m5.washer_t - m5.nut_h]))
@@ -114,9 +106,7 @@ def bed() -> list[Solid]:
     gap = FRAME.bed_adjust_gap
     panel = cube([bx, by, FRAME.bed_panel_t]).translate([x0, y0, gap])
     for x, y in bb.post_xy:
-        panel = panel - cylinder(d=5.4, h=FRAME.bed_panel_t + 2, fn=FN_HOLE).translate(
-            [x, y, gap - 1]
-        )
+        panel = panel - cylinder(d=5.4, h=FRAME.bed_panel_t + 2, fn=FN_HOLE).translate([x, y, gap - 1])
     sx, sy = FRAME.steel_size
     items: list[Solid] = [
         panel.color("Tan", 0.8),

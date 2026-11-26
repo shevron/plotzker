@@ -276,9 +276,7 @@ def calibrate(board: Board, report: Report) -> None:
             break
         old = board.x_steps()
         new = old * CAL_DISTANCE / measured
-        question = (
-            f"Change X steps/mm from {old:g} to {new:.2f} (design: {DESIGN_STEPS:g}) and save?"
-        )
+        question = f"Change X steps/mm from {old:g} to {new:.2f} (design: {DESIGN_STEPS:g}) and save?"
         if not typer.confirm(question):
             break
         board.send(f"M92 X{new:.2f}")
@@ -386,12 +384,8 @@ def wait_for_board(board: Board) -> None:
 def main(
     port: Annotated[str | None, typer.Option(help="Serial port; found if omitted.")] = None,
     cycles: Annotated[int, typer.Option(min=1, help="Homing repeatability cycles.")] = 10,
-    start: Annotated[
-        Step | None, typer.Option("--from", help="Skip the steps before this one.")
-    ] = None,
-    only: Annotated[
-        list[Step] | None, typer.Option(help="Run just this step; repeat for several.")
-    ] = None,
+    start: Annotated[Step | None, typer.Option("--from", help="Skip the steps before this one.")] = None,
+    only: Annotated[list[Step] | None, typer.Option(help="Run just this step; repeat for several.")] = None,
 ) -> None:
     """Test and calibrate the X axis, step by step."""
     steps = select_steps(start, only)

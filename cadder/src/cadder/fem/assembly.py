@@ -140,8 +140,7 @@ def markdown(assembly: AssemblyCheck, result: AssemblyResult) -> str:
     ]
     for r in result.rows:
         lines.append(
-            f"| {r.name} | {r.case} | {r.total:.3f} | {r.limit:g} mm | {r.utilization:.0%} "
-            f"| {r.status.value} |"
+            f"| {r.name} | {r.case} | {r.total:.3f} | {r.limit:g} mm | {r.utilization:.0%} | {r.status.value} |"
         )
     lines += ["", "## Terms (mm)", ""]
     for r in result.rows:
@@ -223,10 +222,7 @@ def assembly_status_lines(
         if entry is None:
             state = "never checked"
         elif entry.get("spec") != spec_hash(assembly, parts, verdicts):
-            state = (
-                f"STALE (a member or the assembly changed since {entry['date']}; "
-                f"was {entry['verdict']})"
-            )
+            state = f"STALE (a member or the assembly changed since {entry['date']}; was {entry['verdict']})"
         else:
             state = f"{entry['verdict']} ({entry['date']})"
         lines.append(f"{'assembly ' + name:<28} {state}")

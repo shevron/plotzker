@@ -43,9 +43,7 @@ def slider_local(t: FloatingIdler) -> Solid:
                 cube([EPS, t.arm_t, top - zb]).translate([0, y0, zb]),
                 cube([t.axle_x - t.arm_end_r, t.arm_t, EPS]).translate([0, y0, zb]),
                 cube([EPS, t.arm_t, EPS]).translate([t.chamfer_x, y0, top - EPS]),
-                cylinder(d=2 * t.arm_end_r, h=t.arm_t, fn=FN)
-                .rotate([-90, 0, 0])
-                .translate([t.axle_x, y0, t.axle_z]),
+                cylinder(d=2 * t.arm_end_r, h=t.arm_t, fn=FN).rotate([-90, 0, 0]).translate([t.axle_x, y0, t.axle_z]),
             )
         )
     web = cube([t.web_t, w, top - zb]).translate([0, -w / 2, zb])
@@ -53,19 +51,15 @@ def slider_local(t: FloatingIdler) -> Solid:
     # printed upside down (the top on the bed, +z down): the holes along y and x lie flat, so
     # their teardrops point to -z (print up); the nut pocket has a flat on that side (a 4.6 mm
     # bridge: a corner there would be a 30° overhang)
-    axle_hole = (
-        teardrop_y(TOL.bolt_hole_d(t.axle_m), w + 2)
-        .rotate([180, 0, 0])
-        .translate([t.axle_x, 0, t.axle_z])
-    )
+    axle_hole = teardrop_y(TOL.bolt_hole_d(t.axle_m), w + 2).rotate([180, 0, 0]).translate([t.axle_x, 0, t.axle_z])
     axle_nut = (
         cylinder(d=TOL.nut_trap_ac(t.axle_m), h=TOL.nut_trap_h(t.axle_m) + 1, fn=6)
         .rotate([-90, 0, 0])
         .translate([t.axle_x, t.nut_y, t.axle_z])
     )
-    screw_nut = nut_slot(
-        t.screw_m, top - t.screw_z + 1, "x", "+z", t.nut_slot_extra, tol=TOL
-    ).translate([TOL.nut_wall + t.nut_t / 2, 0, t.screw_z])
+    screw_nut = nut_slot(t.screw_m, top - t.screw_z + 1, "x", "+z", t.nut_slot_extra, tol=TOL).translate(
+        [TOL.nut_wall + t.nut_t / 2, 0, t.screw_z]
+    )
     # the screw's hole through the thrust wall and on into the blind tunnel for its tip
     tunnel = (
         teardrop_x(TOL.bolt_hole_d(t.screw_m), t.tunnel_end + 1)
@@ -104,11 +98,7 @@ def tower(t: FloatingIdler) -> Solid:
         x_lo, x_hi = t.sweep(radius)
         face = sign * inner
         y_lo, y_hi = (face - 1, face + depth) if sign > 0 else (face - depth, face + 1)
-        pockets.append(
-            cube([x_hi - x_lo, y_hi - y_lo, 2 * radius + 4]).translate(
-                [x_lo, y_lo, t.axle_z - radius]
-            )
-        )
+        pockets.append(cube([x_hi - x_lo, y_hi - y_lo, 2 * radius + 4]).translate([x_lo, y_lo, t.axle_z - radius]))
     return (plate | walls[0] | walls[1]) - hole - pockets[0] - pockets[1]
 
 
@@ -136,9 +126,7 @@ def regions(t: FloatingIdler) -> FloatingRegions:
     bore_r = TOL.bolt_hole_d(t.axle_m) / 2 + 0.3
     hole_r = TOL.bolt_hole_d(t.screw_m) / 2
     return FloatingRegions(
-        bore_load=Cylinder(
-            axle, (0, 1, 0), bore_r, t.width / 2, facing=(-1, 0, 0), facing_tol_deg=60
-        ),
+        bore_load=Cylinder(axle, (0, 1, 0), bore_r, t.width / 2, facing=(-1, 0, 0), facing_tol_deg=60),
         bore=Cylinder(axle, (0, 1, 0), bore_r, t.width / 2),
         nut_seat=Box(
             (r0 + TOL.nut_wall - 0.3, -3, t.screw_z - 3),
@@ -271,6 +259,4 @@ def mount_fem(
                 sustained=sustained,
             )
         )
-    return FemSpec(
-        load_cases=tuple(cases), supports=supports, displacement_limits=tower_limits(t, place)
-    )
+    return FemSpec(load_cases=tuple(cases), supports=supports, displacement_limits=tower_limits(t, place))

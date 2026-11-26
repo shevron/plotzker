@@ -100,6 +100,6 @@ def t_nut(m: float, thickness: float = 4.0) -> Solid:
 
 def spring(od: float, id_: float, length: float) -> Solid:
     """Compression spring as a plain tube. Origin: center of the bottom face, axis +Z."""
-    return (
-        cylinder(d=od, h=length, fn=32) - cylinder(d=id_, h=length + 2, fn=32).translate([0, 0, -1])
-    ).color("SteelBlue")
+    return (cylinder(d=od, h=length, fn=32) - cylinder(d=id_, h=length + 2, fn=32).translate([0, 0, -1])).color(
+        "SteelBlue"
+    )

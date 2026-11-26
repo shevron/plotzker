@@ -71,9 +71,7 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
         assert isinstance(circle, Circle)
         cx, cy, r = circle.cx * scale, circle.cy * scale, circle.r * scale
         east, west = Point(cx + r, cy), Point(cx - r, cy)
-        filled.append(
-            f"M {xy(east)} A {_n(r)} {_n(r)} 0 1 0 {xy(west)} A {_n(r)} {_n(r)} 0 1 0 {xy(east)} Z"
-        )
+        filled.append(f"M {xy(east)} A {_n(r)} {_n(r)} 0 1 0 {xy(west)} A {_n(r)} {_n(r)} 0 1 0 {xy(east)} Z")
     stroked = [f"M {xy(e.start)} {segment(e, True)}" for e in open_edges]
 
     title = solved.sketch.metadata.get("title", ("",))[0]
@@ -87,9 +85,7 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
     if filled:
         lines.append(f'  <path fill="black" fill-rule="evenodd" d="{" ".join(filled)}"/>')
     if stroked:
-        lines.append(
-            f'  <path fill="none" stroke="black" stroke-width="0.2" d="{" ".join(stroked)}"/>'
-        )
+        lines.append(f'  <path fill="none" stroke="black" stroke-width="0.2" d="{" ".join(stroked)}"/>')
     lines.append("</svg>")
     return "\n".join(lines) + "\n"
 

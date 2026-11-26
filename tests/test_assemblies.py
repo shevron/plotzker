@@ -254,9 +254,7 @@ def test_zrib_mount_fits_between_the_runners():
     assert volume(runner_solids & union(*flatten(baseboard.zrib()))) < 1e-6
 
 
-@pytest.mark.parametrize(
-    "gantry", [0, 0.5, 1], ids=["gantry front", "gantry middle", "gantry back"]
-)
+@pytest.mark.parametrize("gantry", [0, 0.5, 1], ids=["gantry front", "gantry middle", "gantry back"])
 def test_y_loom_clears_the_machine(gantry):
     """The loom, along its whole path, touches nothing but the baseboard it lies on: it sits
     in the anchor's groove, outside the belt and rails, and clear of the Y motor mount."""
@@ -349,18 +347,14 @@ def test_y_endstop_board_seats_flat_over_its_solder(side):
     lands = [
         cylinder(d=e.land_d + 0.2, h=5, fn=24)
         .rotate([0, 90, 0])
-        .translate(
-            [e.board_x0 - 3, e.board_front_y + ENDSTOP.hole_v, zc + s * ENDSTOP.hole_pitch / 2]
-        )
+        .translate([e.board_x0 - 3, e.board_front_y + ENDSTOP.hole_v, zc + s * ENDSTOP.hole_pitch / 2])
         for s in (-1, 1)
     ]
     assert volume((solder - union(*lands)) & mount) < 1e-3
     pad = (
         cylinder(d=e.land_d - 1, h=0.4, fn=24)
         .rotate([0, 90, 0])
-        .translate(
-            [e.board_x0 - 0.2, e.board_front_y + ENDSTOP.hole_v, zc + ENDSTOP.hole_pitch / 2]
-        )
+        .translate([e.board_x0 - 0.2, e.board_front_y + ENDSTOP.hole_v, zc + ENDSTOP.hole_pitch / 2])
     )
     assert volume(pad & mount) > 1
 

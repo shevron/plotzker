@@ -91,9 +91,7 @@ class Document:
     """Namespace URI → prefix, as declared in the source; used when writing extensions."""
 
     @classmethod
-    def new(
-        cls, *, version: str = "0.1", unit_length: str | None = None, unit_angle: str | None = None
-    ) -> Document:
+    def new(cls, *, version: str = "0.1", unit_length: str | None = None, unit_angle: str | None = None) -> Document:
         """An empty document."""
         root = Element("sketch")
         root.set("version", version)
@@ -263,8 +261,7 @@ def _write(
     indent = _INDENT * depth
     name = _name(element.namespace, element.name, prefixes)
     attrs = [*declarations] + [
-        f'{_name(ns, local, prefixes)}="{_attr(value)}"'
-        for (ns, local), value in element.attrs.items()
+        f'{_name(ns, local, prefixes)}="{_attr(value)}"' for (ns, local), value in element.attrs.items()
     ]
     opening = f"{indent}<{' '.join([name, *attrs])}"
     if not element.children:
@@ -279,11 +276,7 @@ def _write(
         if isinstance(child, Comment):
             pending.append(f"{indent}{_INDENT}<!--{child.text}-->")
             continue
-        if (
-            previous is not None
-            and separated
-            and (element.name == "sketch" or previous.children or child.children)
-        ):
+        if previous is not None and separated and (element.name == "sketch" or previous.children or child.children):
             lines.append("")
         lines += pending
         pending = []

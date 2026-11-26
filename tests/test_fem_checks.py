@@ -35,9 +35,7 @@ def test_assembly_sums_member_deflections(tmp_path):
 
     from plotzker.assembly_checks import tensioner_assembly
 
-    assembly = tensioner_assembly(
-        "sum_test", "", "y_idler_mount_left", "idler_slider", "idler_seat"
-    )
+    assembly = tensioner_assembly("sum_test", "", "y_idler_mount_left", "idler_slider", "idler_seat")
     # each part alone is within its own 0.1 mm (the slider's and mount's limit names differ)
     for part, prefix in (
         ("idler_slider", "idler_axle"),
@@ -45,10 +43,7 @@ def test_assembly_sums_member_deflections(tmp_path):
     ):
         _write_result(
             tmp_path / part,
-            [
-                (f"{prefix}_{d}", "belt_preload", 0.09)
-                for d in ("along_belt", "sideways", "vertical")
-            ],
+            [(f"{prefix}_{d}", "belt_preload", 0.09) for d in ("along_belt", "sideways", "vertical")],
         )
     result = check_assembly(assembly, PARTS, tmp_path)
     by_name = {r.name: r for r in result.rows}

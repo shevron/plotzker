@@ -168,9 +168,7 @@ def _strengths(part: MaterialPart, sustained: bool) -> Strengths:
             eff["sustained_strength_build_mpa"],
             eff["sustained_strength_build_mpa"],
         )
-    return Strengths(
-        eff["strength_in_plane_mpa"], eff["strength_build_mpa"], eff["strength_build_mpa"]
-    )
+    return Strengths(eff["strength_in_plane_mpa"], eff["strength_build_mpa"], eff["strength_build_mpa"])
 
 
 def _named_regions(part: MaterialPart) -> list[tuple[str, Region]]:
@@ -193,8 +191,7 @@ def _load_regions(part: MaterialPart) -> list[Region]:
 def _patch_edges(part: MaterialPart, mesh: Mesh) -> dict[str, set[int]]:
     """Nodes on the outline of every loaded and supported patch, by label."""
     return {
-        label: patch_edge_nodes([c.face for c in cover_region(mesh, region)])
-        for label, region in _named_regions(part)
+        label: patch_edge_nodes([c.face for c in cover_region(mesh, region)]) for label, region in _named_regions(part)
     }
 
 
@@ -410,8 +407,7 @@ def _pictures(
         rows = [c for c in criteria if c.case == case.name]
         lines = [f"{part.name} / {case.name}: {worst([c.status for c in rows]).value}"]
         lines += [
-            f"{c.name}: {c.value:g} of {c.limit:g} {c.unit.split()[0]} ({c.utilization:.0%}) "
-            f"{c.status.value}"
+            f"{c.name}: {c.value:g} of {c.limit:g} {c.unit.split()[0]} ({c.utilization:.0%}) {c.status.value}"
             for c in rows
         ]
         path = work / f"viz_{case.name}.json"
@@ -484,9 +480,7 @@ def analyze(
     final, tag = first, "coarse"
     if refine:
         log(f"  a criterion is within {REFINE_BAND} of its limit: refining the mesh")
-        final = _mesh_and_solve(
-            part, clean.path, field.scaled(1 / REFINEMENT), work, "fine", options, log
-        )
+        final = _mesh_and_solve(part, clean.path, field.scaled(1 / REFINEMENT), work, "fine", options, log)
         tag = "fine"
         criteria = _judge(part, final, first)
         result.checks += _convergence(part, first, final)
@@ -520,9 +514,7 @@ def analyze(
         f"({1.5 * final.mesh.size:.1f} mm)"
     )
     result.status = (
-        Status.INCONCLUSIVE
-        if not all(c.ok for c in result.checks)
-        else worst([c.status for c in result.criteria])
+        Status.INCONCLUSIVE if not all(c.ok for c in result.checks) else worst([c.status for c in result.criteria])
     )
     result.files = {
         "stl": "part.stl",
@@ -542,9 +534,7 @@ def analyze(
     return result
 
 
-def _displacement_row(
-    name: str, case: str, value: float, limit: float, node: int, mesh: Mesh
-) -> Criterion:
+def _displacement_row(name: str, case: str, value: float, limit: float, node: int, mesh: Mesh) -> Criterion:
     """A displacement criterion row."""
     where = tuple(round(c, 1) for c in mesh.nodes[node])
     util = value / limit
@@ -584,9 +574,7 @@ def run_checks(
 
     unknown = [n for n in names if n not in parts]
     if unknown:
-        raise SystemExit(
-            f"No material or FEM data: {', '.join(unknown)}. Defined: {', '.join(parts)}"
-        )
+        raise SystemExit(f"No material or FEM data: {', '.join(unknown)}. Defined: {', '.join(parts)}")
     targets: list[str] = []
     for name in names:
         base = parts[name].mirror_of
@@ -602,9 +590,7 @@ def run_checks(
             result = analyze(part, out_dir, options, log)
         except (RuntimeError, applied.SpecError) as exc:
             log(f"  check could not be run: {exc}")
-            result = FemResult(
-                name, Status.INCONCLUSIVE, notes=[f"the check could not be run: {exc}"]
-            )
+            result = FemResult(name, Status.INCONCLUSIVE, notes=[f"the check could not be run: {exc}"])
             (out_dir / name).mkdir(parents=True, exist_ok=True)
             (out_dir / name / "report.md").write_text(markdown(result))
             results.append(result)

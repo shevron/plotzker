@@ -51,10 +51,7 @@ class Results:
         """The results of a load case ``k`` times as large (the analysis is linear)."""
         return Results(
             {n: (u[0] * k, u[1] * k, u[2] * k) for n, u in self.displacement.items()},
-            {
-                n: (s[0] * k, s[1] * k, s[2] * k, s[3] * k, s[4] * k, s[5] * k)
-                for n, s in self.stress.items()
-            },
+            {n: (s[0] * k, s[1] * k, s[2] * k, s[3] * k, s[4] * k, s[5] * k) for n, s in self.stress.items()},
             {n: (r[0] * k, r[1] * k, r[2] * k) for n, r in self.reaction.items()},
         )
 
@@ -176,9 +173,7 @@ def read_frd(path: Path) -> Results:
             node = int(line[3:13])
             values = line[13:].rstrip()
             current[node] = tuple(
-                float(values[i : i + 12])
-                for i in range(0, len(values), 12)
-                if values[i : i + 12].strip()
+                float(values[i : i + 12]) for i in range(0, len(values), 12) if values[i : i + 12].strip()
             )
     disp = {n: (v[0], v[1], v[2]) for n, v in blocks.get("DISP", {}).items()}
     stress = {n: (v[0], v[1], v[2], v[3], v[4], v[5]) for n, v in blocks.get("STRESS", {}).items()}

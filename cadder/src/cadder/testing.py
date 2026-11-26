@@ -73,9 +73,7 @@ def touching(a: Solid, b: Solid, box_a: Box | None = None, box_b: Box | None = N
     if any(a_lo[i] > b_hi[i] + TOUCH or b_lo[i] > a_hi[i] + TOUCH for i in range(3)):
         return False
     nudges: list[list[float]] = [[0.0, 0.0, 0.0]] + [
-        [sign * TOUCH if axis == i else 0.0 for i in range(3)]
-        for axis in range(3)
-        for sign in (1, -1)
+        [sign * TOUCH if axis == i else 0.0 for i in range(3)] for axis in range(3) for sign in (1, -1)
     ]
     return any(volume(a & b.translate(nudge)) > 1e-6 for nudge in nudges)
 

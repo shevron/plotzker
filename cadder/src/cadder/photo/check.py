@@ -102,9 +102,7 @@ def _fit_mm(rect: Rectification) -> float:
     return rect.rms_px / px_per_mm
 
 
-def check(
-    photos: list[Path], board: Board = DEFAULT_BOARD, camera: Camera | None = None
-) -> SetCheck:
+def check(photos: list[Path], board: Board = DEFAULT_BOARD, camera: Camera | None = None) -> SetCheck:
     """Look at each photo's target and at how different the viewing angles are."""
     results, directions = [], []
     for photo in photos:
@@ -120,9 +118,7 @@ def check(
             r.reasons.append(f"only {r.corners} target corners: show more of the target")
         if r.fit_mm > FAIL_MM:
             r.verdict = "fail"
-            r.reasons.append(
-                f"target fits only to {r.fit_mm:.2f} mm: flatten the paper, hold the phone still"
-            )
+            r.reasons.append(f"target fits only to {r.fit_mm:.2f} mm: flatten the paper, hold the phone still")
         elif r.fit_mm > WARN_MM:
             r.verdict = "fail" if r.verdict == "fail" else "warn"
             r.reasons.append(f"target fits to {r.fit_mm:.2f} mm: is the paper flat?")
@@ -131,11 +127,7 @@ def check(
             view = rect.camera_center - np.array([board.width / 2, board.height / 2, 0.0])
             directions.append(view / np.linalg.norm(view))
     angle = max(
-        (
-            math.degrees(math.acos(float(np.clip(a @ b, -1, 1))))
-            for a in directions
-            for b in directions
-        ),
+        (math.degrees(math.acos(float(np.clip(a @ b, -1, 1)))) for a in directions for b in directions),
         default=0.0,
     )
     notes = []

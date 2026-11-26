@@ -18,9 +18,7 @@ _OTHER_MM = 0.1
 _SOURCE = "limits: sum of the members' limits (0.3 mm along the belt, 0.1 mm otherwise)"
 
 
-def tensioner_assembly(
-    name: str, description: str, mount: str, slider: str, mount_prefix: str
-) -> AssemblyCheck:
+def tensioner_assembly(name: str, description: str, mount: str, slider: str, mount_prefix: str) -> AssemblyCheck:
     """Mount + slider of one floating belt idler, judged on the idler axle's total displacement.
 
     The slider is tied by a screw on the belt line, so there is no play to add: the terms are the

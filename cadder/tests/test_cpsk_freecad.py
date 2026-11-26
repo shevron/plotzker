@@ -146,8 +146,7 @@ def _data(case: dict[str, Any]) -> SketchData:
         constraints=constraints,
         expressions=expressions,
         varsets=[
-            VarSet(name, label, tuple(Variable(*p) for p in props))
-            for name, label, props in case.get("varsets", [])
+            VarSet(name, label, tuple(Variable(*p) for p in props)) for name, label, props in case.get("varsets", [])
         ],
     )
 
@@ -250,14 +249,10 @@ def freecad_results(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
 
 
 @pytest.fixture(scope="module")
-def imported_results(
-    tmp_path_factory: pytest.TempPathFactory, freecad_results: dict[str, Any]
-) -> dict[str, Any]:
+def imported_results(tmp_path_factory: pytest.TempPathFactory, freecad_results: dict[str, Any]) -> dict[str, Any]:
     out = tmp_path_factory.mktemp("cpsk_import")
     files = [r["file"] for r in freecad_results.values() if "file" in r] + list(map(str, SAMPLES))
-    return _run_freecad(
-        "run_import.py", out, CPSK_IMPORT_IN=os.pathsep.join(files), CPSK_IMPORT_OUT=str(out)
-    )
+    return _run_freecad("run_import.py", out, CPSK_IMPORT_IN=os.pathsep.join(files), CPSK_IMPORT_OUT=str(out))
 
 
 def _dump(geometry: Any) -> list[Any]:
@@ -277,17 +272,13 @@ def _assert_same(ours: list[Any], theirs: list[Any], tolerance: float = 1e-9) ->
         center_radius = ours[1:4]
         assert center_radius == pytest.approx(theirs[1:4], abs=tolerance)
         for a, b in zip(ours[4:], theirs[4:], strict=True):  # same direction; radius ≤ 10 mm
-            assert math.radians((a - b + 180) % 360 - 180) * ours[3] == pytest.approx(
-                0, abs=tolerance
-            )
+            assert math.radians((a - b + 180) % 360 - 180) * ours[3] == pytest.approx(0, abs=tolerance)
     else:
         assert ours[1:] == pytest.approx(theirs[1:], abs=tolerance)
 
 
 @pytest.mark.parametrize("case", ALL, ids=[c["name"] for c in ALL])
-def test_freecad_export_solves_to_freecads_geometry(
-    case: dict[str, Any], freecad_results: dict[str, Any]
-) -> None:
+def test_freecad_export_solves_to_freecads_geometry(case: dict[str, Any], freecad_results: dict[str, Any]) -> None:
     result = freecad_results[case["name"]]
     assert "crash" not in result, result.get("crash")
     if case.get("refused"):
@@ -316,9 +307,7 @@ def test_freecad_round_trip_writes_the_same_file(
 
 
 @pytest.mark.parametrize("path", SAMPLES, ids=[p.stem for p in SAMPLES])
-def test_freecad_imports_documents_fully_constrained(
-    path: Path, imported_results: dict[str, Any]
-) -> None:
+def test_freecad_imports_documents_fully_constrained(path: Path, imported_results: dict[str, Any]) -> None:
     """CPSK → FreeCAD → CPSK (D4): fully constrained in FreeCAD, and the same file back."""
     result = imported_results[path.stem]
     assert set(result) >= {"file", "dof"}, result
@@ -438,9 +427,7 @@ def test_import_renames_unit_names_where_freecad_needs_them() -> None:
     assert data.varsets[0].variables[2].expression == "t_ * e_ + 1 cm"
     assert data.expressions["cpsk_3"] == "Constraints.s_ - 6 mm"  # an anonymous constraint
     assert data.kept.formulas["c:cpsk_3"] == ("Constraints.s_ - 6 mm", "s - 6")
-    assert data.kept.names == {"t_": "t", "e_": "e", "s_": "s", "g_": "g"} | {
-        f"cpsk_{n}": "" for n in (1, 2, 3)
-    }
+    assert data.kept.names == {"t_": "t", "e_": "e", "s_": "s", "g_": "g"} | {f"cpsk_{n}": "" for n in (1, 2, 3)}
 
 
 def _document(body: str, units: str = "") -> Document:

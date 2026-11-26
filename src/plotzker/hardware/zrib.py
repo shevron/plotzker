@@ -41,14 +41,10 @@ def zrib() -> Solid:
     """The board: PCB with its mounting holes and a block standing for the tall parts."""
     z = ZRIB
     holes = [
-        cylinder(d=z.hole_d, h=z.pcb_t + 2, fn=16).translate(
-            [sx * z.hole_pitch[0] / 2, sy * z.hole_pitch[1] / 2, -1]
-        )
+        cylinder(d=z.hole_d, h=z.pcb_t + 2, fn=16).translate([sx * z.hole_pitch[0] / 2, sy * z.hole_pitch[1] / 2, -1])
         for sx in (-1, 1)
         for sy in (-1, 1)
     ]
     pcb = cube([z.width, z.depth, z.pcb_t]).translate([-z.width / 2, -z.depth / 2, 0]) - holes
-    tall = cube([*z.tall_zone, z.height - z.pcb_t]).translate(
-        [-z.tall_zone[0] / 2, -z.tall_zone[1] / 2, z.pcb_t]
-    )
+    tall = cube([*z.tall_zone, z.height - z.pcb_t]).translate([-z.tall_zone[0] / 2, -z.tall_zone[1] / 2, z.pcb_t])
     return pcb.color("DarkGreen") | tall.color("#444")

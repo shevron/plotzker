@@ -95,9 +95,7 @@ class _Builder:
     def add_geometry(self) -> None:
         blocked = {c.operands["of"].target for c in self.sketch.constraints if c.type == "block"}
         for primitive in self.sketch.primitives:
-            self.entities[primitive.index] = self.entity(
-                primitive.geometry, primitive.index in blocked
-            )
+            self.entities[primitive.index] = self.entity(primitive.geometry, primitive.index in blocked)
         self.entities["origin"] = _Entity({None: self.point(0, 0, True)})
         self.entities["x_axis"] = self.line(Point(0, 0), Point(1, 0), True)
         self.entities["y_axis"] = self.line(Point(0, 0), Point(0, 1), True)
@@ -390,9 +388,7 @@ def solve(sketch: Sketch, *, strict: bool = False) -> SolvedSketch:
             warnings.append(warning(Stage.SOLVE, code, message, ids=ids))
 
     measured = {
-        id: builder.units.from_radians(builder.system.get_param(param))
-        if angle
-        else builder.system.get_param(param)
+        id: builder.units.from_radians(builder.system.get_param(param)) if angle else builder.system.get_param(param)
         for id, (param, angle) in builder.measured.items()
     }
     if strict and warnings:

@@ -153,9 +153,7 @@ def _xt60_sleeve() -> Solid:
     s, t = m.xt60_sleeve, m.wall_t
     sx, sy = m.xt60_pocket
     top = m.xt60_y + sy / 2 + m.xt60_pocket_relief + t
-    sleeve = box(
-        m.xt60_x - sx / 2 - t, m.xt60_y - sy / 2 - t, iz0 - EPS, m.xt60_x + sx / 2 + t, top, iz0 + s
-    )
+    sleeve = box(m.xt60_x - sx / 2 - t, m.xt60_y - sy / 2 - t, iz0 - EPS, m.xt60_x + sx / 2 + t, top, iz0 + s)
     y0 = m.xt60_y - sy / 2 - t
     wedge = (
         linear_extrude(
@@ -174,9 +172,7 @@ def _inlet_bosses() -> Solid:
     iz1 = m.hood_z[2]
     return union(
         *(
-            cylinder(d=C14_INLET.ear_d, h=m.inlet_boss_t + EPS, fn=FN_HOLE).translate(
-                [x, y, iz1 - m.inlet_boss_t]
-            )
+            cylinder(d=C14_INLET.ear_d, h=m.inlet_boss_t + EPS, fn=FN_HOLE).translate([x, y, iz1 - m.inlet_boss_t])
             for x, y in _inlet_holes()
         )
     )
@@ -201,9 +197,7 @@ def psu_hood_installed() -> Solid:
     )
     nut_ac, nut_t = TOL.nut_trap_ac(C14_INLET.hole_m), TOL.nut_trap_h(C14_INLET.hole_m)
     for x, y in _inlet_holes():
-        body = body - _hole_z(
-            TOL.bolt_hole_d(C14_INLET.hole_m), x, y, iz1 - m.inlet_boss_t - 1, oz1 + 1
-        )
+        body = body - _hole_z(TOL.bolt_hole_d(C14_INLET.hole_m), x, y, iz1 - m.inlet_boss_t - 1, oz1 + 1)
         # nut pressed in from inside; a corner points +y (up in the print)
         body = body - cylinder(d=nut_ac, h=nut_t + 1, fn=6).rotate([0, 0, 90]).translate(
             [x, y, iz1 - m.inlet_boss_t - 1]

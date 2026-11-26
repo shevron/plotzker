@@ -80,9 +80,7 @@ def board_holes() -> list[Hole]:
             )
     for x, y in bb.post_xy:
         holes.append(Hole("Bed posts", x, y, m5, note="M5 stud, head under the board"))
-    holes.append(
-        Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_d, note="Y loom to the ZRIB; deburr")
-    )
+    holes.append(Hole("Loom hole", LOOM.hole_x, LOOM.hole_y, LOOM.hole_d, note="Y loom to the ZRIB; deburr"))
     for x, y in bb.zrib_pilot_xy:
         holes.append(
             Hole(
@@ -155,9 +153,7 @@ def drilling_svg() -> str:
     d.rect((bx - a3x) / 2, (by - a3y) / 2, (bx + a3x) / 2, (by + a3y) / 2, dotted, "A3 sheet")
     for ry in bb.runner_y:
         d.rect(bb.runner_x[0], ry - bb.runner_w / 2, bb.runner_x[1], ry + bb.runner_w / 2, dashed)
-        d.text(
-            bb.runner_x[0] + 3, ry - bb.runner_w / 2 - 3, "runner 2040 on edge (underside)", size=5
-        )
+        d.text(bb.runner_x[0] + 3, ry - bb.runner_w / 2 - 3, "runner 2040 on edge (underside)", size=5)
     zc, zr = bb.zrib_center, abs(ZMOUNT.plate_v[0])
     d.rect(
         zc[0] - ZMOUNT.leg_u[1],

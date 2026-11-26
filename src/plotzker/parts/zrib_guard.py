@@ -28,9 +28,7 @@ def zrib_guard() -> Solid:
     length = 2 * m.leg_u[1]
     bar = cube([length, m.leg_t, m.strap_t]).translate([-length / 2, 0, 0])
     holes = [
-        cylinder(d=TOL.bolt_hole_d(3), h=m.strap_t + 2, fn=FN_HOLE).translate(
-            [sx * m.strap_screw_u, m.leg_t / 2, -1]
-        )
+        cylinder(d=TOL.bolt_hole_d(3), h=m.strap_t + 2, fn=FN_HOLE).translate([sx * m.strap_screw_u, m.leg_t / 2, -1])
         for sx in (-1, 1)
     ]
     for hole in holes:

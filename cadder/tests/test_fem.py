@@ -57,13 +57,9 @@ def beam_part(build_direction: tuple[float, float, float]) -> PrintedPart:
                 "test",
             ),
         ),
-        supports=(
-            Support("wall", Box((-0.5, -1, -1), (0.5, W + 1, H + 1), facing=(-1, 0, 0)), ""),
-        ),
+        supports=(Support("wall", Box((-0.5, -1, -1), (0.5, W + 1, H + 1), facing=(-1, 0, 0)), ""),),
         displacement_limits=(
-            DisplacementLimit(
-                "tip", Box((L - 0.5, -1, -1), (L + 0.5, W + 1, H + 1)), 5.0, (0, 0, 1)
-            ),
+            DisplacementLimit("tip", Box((L - 0.5, -1, -1), (L + 0.5, W + 1, H + 1)), 5.0, (0, 0, 1)),
         ),
     )
     profile = LIBRARY.profile()
@@ -135,10 +131,7 @@ def test_clean_stl_drops_slivers_and_makes_normals_outward(tmp_path):
     src = tmp_path / "a.stl"
     export(cube(10), str(src))
     text = src.read_text()
-    sliver = (
-        "facet normal 0 0 0\nouter loop\nvertex 0 0 0\nvertex 5 0 0\nvertex 10 0 0\n"
-        "endloop\nendfacet\n"
-    )
+    sliver = "facet normal 0 0 0\nouter loop\nvertex 0 0 0\nvertex 5 0 0\nvertex 10 0 0\nendloop\nendfacet\n"
     src.write_text(text.replace("endsolid", sliver + "endsolid", 1))
     clean = clean_stl(src, tmp_path / "b.stl")
     assert clean.dropped >= 1
@@ -199,9 +192,7 @@ def test_force_and_couple_distribution_are_exact():
     forces = force_on_region(mesh, region, (3.0, 0.0, -6.0), "test")
     assert [sum(f[i] for f in forces.values()) for i in range(3)] == pytest.approx([3, 0, -6])
     couple = moment_on_region(mesh, region, (0.0, 0.0, 12.0), "test")
-    assert [sum(f[i] for f in couple.values()) for i in range(3)] == pytest.approx(
-        [0, 0, 0], abs=1e-9
-    )
+    assert [sum(f[i] for f in couple.values()) for i in range(3)] == pytest.approx([0, 0, 0], abs=1e-9)
     torque = sum(mesh.nodes[n][0] * f[1] - mesh.nodes[n][1] * f[0] for n, f in couple.items())
     assert torque == pytest.approx(12.0)
 
@@ -277,10 +268,7 @@ def test_status_lines_flag_stale_and_missing_checks(tmp_path):
     part = beam_part((0, 0, 1))
     verdicts = tmp_path / "verdicts.toml"
     assert "never checked" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
-    entry = (
-        '[beam]\nverdict = "PASS"\ndate = "2026-01-01"\ngeometry = "x"\n'
-        f'spec = "{spec_hash(part)}"\n'
-    )
+    entry = f'[beam]\nverdict = "PASS"\ndate = "2026-01-01"\ngeometry = "x"\nspec = "{spec_hash(part)}"\n'
     verdicts.write_text(entry)
     assert "PASS (2026-01-01)" in status_lines(["beam"], {"beam": part}, verdicts, False)[0]
     verdicts.write_text(entry.replace(spec_hash(part), "old"))

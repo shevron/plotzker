@@ -105,16 +105,13 @@ class EndstopSpec:
     @property
     def contact_rest_v(self) -> float:
         """Lever surface at the contact point, past the board's front edge, at rest."""
-        return self.body_overhang + self.contact_s * math.sin(
-            self.lever_angle(self.rest_protrusion)
-        )
+        return self.body_overhang + self.contact_s * math.sin(self.lever_angle(self.rest_protrusion))
 
     @property
     def contact_travel(self) -> float:
         """Lever travel at the contact point, rest to fully pressed."""
         return self.contact_s * (
-            math.sin(self.lever_angle(self.rest_protrusion))
-            - math.sin(self.lever_angle(self.pressed_protrusion))
+            math.sin(self.lever_angle(self.rest_protrusion)) - math.sin(self.lever_angle(self.pressed_protrusion))
         )
 
     @property
@@ -130,22 +127,13 @@ def endstop(pressed: bool = False) -> Solid:
     """Endstop board in the model frame (see the module docstring); lever at rest or pressed."""
     e = ENDSTOP
     length, width, t = e.pcb
-    holes = [
-        cylinder(d=e.hole_d, h=t + 2, fn=16).translate([su * e.hole_pitch / 2, e.hole_v, -1])
-        for su in (-1, 1)
-    ]
+    holes = [cylinder(d=e.hole_d, h=t + 2, fn=16).translate([su * e.hole_pitch / 2, e.hole_v, -1]) for su in (-1, 1)]
     pcb = (cube([width, length, t]).translate([-width / 2, -length, 0]) - holes).color("Black")
     body_w, body_h, body_d = e.body
-    body = (
-        cube([body_w, body_h, body_d])
-        .translate([e.body_u - body_w / 2, e.body_overhang - body_h, t])
-        .color("#222")
-    )
+    body = cube([body_w, body_h, body_d]).translate([e.body_u - body_w / 2, e.body_overhang - body_h, t]).color("#222")
     conn_w, conn_l, conn_h = e.connector
     connector = (
-        cube([conn_w, conn_l, conn_h])
-        .translate([-conn_w / 2, -length - e.connector_overhang, t])
-        .color("White")
+        cube([conn_w, conn_l, conn_h]).translate([-conn_w / 2, -length - e.connector_overhang, t]).color("White")
     )
     protrusion = e.pressed_protrusion if pressed else e.rest_protrusion
     lever = (
@@ -163,9 +151,9 @@ def endstop_keepout() -> Solid:
     e = ENDSTOP
     width = e.connector[0] + 2 * e.plug_clearance
     rear_face = -(e.pcb[0] + e.connector_overhang)
-    return cube(
-        [width, rear_face - e.plug_keepout_v, e.pcb[2] + e.connector[2] + e.plug_clearance]
-    ).translate([-width / 2, e.plug_keepout_v, 0])
+    return cube([width, rear_face - e.plug_keepout_v, e.pcb[2] + e.connector[2] + e.plug_clearance]).translate(
+        [-width / 2, e.plug_keepout_v, 0]
+    )
 
 
 def endstop_placed(

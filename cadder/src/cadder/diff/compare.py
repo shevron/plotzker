@@ -85,9 +85,7 @@ def compare_snapshots(a: Snapshot, b: Snapshot) -> list[PartChange]:
     return changes
 
 
-def _compare_part(
-    name: str, path_a: Path | None, path_b: Path | None, error: str | None
-) -> PartChange:
+def _compare_part(name: str, path_a: Path | None, path_b: Path | None, error: str | None) -> PartChange:
     sa, err_a = _stats(path_a)
     sb, err_b = _stats(path_b)
     if sa is None or sb is None:

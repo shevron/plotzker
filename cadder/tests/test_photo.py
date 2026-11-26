@@ -45,12 +45,8 @@ def _art() -> np.ndarray:
         return round(x * PPM * 16 - 8), round((BOARD.height - y) * PPM * 16 - 8)
 
     cv2.rectangle(art, px(40, 80), px(70, 55), (170, 170, 170), -1, cv2.LINE_AA, 4)
-    cv2.circle(
-        art, px(*HOLE), round((RING_D / 2 * PPM - 0.5) * 16), (90, 90, 90), -1, cv2.LINE_AA, 4
-    )
-    cv2.circle(
-        art, px(*HOLE), round((HOLE_D / 2 * PPM - 0.5) * 16), (25, 25, 25), -1, cv2.LINE_AA, 4
-    )
+    cv2.circle(art, px(*HOLE), round((RING_D / 2 * PPM - 0.5) * 16), (90, 90, 90), -1, cv2.LINE_AA, 4)
+    cv2.circle(art, px(*HOLE), round((HOLE_D / 2 * PPM - 0.5) * 16), (25, 25, 25), -1, cv2.LINE_AA, 4)
     return art
 
 
@@ -68,16 +64,12 @@ def photo(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """The synthetic photo: the board art seen by the camera of ``_pose``."""
     folder = tmp_path_factory.mktemp("photo")
     k, rvec, tvec = _pose()
-    corners = np.array(
-        [[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]]
-    )
+    corners = np.array([[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]])
     img_px, _ = cv2.projectPoints(_to_cv(BOARD, corners), rvec, tvec, k, np.zeros(5))
     w, h = BOARD.width * PPM, BOARD.height * PPM
     art_px = np.array([[0, h], [w, h], [w, 0], [0, 0]], np.float32) - 0.5  # pixel centers
     homography = cv2.getPerspectiveTransform(art_px, img_px.reshape(-1, 2).astype(np.float32))
-    image = cv2.warpPerspective(
-        _art(), homography, SIZE, flags=cv2.INTER_CUBIC, borderValue=(200, 190, 180)
-    )
+    image = cv2.warpPerspective(_art(), homography, SIZE, flags=cv2.INTER_CUBIC, borderValue=(200, 190, 180))
     path = folder / "part.png"
     cv2.imwrite(str(path), image)
     return path
@@ -168,9 +160,7 @@ def _render(path: Path, center: np.ndarray, angles: tuple[float, float, float]) 
     r, _ = cv2.Rodrigues(np.radians(np.array(angles)))
     rvec, _ = cv2.Rodrigues(r)
     tvec = -r @ _to_cv(BOARD, center[None, :])[0]
-    corners = np.array(
-        [[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]]
-    )
+    corners = np.array([[0, 0, 0], [BOARD.width, 0, 0], [BOARD.width, BOARD.height, 0], [0, BOARD.height, 0]])
     img_px, _ = cv2.projectPoints(_to_cv(BOARD, corners), rvec, tvec, k, np.zeros(5))
     w, h = BOARD.width * PPM, BOARD.height * PPM
     art_px = np.array([[0, h], [w, h], [w, 0], [0, 0]], np.float32) - 0.5
@@ -258,9 +248,7 @@ def test_overlay_on_another_photo_cropped(photo: Path, rect: Rectification) -> N
 
     ff = FeatureFile(
         path=photo.parent / "f.json",
-        features=[
-            {"name": "hole", "kind": "circle", "center": [*HOLE, 0], "d": 6, "source": "photo"}
-        ],
+        features=[{"name": "hole", "kind": "circle", "center": [*HOLE, 0], "d": 6, "source": "photo"}],
         rect=None,
         image=photo,
     )

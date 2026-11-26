@@ -104,9 +104,7 @@ def target_command(
     square: Annotated[float, typer.Option(help="Square size, mm.")] = 15.0,
     marker: Annotated[float, typer.Option(help="Marker size, mm.")] = 11.0,
     paper: Annotated[str, typer.Option(help="A4, LETTER or A3.")] = "A4",
-    field: Annotated[
-        str, typer.Option(help="White field for the part: squares x0,y0,x1,y1, or 'none'.")
-    ] = "3,4,9,13",
+    field: Annotated[str, typer.Option(help="White field for the part: squares x0,y0,x1,y1, or 'none'.")] = "3,4,9,13",
 ) -> None:
     """Write a printable ChArUco target (print at 100 %, then measure 10 squares).
 
@@ -134,17 +132,11 @@ def rectify_command(
     squares: Annotated[str, typer.Option(help="Board squares, e.g. 12x17.")] = "12x17",
     nominal_square: Annotated[float, typer.Option(help="Board's nominal square, mm.")] = 15.0,
     nominal_marker: Annotated[float, typer.Option(help="Board's nominal marker, mm.")] = 11.0,
-    height: Annotated[
-        float, typer.Option(help="Rectify the plane this far above the paper, mm.")
-    ] = 0.0,
-    region: Annotated[
-        str | None, typer.Option(help="x0,y0,x1,y1 in target mm (default: whole board).")
-    ] = None,
+    height: Annotated[float, typer.Option(help="Rectify the plane this far above the paper, mm.")] = 0.0,
+    region: Annotated[str | None, typer.Option(help="x0,y0,x1,y1 in target mm (default: whole board).")] = None,
     ppmm: Annotated[float | None, typer.Option(help="Output pixels per mm.")] = None,
     focal: Annotated[float | None, typer.Option(help="Focal length in pixels.")] = None,
-    camera: Annotated[
-        Path | None, typer.Option(help="A camera file from `calibrate` (same phone and zoom).")
-    ] = None,
+    camera: Annotated[Path | None, typer.Option(help="A camera file from `calibrate` (same phone and zoom).")] = None,
     out: Annotated[Path | None, typer.Option(help="Output folder (default: photo's).")] = None,
 ) -> None:
     """Find the target, solve the camera pose and write a square-on image in mm (+ sidecar).
@@ -227,15 +219,9 @@ def edges_command(
     y1: float,
     band: Annotated[float, typer.Option(help="Width averaged across the line, px.")] = 5,
     count: Annotated[int, typer.Option(help="Edges to report.")] = 6,
-    first: Annotated[
-        bool, typer.Option("--first", help="The first edges from the start, not the strongest.")
-    ] = False,
-    polarity: Annotated[
-        str | None, typer.Option(help="Only 'rising' (dark→light) or 'falling' edges.")
-    ] = None,
-    min_strength: Annotated[
-        float, typer.Option("--min-strength", help="Weakest edge kept (gray levels / px).")
-    ] = 8,
+    first: Annotated[bool, typer.Option("--first", help="The first edges from the start, not the strongest.")] = False,
+    polarity: Annotated[str | None, typer.Option(help="Only 'rising' (dark→light) or 'falling' edges.")] = None,
+    min_strength: Annotated[float, typer.Option("--min-strength", help="Weakest edge kept (gray levels / px).")] = 8,
     as_json: Json = False,
 ) -> None:
     """Edges along the line (x0, y0) → (x1, y1), to sub-pixel (mm on rectified images).
@@ -247,18 +233,13 @@ def edges_command(
     from cadder.photo.measure import edges
 
     scale = _scale(image)
-    found = edges(
-        load(image), scale, (x0, y0), (x1, y1), band, count, min_strength, first, polarity
-    )
+    found = edges(load(image), scale, (x0, y0), (x1, y1), band, count, min_strength, first, polarity)
     if as_json:
         _echo_json([asdict(e) for e in found])
         return
     for e in found:
         kind = "dark→light" if e.rising else "light→dark"
-        typer.echo(
-            f"at {e.position:8.3f} {scale.unit}: ({e.x:.3f}, {e.y:.3f}) {kind}, "
-            f"strength {e.strength:.0f}"
-        )
+        typer.echo(f"at {e.position:8.3f} {scale.unit}: ({e.x:.3f}, {e.y:.3f}) {kind}, strength {e.strength:.0f}")
 
 
 @app.command("holes")
@@ -303,9 +284,7 @@ def point_command(
     u: float,
     v: float,
     height: Annotated[float, typer.Option(help="The feature's height above the paper, mm.")] = 0,
-    from_photo: Annotated[
-        bool, typer.Option("--photo", help="U V are photo pixels (default: rectified mm).")
-    ] = False,
+    from_photo: Annotated[bool, typer.Option("--photo", help="U V are photo pixels (default: rectified mm).")] = False,
 ) -> None:
     """Where a feature really is (target mm), given where it is seen and its height.
 
@@ -346,9 +325,7 @@ def triangulate_command(
     if len(parsed) < 2:
         raise ValueError("give the feature in at least two photos")
     point, miss = triangulate(parsed)
-    typer.echo(
-        f"({point[0]:.3f}, {point[1]:.3f}, {point[2]:.3f}) mm; rays meet within {miss:.3f} mm RMS"
-    )
+    typer.echo(f"({point[0]:.3f}, {point[1]:.3f}, {point[2]:.3f}) mm; rays meet within {miss:.3f} mm RMS")
 
 
 @app.command("overlay")
@@ -360,9 +337,7 @@ def overlay_command(
         Path | None,
         typer.Option(help="Draw on this photo's rectification instead (another photo of the set)."),
     ] = None,
-    crop: Annotated[
-        float | None, typer.Option(help="Crop to the features plus this margin (mm).")
-    ] = None,
+    crop: Annotated[float | None, typer.Option(help="Crop to the features plus this margin (mm).")] = None,
     labels: Annotated[str, typer.Option(help="names, numbers (with a legend) or none.")] = "names",
     out: Annotated[Path | None, typer.Option(help="Output image.")] = None,
 ) -> None:
@@ -434,12 +409,8 @@ def outline_command(
     y0: float,
     x1: float,
     y1: float,
-    light: Annotated[
-        bool, typer.Option("--light", help="A light part on a dark background.")
-    ] = False,
-    guess: Annotated[
-        str | None, typer.Option(help="x,y,length,width,angle: skip the threshold first guess.")
-    ] = None,
+    light: Annotated[bool, typer.Option("--light", help="A light part on a dark background.")] = False,
+    guess: Annotated[str | None, typer.Option(help="x,y,length,width,angle: skip the threshold first guess.")] = None,
     avoid: Annotated[
         list[str] | None,
         typer.Option(help="x0,y0,x1,y1: no measuring lines here (overhanging parts); repeatable."),

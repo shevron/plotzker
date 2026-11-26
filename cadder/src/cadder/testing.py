@@ -89,8 +89,8 @@ def connected_groups(items: Iterable[object]) -> list[list[int]]:
     group = list(range(len(solids)))
     for i, j in itertools.combinations(range(len(solids)), 2):
         if group[i] != group[j] and touching(solids[i], solids[j], boxes[i], boxes[j]):
-            group = [group[i] if g == group[j] else g for g in group]
+            group = [group[i] if label == group[j] else label for label in group]
     groups: dict[int, list[int]] = {}
-    for index, g in enumerate(group):
-        groups.setdefault(g, []).append(index)
+    for index, label in enumerate(group):
+        groups.setdefault(label, []).append(index)
     return sorted(groups.values(), key=len, reverse=True)

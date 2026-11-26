@@ -290,22 +290,46 @@ class _Writer:
                 text, level, dim = self.write(operand)
                 return f"{op}{_paren(text, level, 4)}", 4, dim
             case cpsk_formula.Binary(operator="^", left=left, right=right):
-                (lt, ll, ld), (rt, rl, _) = self.write(left), self.write(right)
+                (left_text, left_level, left_dimension), (right_text, right_level, _) = (
+                    self.write(left),
+                    self.write(right),
+                )
                 return (
-                    f"{_paren(lt, ll, 3)} ^ {_paren(rt, rl, 4)}",
+                    f"{_paren(left_text, left_level, 3)} ^ {_paren(right_text, right_level, 4)}",
                     3,
-                    None if ld is None else "other",
+                    None if left_dimension is None else "other",
                 )
             case cpsk_formula.Binary(operator=op, left=left, right=right) if op in ("*", "/"):
-                (lt, ll, ld), (rt, rl, rd) = self.write(left), self.write(right)
+                (left_text, left_level, left_dimension), (right_text, right_level, right_dimension) = (
+                    self.write(left),
+                    self.write(right),
+                )
                 if op == "*":
-                    dim = rd if ld is None else ld if rd is None else "other"
+                    dim = (
+                        right_dimension
+                        if left_dimension is None
+                        else left_dimension
+                        if right_dimension is None
+                        else "other"
+                    )
                 else:
-                    dim = ld if rd is None else None if ld == rd else "other"
-                return f"{_paren(lt, ll, 2)} {op} {_paren(rt, rl, 3)}", 2, dim
+                    dim = (
+                        left_dimension
+                        if right_dimension is None
+                        else None
+                        if left_dimension == right_dimension
+                        else "other"
+                    )
+                return f"{_paren(left_text, left_level, 2)} {op} {_paren(right_text, right_level, 3)}", 2, dim
             case cpsk_formula.Binary(operator=op, left=left, right=right):
-                (lt, ll, ld), (rt, rl, rd) = self.matched([left, right])
-                return f"{_paren(lt, ll, 1)} {op} {_paren(rt, rl, 2)}", 1, ld or rd
+                (left_text, left_level, left_dimension), (right_text, right_level, right_dimension) = self.matched(
+                    [left, right]
+                )
+                return (
+                    f"{_paren(left_text, left_level, 1)} {op} {_paren(right_text, right_level, 2)}",
+                    1,
+                    left_dimension or right_dimension,
+                )
         raise AssertionError(node)
 
     def call(self, function: str, args: tuple[cpsk_formula.Node, ...]) -> tuple[str, int, Dimension]:

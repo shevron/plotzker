@@ -139,25 +139,25 @@ def diff(
     from cadder.diff.source import SourceLayout, collect, format_source
 
     config = BuildConfig(project.spec, project.source_dirs, project.legacy_specs)
-    a = take_snapshot(project.root, rev_a, out / "snapshots", config)
-    b = take_snapshot(project.root, rev_b, out / "snapshots", config)
-    changes = compare_snapshots(a, b)
+    before = take_snapshot(project.root, rev_a, out / "snapshots", config)
+    after = take_snapshot(project.root, rev_b, out / "snapshots", config)
+    changes = compare_snapshots(before, after)
     volumes = {c.name: (c.after or c.before).volume for c in changes if c.after or c.before}  # type: ignore[union-attr]
-    assemblies = compare_assemblies(a, b, volumes)
+    assemblies = compare_assemblies(before, after, volumes)
     changed = [c.name for c in changes if c.status.value not in ("unchanged", "error")]
     layout = SourceLayout(project.source_dirs, project.params_file, project.verdicts_file)
-    info = collect(project.root, a, b, changed, layout)
+    info = collect(project.root, before, after, changed, layout)
     if as_json:
-        typer.echo(to_json(a, b, changes, assemblies))
+        typer.echo(to_json(before, after, changes, assemblies))
     else:
-        typer.echo(format_report(a, b, changes, all_parts))
+        typer.echo(format_report(before, after, changes, all_parts))
         typer.echo()
         typer.echo(format_assemblies(assemblies, all_parts))
         if text := format_source(info):
             typer.echo()
             typer.echo(text)
     if html:
-        report = write_report(a, b, changes, out / "reports", assemblies, info)
+        report = write_report(before, after, changes, out / "reports", assemblies, info)
         typer.echo(f"\nreport: {report}", err=as_json)
         if serve_port is not None:
             serve(report.parent, serve_port)

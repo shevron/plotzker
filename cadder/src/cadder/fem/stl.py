@@ -37,12 +37,12 @@ def _cross(a: Vec3, b: Vec3, c: Vec3) -> Vec3:
 
 def _on_segment(m: Vec3, p: Vec3, q: Vec3, tol: float = 2 * WELD_TOL) -> bool:
     """Whether ``m`` lies strictly inside the segment ``p``-``q`` (within ``tol``)."""
-    d = (q[0] - p[0], q[1] - p[1], q[2] - p[2])
-    length2 = d[0] ** 2 + d[1] ** 2 + d[2] ** 2
-    t = ((m[0] - p[0]) * d[0] + (m[1] - p[1]) * d[1] + (m[2] - p[2]) * d[2]) / length2
-    if not 1e-6 < t < 1 - 1e-6:
+    direction = (q[0] - p[0], q[1] - p[1], q[2] - p[2])
+    length2 = direction[0] ** 2 + direction[1] ** 2 + direction[2] ** 2
+    fraction = ((m[0] - p[0]) * direction[0] + (m[1] - p[1]) * direction[1] + (m[2] - p[2]) * direction[2]) / length2
+    if not 1e-6 < fraction < 1 - 1e-6:
         return False
-    foot = (p[0] + t * d[0], p[1] + t * d[1], p[2] + t * d[2])
+    foot = (p[0] + fraction * direction[0], p[1] + fraction * direction[1], p[2] + fraction * direction[2])
     return (m[0] - foot[0]) ** 2 + (m[1] - foot[1]) ** 2 + (m[2] - foot[2]) ** 2 <= tol**2
 
 

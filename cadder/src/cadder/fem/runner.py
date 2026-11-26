@@ -205,14 +205,16 @@ def _excluded_nodes(part: MaterialPart, mesh: Mesh) -> set[int]:
 
 def _nearest_patch(mesh: Mesh, node: int, edges: dict[str, set[int]]) -> tuple[str, float]:
     """The loaded or supported patch whose outline is closest to ``node``, and the distance."""
-    p = mesh.nodes[node]
+    target = mesh.nodes[node]
     best = ("none", math.inf)
     for label, nodes in edges.items():
-        for n in nodes:
-            q = mesh.nodes[n]
-            d = math.sqrt((p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2)
-            if d < best[1]:
-                best = (label, d)
+        for other in nodes:
+            position = mesh.nodes[other]
+            distance = math.sqrt(
+                (target[0] - position[0]) ** 2 + (target[1] - position[1]) ** 2 + (target[2] - position[2]) ** 2
+            )
+            if distance < best[1]:
+                best = (label, distance)
     return best
 
 
@@ -268,16 +270,16 @@ def _judge(part: MaterialPart, solved: Solved, reference: Solved | None) -> list
     excluded_ref = _excluded_nodes(part, reference.mesh) if reference else set()
     rows = []
     for case in spec.load_cases:
-        sf = case.safety_factor or spec.safety_factor
+        safety_factor = case.safety_factor or spec.safety_factor
         run = solved.results[case.name]
         allow = _strengths(part, case.sustained)
-        sr = stress_result(mesh, run.stress, part.axis, allow, excluded)
-        util = sr.robust * sf
+        stresses = stress_result(mesh, run.stress, part.axis, allow, excluded)
+        util = stresses.robust * safety_factor
         status = status_for(util)
         note = ""
-        if sr.peak * sf > 1 and status is not Status.FAIL:
+        if stresses.peak * safety_factor > 1 and status is not Status.FAIL:
             status = worst([status, Status.MARGINAL])
-            note = f"; raw peak {sr.peak * sf:.2f} exceeds the limit next to a load or support edge"
+            note = f"; raw peak {stresses.peak * safety_factor:.2f} exceeds the limit next to a load or support edge"
         if reference:
             ref = stress_result(
                 reference.mesh,
@@ -286,13 +288,13 @@ def _judge(part: MaterialPart, solved: Solved, reference: Solved | None) -> list
                 allow,
                 excluded_ref,
             )
-            drift = (sr.robust - ref.robust) / max(ref.robust, 1e-12)
+            drift = (stresses.robust - ref.robust) / max(ref.robust, 1e-12)
             note += f"; peak stress changed {drift:+.0%} from the first mesh"
             if abs(drift) > 0.25:
                 note += " (sharp-corner singularity likely: judge with care)"
-        where = tuple(round(c, 1) for c in mesh.nodes[sr.robust_node])
-        principal, across, shear = stress_components(run.stress[sr.robust_node], part.axis)
-        patch, distance = _nearest_patch(mesh, sr.robust_node, edges)
+        where = tuple(round(c, 1) for c in mesh.nodes[stresses.robust_node])
+        principal, across, shear = stress_components(run.stress[stresses.robust_node], part.axis)
+        patch, distance = _nearest_patch(mesh, stresses.robust_node, edges)
         rows.append(
             Criterion(
                 f"strength/{case.name}",
@@ -302,7 +304,8 @@ def _judge(part: MaterialPart, solved: Solved, reference: Solved | None) -> list
                 "utilization (failure index × safety factor)",
                 round(util, 3),
                 status,
-                f"{sr.robust_mode} governs at {where}, failure index {sr.robust:.3f} × SF {sf:g}; "
+                f"{stresses.robust_mode} governs at {where}, failure index "
+                f"{stresses.robust:.3f} × SF {safety_factor:g}; "
                 f"there: in-plane principal {principal:.1f} MPa (allowable "
                 f"{allow.in_plane:.1f}), across the layers {across:+.1f} MPa and interlayer "
                 f"shear {shear:.1f} MPa (allowable {allow.build:.1f}); {distance:.1f} mm from "
@@ -344,8 +347,8 @@ def _equilibrium(part: MaterialPart, solved: Solved) -> list[Check]:
         total = applied.net_force(forces, supports)
         reaction = [0.0, 0.0, 0.0]
         for n in support_set:
-            r = run.reaction.get(n, (0.0, 0.0, 0.0))
-            reaction = [reaction[i] + r[i] for i in range(3)]
+            support_reaction = run.reaction.get(n, (0.0, 0.0, 0.0))
+            reaction = [reaction[i] + support_reaction[i] for i in range(3)]
         scale = sum(math.sqrt(sum(c * c for c in f)) for f in forces.values()) or 1.0
         unbalance = math.sqrt(sum((total[i] + reaction[i]) ** 2 for i in range(3))) / scale
         body = solved.body_load[case.name]
@@ -400,9 +403,9 @@ def _pictures(
     data_files = []
     for case in spec.load_cases:
         allow = _strengths(part, case.sustained)
-        sf = case.safety_factor or spec.safety_factor
+        safety_factor = case.safety_factor or spec.safety_factor
         run = final.results[case.name]
-        util = node_utilization(run.stress, part.axis, allow, sf)
+        util = node_utilization(run.stress, part.axis, allow, safety_factor)
         hotspot = stress_result(final.mesh, run.stress, part.axis, allow, excluded)
         rows = [c for c in criteria if c.case == case.name]
         lines = [f"{part.name} / {case.name}: {worst([c.status for c in rows]).value}"]

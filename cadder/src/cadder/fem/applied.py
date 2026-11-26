@@ -56,11 +56,11 @@ def moment_on_region(mesh: Mesh, region: Region, vector: Vec3, what: str) -> dic
         raise SpecError(f"{what}: the region is too small to carry a couple")
     forces: dict[int, Vec3] = {}
     for n, rho in arms.items():
-        cx = vector[1] * rho[2] - vector[2] * rho[1]
-        cy = vector[2] * rho[0] - vector[0] * rho[2]
-        cz = vector[0] * rho[1] - vector[1] * rho[0]
-        s = weights[n] / inertia
-        forces[n] = (cx * s, cy * s, cz * s)
+        cross_x = vector[1] * rho[2] - vector[2] * rho[1]
+        cross_y = vector[2] * rho[0] - vector[0] * rho[2]
+        cross_z = vector[0] * rho[1] - vector[1] * rho[0]
+        scale_factor = weights[n] / inertia
+        forces[n] = (cross_x * scale_factor, cross_y * scale_factor, cross_z * scale_factor)
     return forces
 
 

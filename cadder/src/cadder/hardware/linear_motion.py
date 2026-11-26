@@ -84,18 +84,18 @@ SCS10UU_SPEC = Scs10uuSpec()
 def shaft(spec: Shaft, length: float | None = None) -> Solid:
     """A shaft (``length`` overrides the spec's). Origin: start of the shaft on its axis; runs
     along +Y."""
-    h = spec.length if length is None else length
-    return cylinder(d=spec.dia, h=h, fn=32).rotate([-90, 0, 0]).color("WhiteSmoke")
+    length_value = spec.length if length is None else length
+    return cylinder(d=spec.dia, h=length_value, fn=32).rotate([-90, 0, 0]).color("WhiteSmoke")
 
 
 def sk10() -> Solid:
     """SK10. Origin: mounting surface under the shaft axis, at mid-thickness; shaft along Y."""
-    c = SK10_SPEC.base_chamfer
+    chamfer = SK10_SPEC.base_chamfer
     base = hull(
-        cube([SK10_SPEC.width - 2 * c, SK10_SPEC.length, SK10_SPEC.base_thickness]).translate(
-            [-SK10_SPEC.width / 2 + c, -SK10_SPEC.length / 2, 0]
+        cube([SK10_SPEC.width - 2 * chamfer, SK10_SPEC.length, SK10_SPEC.base_thickness]).translate(
+            [-SK10_SPEC.width / 2 + chamfer, -SK10_SPEC.length / 2, 0]
         ),
-        cube([SK10_SPEC.width, SK10_SPEC.length, SK10_SPEC.base_thickness - c]).translate(
+        cube([SK10_SPEC.width, SK10_SPEC.length, SK10_SPEC.base_thickness - chamfer]).translate(
             [-SK10_SPEC.width / 2, -SK10_SPEC.length / 2, 0]
         ),
     )
@@ -121,17 +121,19 @@ def sk10() -> Solid:
 
 def scs10uu() -> Solid:
     """SCS10UU. Origin: block base plane under the shaft axis, at mid-length; shaft along Y."""
-    c = SCS10UU_SPEC.top_chamfer
+    chamfer = SCS10UU_SPEC.top_chamfer
     recess = polygon(
         [
-            [-SCS10UU_SPEC.recess_width / 2 - c, EPS],
-            [SCS10UU_SPEC.recess_width / 2 + c, EPS],
+            [-SCS10UU_SPEC.recess_width / 2 - chamfer, EPS],
+            [SCS10UU_SPEC.recess_width / 2 + chamfer, EPS],
             [SCS10UU_SPEC.recess_width / 2, -SCS10UU_SPEC.recess_depth],
             [-SCS10UU_SPEC.recess_width / 2, -SCS10UU_SPEC.recess_depth],
         ]
     ).translate([0, SCS10UU_SPEC.height, 0])
     edge_chamfers = [
-        polygon([[0, EPS], [-sx * c, EPS], [0, -c]]).translate([sx * SCS10UU_SPEC.width / 2, SCS10UU_SPEC.height, 0])
+        polygon([[0, EPS], [-sx * chamfer, EPS], [0, -chamfer]]).translate(
+            [sx * SCS10UU_SPEC.width / 2, SCS10UU_SPEC.height, 0]
+        )
         for sx in (-1, 1)
     ]
     top_cuts = linear_extrude([recess, *edge_chamfers], height=SCS10UU_SPEC.length + 2, center=True).rotate([90, 0, 0])

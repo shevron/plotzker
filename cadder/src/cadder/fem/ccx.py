@@ -58,13 +58,13 @@ class Results:
 
 def local_axes(build: Vec3) -> tuple[Vec3, Vec3, Vec3]:
     """Material axes: 1 and 2 span the layer plane, 3 is the build direction (right-handed)."""
-    n = math.sqrt(sum(c * c for c in build))
-    e3 = (build[0] / n, build[1] / n, build[2] / n)
+    build_length = math.sqrt(sum(c * c for c in build))
+    e3 = (build[0] / build_length, build[1] / build_length, build[2] / build_length)
     helper = (1.0, 0.0, 0.0) if abs(e3[0]) < 0.9 else (0.0, 1.0, 0.0)
-    d = sum(h * c for h, c in zip(helper, e3, strict=True))
-    e1 = (helper[0] - d * e3[0], helper[1] - d * e3[1], helper[2] - d * e3[2])
-    m = math.sqrt(sum(c * c for c in e1))
-    e1 = (e1[0] / m, e1[1] / m, e1[2] / m)
+    projection = sum(h * c for h, c in zip(helper, e3, strict=True))
+    e1 = (helper[0] - projection * e3[0], helper[1] - projection * e3[1], helper[2] - projection * e3[2])
+    e1_length = math.sqrt(sum(c * c for c in e1))
+    e1 = (e1[0] / e1_length, e1[1] / e1_length, e1[2] / e1_length)
     e2 = (
         e3[1] * e1[2] - e3[2] * e1[1],
         e3[2] * e1[0] - e3[0] * e1[2],
@@ -120,9 +120,9 @@ def write_input(
         for node, f in forces.items():
             out += [f"{node},{d},{c:.8g}" for d, c in enumerate(f, start=1) if c]
     if acceleration is not None and any(acceleration):
-        a = math.sqrt(sum(c * c for c in acceleration))
-        direction = ",".join(f"{-c / a:.8g}" for c in acceleration)
-        out += ["*DLOAD", f"EALL,GRAV,{a:.8g},{direction}"]
+        acceleration_magnitude = math.sqrt(sum(c * c for c in acceleration))
+        direction = ",".join(f"{-c / acceleration_magnitude:.8g}" for c in acceleration)
+        out += ["*DLOAD", f"EALL,GRAV,{acceleration_magnitude:.8g},{direction}"]
     out += ["*NODE FILE", "U,RF", "*EL FILE", "S", "*END STEP"]
     path.write_text("\n".join(out) + "\n")
 
@@ -150,13 +150,13 @@ def run_ccx(inp: Path, threads: int = 1) -> Results:
 
 def _thread_env(threads: int) -> dict[str, str]:
     """Environment that makes CalculiX use ``threads`` threads."""
-    n = str(max(1, threads))
+    thread_count = str(max(1, threads))
     return {
         **os.environ,
-        "OMP_NUM_THREADS": n,
-        "CCX_NPROC_STIFFNESS": n,
-        "CCX_NPROC_EQUATION_SOLVER": n,
-        "CCX_NPROC_RESULTS": n,
+        "OMP_NUM_THREADS": thread_count,
+        "CCX_NPROC_STIFFNESS": thread_count,
+        "CCX_NPROC_EQUATION_SOLVER": thread_count,
+        "CCX_NPROC_RESULTS": thread_count,
     }
 
 

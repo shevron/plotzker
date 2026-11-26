@@ -182,15 +182,15 @@ def _is_freecad_unit(name: str) -> bool:
 
 
 def _part(geometry: Geometry, part: Any, vector: Any) -> Any:
-    c = geometry.coords
+    coords = geometry.coords
     if geometry.kind == "point":
-        return part.Point(vector(c[0], c[1], 0))
+        return part.Point(vector(coords[0], coords[1], 0))
     if geometry.kind == "line":
-        return part.LineSegment(vector(c[0], c[1], 0), vector(c[2], c[3], 0))
-    circle = part.Circle(vector(c[0], c[1], 0), vector(0, 0, 1), c[2])
+        return part.LineSegment(vector(coords[0], coords[1], 0), vector(coords[2], coords[3], 0))
+    circle = part.Circle(vector(coords[0], coords[1], 0), vector(0, 0, 1), coords[2])
     if geometry.kind == "circle":
         return circle
-    return part.ArcOfCircle(circle, math.radians(c[3]), math.radians(c[4]))
+    return part.ArcOfCircle(circle, math.radians(coords[3]), math.radians(coords[4]))
 
 
 def _arguments(constraint: Constraint) -> list[Any]:
@@ -506,16 +506,16 @@ def _is_inactive(node: Node) -> bool:
 
 
 def _geometry(primitive: cpsk.Primitive) -> Geometry:
-    g = primitive.geometry
+    geometry = primitive.geometry
     coords: tuple[float, ...]
-    if isinstance(g, cpsk.Point):
-        coords = (g.x, g.y)
-    elif isinstance(g, cpsk.Line):
-        coords = (g.x1, g.y1, g.x2, g.y2)
-    elif isinstance(g, cpsk.Circle):
-        coords = (g.cx, g.cy, g.r)
+    if isinstance(geometry, cpsk.Point):
+        coords = (geometry.x, geometry.y)
+    elif isinstance(geometry, cpsk.Line):
+        coords = (geometry.x1, geometry.y1, geometry.x2, geometry.y2)
+    elif isinstance(geometry, cpsk.Circle):
+        coords = (geometry.cx, geometry.cy, geometry.r)
     else:
-        coords = (g.cx, g.cy, g.r, g.start_angle, g.end_angle)
+        coords = (geometry.cx, geometry.cy, geometry.r, geometry.start_angle, geometry.end_angle)
     return Geometry(primitive.kind, coords, primitive.construction)
 
 

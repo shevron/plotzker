@@ -24,8 +24,8 @@ LM8UU = Bearing(8, 15, 24)
 LM10UU = Bearing(10, 19, 29)
 
 
-def bearing(b: Bearing) -> Solid:
+def bearing(spec: Bearing) -> Solid:
     """Generic bearing. Origin: center of one face, axis +Z."""
-    body = cylinder(d=b.outer_dia, h=b.width, fn=48)
-    bore = cylinder(d=b.bore, h=b.width + 2, fn=32).translate([0, 0, -1])
+    body = cylinder(d=spec.outer_dia, h=spec.width, fn=48)
+    bore = cylinder(d=spec.bore, h=spec.width + 2, fn=32).translate([0, 0, -1])
     return (body - bore).color("LightSteelBlue")

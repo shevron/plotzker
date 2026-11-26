@@ -26,8 +26,10 @@ def load(path):
 def make_points(xyz, u, scale):
     """Points displaced by ``scale`` times the displacement."""
     pts = vtk.vtkPoints()
-    for p, d in zip(xyz, u, strict=True):
-        pts.InsertNextPoint(p[0] + scale * d[0], p[1] + scale * d[1], p[2] + scale * d[2])
+    for point, displacement in zip(xyz, u, strict=True):
+        pts.InsertNextPoint(
+            point[0] + scale * displacement[0], point[1] + scale * displacement[1], point[2] + scale * displacement[2]
+        )
     return pts
 
 
@@ -110,12 +112,12 @@ def render(poly, ghost, colors, rng, field, bar_title, text, camera, marker, out
         sphere.SetRadius(radius)
         sphere.SetThetaResolution(16)
         sphere.SetPhiResolution(16)
-        sm = vtk.vtkPolyDataMapper()
-        sm.SetInputConnection(sphere.GetOutputPort())
-        sa = vtk.vtkActor()
-        sa.SetMapper(sm)
-        sa.GetProperty().SetColor(*rgb)
-        renderer.AddActor(sa)
+        slab_mapper = vtk.vtkPolyDataMapper()
+        slab_mapper.SetInputConnection(sphere.GetOutputPort())
+        slab_actor = vtk.vtkActor()
+        slab_actor.SetMapper(slab_mapper)
+        slab_actor.GetProperty().SetColor(*rgb)
+        renderer.AddActor(slab_actor)
     bar = vtk.vtkScalarBarActor()
     bar.SetLookupTable(colors)
     bar.SetTitle(bar_title)
@@ -158,8 +160,8 @@ def write_vtu(data, path, disp, util):
     """The undeformed volume mesh with the result fields, for ParaView or FreeCAD."""
     grid = vtk.vtkUnstructuredGrid()
     pts = vtk.vtkPoints()
-    for p in data["xyz"]:
-        pts.InsertNextPoint(*p)
+    for point in data["xyz"]:
+        pts.InsertNextPoint(*point)
     grid.SetPoints(pts)
     for tet in data["tets"]:
         ids = vtk.vtkIdList()
@@ -169,18 +171,18 @@ def write_vtu(data, path, disp, util):
     vec = vtk.vtkFloatArray()
     vec.SetName("displacement_mm")
     vec.SetNumberOfComponents(3)
-    for d in data["u"]:
-        vec.InsertNextTuple3(*d)
+    for displacement in data["u"]:
+        vec.InsertNextTuple3(*displacement)
     grid.GetPointData().AddArray(vec)
     arr = vtk.vtkFloatArray()
     arr.SetName("utilization")
-    for v in util:
-        arr.InsertNextValue(v)
+    for value in util:
+        arr.InsertNextValue(value)
     grid.GetPointData().AddArray(arr)
     mag = vtk.vtkFloatArray()
     mag.SetName("displacement_magnitude_mm")
-    for v in disp:
-        mag.InsertNextValue(v)
+    for value in disp:
+        mag.InsertNextValue(value)
     grid.GetPointData().AddArray(mag)
     writer = vtk.vtkXMLUnstructuredGridWriter()
     writer.SetFileName(str(path))
@@ -190,8 +192,8 @@ def write_vtu(data, path, disp, util):
 
 def normalize(v):
     """Unit vector."""
-    n = math.sqrt(sum(c * c for c in v)) or 1.0
-    return tuple(c / n for c in v)
+    length = math.sqrt(sum(c * c for c in v)) or 1.0
+    return tuple(c / length for c in v)
 
 
 def main():
@@ -199,16 +201,16 @@ def main():
     data = load(sys.argv[1])
     out = Path(sys.argv[2])
     case = data["case"]
-    xyz, u, util = data["xyz"], data["u"], data["util"]
-    disp = [math.sqrt(d[0] ** 2 + d[1] ** 2 + d[2] ** 2) for d in u]
-    lo = [min(p[i] for p in xyz) for i in range(3)]
-    hi = [max(p[i] for p in xyz) for i in range(3)]
-    center = [(lo[i] + hi[i]) / 2 for i in range(3)]
-    diag = math.sqrt(sum((hi[i] - lo[i]) ** 2 for i in range(3)))
+    xyz, displacements, util = data["xyz"], data["u"], data["util"]
+    disp = [math.sqrt(d[0] ** 2 + d[1] ** 2 + d[2] ** 2) for d in displacements]
+    lower = [min(p[i] for p in xyz) for i in range(3)]
+    upper = [max(p[i] for p in xyz) for i in range(3)]
+    center = [(lower[i] + upper[i]) / 2 for i in range(3)]
+    diag = math.sqrt(sum((upper[i] - lower[i]) ** 2 for i in range(3)))
     top = max(disp) or 1e-9
     scale = 0.05 * diag / top
-    deformed = surface(make_points(xyz, u, scale), data["tris"], util, disp)
-    ghost = surface(make_points(xyz, u, 0.0), data["tris"], util, disp)
+    deformed = surface(make_points(xyz, displacements, scale), data["tris"], util, disp)
+    ghost = surface(make_points(xyz, displacements, 0.0), data["tris"], util, disp)
     head = "\n".join(data["lines"])
     note = f"deformation x{scale:.0f}, ghost = undeformed   max displacement {top:.3f} mm"
     names = []
@@ -226,7 +228,7 @@ def main():
         "utilization = failure index x safety factor (1.0 = at the allowable)",
     )
     hot = xyz[data["hotspot"]]
-    hot_def = [hot[i] + scale * u[data["hotspot"]][i] for i in range(3)]
+    hot_def = [hot[i] + scale * displacements[data["hotspot"]][i] for i in range(3)]
     mark = [(hot_def, 0.012 * diag, (0.85, 0.0, 0.85))]
     for name, direction in (
         (f"{case}_utilization.png", view),

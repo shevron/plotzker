@@ -334,8 +334,8 @@ class _Reader:
             case "circle":
                 geometry = Circle(*values)
             case _:
-                cx, cy, r, start, end = values
-                geometry = Arc(cx, cy, r, start, end, units=self.units)
+                cx, cy, radius, start, end = values
+                geometry = Arc(cx, cy, radius, start, end, units=self.units)
         if isinstance(geometry, Circle | Arc) and not geometry.r > 0:
             self.error("structure", f"radius must be positive, not {geometry.r:g}", element.line)
         index = len(self.primitives)

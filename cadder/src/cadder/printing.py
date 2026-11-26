@@ -45,33 +45,33 @@ class Tolerances:
     nozzle_dia: float = 0.4
     nut_wall: float = 2.0  #: plastic that backs a pressed-in nut (takes the thrust or pull)
 
-    def bolt_hole_dia(self, m: float) -> float:
+    def bolt_hole_dia(self, size: float) -> float:
         """Clearance hole for an M``m`` bolt."""
-        return m + self.bolt
+        return size + self.bolt
 
-    def nut_trap_across_flats(self, m: float) -> float:
+    def nut_trap_across_flats(self, size: float) -> float:
         """Across flats of a nut trap."""
-        return metric(m).nut_across_flats + self.nut
+        return metric(size).nut_across_flats + self.nut
 
-    def nut_trap_across_corners(self, m: float) -> float:
+    def nut_trap_across_corners(self, size: float) -> float:
         """Across corners of a nut trap (for a 6-sided cylinder)."""
-        return self.nut_trap_across_flats(m) / cos_deg(30)
+        return self.nut_trap_across_flats(size) / cos_deg(30)
 
-    def nut_trap_height(self, m: float) -> float:
+    def nut_trap_height(self, size: float) -> float:
         """Height (thickness) of a nut trap slot."""
-        return metric(m).nut_height + self.nut_thickness
+        return metric(size).nut_height + self.nut_thickness
 
-    def counterbore_dia(self, m: float) -> float:
+    def counterbore_dia(self, size: float) -> float:
         """Counterbore for a socket head cap screw head."""
-        return metric(m).head_dia + 2 * self.bolt
+        return metric(size).head_dia + 2 * self.bolt
 
-    def slide_dia(self, d: float) -> float:
+    def slide_dia(self, dia: float) -> float:
         """Hole diameter for a sliding fit on a ``d`` mm part."""
-        return d + self.slide
+        return dia + self.slide
 
-    def press_dia(self, d: float) -> float:
+    def press_dia(self, dia: float) -> float:
         """Hole diameter for a press fit on a ``d`` mm part."""
-        return d + self.press
+        return dia + self.press
 
 
 #: Euler rotations from the canonical frame (bolt axis y, entrance toward +z) to
@@ -89,7 +89,7 @@ _ROTATIONS: dict[tuple[str, str], tuple[float, float, float]] = {
 
 
 def nut_slot(
-    m: float,
+    size: float,
     reach: float,
     axis: str,
     entrance: str,
@@ -106,9 +106,9 @@ def nut_slot(
     ``tol``: the project's print tolerances (default: :class:`Tolerances`' defaults).
     """
     tol = tol or Tolerances()
-    af = metric(m).nut_across_flats + tol.nut_slot  # across flats (the print comes out ~0.1 narrow)
-    ac = af / cos_deg(30)
-    t = tol.nut_trap_height(m) + extra_thickness
-    hexagon = cylinder(d=ac, h=t, fn=6).rotate([90, 0, 0]).translate([0, t / 2, 0])
-    walls = cube([ac, t, reach + EPS]).translate([-ac / 2, -t / 2, -EPS])
+    across_flats = metric(size).nut_across_flats + tol.nut_slot  # across flats (the print comes out ~0.1 narrow)
+    across_corners = across_flats / cos_deg(30)
+    thickness = tol.nut_trap_height(size) + extra_thickness
+    hexagon = cylinder(d=across_corners, h=thickness, fn=6).rotate([90, 0, 0]).translate([0, thickness / 2, 0])
+    walls = cube([across_corners, thickness, reach + EPS]).translate([-across_corners / 2, -thickness / 2, -EPS])
     return (hexagon | walls).rotate(list(_ROTATIONS[axis, entrance]))

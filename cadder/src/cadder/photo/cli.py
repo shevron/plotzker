@@ -444,7 +444,8 @@ def outline_command(
     else:
         typer.echo(
             f"center ({found_outline.x:.3f}, {found_outline.y:.3f}) {scale.unit}, "
-            f"length {found_outline.length:.3f} x width {found_outline.width:.3f}, angle {found_outline.angle_deg:.2f}°, fit RMS {found_outline.rms:.3f}; "
+            f"length {found_outline.length:.3f} x width {found_outline.width:.3f}, "
+            f"angle {found_outline.angle_deg:.2f}°, fit RMS {found_outline.rms:.3f}; "
             f"edge points per side {found_outline.points}"
         )
     import cv2

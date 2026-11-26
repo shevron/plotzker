@@ -74,59 +74,59 @@ METRIC: dict[float, MetricSize] = {size.size: size for size in _SIZES}
 M2_5, M3, M4, M5 = _SIZES
 
 
-def metric(m: float) -> MetricSize:
+def metric(size: float) -> MetricSize:
     """Fastener dimensions for thread size ``m`` (e.g. ``metric(3)``)."""
     try:
-        return METRIC[m]
+        return METRIC[size]
     except KeyError:
-        raise ValueError(f"No fastener data for M{m}; known: {sorted(METRIC)}") from None
+        raise ValueError(f"No fastener data for M{size}; known: {sorted(METRIC)}") from None
 
 
 # --- models (fit checks and visuals only) -------------------------------------
 
 
-def shcs(m: float, length: float) -> Solid:
+def shcs(size: float, length: float) -> Solid:
     """Socket head cap screw.
 
     Origin: center of the underside of the head; shank points down -Z.
     """
-    size = metric(m)
-    head = cylinder(d=size.head_dia, h=size.head_height, fn=24)
-    shank = cylinder(d=m, h=length, fn=16).translate([0, 0, -length])
+    metric_size = metric(size)
+    head = cylinder(d=metric_size.head_dia, h=metric_size.head_height, fn=24)
+    shank = cylinder(d=size, h=length, fn=16).translate([0, 0, -length])
     return (head | shank).color("DimGray")
 
 
-def countersunk_screw(m: float, length: float, head_dia: float) -> Solid:
+def countersunk_screw(size: float, length: float, head_dia: float) -> Solid:
     """Countersunk (90°) screw. Origin: center of the head's top face; shank points down -Z."""
-    h = (head_dia - m) / 2
-    head = cylinder(d1=m, d2=head_dia, h=h, fn=24).translate([0, 0, -h])
-    shank = cylinder(d=m, h=length - h + 0.01, fn=16).translate([0, 0, -length])
+    head_height = (head_dia - size) / 2
+    head = cylinder(d1=size, d2=head_dia, h=head_height, fn=24).translate([0, 0, -head_height])
+    shank = cylinder(d=size, h=length - head_height + 0.01, fn=16).translate([0, 0, -length])
     return (head | shank).color("DimGray")
 
 
-def hex_nut(m: float) -> Solid:
+def hex_nut(size: float) -> Solid:
     """Hex nut. Origin: center of the bottom face, axis +Z."""
-    size = metric(m)
-    body = cylinder(d=size.nut_across_corners, h=size.nut_height, fn=6)
-    bore = cylinder(d=m, h=size.nut_height + 2, fn=16).translate([0, 0, -1])
+    metric_size = metric(size)
+    body = cylinder(d=metric_size.nut_across_corners, h=metric_size.nut_height, fn=6)
+    bore = cylinder(d=size, h=metric_size.nut_height + 2, fn=16).translate([0, 0, -1])
     return (body - bore).color("Silver")
 
 
-def washer(m: float) -> Solid:
+def washer(size: float) -> Solid:
     """Washer. Origin: center of the bottom face, axis +Z."""
-    size = metric(m)
-    body = cylinder(d=size.washer_outer_dia, h=size.washer_thickness, fn=24)
-    bore = cylinder(d=m + 0.3, h=3, fn=16).translate([0, 0, -1])
+    metric_size = metric(size)
+    body = cylinder(d=metric_size.washer_outer_dia, h=metric_size.washer_thickness, fn=24)
+    bore = cylinder(d=size + 0.3, h=3, fn=16).translate([0, 0, -1])
     return (body - bore).color("Silver")
 
 
-def t_nut(m: float, thickness: float = 4.0) -> Solid:
+def t_nut(size: float, thickness: float = 4.0) -> Solid:
     """Drop-in T-nut for the 6 mm slot of 2020/2040 V-slot (simplified plate).
 
     Origin: center of the top face; axis along Z, the plate lies in XY (long side along X).
     """
     plate = cube([11, 9.5, thickness]).translate([-5.5, -4.75, -thickness])
-    bore = cylinder(d=m, h=thickness + 2, fn=16).translate([0, 0, -thickness - 1])
+    bore = cylinder(d=size, h=thickness + 2, fn=16).translate([0, 0, -thickness - 1])
     return (plate - bore).color("Silver")
 
 

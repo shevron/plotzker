@@ -280,55 +280,55 @@ class _Exporter:
             return format_number(float(f"{math.degrees(constraint.value):.12g}"))
         return format_number(constraint.value)
 
-    def _map(self, c: Constraint) -> tuple[str, dict[str, str | float | bool | None]]:
-        if c.type not in _TYPES:
+    def _map(self, constraint: Constraint) -> tuple[str, dict[str, str | float | bool | None]]:
+        if constraint.type not in _TYPES:
             raise _UnsupportedError("CPSK 0.1 has no such constraint")
         operands = [
             (geo, pos)
             for geo, pos in (
-                (c.first, c.first_pos),
-                (c.second, c.second_pos),
-                (c.third, c.third_pos),
+                (constraint.first, constraint.first_pos),
+                (constraint.second, constraint.second_pos),
+                (constraint.third, constraint.third_pos),
             )
             if geo != UNDEFINED
         ]
         refs = [self._operand(geo, pos) for geo, pos in operands]
         kinds = [r.kind for r in refs]  # "point" for a point or a point of a curve, else an edge
-        t = c.type
+        kind = constraint.type
 
         def named(*names: str) -> dict[str, str | float | bool | None]:
             return dict(zip(names, (r.reference for r in refs), strict=True))
 
-        if t == "Coincident" and kinds == ["point", "point"]:
+        if kind == "Coincident" and kinds == ["point", "point"]:
             return "coincident", named("a", "b")
-        if t == "PointOnObject" and len(kinds) == 2 and kinds[0] == "point" and kinds[1] in _CURVES:
+        if kind == "PointOnObject" and len(kinds) == 2 and kinds[0] == "point" and kinds[1] in _CURVES:
             return "point-on", named("point", "object")
-        if t in ("Horizontal", "Vertical") and kinds == ["line"]:
-            return t.lower(), named("of")
-        if t in ("Horizontal", "Vertical") and kinds == ["point", "point"]:
-            return t.lower(), named("a", "b")
-        if t in ("Parallel", "Perpendicular") and kinds == ["line", "line"]:
-            return t.lower(), named("a", "b")
-        if t == "Perpendicular" and sorted(kinds) in (["circle", "line"], ["arc", "line"]):
+        if kind in ("Horizontal", "Vertical") and kinds == ["line"]:
+            return kind.lower(), named("of")
+        if kind in ("Horizontal", "Vertical") and kinds == ["point", "point"]:
+            return kind.lower(), named("a", "b")
+        if kind in ("Parallel", "Perpendicular") and kinds == ["line", "line"]:
+            return kind.lower(), named("a", "b")
+        if kind == "Perpendicular" and sorted(kinds) in (["circle", "line"], ["arc", "line"]):
             return "perpendicular", named("a", "b")  # the line through the centre
-        if t == "Perpendicular" and kinds == ["point", "point"] and self._line_and_arc_ends(operands):
+        if kind == "Perpendicular" and kinds == ["point", "point"] and self._line_and_arc_ends(operands):
             return "perpendicular", named("a", "b")
-        if t == "Tangent" and len(kinds) == 2 and set(kinds) <= _CURVES and kinds != ["line"] * 2:
+        if kind == "Tangent" and len(kinds) == 2 and set(kinds) <= _CURVES and kinds != ["line"] * 2:
             return "tangent", named("a", "b")
-        if t == "Tangent" and kinds == ["point", "point"] and self._end_points(operands):
+        if kind == "Tangent" and kinds == ["point", "point"] and self._end_points(operands):
             return "tangent", named("a", "b")
-        if t == "Equal" and kinds in (["line", "line"], *_ROUND_PAIRS):
+        if kind == "Equal" and kinds in (["line", "line"], *_ROUND_PAIRS):
             return "equal", named("a", "b")
-        if t == "Symmetric" and kinds[:2] == ["point", "point"] and kinds[2:] in (["line"], ["point"]):
+        if kind == "Symmetric" and kinds[:2] == ["point", "point"] and kinds[2:] in (["line"], ["point"]):
             return "symmetric", named("a", "b", "about")
-        if t == "Block" and len(kinds) == 1 and operands[0][1] == 0:
+        if kind == "Block" and len(kinds) == 1 and operands[0][1] == 0:
             return "block", named("of")
-        if t == "Distance" and kinds == ["line"]:
+        if kind == "Distance" and kinds == ["line"]:
             return "distance", named("of")
-        if t == "Distance" and kinds in (["point", "point"], ["point", "line"]):
+        if kind == "Distance" and kinds in (["point", "point"], ["point", "line"]):
             return "distance", named("a", "b")
-        if t in ("DistanceX", "DistanceY"):
-            name = "distance-x" if t == "DistanceX" else "distance-y"
+        if kind in ("DistanceX", "DistanceY"):
+            name = "distance-x" if kind == "DistanceX" else "distance-y"
             if kinds == ["line"]:
                 line = refs[0].reference
                 return name, {"a": f"{line}.start", "b": f"{line}.end"}
@@ -336,13 +336,13 @@ class _Exporter:
                 return name, {"a": "origin", "b": refs[0].reference}
             if kinds == ["point", "point"]:
                 return name, named("a", "b")
-        if t in ("Radius", "Diameter") and len(kinds) == 1 and kinds[0] in _ROUND:
-            return t.lower(), named("of")
-        if t == "Angle" and kinds == ["line"]:
+        if kind in ("Radius", "Diameter") and len(kinds) == 1 and kinds[0] in _ROUND:
+            return kind.lower(), named("of")
+        if kind == "Angle" and kinds == ["line"]:
             return "angle", {"a": "x_axis", "b": refs[0].reference}
-        if t == "Angle" and kinds == ["arc"]:
+        if kind == "Angle" and kinds == ["arc"]:
             return "angle", named("of")
-        if t == "Angle" and kinds == ["line", "line"]:
+        if kind == "Angle" and kinds == ["line", "line"]:
             return "angle", named("a", "b")
         raise _UnsupportedError(f"this form ({', '.join(kinds)}) is not supported in CPSK 0.1")
 

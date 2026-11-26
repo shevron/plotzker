@@ -78,11 +78,11 @@ def main():
 
     def placement_of(entry):
         """World placement of a component: its bounding-box center and orientation."""
-        m = entry["rotation"]
+        rotation_matrix = entry["rotation"]
         matrix = App.Matrix(
-            m[0], m[1], m[2], entry["center"][0],
-            m[3], m[4], m[5], entry["center"][1],
-            m[6], m[7], m[8], entry["center"][2],
+            rotation_matrix[0], rotation_matrix[1], rotation_matrix[2], entry["center"][0],
+            rotation_matrix[3], rotation_matrix[4], rotation_matrix[5], entry["center"][1],
+            rotation_matrix[6], rotation_matrix[7], rotation_matrix[8], entry["center"][2],
             0, 0, 0, 1,
         )  # fmt: skip
         return App.Placement(matrix)
@@ -232,26 +232,26 @@ def add_gui_state(path, doc, masters):
     """
     tree = etree.parse(os.path.join(HERE, "gui_document.xml"), etree.XMLParser(remove_comments=True))
     data = tree.getroot().find("ViewProviderData")
-    prototypes = {vp.get("template"): vp for vp in data.findall("ViewProvider")}
-    for vp in prototypes.values():
-        data.remove(vp)
+    prototypes = {provider.get("template"): provider for provider in data.findall("ViewProvider")}
+    for provider in prototypes.values():
+        data.remove(provider)
     appearances = {}  # file name -> bytes
 
     def add(kind, obj, visible, rgb=None, transparency=0):
-        vp = copy.deepcopy(prototypes[kind])
-        del vp.attrib["template"]
-        vp.set("name", obj.Name)
-        vp.find('.//Property[@name="Visibility"]/Bool').set("value", str(visible).lower())
+        provider = copy.deepcopy(prototypes[kind])
+        del provider.attrib["template"]
+        provider.set("name", obj.Name)
+        provider.find('.//Property[@name="Visibility"]/Bool').set("value", str(visible).lower())
         if rgb is not None:
             name = f"ShapeAppearance{len(appearances) + 1000}"
-            vp.find('.//Property[@name="ShapeAppearance"]/MaterialList').set("file", name)
-            vp.find('.//Property[@name="Transparency"]/Integer').set("value", str(transparency))
-            r, g, b = rgb
+            provider.find('.//Property[@name="ShapeAppearance"]/MaterialList').set("file", name)
+            provider.find('.//Property[@name="Transparency"]/Integer').set("value", str(transparency))
+            red, green, blue = rgb
             appearances[name] = struct.pack(
                 "<i4I2f3i",
                 1,
                 0x555555FF,  # ambient, diffuse, specular, emissive as RGBA, then shininess,
-                (r << 24) | (g << 16) | (b << 8) | 0xFF,  # transparency and three empty strings
+                (red << 24) | (green << 16) | (blue << 8) | 0xFF,  # transparency and three empty strings
                 0x888888FF,
                 0x000000FF,
                 0.9,
@@ -260,7 +260,7 @@ def add_gui_state(path, doc, masters):
                 0,
                 0,
             )
-        data.append(vp)
+        data.append(provider)
 
     kinds = {
         "Assembly::AssemblyObject": "assembly",

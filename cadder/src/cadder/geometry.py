@@ -107,22 +107,22 @@ def _solve_cpsk(path: Path, params: Mapping[str, float | str], strict: bool) -> 
     return target, cpsk.svg_origin(solved)
 
 
-def teardrop(d: float) -> Solid:
+def teardrop(dia: float) -> Solid:
     """2D horizontal-hole profile printable without support.
 
     A circle with a 45° point toward +Y, in the XY plane. Rotate it into place.
     """
-    return circle(d=d, fn=FN_HOLE) | square([d / 2, d / 2]).rotate([0, 0, 45])
+    return circle(d=dia, fn=FN_HOLE) | square([dia / 2, dia / 2]).rotate([0, 0, 45])
 
 
-def teardrop_x(d: float, length: float) -> Solid:
+def teardrop_x(dia: float, length: float) -> Solid:
     """Teardrop hole along the X axis (point up, +Z), centered on the origin."""
-    return linear_extrude(teardrop(d), height=length, center=True).rotate([90, 0, 90])
+    return linear_extrude(teardrop(dia), height=length, center=True).rotate([90, 0, 90])
 
 
-def teardrop_y(d: float, length: float) -> Solid:
+def teardrop_y(dia: float, length: float) -> Solid:
     """Teardrop hole along the Y axis (point up, +Z), centered on the origin."""
-    return linear_extrude(teardrop(d), height=length, center=True).rotate([90, 0, 0])
+    return linear_extrude(teardrop(dia), height=length, center=True).rotate([90, 0, 0])
 
 
 def lever_couple(arm: Sequence[float], force: Sequence[float]) -> tuple[float, float, float]:

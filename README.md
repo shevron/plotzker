@@ -648,8 +648,10 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
 
 - PEP 8, enforced by `ruff format` and `ruff check` (config in `pyproject.toml`, and in
   `cadder/pyproject.toml` for cadder; line length 100).
-- Import PythonSCAD names explicitly (`from pythonscad import cube, cylinder`), never
-  `from pythonscad import *`.
+- No star imports (`from x import *`): import names explicitly
+  (`from pythonscad import cube, cylinder`). The one exception is a package `__init__`
+  republishing another package's whole public API, marked `# noqa: F403` with the reason.
+  Enforced by ruff (F403, F405).
 - Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
   reads in the order the operations happen. Note that this is the reverse of the
   OpenSCAD nesting order.

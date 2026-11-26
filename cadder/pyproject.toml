@@ -42,7 +42,6 @@ per-file-target-version = { "src/cpsk_core/**" = "py311", "tests/test_cpsk_core.
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "RUF", "TID"]
 ignore = [
-    "F403", "F405",  # star imports are not used, but keep PythonSCAD examples pasteable
     "RUF001", "RUF002", "RUF003",  # ×, –, → and box-drawing characters in docstrings/comments
 ]
 

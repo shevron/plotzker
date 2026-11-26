@@ -69,7 +69,7 @@ def _handles() -> dict[str, Matrix | list[Matrix]]:
             handle([sx * ZMOUNT.strap_screw_u, ZMOUNT.strap_screw_v, ZMOUNT.strap_bottom_z], [180, 0, 0])
             for sx in sides
         ],
-        #: corners along u (a flat leads into the slot, README §7.4)
+        #: corners along u (a flat leads into the slot, CODING_STANDARDS.md §5)
         "strap_nuts": [handle([sx * ZMOUNT.strap_screw_u, ZMOUNT.strap_screw_v, ZMOUNT.strap_nut_z]) for sx in sides],
         "strap": handle([0, ZMOUNT.strap_screw_v - ZMOUNT.leg_thickness / 2, ZMOUNT.strap_bottom_z]),
     }

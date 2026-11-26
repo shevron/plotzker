@@ -64,7 +64,7 @@ Tasks are sized for one working session each; what to do when one is finished is
   0.1 mm) and travels to X = 410. Guide: [`docs/x-axis-bringup.md`](docs/x-axis-bringup.md);
   results: [`docs/controller.md`](docs/controller.md).
 
-### Phase 3 — Mechanical CAD (PythonSCAD; conventions in README §7.4, workflow in README §6)
+### Phase 3 — Mechanical CAD (PythonSCAD; conventions in CODING_STANDARDS.md, workflow in README §6)
 
 Done:
 
@@ -173,11 +173,11 @@ Open:
     115/230 V selector to 230 V, fit a T3.15 A slow-blow fuse.
 - [x] **T3.33 ZRIB code moved to `plotzker.legacy.zrib`** (2026-11-26, D43): out of the machine,
   FreeCAD assembly, registries and drilling layout; the PSU mount and loom are unchanged.
-- [x] **T3.34 Readable names** (2026-11-26, README §7.5): constants used by name, hardware specs
+- [x] **T3.34 Readable names** (2026-11-26, CODING_STANDARDS.md §1): constants used by name, hardware specs
   suffixed `_SPEC`, abbreviations spelled out. Names in TOML files, `--json`, the CLI and CPSK kept.
-- [x] **T3.35 Disallowed nested functions removed** (2026-11-26, README §7.5): 23 nested functions
+- [x] **T3.35 Disallowed nested functions removed** (2026-11-26, CODING_STANDARDS.md §2): 23 nested functions
   remain, all allowed cases.
-- [ ] **T3.36 Polymorphism instead of type checks** (README §7.5). Behavior that depends on an object's class,
+- [ ] **T3.36 Polymorphism instead of type checks** (CODING_STANDARDS.md §2). Behavior that depends on an object's class,
   or mainly works on its data, becomes a method of the class. A method must not pull a higher
   layer into the class (solver, exporter, renderer, CLI): code there keeps dispatching on type,
   with `match` instead of `isinstance` chains.
@@ -266,12 +266,12 @@ update the log once it is agreed (README §7.1). 🟡 = to be confirmed at build
 | D20 | SVG/PDF toolchain deferred; prove the machine with hand-written/scripted G-code first | ✅ | README §3.9 |
 | D21 | X-carriage preload: 2 eccentric spacers on the bottom wheel pair (no slot fallback) | ✅ | README §3.4 |
 | D22 | CAD migrated from OpenSCAD to PythonSCAD (ported 1:1) | ✅ | README §6 |
-| D23 | 2D sketches as SVG files next to the module that extrudes them, loaded with `load_sketch()`; so far only the V-slot profiles. PythonSCAD stays the only 3D source; printed parts stay parametric in Python | 🔬 | README §6 |
+| D23 | 2D sketches as SVG files next to the module that extrudes them, loaded with `load_sketch()`; so far only the V-slot profiles. PythonSCAD stays the only 3D source; printed parts stay parametric in Python | 🔬 | `CODING_STANDARDS.md` §6 |
 | D24 | Parametric sketches: no open interchange format carries constraints, and a Python constraint module was tried and rejected. Draw and constrain in a CAD tool and export SVG (D23) | ✅ | `cadder/docs/sketch-formats.md` |
 | D25 | Y drive: motor behind the rear SK10, shaft outboard, belt 30 mm outboard of the shaft; idler and Y endstop at the **front** on both sides; printed mounts screwed to the baseboard with 4 × 25 countersunk wood screws through 9 mm bosses | ✅ | §6 |
 | D26 | The Y motor and idler mounts have a **corner pocket for their SK10**, so the belt line follows the SK10 (outer face and outboard edge), not the drilling. Mounts are fitted last and screwed down with no pre-drilled positions | ✅ | README §3.2 |
 | D27 | Belt clamps: flat undersides on the gantry brackets and the carriage's rear block; one cap design for all six, with the groove and tooth ridges in the cap; M3×14 | ✅ | §6 |
-| D28 | **Handles and `align()`:** parts expose named handles and assemblies place hardware on them instead of repeating coordinates | 🔬 in use | README §7.4 |
+| D28 | **Handles and `align()`:** parts expose named handles and assemblies place hardware on them instead of repeating coordinates | 🔬 in use | `CODING_STANDARDS.md` §5 |
 | D29 | **No heat-set inserts: pressed-in hex nuts everywhere**, in slots or hex shafts with a wall behind them that takes the load (`TOL.nut_wall`). **Avoid self-tapping into printed plastic**; exception: the servo's own screws in the pen holder | ✅ | README §7.1 |
 | D30 | Baseboard **700 × 900 × 18 mm**; bed on 4 M5 posts adjusted from above; controller bare (no case) under the board between the runners; PSU off the board (see D38) and mains off the plywood; runners from extrusions on hand | 🟡 | README §3.8 |
 | D31 | Baseboard layout: three 2040 runners on edge along X (y 150 / 450 / 750) on M5 countersunk screws into drop-in T-nuts; bed posts = M5×45 stud from below + spring + nut on the panel; steel stops 24 mm short of the panel edge; SK10s on through-bolts, the right rail's holes oversized (Ø7) for alignment; the layout is generated, not drawn | 🟡 | `python -m plotzker layout` |
@@ -279,10 +279,10 @@ update the log once it is agreed (README §7.1). 🟡 = to be confirmed at build
 | D33 | X cable: ribbon festoon in the beam's two rear T-slots, mock-up first | 🔬 | T3.8 |
 | D34 | **X belt attached at the bottom of the carriage** (motor/idler axis z 70.7; the X− endstop board lies flat on its foot at the left end). Revert point: git tag `pre-x-belt-bottom` | ✅ | §6 |
 | D35 | The left bracket's base extends outboard under the X idler (shelf, now carrying the D42 tower) instead of leaving it overhanging | ✅ | `BRACKET.shelf_x` |
-| D36 | **CAD split into `cadder` (generic framework) and `plotzker` (the plotter)**; one repo for now, cadder moves out later. cadder never imports a project; firmware stays in plotzker. Candidates to move with cadder: the generic half of README §7, the `fem-analyst` agent, generic Makefile targets | ✅ | README §5, `cadder/README.md` |
+| D36 | **CAD split into `cadder` (generic framework) and `plotzker` (the plotter)**; one repo for now, cadder moves out later. cadder never imports a project; firmware stays in plotzker. Candidates to move with cadder: `CODING_STANDARDS.md`, the generic half of README §7, the `fem-analyst` agent, generic Makefile targets | ✅ | README §5, `cadder/README.md` |
 | D37 | **v1 pen holder:** pen slide in two printed sleeves on one Ø6 rod (LM6UU later), key rib against rotation, FT90M servo with a pin in a slot (the slot's clearance is the float), 90° V-block with an M5 thumbscrew. Rejected: flexure/four-bar, plastic dovetail. Alternate if the sleeves stick: 625-bearing rollers | ✅ | §6 |
 | D38 | **PSU mount:** PSU on edge beside the board's right edge on two printed L brackets, fan face out, label wall up, terminal end to the front, clear of the table; printed hood with the fused, switched C14 inlet and the female XT60 (male on the controller lead); no internal partition (mains separation rests on insulation); opens only with a tool. XT60 position to recheck in T3.32 | 🟡 | README §3.6 |
-| D39 | **Measure with the caliper, not from photos** (photos only for flat hole patterns) | ✅ | README §7.9 |
+| D39 | **Measure with the caliper, not from photos** (photos only for flat hole patterns) | ✅ | README §7.7 |
 | D40 | **Licensing:** CC BY-SA 4.0 for the plotter's designs and documentation, LGPL-3.0-or-later for software (all of `cadder/` included); no source headers | ✅ | README §8 |
 | D41 | **Controller: Creality V4.2.2 instead of the ZRIB v5.8**, which failed on the bench. Given up: spare drivers and endstop inputs (pen changer), swappable drivers. Last ZRIB state: git tag `pre-creality-board` | ✅ | `docs/controller.md` |
 | D42 | **Floating belt idlers:** the idler's slider hangs on its tension screw, which runs along the belt line at the axle's height (no couple, no rail, no play); one slider for all three idlers, printed top down. Replaced the dovetail tensioners, which tilted under belt load | ✅ | `parts/floating_idler.py` |

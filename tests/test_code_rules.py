@@ -1,4 +1,4 @@
-"""Coding rules of README §7.5 that no linter in our toolchain checks."""
+"""Rules of CODING_STANDARDS.md §2 that no linter in our toolchain checks."""
 
 import ast
 from collections.abc import Iterator

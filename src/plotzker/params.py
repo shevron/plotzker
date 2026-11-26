@@ -38,7 +38,7 @@ from cadder.printing import Tolerances
 from plotzker.hardware import C14_INLET_SPEC, ENDSTOP_SPEC, PSU_SPEC, XT60_SPEC, Y_SHAFT
 
 # -----------------------------------------------------------------------------
-# Print tolerances (tune after a test print; defaults from README.md §7.4)
+# Print tolerances (tune after a test print; defaults from CODING_STANDARDS.md §5)
 # -----------------------------------------------------------------------------
 
 

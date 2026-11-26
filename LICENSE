@@ -10,7 +10,8 @@ CC BY-SA 4.0 (SPDX: CC-BY-SA-4.0), text in LICENSES/CC-BY-SA-4.0.txt
 
   src/plotzker/               the plotter's CAD designs (PythonSCAD sources and their data)
   docs/                       the plotter's documentation and drawings
-  README.md, STATUS.md        project documentation
+  README.md, STATUS.md,       project documentation
+  CODING_STANDARDS.md
   freecad/README.md
   fem/verdicts.toml
 

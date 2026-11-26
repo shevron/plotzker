@@ -5,14 +5,15 @@ hardware (metric hex fasteners, bearings) and 3D-printed parts. It draws with or
 household pens on paper, card, cardboard or thin wood.
 
 This file holds what rarely changes: goals, requirements, the high-level design and its
-rationale, the repository layout, and the coding standards and contribution guidelines for
-humans and AI agents alike.
+rationale, the repository layout, and the contribution guidelines for humans and AI agents
+alike. Coding standards are in [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 
 **Repository:** <https://github.com/shevron/plotzker> (`git clone git@github.com:shevron/plotzker.git`).
 
 | File | Purpose |
 |------|---------|
-| `README.md` (this file) | Overview, goals, high-level design and decisions, standards, contribution guidelines |
+| `README.md` (this file) | Overview, goals, high-level design and decisions, contribution guidelines |
+| [`CODING_STANDARDS.md`](CODING_STANDARDS.md) | Coding style, preferred patterns, CAD conventions, testing |
 | [`STATUS.md`](STATUS.md) | Ongoing work: current status, work plan, open questions, detailed decisions, inventory, key numbers, as-built design notes, ideas |
 | [`CLAUDE.md`](CLAUDE.md) | Instructions specific to AI agents; points to the two files above |
 | [`cadder/README.md`](cadder/README.md) | cadder, the generic CAD-project framework the plotter's CAD is built on |
@@ -22,8 +23,7 @@ humans and AI agents alike.
 © 2026 Shahar Evron and the plotzker project contributors.
 
 **Contents:** 1 Goals · 2 Requirements and constraints · 3 Design · 4 Design decisions ·
-5 Repository layout · 6 Development setup and workflow · 7 Contribution guidelines and
-coding standards · 8 License and copyright
+5 Repository layout · 6 Development setup and workflow · 7 Contribution guidelines · 8 License and copyright
 
 ---
 
@@ -365,7 +365,8 @@ and newer) are in the decision log in [`STATUS.md`](STATUS.md).
 
 ```
 Plotter/
-├── README.md            ← overview, design, standards, contribution guidelines (this file)
+├── README.md            ← overview, design, contribution guidelines (this file)
+├── CODING_STANDARDS.md  ← coding style, patterns, CAD conventions, testing
 ├── STATUS.md            ← ongoing development: work plan, decisions, open questions
 ├── CLAUDE.md            ← instructions specific to AI agents
 ├── LICENSE, LICENSES/   ← which license covers what (§8), and the full texts
@@ -400,7 +401,7 @@ module (OpenSCAD's geometry engine with a Python API). It is two packages: **`pl
 plotter itself, and **`cadder`** ([`cadder/README.md`](cadder/README.md)), the generic
 framework it is built on (parts and assemblies, handles, hardware catalog, FEM checks, design
 diff, FreeCAD export, the command line). cadder is a uv workspace member in `cadder/` and
-never imports plotzker (D36). Conventions: §7.4.
+never imports plotzker (D36). Conventions: [`CODING_STANDARDS.md`](CODING_STANDARDS.md).
 
 **Setup (once):** Python ≥ 3.14 from [pyenv](https://github.com/pyenv/pyenv), packages
 managed with [uv](https://docs.astral.sh/uv/). `.python-version` pins 3.14 for both
@@ -449,41 +450,22 @@ the plotter's own command; the others are cadder's.
 | `python -m plotzker freecad` (`make freecad`) | The FreeCAD assembly `freecad/PenPlotter.FCStd` (needs FreeCAD 1.x; `--export-only` writes only the STLs and manifest). See [`freecad/README.md`](freecad/README.md) |
 | `python -m plotzker layout` | Baseboard drilling layout: `docs/baseboard-layout.svg` (1:1) and `docs/baseboard-holes.md` |
 | `python -m plotzker all` | `check`, `stl`, `layout`, `render` |
-| `python -m pytest` | Tests of both packages (`tests/`, `cadder/tests/`): design rules hold, every part is a sane printable solid, assembly parts connect (philosophy: §7.6) |
-| `mypy` | Type checks (§7.5) |
+| `python -m pytest` | Tests of both packages (`tests/`, `cadder/tests/`): design rules hold, every part is a sane printable solid, assembly parts connect (philosophy: `CODING_STANDARDS.md` §7) |
+| `mypy` | Type checks (`CODING_STANDARDS.md` §3) |
 | `ruff format . && ruff check .` | Formatting and lint (PEP 8) |
 
 After an intentional geometry change: review the new STLs/renders.
 
-**2D sketches (trial, D23):** a shape that is easier to draw than to code can be an
-SVG file next to the Python module that uses it. `cadder.geometry.load_sketch(path)` imports it
-as a 2D object, which the module extrudes:
-
-```python
-profile = load_sketch(Path(__file__).with_name("vslot_2040.svg"))
-beam = linear_extrude(profile, height=520)
-```
-
-- Draw at **1 user unit = 1 mm**: `width`/`height` in mm and a `viewBox` with the same
-  numbers. The viewBox's bottom-left corner is the CAD origin; the sketch keeps the
-  orientation it is drawn in.
-- Every shape is imported **filled**; strokes and colors are ignored and separate
-  shapes are unioned. Make holes sub-paths of one `<path>` with `fill-rule="evenodd"`
-  (Inkscape: *Path → Combine*). Convert text and clones to paths.
-- A profile used at several lengths is loaded directly (`vslot_x(length, size)` picks
-  the 2020 or 2040 sketch). A part with fixed 3D dimensions gets a module with the same
-  name as its sketch (`foo.svg` + `foo.py`) that extrudes it.
-- The sketches can be edited in Inkscape or as text; note the dimensions in a comment at
-  the top of the file.
-- Parametric/constrained sketches: draw them in your CAD tool (e.g. FreeCAD) and export
-  the solved outline as SVG into the repo (D24); the SVG is the source for PythonSCAD.
+**2D sketches (trial, D23):** a shape that is easier to draw than to code can be an SVG file
+next to the Python module that uses it. How to draw and use them:
+[`CODING_STANDARDS.md`](CODING_STANDARDS.md) §6.
 
 **Interactive preview:** open `preview.py` (repo root) in the PythonSCAD app, set the
 part or assembly name at the top, and render (F6). It adds `src/` to the path itself.
 
 ---
 
-## 7. Contribution guidelines and coding standards
+## 7. Contribution guidelines
 
 These apply to everyone working on the project, human or AI agent.
 
@@ -492,7 +474,7 @@ These apply to everyone working on the project, human or AI agent.
 - Pick work from the task list in [`STATUS.md`](STATUS.md); do **one task at a time** and
   check its "done when" criterion.
 - Before designing around an unknown dimension or fact, **measure or check it** (with the
-  caliper; photos only as in §7.9) instead of guessing. Mark
+  caliper; photos only as in §7.7) instead of guessing. Mark
   any assumed value clearly as `ASSUMED` in code and as *assumed* in docs.
 - Check the inventory (`STATUS.md`) and `docs/hardware.md` before designing around a part.
 - **Don't silently change a decision.** High-level decisions are in §4, detailed ones in
@@ -518,7 +500,8 @@ These apply to everyone working on the project, human or AI agent.
    Anything else must be justified and noted in this README.
 3. **CAD is PythonSCAD (Python).** The `plotzker` package under `src/` is the only CAD
    source (D2). No other CAD formats as sources, with one exception on trial (D23):
-   2D sketches as SVG files next to the module that extrudes them (§6). STLs and renders
+   2D sketches as SVG files next to the module that extrudes them
+   (`CODING_STANDARDS.md` §6). STLs and renders
    are generated outputs.
 4. **Safety:** printer heaters stay disabled in firmware and unconnected; mains wiring
    enclosed and earthed.
@@ -540,8 +523,6 @@ These apply to everyone working on the project, human or AI agent.
 
 - Keep this README concise; prefer tables for comparisons and decisions. It holds what
   rarely changes; anything tied to the progress of the work goes in `STATUS.md`.
-- **US English spelling** everywhere: docs, comments, docstrings, identifiers, sketch
-  comments (center, color, modeled, leveling, aluminum, millimeter, catalog...).
 - Longer research, procedures and results go in `docs/<topic>.md` (e.g.
   `docs/pen-lift.md`, `docs/calibration.md`), linked from this README or `STATUS.md`.
 - Don't store vendor datasheets or drawings in the repository (copyright). Record the
@@ -549,67 +530,11 @@ These apply to everyone working on the project, human or AI agent.
 - Electronics wiring and pin allocation live in `docs/controller.md`; keep it current
   (mark items verified after bench tests).
 
-### 7.4 CAD conventions (PythonSCAD)
+### 7.4 Code and CAD changes
 
-The CAD is a Python package, `plotzker` (`src/plotzker/`), built on the
-[PythonSCAD](https://pythonscad.org) `pythonscad` module (OpenSCAD's geometry engine
-with a native Python API) and on **cadder** (`cadder/`, D36), the generic framework for
-software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are in §6.
+**Coding standards** (style, code structure, types, comments, CAD conventions and testing) are
+in [`CODING_STANDARDS.md`](CODING_STANDARDS.md); follow them for every change.
 
-- **Where code goes:** anything another CAD project could use as is (a helper, a part or
-  assembly class, a vendor part, a check, an export) belongs in `cadder`; anything about
-  this machine (its dimensions, parts, loads, layout) belongs in `plotzker`. **cadder never
-  imports plotzker** (ruff rule TID251 and a test enforce it); cadder's tests use their own
-  fixture project (`cadder/tests/fixture`). A change to cadder needs a cadder test.
-
-- **Environment:** set up as in §6; run commands in the activated `.venv` or with `uv run`.
-  Don't install packages with `pip`; add them to the `pyproject.toml` of the package that needs
-  them (cadder's own in `cadder/`) and re-sync.
-- **Parametric first.** Shared dimensions in `params.py` (travel, shaft spacing,
-  clearances, tolerances, tool-plate interface), grouped into frozen dataclasses with one
-  module-level instance each (`TOL`, `BEAM`, `CARRIAGE`, `TOOL_PLATE`...). Vendor-part
-  dimensions and simple models in `cadder.hardware` (`SK10_SPEC`, `SCS10UU_SPEC`, `NEMA17_SPEC`, `VWHEEL_SPEC`,
-  fasteners...); plotter-specific hardware in `plotzker.hardware`. Derived values are
-  `@property`s, never typed-in numbers. No magic numbers in part modules: add a parameter
-  instead.
-- **Design rules** live in `params.design_checks()` (`(ok, message)` pairs);
-  `check_design()` raises `cadder.checks.DesignError`. Add a rule whenever a new
-  constraint appears (clearance, travel, fit).
-- One printable part per module in `parts/`, exposing a function that returns the part
-  in its **print orientation** (flat face on z = 0), plus `*_installed()` / `*_left()`
-  helpers when the part is designed in another frame. Register every part in
-  `parts.PARTS` (name = STL file name): a `cadder.part.PrintedPart` once it has a print
-  profile, material and FEM data (§7.8), a plain `Part` until then. A non-printed part of
-  a known material (a plate, a purchased part in a check) is a `MaterialPart`.
-- Assemblies in `assemblies/` return lists of colored solids (parts + hardware models)
-  for fit checks; register them in `assemblies.ASSEMBLIES` as `cadder.assembly.Assembly`
-  objects. The FreeCAD assembly (rigid bodies and joints) is defined in
-  `freecad_assembly.py` (`cadder.freecad`).
-- Print tolerances: `params.TOL`, a `cadder.printing.Tolerances` with cadder's defaults
-  and the values measured on our prints (tune after a test print):
-  - Bolt clearance holes: nominal + 0.3–0.4 mm (M3 → 3.4 mm, M5 → 5.4 mm)
-  - Sliding fit +0.2 mm; press fit −0.1 to 0 mm
-  - Nut traps: across-flats + 0.3 mm
-  - Minimum wall: 1.6 mm (4 perimeters at 0.4 mm nozzle)
-- **Handles:** a part that hardware or other parts attach to exposes named handles
-  (`cadder.handles.set_handles` / `get_handle`) and assemblies place things with `.align(handle)`
-  rather than repeating the part's coordinates (D28).
-- **Nut slots pressed in from an edge** (a nut slid in sideways): use
-  `cadder.printing.nut_slot(size, reach, axis, entrance, tol=TOL)`. The nut goes in **flat-first** (a flat faces the pressing
-  direction, so a thumb pushes straight onto it instead of rotating a pointy nut), and the
-  pocket follows the hex outline at the bottom (flat floor, 60° sloped sides up to the
-  corners) so the nut **cannot turn** when the bolt is tightened; above the corners the walls
-  run straight out to the entrance. A plain rectangular slot wide enough for the corners lets
-  the nut spin. Hex shafts (nut seated along its axis) use `TOL.nut_trap_across_corners` /
-  `nut_trap_height` instead. Measured on PETG: slots come out ~0.1 mm narrower across and ~0.1 mm
-  thicker than designed (`TOL.nut_slot`, `TOL.nut_thickness` allow for it).
-- Prefer designs printable without supports (teardrop holes from `cadder.geometry`, 45°
-  overhangs); note any required supports in the module docstring.
-- Each part module starts with a docstring: purpose, required hardware (with
-  quantities), print settings (material, layer height, infill, orientation). A part defined as a
-  `PrintedPart` (§7.8) names its print profile instead of repeating the settings.
-- Facet counts: pass `fn=` explicitly; use `cadder.geometry.FN` / `FN_HOLE` (64) for
-  printed geometry, lower counts only for hardware models.
 - **Before handing over a CAD change:** `make check` and `make test` pass;
   `python -m plotzker stl` regenerates `stl/`; `python -m plotzker render`
   regenerates `renders/` (needs the PythonSCAD app). If geometry changed on purpose,
@@ -619,131 +544,17 @@ software-driven CAD projects. Setup, commands and the 2D sketch rules (D23) are 
   X drive ends) and open the PNGs. Passing tests don't catch features that look wrong.
 - **FEM check:** for a new structural part or a significant change to one (anything that affects
   the load path: thickness, ribs, holes, fillets, material, print profile or orientation),
-  define or update its `PrintedPart` FEM spec and ask the `fem-analyst` sub-agent to check it (§7.8).
+  define or update its `PrintedPart` FEM spec and ask the `fem-analyst` sub-agent to check it (§7.6).
   Report its verdict with the change; don't hand over a FAIL without saying so.
 
-### 7.5 Python coding standards
-
-- PEP 8, enforced by `ruff format` and `ruff check` (config in `pyproject.toml`, and in
-  `cadder/pyproject.toml` for cadder; line length 119).
-- No star imports (`from x import *`): import names explicitly
-  (`from pythonscad import cube, cylinder`). The one exception is a package `__init__`
-  republishing another package's whole public API, marked `# noqa: F403` with the reason.
-  Enforced by ruff (F403, F405).
-- Don't parenthesize a returned tuple that fits on one line: `return x, y`, not
-  `return (x, y)`. Parentheses stay where a tuple spans several lines.
-- **Names favor readability over brevity.** Spell words out (`height`, `outer_dia`,
-  `thickness`, not `h`, `od`, `t`), including in dataclass fields and parameters. Engineering
-  shorthand is not an exception. Don't copy a module constant into a shorter local name; use
-  the constant's own name. One or two letters are fine only in a very narrow scope
-  (comprehensions, short loops, temporaries) or where the short name is the convention, such
-  as coordinate letters (`x`, `y`, `z`, `u`, `v`). The wider the scope, the more descriptive
-  the name. Allowed abbreviations: names set by a library (such as PythonSCAD's `fn`),
-  `min`, `max`, `id`, `dia` (diameter), `tol` (tolerance), `rect` (rectangle) and unit
-  suffixes (`_mm`, `_mpa`, `_g`, `_deg`). Names that belong to a file format or external
-  interface (CPSK, TOML keys, `--json` output, the CLI) keep their spelling.
-- Entry-point code runs only under a guard, `if __name__ == "__main__":`, so importing a
-  module never runs it. A script run by `freecadcmd` uses
-  `if __name__ in ("__main__", "<file name>"):` and ends a failure with `sys.exit(1)`.
-  Exception: files a host application is meant to run on load (FreeCAD's `Init.py`,
-  `preview.py`).
-- **Flat is better than nested.** Write functions at module level, prefixed with `_` when
-  private to the module. Nest a function only if it is short (up to 8 lines) and is one of:
-  - a local callable used right where it is defined, such as in a comprehension or as `key=`;
-  - a closure that updates enclosing state, such as a `nonlocal` counter or a signal or event
-    handler;
-  - glue that gives an API callback extra context (prefer `functools.partial`, or a lambda
-    if it is one line with no logic);
-  - a mock or monkeypatch replacement in a test.
-
-  The length limit does not apply to the function a decorator or factory builds and returns,
-  when there is little code outside it.
-- Don't give a local variable or parameter the name of something at module level (an import,
-  function, class or variable). Pytest fixtures requested as parameters are the exception.
-  Enforced by `tests/test_code_rules.py`.
-- **Prefer polymorphism to type checks.** Behavior that depends on an object's class, or
-  mainly works on its data, is a method of that class, and subclasses extend or override it.
-  Treat `isinstance` on our own classes as a code smell. A method must not pull a higher
-  layer into the class (a solver, an exporter, a renderer or the CLI): code there that
-  dispatches on type uses `match`. `isinstance` is fine for validating outside input, for
-  built-in and library types, and for picking out members of a mixed collection.
-- Prefer the method style for transforms (`cube(...).rotate(...).translate(...)`): it
-  reads in the order the operations happen. Note that this is the reverse of the
-  OpenSCAD nesting order.
-- Don't give a function the same name as its module inside a package `__init__`
-  (`from .x_carriage import x_carriage` shadows the submodule); import modules there.
-- Mark assumed values with an `ASSUMED` comment, design choices with `DESIGN (Tn.m)`.
-- **Command-line tools use [Typer](https://typer.tiangolo.com)** (a project dependency): arguments
-  and options from type-annotated function parameters, output with `typer.echo` / `typer.secho`
-  (errors to stderr with `err=True`, failures as `raise typer.Exit(code)`), not `argparse`, `click`
-  or bare `print` / `sys.exit`. Exception: scripts that run in a limited environment without our
-  dependencies (the FreeCAD Python, code embedded in a PythonSCAD subprocess): there keep to the
-  standard library.
-
-#### Type annotations
-
-- All code must pass type checking with `mypy` (`make typecheck`, part of `make check`;
-  strict mode, config in `pyproject.toml`). Annotate all new functions and public
-  attributes.
-- Follow PEP 604 (`X | Y` unions) and PEP 673 (`Self`).
-- Use `collections.abc` for generic collection types over deprecated `typing` types.
-- Prefer structural typing (duck typing) such as `Protocol`s over strict inheritance,
-  unless inheritance also serves other purposes beyond type adherence (such as code reuse).
-- `pythonscad` ships no type information: the stub `cadder/stubs/pythonscad/__init__.pyi`
-  provides it, including the `Solid` type. `Solid` exists only in the stub, so import it
-  under `if TYPE_CHECKING:` (annotations are lazy in Python 3.14). Extend the stub when
-  using a new PythonSCAD function or method.
-
-#### Comments and docblocks
-
-- Files, classes and functions have a short docblock (at least a one-liner, PEP 257 style)
-  describing the purpose of the unit: "what this is", not "how this works".
-- A Google-style docstring may describe a function in more detail, beyond what naming and
-  type annotations already say, if necessary.
-- Inline comments should be rare, and never explain what the code does or repeat what is
-  obvious from reading it.
-- A short inline comment is fine for a non-obvious block or something others may find
-  confusing or counter-intuitive, but code should be self-documenting; a comment is a
-  last resort.
-
-### 7.6 Testing
-
-Tests exist to make changes faster and safer: they should fail when the code is broken
-and stay quiet when a design value changes on purpose. A test that only makes changes
-slower has negative value; delete it.
-
-**Test:**
-- Pure functions that are reused or more than trivial (geometry helpers, the sketch
-  loader, the measuring helpers in `cadder.testing`).
-- cadder's tests (`cadder/tests/`) run against the fixture project, never against the
-  plotter; the plotter's tests (`tests/`) cover its own parts, assemblies and specs.
-- Solids are sane: every printable part is one piece with no enclosed voids, has a
-  plausible volume and rests on the print bed.
-- Assemblies hold together: parts touch what they mount on, nothing floats.
-- Behavior at the public interface: the design rules pass, a broken rule is reported,
-  errors for bad input, the STL export writes its files.
-
-**Don't test:**
-- Parameter or geometry values that are expected to change (key numbers, reference
-  volumes or bounding boxes). That duplicates the configuration and breaks on every
-  intended change. A real constraint belongs in `params.design_checks()` instead.
-- Trivial behavior: Python operators, one-line arithmetic, other libraries.
-- Implementation details and private (`_name`) code.
-- Anything through a mock that replaces the code under test. Overriding a parameter
-  set (e.g. `dataclasses.replace` on a params instance) is fine; faking the
-  implementation is not.
-
-Run with `make test`. Assemblies are fit-check models: when a connection test fails
-because a model is too crude (a missing nut or bushing), fix the model.
-
-### 7.7 Firmware
+### 7.5 Firmware
 
 - Marlin 2.1.x, `BOARD_CREALITY_V422`. Keep the configuration under `firmware/` (a script that
   applies our settings to a stated Marlin version, full files or a diff) with build and flash notes.
 - Never enable heaters or thermal outputs.
 - Build, flash and test notes: [`firmware/README.md`](firmware/README.md).
 
-### 7.8 FEM checks
+### 7.6 FEM checks
 
 Structural printed parts are checked by FEM against their planned loads and allowed deflections
 (method: [`cadder/docs/fem.md`](cadder/docs/fem.md), the plotter's parts and data: [`docs/fem.md`](docs/fem.md)).
@@ -764,7 +575,7 @@ Structural printed parts are checked by FEM against their planned loads and allo
   assumption); it is not silently worked around.
 - A new sub-agent definition only loads at session start.
 
-### 7.9 Measuring parts from photos
+### 7.7 Measuring parts from photos
 
 Ask for **caliper readings**. Photos are only for flat hole patterns and positions on one flat
 face ([`docs/photo-measurement.md`](docs/photo-measurement.md), D39): one top-down photo on the
@@ -779,7 +590,7 @@ Copyright © 2026 Shahar Evron and the plotzker project contributors.
 
 | What | License |
 |------|---------|
-| The plotter's designs (`src/plotzker/`) and the STL, drawing, FreeCAD and render files generated from them; the plotter's documentation (`docs/`, `README.md`, `STATUS.md`, `freecad/README.md`); `fem/verdicts.toml` | [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt) |
+| The plotter's designs (`src/plotzker/`) and the STL, drawing, FreeCAD and render files generated from them; the plotter's documentation (`docs/`, `README.md`, `CODING_STANDARDS.md`, `STATUS.md`, `freecad/README.md`); `fem/verdicts.toml` | [CC BY-SA 4.0](LICENSES/CC-BY-SA-4.0.txt) |
 | Software: all of `cadder/` (including its hardware models, 2D sketches, docs, the CPSK format and the FreeCAD addon), `tests/`, `firmware/`, `preview.py`, build and tool configuration, and anything not listed above | [LGPL-3.0-or-later](LICENSES/LGPL-3.0-or-later.txt) (with [GPL-3.0](LICENSES/GPL-3.0-or-later.txt), which it builds on) |
 
 [`LICENSE`](LICENSE) has the same map with the license notices. Source files carry no headers.

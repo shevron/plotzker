@@ -107,8 +107,8 @@ make freecad-addon                   # (workspace root) link the CPSK addon into
 The `diff` extra (numpy, manifold3d) is needed for the design diff, the `photo` extra (OpenCV,
 Pillow, pillow-heif) for `cadder photo`. `planegcs` (the CPSK
 solver) has no macOS wheels; it builds from source with Eigen and Boost (`brew install eigen boost`). Conventions (code style,
-typing, testing) are those of the plotzker repository's README §7 for now; they move here with
-cadder.
+typing, testing) are those of the plotzker repository's
+[`CODING_STANDARDS.md`](../CODING_STANDARDS.md) for now; they move here with cadder.
 
 ## License
 

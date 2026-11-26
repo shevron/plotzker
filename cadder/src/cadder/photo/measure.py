@@ -50,12 +50,12 @@ def _box_px(scale: Scale, box: tuple[float, float, float, float], shape: tuple[i
     (u0, v0), (u1, v1) = scale.to_px(np.array([box[:2], box[2:]]))
     lo_u, hi_u = sorted((u0, u1))
     lo_v, hi_v = sorted((v0, v1))
-    h, w = shape[:2]
+    image_height, image_width = shape[:2]
     return (
         max(0, math.floor(lo_u)),
         max(0, math.floor(lo_v)),
-        min(w, math.ceil(hi_u)),
-        min(h, math.ceil(hi_v)),
+        min(image_width, math.ceil(hi_u)),
+        min(image_height, math.ceil(hi_v)),
     )
 
 
@@ -86,13 +86,13 @@ def crop(
     (x0, y0), (x1, y1) = scale.from_px(np.array([[u0, v0], [u1, v1]], dtype=np.float64))
     xs, ys = sorted((x0, x1)), sorted((y0, y1))
     step = grid or nice_step(max(xs[1] - xs[0], ys[1] - ys[0]))
-    for axis, (lo, hi) in enumerate((xs, ys)):
-        n0 = math.ceil(lo / step - 1e-9)
-        for n in range(n0, math.floor(hi / step + 1e-9) + 1):
-            value = n * step
+    for axis, (low, high) in enumerate((xs, ys)):
+        first_tick = math.ceil(low / step - 1e-9)
+        for tick in range(first_tick, math.floor(high / step + 1e-9) + 1):
+            value = tick * step
             point = np.array([[value, ys[0]]] if axis == 0 else [[xs[0], value]])
             u, v = scale.to_px(point)[0]
-            color = (0, 0, 255) if n % 5 == 0 else (0, 220, 255)
+            color = (0, 0, 255) if tick % 5 == 0 else (0, 220, 255)
             label = f"{value:g}"
             if axis == 0:
                 x = round((u - u0) * k)
@@ -139,24 +139,28 @@ def edges(
     import cv2
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32)
-    (a, b) = scale.to_px(np.array([start, end]))
-    length = float(np.hypot(*(b - a)))
+    (start_px, end_px) = scale.to_px(np.array([start, end]))
+    length = float(np.hypot(*(end_px - start_px)))
     if length < 3:
         raise ValueError("the measuring line is too short")
-    n = max(3, round(length * 2))  # half-pixel samples
-    t = np.linspace(0, 1, n)
-    along = (b - a) / length
+    sample_count = max(3, round(length * 2))  # half-pixel samples
+    fractions = np.linspace(0, 1, sample_count)
+    along = (end_px - start_px) / length
     normal = np.array([-along[1], along[0]])
     offsets = np.linspace(-band / 2, band / 2, max(1, round(band)))
-    pts = a[None, None, :] + (t[:, None, None] * (b - a)) + offsets[None, :, None] * normal
+    pts = start_px[None, None, :] + (fractions[:, None, None] * (end_px - start_px)) + offsets[None, :, None] * normal
     map_x = pts[..., 0].astype(np.float32)
     map_y = pts[..., 1].astype(np.float32)
     samples = cv2.remap(gray, map_x, map_y, cv2.INTER_LINEAR)
     profile = cv2.GaussianBlur(samples.mean(axis=1).reshape(-1, 1), (1, 5), 1.0).ravel()
-    step = length / (n - 1)
+    step = length / (sample_count - 1)
     grad = np.gradient(profile) / step
     mag = np.abs(grad)
-    peaks = [i for i in range(1, n - 1) if mag[i] >= mag[i - 1] and mag[i] > mag[i + 1] and mag[i] >= min_strength]
+    peaks = [
+        i
+        for i in range(1, sample_count - 1)
+        if mag[i] >= mag[i - 1] and mag[i] > mag[i + 1] and mag[i] >= min_strength
+    ]
     if polarity in ("rising", "falling"):
         peaks = [i for i in peaks if (grad[i] > 0) == (polarity == "rising")]
     elif polarity is not None:
@@ -167,7 +171,7 @@ def edges(
         denom = mag[i - 1] - 2 * mag[i] + mag[i + 1]
         frac = 0.5 * (mag[i - 1] - mag[i + 1]) / denom if denom else 0.0
         s_px = (i + frac) * step
-        xy = scale.from_px((a + along * s_px)[None, :])[0]
+        xy = scale.from_px((start_px + along * s_px)[None, :])[0]
         found.append(
             Edge(
                 position=s_px / scale.px_per_unit,
@@ -177,7 +181,7 @@ def edges(
                 rising=bool(grad[i] > 0),
             )
         )
-    return sorted(found, key=lambda e: e.position)
+    return sorted(found, key=lambda edge: edge.position)
 
 
 @dataclass(frozen=True)
@@ -200,38 +204,38 @@ class Hole:
 
 def fit_circle(points: Points) -> tuple[float, float, float, float]:
     """Least-squares circle through ``points`` (N × 2): center x, y, radius, RMS residual."""
-    p = np.asarray(points, dtype=np.float64)
-    a = np.column_stack([2 * p[:, 0], 2 * p[:, 1], np.ones(len(p))])
-    rhs = (p**2).sum(axis=1)
-    (cx, cy, c), *_ = np.linalg.lstsq(a, rhs, rcond=None)
-    r = math.sqrt(c + cx * cx + cy * cy)
-    rms = float(np.sqrt(np.mean((np.hypot(p[:, 0] - cx, p[:, 1] - cy) - r) ** 2)))
-    return float(cx), float(cy), r, rms
+    data = np.asarray(points, dtype=np.float64)
+    matrix = np.column_stack([2 * data[:, 0], 2 * data[:, 1], np.ones(len(data))])
+    rhs = (data**2).sum(axis=1)
+    (center_x, center_y, offset), *_ = np.linalg.lstsq(matrix, rhs, rcond=None)
+    radius = math.sqrt(offset + center_x * center_x + center_y * center_y)
+    rms = float(np.sqrt(np.mean((np.hypot(data[:, 0] - center_x, data[:, 1] - center_y) - radius) ** 2)))
+    return float(center_x), float(center_y), radius, rms
 
 
 RAYS = 120  #: rays cast around a hole candidate
 
 
 def _ray_peaks(
-    mag: npt.NDArray[np.float32], cx: float, cy: float, radius_lo: float, radius_hi: float
+    mag: npt.NDArray[np.float32], center_x: float, center_y: float, radius_lo: float, radius_hi: float
 ) -> dict[int, list[tuple[float, float, float]]]:
     """Gradient peaks on ``RAYS`` rays from (cx, cy) between radii ``radius_lo`` and ``radius_hi``:
     ray index → [(x, y, radius)], sub-pixel, every local maximum above a quarter of the ray's
     strongest."""
     import cv2
 
-    n = max(32, round((radius_hi - radius_lo) * 2))
-    radii = np.linspace(radius_lo, radius_hi, n)
+    ray_count = max(32, round((radius_hi - radius_lo) * 2))
+    radii = np.linspace(radius_lo, radius_hi, ray_count)
     step = radii[1] - radii[0]
     out: dict[int, list[tuple[float, float, float]]] = {}
     for ray in range(RAYS):
         ang = 2 * math.pi * ray / RAYS
-        c, s = math.cos(ang), math.sin(ang)
-        xs, ys = cx + c * radii, cy + s * radii
+        cos_angle, sin_angle = math.cos(ang), math.sin(ang)
+        xs, ys = center_x + cos_angle * radii, center_y + sin_angle * radii
         ok = (xs >= 1) & (ys >= 1) & (xs < mag.shape[1] - 2) & (ys < mag.shape[0] - 2)
         if ok.sum() < 5:
             continue
-        rr = radii[ok]
+        peak_radii = radii[ok]
         vals = cv2.remap(
             mag, xs[ok].astype(np.float32).reshape(1, -1),
             ys[ok].astype(np.float32).reshape(1, -1), cv2.INTER_LINEAR,
@@ -241,22 +245,26 @@ def _ray_peaks(
             if vals[j] >= vals[j - 1] and vals[j] > vals[j + 1] and vals[j] >= floor:
                 denom = vals[j - 1] - 2 * vals[j] + vals[j + 1]
                 frac = 0.5 * (vals[j - 1] - vals[j + 1]) / denom if denom else 0.0
-                r = float(rr[j] + frac * step)
-                out.setdefault(ray, []).append((cx + c * r, cy + s * r, r))
+                radius = float(peak_radii[j] + frac * step)
+                out.setdefault(ray, []).append((center_x + cos_angle * radius, center_y + sin_angle * radius, radius))
     return out
 
 
-def _ellipse_radius(e: tuple[float, float, float, float, float], ang: float) -> float:
+def _ellipse_radius(ellipse: tuple[float, float, float, float, float], ang: float) -> float:
     """Distance from an ellipse's center to its edge in direction ``ang`` (radians).
 
     ``e`` is (cx, cy, a, b, phi): center, semi-axes, major axis direction.
     """
-    _, _, a, b, phi = e
-    t = ang - phi
-    return a * b / math.hypot(b * math.cos(t), a * math.sin(t))
+    _, _, semi_major, semi_minor, phi = ellipse
+    angle_from_axis = ang - phi
+    return (
+        semi_major
+        * semi_minor
+        / math.hypot(semi_minor * math.cos(angle_from_axis), semi_major * math.sin(angle_from_axis))
+    )
 
 
-def _track(mag: npt.NDArray[np.float32], cx: float, cy: float, r: float) -> Hole | None:
+def _track(mag: npt.NDArray[np.float32], center_x: float, center_y: float, radius: float) -> Hole | None:
     """Follow one circular edge near radius ``r`` around (cx, cy) and fit an ellipse to it.
 
     On each ray the gradient peak nearest the current estimate is taken, then the ellipse is
@@ -264,33 +272,35 @@ def _track(mag: npt.NDArray[np.float32], cx: float, cy: float, r: float) -> Hole
     """
     import cv2
 
-    e = (cx, cy, r, r, 0.0)
+    ellipse = (center_x, center_y, radius, radius, 0.0)
     chosen: list[tuple[float, float]] = []
     for _ in range(4):
-        peaks = _ray_peaks(mag, e[0], e[1], 0.75 * e[3], 1.25 * e[2])
-        tol = max(1.0, 0.04 * e[2])
+        peaks = _ray_peaks(mag, ellipse[0], ellipse[1], 0.75 * ellipse[3], 1.25 * ellipse[2])
+        tol = max(1.0, 0.04 * ellipse[2])
         chosen = []
         for ray, items in peaks.items():
             ang = 2 * math.pi * ray / RAYS
-            want = _ellipse_radius(e, ang) if e[2] != e[3] else e[2]
+            want = _ellipse_radius(ellipse, ang) if ellipse[2] != ellipse[3] else ellipse[2]
             # the ray starts at the current center: its radius is measured from there
-            x, y, rr = min(items, key=lambda q: abs(q[2] - want))
-            if abs(rr - want) <= tol:
+            x, y, chosen_radius = min(items, key=lambda q: abs(q[2] - want))
+            if abs(chosen_radius - want) <= tol:
                 chosen.append((x, y))
         if len(chosen) < RAYS // 2:
             return None
-        (fx, fy), (w, h), ang_deg = cv2.fitEllipseAMS(np.array(chosen, dtype=np.float32))
-        a, b = max(w, h) / 2, min(w, h) / 2
-        if not (math.isfinite(a) and b > 0):
+        (fit_x, fit_y), (fit_width, fit_height), ang_deg = cv2.fitEllipseAMS(np.array(chosen, dtype=np.float32))
+        semi_major, semi_minor = max(fit_width, fit_height) / 2, min(fit_width, fit_height) / 2
+        if not (math.isfinite(semi_major) and semi_minor > 0):
             return None
-        phi = math.radians(ang_deg + (90 if h > w else 0))
-        e = (float(fx), float(fy), float(a), float(b), phi)
+        phi = math.radians(ang_deg + (90 if fit_height > fit_width else 0))
+        ellipse = (float(fit_x), float(fit_y), float(semi_major), float(semi_minor), phi)
     pts = np.array(chosen)
-    angs = np.arctan2(pts[:, 1] - e[1], pts[:, 0] - e[0])
-    dist = np.hypot(pts[:, 0] - e[0], pts[:, 1] - e[1])
-    model = np.array([_ellipse_radius(e, t) for t in angs])
+    angs = np.arctan2(pts[:, 1] - ellipse[1], pts[:, 0] - ellipse[0])
+    dist = np.hypot(pts[:, 0] - ellipse[0], pts[:, 1] - ellipse[1])
+    model = np.array([_ellipse_radius(ellipse, t) for t in angs])
     rms = float(np.sqrt(np.mean((dist - model) ** 2)))
-    return Hole(e[0], e[1], 2 * e[2], rms, len(chosen), 2 * e[3], math.degrees(e[4]) % 180)
+    return Hole(
+        ellipse[0], ellipse[1], 2 * ellipse[2], rms, len(chosen), 2 * ellipse[3], math.degrees(ellipse[4]) % 180
+    )
 
 
 def _ransac_circles(
@@ -305,32 +315,40 @@ def _ransac_circles(
         edge = edge[rng.choice(len(edge), 4000, replace=False)]
     idx = rng.integers(0, len(edge), size=(trials, 3))
     a, b, c = edge[idx[:, 0]], edge[idx[:, 1]], edge[idx[:, 2]]
-    d = 2 * (a[:, 0] * (b[:, 1] - c[:, 1]) + b[:, 0] * (c[:, 1] - a[:, 1]) + c[:, 0] * (a[:, 1] - b[:, 1]))
-    ok = np.abs(d) > 1e-6
-    a, b, c, d = a[ok], b[ok], c[ok], d[ok]
-    sa, sb, sc = (a**2).sum(1), (b**2).sum(1), (c**2).sum(1)
-    ux = (sa * (b[:, 1] - c[:, 1]) + sb * (c[:, 1] - a[:, 1]) + sc * (a[:, 1] - b[:, 1])) / d
-    uy = (sa * (c[:, 0] - b[:, 0]) + sb * (a[:, 0] - c[:, 0]) + sc * (b[:, 0] - a[:, 0])) / d
-    r = np.hypot(a[:, 0] - ux, a[:, 1] - uy)
-    keep = (r >= radius_lo) & (r <= radius_hi)
-    ux, uy, r = ux[keep], uy[keep], r[keep]
+    determinant = 2 * (a[:, 0] * (b[:, 1] - c[:, 1]) + b[:, 0] * (c[:, 1] - a[:, 1]) + c[:, 0] * (a[:, 1] - b[:, 1]))
+    ok = np.abs(determinant) > 1e-6
+    a, b, c, determinant = a[ok], b[ok], c[ok], determinant[ok]
+    square_a, square_b, square_c = (a**2).sum(1), (b**2).sum(1), (c**2).sum(1)
+    center_u = (
+        square_a * (b[:, 1] - c[:, 1]) + square_b * (c[:, 1] - a[:, 1]) + square_c * (a[:, 1] - b[:, 1])
+    ) / determinant
+    center_v = (
+        square_a * (c[:, 0] - b[:, 0]) + square_b * (a[:, 0] - c[:, 0]) + square_c * (b[:, 0] - a[:, 0])
+    ) / determinant
+    radii = np.hypot(a[:, 0] - center_u, a[:, 1] - center_v)
+    keep = (radii >= radius_lo) & (radii <= radius_hi)
+    center_u, center_v, radii = center_u[keep], center_v[keep], radii[keep]
     scored: list[tuple[int, float, float, float]] = []
-    for start in range(0, len(r), 500):  # in chunks, to bound memory
-        cx, cy, rr = ux[start : start + 500], uy[start : start + 500], r[start : start + 500]
-        dx = edge[None, :, 0] - cx[:, None]
-        dy = edge[None, :, 1] - cy[:, None]
-        inl = np.abs(np.hypot(dx, dy) - rr[:, None]) <= tol
+    for start in range(0, len(radii), 500):  # in chunks, to bound memory
+        batch_x, batch_y, batch_radii = (
+            center_u[start : start + 500],
+            center_v[start : start + 500],
+            radii[start : start + 500],
+        )
+        dx = edge[None, :, 0] - batch_x[:, None]
+        dy = edge[None, :, 1] - batch_y[:, None]
+        inl = np.abs(np.hypot(dx, dy) - batch_radii[:, None]) <= tol
         bins = ((np.arctan2(dy, dx) + math.pi) / (2 * math.pi) * 36).astype(int) % 36
-        for k in range(len(rr)):
+        for k in range(len(batch_radii)):
             coverage = len(np.unique(bins[k][inl[k]]))
-            scored.append((coverage, float(cx[k]), float(cy[k]), float(rr[k])))
+            scored.append((coverage, float(batch_x[k]), float(batch_y[k]), float(batch_radii[k])))
     scored.sort(reverse=True)
     out: list[tuple[float, float, float]] = []
-    for cov, cx0, cy0, r0 in scored:
-        if cov < 18:  # less than half a circle
+    for covered, best_x, best_y, radius0 in scored:
+        if covered < 18:  # less than half a circle
             break
-        if all(math.hypot(cx0 - x, cy0 - y) > 3 * tol or abs(r0 - q) > 3 * tol for x, y, q in out):
-            out.append((cx0, cy0, r0))
+        if all(math.hypot(best_x - x, best_y - y) > 3 * tol or abs(radius0 - q) > 3 * tol for x, y, q in out):
+            out.append((best_x, best_y, radius0))
         if len(out) >= best:
             break
     return out
@@ -368,7 +386,7 @@ def holes(
         np.column_stack([xs, ys]).astype(np.float64), radius_min * k * 0.9, radius_max * k * 1.1, 1.5,
         count * 2,
     )  # fmt: skip
-    candidates = [(x / k, y / k, r / k) for x, y, r in seeds]
+    candidates = [(x / k, y / k, radius / k) for x, y, radius in seeds]
     for frac in (0.25, 0.5, 0.75):  # and the box center, at a few radii
         candidates.append((gray.shape[1] / 2, gray.shape[0] / 2, radius_min + frac * (radius_max - radius_min)))
     blur = cv2.GaussianBlur(gray.astype(np.float32), (0, 0), max(1.0, (radius_min + radius_max) / 200))
@@ -377,47 +395,52 @@ def holes(
         dtype=np.float32,
     )
     fits: list[Hole] = []
-    for cx, cy, r in candidates:
-        h = _track(mag, cx, cy, r)
-        if h and 1.8 * radius_min <= h.diameter <= 2.2 * radius_max and h.rms <= max(0.5, 0.01 * h.diameter):
-            fits.append(h)
-    fits.sort(key=lambda h: (-h.points, h.rms / h.diameter))
+    for center_x, center_y, radius in candidates:
+        hole = _track(mag, center_x, center_y, radius)
+        if (
+            hole
+            and 1.8 * radius_min <= hole.diameter <= 2.2 * radius_max
+            and hole.rms <= max(0.5, 0.01 * hole.diameter)
+        ):
+            fits.append(hole)
+    fits.sort(key=lambda hole: (-hole.points, hole.rms / hole.diameter))
     unique: list[Hole] = []
-    for h in fits:  # best-supported first; one per circle (another center, or another ring)
+    for hole in fits:  # best-supported first; one per circle (another center, or another ring)
         if all(
-            math.hypot(h.x - o.x, h.y - o.y) > 0.25 * o.diameter or abs(h.diameter - o.diameter) > 0.10 * o.diameter
+            math.hypot(hole.x - o.x, hole.y - o.y) > 0.25 * o.diameter
+            or abs(hole.diameter - o.diameter) > 0.10 * o.diameter
             for o in unique
         ):
-            unique.append(h)
+            unique.append(hole)
     # group concentric rings into holes (in order of their best ring), rings inside out
     groups: list[list[Hole]] = []
-    for h in unique:
-        for g in groups:
-            if math.hypot(h.x - g[0].x, h.y - g[0].y) < 0.25 * min(h.diameter, g[0].diameter):
-                g.append(h)
+    for hole in unique:
+        for group in groups:
+            if math.hypot(hole.x - group[0].x, hole.y - group[0].y) < 0.25 * min(hole.diameter, group[0].diameter):
+                group.append(hole)
                 break
         else:
-            groups.append([h])
+            groups.append([hole])
     results = [
-        replace(h, hole=n, ring=m)
-        for n, g in enumerate(groups[:count], 1)
-        for m, h in enumerate(sorted(g, key=lambda h: h.diameter), 1)
+        replace(hole, hole=n, ring=m)
+        for n, group in enumerate(groups[:count], 1)
+        for m, hole in enumerate(sorted(group, key=lambda hole: hole.diameter), 1)
     ]
     out = []
     unit = scale.px_per_unit
-    for h in results:
-        center = scale.from_px(np.array([[h.x + u0, h.y + v0]]))[0]
+    for hole in results:
+        center = scale.from_px(np.array([[hole.x + u0, hole.y + v0]]))[0]
         out.append(
             Hole(
                 float(center[0]),
                 float(center[1]),
-                h.diameter / unit,
-                h.rms / unit,
-                h.points,
-                h.minor / unit,
-                h.angle_deg,
-                h.hole,
-                h.ring,
+                hole.diameter / unit,
+                hole.rms / unit,
+                hole.points,
+                hole.minor / unit,
+                hole.angle_deg,
+                hole.hole,
+                hole.ring,
             )
         )
     return out
@@ -449,29 +472,34 @@ def _initial_rect(
     _, mask = cv2.threshold(blur, 0, 255, mode + cv2.THRESH_OTSU)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
     filled = np.zeros_like(mask)  # fill holes (print, pads) so the part is one blob
-    cs, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(filled, cs, -1, 255, -1)
+    found, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(filled, found, -1, 255, -1)
     k = np.ones((open_px, open_px), np.uint8)
     mask = cv2.morphologyEx(filled, cv2.MORPH_OPEN, k)
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     if not contours:
         raise ValueError("no part found in the box (try --light for a light part)")
-    h, w = gray.shape
-    center = np.array([w / 2, h / 2])
+    image_height, image_width = gray.shape
+    center = np.array([image_width / 2, image_height / 2])
 
-    def score(c: Any) -> float:
-        m = cv2.moments(c)
-        if not m["m00"]:
+    def score(contour: Any) -> float:
+        moments = cv2.moments(contour)
+        if not moments["m00"]:
             return -1.0
-        c_xy = np.array([m["m10"] / m["m00"], m["m01"] / m["m00"]])
-        area = float(m["m00"])
-        return area / (1.0 + float(np.hypot(*(c_xy - center))) / float(max(w, h)))
+        c_xy = np.array([moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]])
+        area = float(moments["m00"])
+        return area / (1.0 + float(np.hypot(*(c_xy - center))) / float(max(image_width, image_height)))
 
     best = max(contours, key=score)
-    (cx, cy), (rw, rh), ang = cv2.minAreaRect(best)
+    (center_x, center_y), (rect_width, rect_height), ang = cv2.minAreaRect(best)
     dense, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    pts = max(dense, key=lambda c: cv2.pointPolygonTest(c, (cx, cy), False)).reshape(-1, 2)
-    return (float(cx), float(cy)), (float(rw), float(rh)), float(ang), pts.astype(np.float64)
+    pts = max(dense, key=lambda contour: cv2.pointPolygonTest(contour, (center_x, center_y), False)).reshape(-1, 2)
+    return (
+        (float(center_x), float(center_y)),
+        (float(rect_width), float(rect_height)),
+        float(ang),
+        pts.astype(np.float64),
+    )
 
 
 def fit_rectangle(
@@ -491,55 +519,65 @@ def fit_rectangle(
     pts = [(name, np.asarray(p, dtype=np.float64)) for name in names for p in sides[name]]
     keep = np.ones(len(pts), bool)
     if tol:  # keep, per side, the points near the most common offset (drop overhangs)
-        th = theta
-        n1 = np.array([math.cos(th), math.sin(th)])
-        n2 = np.array([-math.sin(th), math.cos(th)])
-        nrm = {"+a": n1, "-a": -n1, "+b": n2, "-b": -n2}
+        angle = theta
+        axis1 = np.array([math.cos(angle), math.sin(angle)])
+        axis2 = np.array([-math.sin(angle), math.cos(angle)])
+        nrm = {"+a": axis1, "-a": -axis1, "+b": axis2, "-b": -axis2}
         proj = np.array([nrm[tag] @ p for tag, p in pts])
         tags = np.array([tag for tag, _ in pts])
         for name in names:
             sel = tags == name
             if not sel.any():
                 continue
-            v = proj[sel]
-            counts_near = [(np.abs(v - x) <= tol).sum() for x in v]
-            mode = v[int(np.argmax(counts_near))]
-            keep[sel] = np.abs(v - mode) <= tol
+            values = proj[sel]
+            counts_near = [(np.abs(values - x) <= tol).sum() for x in values]
+            mode = values[int(np.argmax(counts_near))]
+            keep[sel] = np.abs(values - mode) <= tol
 
-    def normals(th: float) -> dict[str, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]]:
-        n1 = np.array([math.cos(th), math.sin(th)])
-        n2 = np.array([-math.sin(th), math.cos(th)])
-        return {"+a": (n1, n2), "-a": (-n1, -n2), "+b": (n2, -n1), "-b": (-n2, n1)}  # n, dn/dθ
+    def normals(angle: float) -> dict[str, tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]]:
+        axis1 = np.array([math.cos(angle), math.sin(angle)])
+        axis2 = np.array([-math.sin(angle), math.cos(angle)])
+        return {"+a": (axis1, axis2), "-a": (-axis1, -axis2), "+b": (axis2, -axis1), "-b": (-axis2, axis1)}  # n, dn/dθ
 
     for _ in range(8):
-        nn = normals(theta)
+        normal_vectors = normals(theta)
         offsets = {
             name: float(
-                np.mean([nn[name][0] @ p for (tag, p), ok in zip(pts, keep, strict=True) if tag == name and ok])
+                np.mean(
+                    [normal_vectors[name][0] @ p for (tag, p), ok in zip(pts, keep, strict=True) if tag == name and ok]
+                )
             )
             for name in names
         }
-        resid = np.array([nn[tag][0] @ p - offsets[tag] for tag, p in pts])
-        grad = np.array([nn[tag][1] @ p for tag, p in pts])
+        resid = np.array([normal_vectors[tag][0] @ p - offsets[tag] for tag, p in pts])
+        grad = np.array([normal_vectors[tag][1] @ p for tag, p in pts])
         for name in names:  # the offsets absorb a side's mean: center the gradient per side
             sel = np.array([tag == name for tag, _ in pts]) & keep
             if sel.any():
                 grad[np.array([tag == name for tag, _ in pts])] -= grad[sel].mean()
-        g, r = grad[keep], resid[keep]
-        angle_step = -float(np.sum(r * g) / np.sum(g * g)) if np.sum(g * g) > 0 else 0.0
+        gradients, residuals = grad[keep], resid[keep]
+        angle_step = (
+            -float(np.sum(residuals * gradients) / np.sum(gradients * gradients))
+            if np.sum(gradients * gradients) > 0
+            else 0.0
+        )
         theta += angle_step
-        sigma = float(np.sqrt(np.mean(r**2))) if len(r) else 0.0
+        sigma = float(np.sqrt(np.mean(residuals**2))) if len(residuals) else 0.0
         keep = np.abs(resid) <= max(3 * sigma, 0.75)
         if tol:
             keep &= np.abs(resid) <= 2 * tol
         if abs(angle_step) < 1e-7:
             break
-    nn = normals(theta)
+    normal_vectors = normals(theta)
     offsets = {
-        name: float(np.mean([nn[name][0] @ p for (tag, p), ok in zip(pts, keep, strict=True) if tag == name and ok]))
+        name: float(
+            np.mean(
+                [normal_vectors[name][0] @ p for (tag, p), ok in zip(pts, keep, strict=True) if tag == name and ok]
+            )
+        )
         for name in names
     }
-    resid = np.array([nn[tag][0] @ p - offsets[tag] for (tag, p), ok in zip(pts, keep, strict=True) if ok])
+    resid = np.array([normal_vectors[tag][0] @ p - offsets[tag] for (tag, p), ok in zip(pts, keep, strict=True) if ok])
     counts = {
         name: int(sum(1 for (tag, _), ok in zip(pts, keep, strict=True) if tag == name and ok)) for name in names
     }
@@ -582,44 +620,48 @@ def outline(
     open_px = max(3, round(3.0 * unit)) if scale.rect else 15  # ~3 mm: drops levers, shadows
     tol = max(2.0, 0.3 * unit)  # ~0.3 mm
     if guess:
-        gx, gy, glen, gwid, gang = guess
+        guess_x, guess_y, glen, gwid, gang = guess
         (gcx, gcy), tip = scale.to_px(
-            np.array([[gx, gy], [gx + math.cos(math.radians(gang)), gy + math.sin(math.radians(gang))]])
+            np.array(
+                [[guess_x, guess_y], [guess_x + math.cos(math.radians(gang)), guess_y + math.sin(math.radians(gang))]]
+            )
         )
         theta = math.atan2(tip[1] - gcy, tip[0] - gcx)
-        n1 = np.array([math.cos(theta), math.sin(theta)])
-        n2 = np.array([-math.sin(theta), math.cos(theta)])
-        c0 = np.array([gcx, gcy])
-        ha, hb = glen * unit / 2, gwid * unit / 2
+        axis1 = np.array([math.cos(theta), math.sin(theta)])
+        axis2 = np.array([-math.sin(theta), math.cos(theta)])
+        guess_center = np.array([gcx, gcy])
+        half_length, half_width = glen * unit / 2, gwid * unit / 2
         fitted = {
-            "+a": n1 @ c0 + ha,
-            "-a": -(n1 @ c0) + ha,
-            "+b": n2 @ c0 + hb,
-            "-b": -(n2 @ c0) + hb,
+            "+a": axis1 @ guess_center + half_length,
+            "-a": -(axis1 @ guess_center) + half_length,
+            "+b": axis2 @ guess_center + half_width,
+            "-b": -(axis2 @ guess_center) + half_width,
         }
     else:
-        (cx, cy), (rw, rh), ang, contour = _initial_rect(np.asarray(gray, np.uint8), dark, open_px)
+        (center_x, center_y), (rect_width, rect_height), ang, contour = _initial_rect(
+            np.asarray(gray, np.uint8), dark, open_px
+        )
         theta = math.radians(ang)
-        c0 = np.array([cx + u0, cy + v0])
-        n1 = np.array([math.cos(theta), math.sin(theta)])
-        n2 = np.array([-math.sin(theta), math.cos(theta)])
+        guess_center = np.array([center_x + u0, center_y + v0])
+        axis1 = np.array([math.cos(theta), math.sin(theta)])
+        axis2 = np.array([-math.sin(theta), math.cos(theta)])
         # 1) the blob's outline points, by side of the first guess, away from the corners
         sides: dict[str, list[npt.NDArray[np.float64]]] = {"+a": [], "-a": [], "+b": [], "-b": []}
-        for q in contour + np.array([u0, v0]):
-            d = q - c0
-            a_, b_ = d @ n1 / (rw / 2), d @ n2 / (rh / 2)
-            if abs(a_) >= abs(b_) and abs(b_) < 0.7:
-                sides["+a" if a_ > 0 else "-a"].append(q.astype(np.float64))
-            elif abs(b_) > abs(a_) and abs(a_) < 0.7:
-                sides["+b" if b_ > 0 else "-b"].append(q.astype(np.float64))
+        for point in contour + np.array([u0, v0]):
+            offset = point - guess_center
+            along_ratio, across_ratio = offset @ axis1 / (rect_width / 2), offset @ axis2 / (rect_height / 2)
+            if abs(along_ratio) >= abs(across_ratio) and abs(across_ratio) < 0.7:
+                sides["+a" if along_ratio > 0 else "-a"].append(point.astype(np.float64))
+            elif abs(across_ratio) > abs(along_ratio) and abs(along_ratio) < 0.7:
+                sides["+b" if across_ratio > 0 else "-b"].append(point.astype(np.float64))
         if any(len(v) < 3 for v in sides.values()):
             raise ValueError("the part's outline was not found; check the box and --light/--dark")
         theta, fitted, _, _ = fit_rectangle(sides, theta, tol)
     # 2) sub-pixel: short lines across each fitted side, from outside, first part edge
     polarity = "falling" if dark else "rising"  # background → part
-    n1 = np.array([math.cos(theta), math.sin(theta)])
-    n2 = np.array([-math.sin(theta), math.cos(theta)])
-    center = n1 * (fitted["+a"] - fitted["-a"]) / 2 + n2 * (fitted["+b"] - fitted["-b"]) / 2
+    axis1 = np.array([math.cos(theta), math.sin(theta)])
+    axis2 = np.array([-math.sin(theta), math.cos(theta)])
+    center = axis1 * (fitted["+a"] - fitted["-a"]) / 2 + axis2 * (fitted["+b"] - fitted["-b"]) / 2
     half = {"+a": (fitted["+a"] + fitted["-a"]) / 2, "+b": (fitted["+b"] + fitted["-b"]) / 2}
     half["-a"], half["-b"] = half["+a"], half["+b"]
     out_px, in_px = max(4.0, search[0] * unit), max(6.0, search[1] * unit)
@@ -628,15 +670,15 @@ def outline(
         for a in (tuple(scale.to_px(np.array([[b[0], b[1]], [b[2], b[3]]])).ravel()) for b in avoid or [])
     ]
 
-    def avoided(q: npt.NDArray[np.float64]) -> bool:
-        return any(x0 <= q[0] <= x1 and y0 <= q[1] <= y1 for x0, y0, x1, y1 in avoid_px)
+    def avoided(point: npt.NDArray[np.float64]) -> bool:
+        return any(x0 <= point[0] <= x1 and y0 <= point[1] <= y1 for x0, y0, x1, y1 in avoid_px)
 
     fine: dict[str, list[npt.NDArray[np.float64]]] = {}
     for name, normal, along, half_along in (
-        ("+a", n1, n2, half["+b"]),
-        ("-a", -n1, n2, half["+b"]),
-        ("+b", n2, n1, half["+a"]),
-        ("-b", -n2, n1, half["+a"]),
+        ("+a", axis1, axis2, half["+b"]),
+        ("-a", -axis1, axis2, half["+b"]),
+        ("+b", axis2, axis1, half["+a"]),
+        ("-b", -axis2, axis1, half["+a"]),
     ):
         pts = []
         for f in np.linspace(-span, span, per_side):
@@ -652,22 +694,23 @@ def outline(
     if any(len(v) < 3 for v in sides.values()):
         raise ValueError("too few edge points on a side; check the box and --light/--dark")
     theta, offsets, resid, counts = fit_rectangle(sides, theta, tol)
-    n1 = np.array([math.cos(theta), math.sin(theta)])
-    n2 = np.array([-math.sin(theta), math.cos(theta)])
+    axis1 = np.array([math.cos(theta), math.sin(theta)])
+    axis2 = np.array([-math.sin(theta), math.cos(theta)])
     length_a = offsets["+a"] + offsets["-a"]  # extent along n1
     length_b = offsets["+b"] + offsets["-b"]  # extent along n2
-    center_px = n1 * (offsets["+a"] - offsets["-a"]) / 2 + n2 * (offsets["+b"] - offsets["-b"]) / 2
+    center_px = axis1 * (offsets["+a"] - offsets["-a"]) / 2 + axis2 * (offsets["+b"] - offsets["-b"]) / 2
     corners_px = [
-        center_px + n1 * sa * length_a / 2 + n2 * sb * length_b / 2 for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))
+        center_px + axis1 * sa * length_a / 2 + axis2 * sb * length_b / 2
+        for sa, sb in ((-1, -1), (1, -1), (1, 1), (-1, 1))
     ]
     k = scale.px_per_unit
     center = scale.from_px(center_px[None, :])[0]
     corners = [(float(a), float(b)) for a, b in scale.from_px(np.array(corners_px))]
     # the length side and its angle in user coordinates (y up on rectified images)
     if length_a >= length_b:
-        length, width, axis = length_a, length_b, n1
+        length, width, axis = length_a, length_b, axis1
     else:
-        length, width, axis = length_b, length_a, n2
+        length, width, axis = length_b, length_a, axis2
     p0, p1 = scale.from_px(np.array([center_px, center_px + axis]))
     angle = math.degrees(math.atan2(p1[1] - p0[1], p1[0] - p0[0]))
     angle = (angle + 90) % 180 - 90  # a side direction: −90…90

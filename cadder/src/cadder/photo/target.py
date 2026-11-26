@@ -111,21 +111,21 @@ def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: floa
     if board.width > paper_width - 10 or board.height > paper_height - 25:
         raise ValueError(f"{board.width:g} × {board.height:g} mm board does not fit {paper}")
     page = np.full((round(paper_height * px_per_mm), round(paper_width * px_per_mm)), 255, np.uint8)
-    bw, bh = round(board.width * px_per_mm), round(board.height * px_per_mm)
-    art = board.opencv().generateImage((bw, bh), marginSize=0, borderBits=1)
+    board_width, board_height = round(board.width * px_per_mm), round(board.height * px_per_mm)
+    art = board.opencv().generateImage((board_width, board_height), marginSize=0, borderBits=1)
     if board.field:  # a plain white area for the part (rows count from the top in the image)
         fx0, fy0, fx1, fy1 = board.field
-        sq = bw / board.squares_x
-        art[round((board.squares_y - fy1) * sq) : round((board.squares_y - fy0) * sq),
-            round(fx0 * sq) : round(fx1 * sq)] = 255  # fmt: skip
-    x0 = (page.shape[1] - bw) // 2
+        square_px = board_width / board.squares_x
+        art[round((board.squares_y - fy1) * square_px) : round((board.squares_y - fy0) * square_px),
+            round(fx0 * square_px) : round(fx1 * square_px)] = 255  # fmt: skip
+    x0 = (page.shape[1] - board_width) // 2
     y0 = round(8 * px_per_mm)
-    page[y0 : y0 + bh, x0 : x0 + bw] = art
+    page[y0 : y0 + board_height, x0 : x0 + board_width] = art
 
-    def text(s: str, x_mm: float, y_mm: float, size: float = 0.9) -> None:
+    def text(square: str, x_mm: float, y_mm: float, size: float = 0.9) -> None:
         cv2.putText(
             page,
-            s,
+            square,
             (round(x_mm * px_per_mm), round(y_mm * px_per_mm)),
             cv2.FONT_HERSHEY_SIMPLEX,
             size * px_per_mm / 20 * 1.2,
@@ -134,7 +134,7 @@ def target_page(board: Board = DEFAULT_BOARD, paper: str = "A4", px_per_mm: floa
             cv2.LINE_AA,
         )
 
-    left_mm, bottom_mm = x0 / px_per_mm, (y0 + bh) / px_per_mm
+    left_mm, bottom_mm = x0 / px_per_mm, (y0 + board_height) / px_per_mm
     text(board.label(), left_mm, bottom_mm + 5)
     text(
         "Print at 100 % (no fit to page). Measure 10 squares; pass square size to rectify.",
@@ -193,9 +193,9 @@ def detect(image: BGR, board: Board) -> tuple[Points, Points]:
     for scale in (1.0, 0.5, 0.35, 0.25):
         img_s = gray if scale == 1 else cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
         corners, ids, _, _ = detector.detectBoard(img_s)
-        n = 0 if ids is None else len(ids)
-        if n > best[0]:
-            best = (n, corners, ids, scale)
+        marker_count = 0 if ids is None else len(ids)
+        if marker_count > best[0]:
+            best = (marker_count, corners, ids, scale)
     found, corners, ids, scale = best
     if found < 6:
         raise ValueError(f"target not found: {found} ChArUco corners (need at least 6)")
@@ -246,8 +246,8 @@ class Rectification:
     def _rt(self) -> tuple[Points, Points]:
         import cv2
 
-        r, _ = cv2.Rodrigues(np.asarray(self.rvec, dtype=np.float64))
-        return np.asarray(r, dtype=np.float64), np.asarray(self.tvec, dtype=np.float64)
+        rotation, _ = cv2.Rodrigues(np.asarray(self.rvec, dtype=np.float64))
+        return np.asarray(rotation, dtype=np.float64), np.asarray(self.tvec, dtype=np.float64)
 
     def project(self, points: Points) -> Points:
         """Target-frame points (N × 3, mm) → photo pixels (N × 2)."""
@@ -268,12 +268,12 @@ class Rectification:
         px = np.asarray(pixels, dtype=np.float64).reshape(-1, 1, 2)
         norm = cv2.undistortPoints(px, self._k(), self._d()).reshape(-1, 2)  # lens removed
         rays = np.column_stack([norm, np.ones(len(norm))])
-        r, t = self._rt()
-        center = -r.T @ t  # camera center, board frame
-        dirs = rays @ r  # = (r.T @ rays.T).T
+        rotation, translation = self._rt()
+        center = -rotation.T @ translation  # camera center, board frame
+        dirs = rays @ rotation  # = (r.T @ rays.T).T
         z = -height  # board frame: z into the paper
-        s = (z - center[2]) / dirs[:, 2]
-        hit = center + dirs * s[:, None]
+        ray_length = (z - center[2]) / dirs[:, 2]
+        hit = center + dirs * ray_length[:, None]
         return _from_cv(self.board, hit)[:, :2]
 
     def ray(self, pixels: Points) -> tuple[Points, Points]:
@@ -283,22 +283,22 @@ class Rectification:
 
         px = np.asarray(pixels, dtype=np.float64).reshape(-1, 1, 2)
         norm = cv2.undistortPoints(px, self._k(), self._d()).reshape(-1, 2)
-        r, _ = self._rt()
-        dirs_cv = np.column_stack([norm, np.ones(len(norm))]) @ r
+        rotation, _ = self._rt()
+        dirs_cv = np.column_stack([norm, np.ones(len(norm))]) @ rotation
         dirs = dirs_cv * np.array([1.0, -1.0, -1.0])  # board frame → target frame (no shift)
         return self.camera_center, dirs / np.linalg.norm(dirs, axis=1, keepdims=True)
 
     @property
     def camera_center(self) -> Points:
         """Camera position in the target frame (mm)."""
-        r, t = self._rt()
-        return np.asarray(_from_cv(self.board, -r.T @ t)[0], dtype=np.float64)
+        rotation, translation = self._rt()
+        return np.asarray(_from_cv(self.board, -rotation.T @ translation)[0], dtype=np.float64)
 
     @property
     def tilt_deg(self) -> float:
         """Angle between the camera's axis and the target's normal (0 = square-on)."""
-        r, _ = self._rt()
-        axis = r.T @ np.array([0.0, 0.0, 1.0])  # camera z in the board frame
+        rotation, _ = self._rt()
+        axis = rotation.T @ np.array([0.0, 0.0, 1.0])  # camera z in the board frame
         return math.degrees(math.acos(min(1.0, abs(axis[2]))))
 
     def rect_to_mm(self, uv: Points) -> Points:
@@ -328,15 +328,17 @@ class Rectification:
         between, which is ample for the smooth lens and perspective mapping."""
         import cv2
 
-        w, h = size
-        us = np.arange(0, w + step, step, dtype=np.float64)
-        vs = np.arange(0, h + step, step, dtype=np.float64)
+        width, height = size
+        us = np.arange(0, width + step, step, dtype=np.float64)
+        vs = np.arange(0, height + step, step, dtype=np.float64)
         grid = np.stack(np.meshgrid(us, vs), axis=-1).reshape(-1, 2)
         photo = self.rect_to_photo(grid).reshape(len(vs), len(us), 2).astype(np.float32)
         # sample the coarse grid bilinearly at u / step, v / step for every output pixel
-        cu, cv = np.meshgrid(np.arange(w, dtype=np.float32) / step, np.arange(h, dtype=np.float32) / step)
-        map_x = cv2.remap(photo[..., 0], cu, cv, cv2.INTER_LINEAR)
-        map_y = cv2.remap(photo[..., 1], cu, cv, cv2.INTER_LINEAR)
+        coarse_u, coarse_v = np.meshgrid(
+            np.arange(width, dtype=np.float32) / step, np.arange(height, dtype=np.float32) / step
+        )
+        map_x = cv2.remap(photo[..., 0], coarse_u, coarse_v, cv2.INTER_LINEAR)
+        map_y = cv2.remap(photo[..., 1], coarse_u, coarse_v, cv2.INTER_LINEAR)
         return map_x, map_y
 
     def at_height(self, xy: Points, height: float) -> Points:
@@ -377,20 +379,20 @@ def triangulate(views: list[tuple[Rectification, Points]]) -> tuple[Points, floa
     """A feature's 3D position (target frame) from where it is seen in two or more photos:
     each view is a rectification and the feature's position on its rectified plane (mm).
     Returns the point closest to all the rays and the RMS distance of the rays from it (mm)."""
-    a = np.zeros((3, 3))
-    b = np.zeros(3)
+    normal_matrix = np.zeros((3, 3))
+    normal_rhs = np.zeros(3)
     rays = []
     for rect, xy in views:
         xy = np.asarray(xy, dtype=np.float64).reshape(1, 2)
         px = rect.project(np.column_stack([xy, [rect.plane_height]]))
-        origin, d = rect.ray(px)
-        d = d[0]
-        m = np.eye(3) - np.outer(d, d)
-        a += m
-        b += m @ origin
-        rays.append((origin, d))
-    point = np.linalg.solve(a, b)
-    miss = [np.linalg.norm((np.eye(3) - np.outer(d, d)) @ (point - o)) for o, d in rays]
+        origin, direction = rect.ray(px)
+        direction = direction[0]
+        projector = np.eye(3) - np.outer(direction, direction)
+        normal_matrix += projector
+        normal_rhs += projector @ origin
+        rays.append((origin, direction))
+    point = np.linalg.solve(normal_matrix, normal_rhs)
+    miss = [np.linalg.norm((np.eye(3) - np.outer(direction, direction)) @ (point - o)) for o, direction in rays]
     return point, float(np.sqrt(np.mean(np.square(miss))))
 
 
@@ -405,8 +407,8 @@ def _fit_focal(obj: Points, img: Points, size: tuple[int, int], guess: float) ->
     center; ``None`` when the fit fails (a square-on view barely constrains it)."""
     import cv2
 
-    w, h = size
-    k0 = np.array([[guess, 0, w / 2], [0, guess, h / 2], [0, 0, 1]], dtype=np.float64)
+    width, height = size
+    initial_matrix = np.array([[guess, 0, width / 2], [0, guess, height / 2], [0, 0, 1]], dtype=np.float64)
     flags = (
         cv2.CALIB_USE_INTRINSIC_GUESS
         | cv2.CALIB_FIX_PRINCIPAL_POINT
@@ -421,7 +423,7 @@ def _fit_focal(obj: Points, img: Points, size: tuple[int, int], guess: float) ->
             [obj_cv(obj)],
             [img.astype(np.float32)],
             size,
-            k0,
+            initial_matrix,
             np.zeros(5),
             flags=flags,
         )
@@ -445,13 +447,13 @@ def solve_pose(
     """Camera pose (rvec, tvec in OpenCV's board frame) and RMS reprojection error (px)."""
     import cv2
 
-    d = np.zeros(5) if dist is None else dist
+    distortion = np.zeros(5) if dist is None else dist
     obj_b = _to_cv(board, obj)
-    ok, rvec, tvec = cv2.solvePnP(obj_b, img, k, d, flags=cv2.SOLVEPNP_ITERATIVE)
+    ok, rvec, tvec = cv2.solvePnP(obj_b, img, k, distortion, flags=cv2.SOLVEPNP_ITERATIVE)
     if not ok:
         raise ValueError("could not solve the camera pose from the target")
-    rvec, tvec = cv2.solvePnPRefineLM(obj_b, img, k, d, rvec, tvec)
-    proj, _ = cv2.projectPoints(obj_b, rvec, tvec, k, d)
+    rvec, tvec = cv2.solvePnPRefineLM(obj_b, img, k, distortion, rvec, tvec)
+    proj, _ = cv2.projectPoints(obj_b, rvec, tvec, k, distortion)
     rms = float(np.sqrt(np.mean(np.sum((proj.reshape(-1, 2) - img) ** 2, axis=1))))
     return np.asarray(rvec, np.float64).ravel(), np.asarray(tvec, np.float64).ravel(), rms
 
@@ -475,8 +477,8 @@ def fit_distortion(obj: Points, img: Points, size: tuple[int, int], k: Points) -
         )
     except cv2.error:
         return None
-    d = np.asarray(dist, dtype=np.float64).ravel()[:5]
-    return d if np.all(np.isfinite(d)) else None
+    distortion = np.asarray(dist, dtype=np.float64).ravel()[:5]
+    return distortion if np.all(np.isfinite(distortion)) else None
 
 
 @dataclass
@@ -513,45 +515,53 @@ def calibrate(photos: list[Path], board: Board = DEFAULT_BOARD) -> Camera:
 
     objs, imgs, names, size = [], [], [], None
     guess = None
-    for p in photos:
-        image = load(p)
-        s = (image.shape[1], image.shape[0])
-        if size and s != size:
-            raise ValueError(f"{p.name}: {s[0]}×{s[1]}, but the others are {size[0]}×{size[1]}")
-        size = s
+    for photo in photos:
+        image = load(photo)
+        image_size = (image.shape[1], image.shape[0])
+        if size and image_size != size:
+            raise ValueError(f"{photo.name}: {image_size[0]}×{image_size[1]}, but the others are {size[0]}×{size[1]}")
+        size = image_size
         try:
             obj, img = detect(image, board)
         except ValueError as exc:
-            raise ValueError(f"{p.name}: {exc}") from exc
+            raise ValueError(f"{photo.name}: {exc}") from exc
         objs.append(obj_cv(obj))
         imgs.append(img.astype(np.float32))
-        names.append(p.name)
-        guess = guess or info(p).focal_px
+        names.append(photo.name)
+        guess = guess or info(photo).focal_px
     if size is None or len(objs) < 2:
         raise ValueError("calibration needs at least two photos of the target")
-    w, h = size
-    f0 = guess or max(size)
-    k0 = np.array([[f0, 0, w / 2], [0, f0, h / 2], [0, 0, 1]], dtype=np.float64)
+    width, height = size
+    initial_focal = guess or max(size)
+    initial_matrix = np.array(
+        [[initial_focal, 0, width / 2], [0, initial_focal, height / 2], [0, 0, 1]], dtype=np.float64
+    )
     flags = cv2.CALIB_USE_INTRINSIC_GUESS | cv2.CALIB_FIX_ASPECT_RATIO | cv2.CALIB_ZERO_TANGENT_DIST
-    if sum(len(o) for o in objs) < 150:
+    if sum(len(object_points) for object_points in objs) < 150:
         flags |= cv2.CALIB_FIX_K3
     for _ in range(4):  # drop misplaced corners (found next to the part) and fit again
-        rms, k, dist, rvecs, tvecs = cv2.calibrateCamera(objs, imgs, size, k0.copy(), np.zeros(5), flags=flags)
+        rms, k, dist, rvecs, tvecs = cv2.calibrateCamera(
+            objs, imgs, size, initial_matrix.copy(), np.zeros(5), flags=flags
+        )
         errors = []
-        for o, i, rv, tv in zip(objs, imgs, rvecs, tvecs, strict=True):
-            proj, _ = cv2.projectPoints(o, rv, tv, k, dist)
-            errors.append(np.linalg.norm(proj.reshape(-1, 2) - i.reshape(-1, 2), axis=1))
+        for object_points, photo_points, rotation_vector, translation_vector in zip(
+            objs, imgs, rvecs, tvecs, strict=True
+        ):
+            proj, _ = cv2.projectPoints(object_points, rotation_vector, translation_vector, k, dist)
+            errors.append(np.linalg.norm(proj.reshape(-1, 2) - photo_points.reshape(-1, 2), axis=1))
         limit = max(3 * float(np.median(np.concatenate(errors))), 3.0)
-        keep = [e <= limit if (e <= limit).sum() >= 6 else e >= 0 for e in errors]
+        keep = [error <= limit if (error <= limit).sum() >= 6 else error >= 0 for error in errors]
         if all(m.all() for m in keep):
             break
-        objs = [o[m] for o, m in zip(objs, keep, strict=True)]
-        imgs = [i[m] for i, m in zip(imgs, keep, strict=True)]
+        objs = [object_points[m] for object_points, m in zip(objs, keep, strict=True)]
+        imgs = [photo_points[m] for photo_points, m in zip(imgs, keep, strict=True)]
     views = []
-    for name, o, i, rv, tv in zip(names, objs, imgs, rvecs, tvecs, strict=True):
-        proj, _ = cv2.projectPoints(o, rv, tv, k, dist)
-        e = float(np.sqrt(np.mean(np.sum((proj.reshape(-1, 2) - i) ** 2, axis=1))))
-        views.append({"photo": name, "corners": len(o), "rms_px": round(e, 3)})
+    for name, object_points, photo_points, rotation_vector, translation_vector in zip(
+        names, objs, imgs, rvecs, tvecs, strict=True
+    ):
+        proj, _ = cv2.projectPoints(object_points, rotation_vector, translation_vector, k, dist)
+        error = float(np.sqrt(np.mean(np.sum((proj.reshape(-1, 2) - photo_points) ** 2, axis=1))))
+        views.append({"photo": name, "corners": len(object_points), "rms_px": round(error, 3)})
     return Camera(
         camera_matrix=np.asarray(k, dtype=np.float64).tolist(),
         dist=np.asarray(dist, dtype=np.float64).ravel()[:5].tolist(),
@@ -591,8 +601,13 @@ def rectify(
     if region:  # paper is rarely flat: solve from the corners nearest the region
         x0, y0, x1, y1 = region
         for squares in (2, 3, 4, 6):  # widen until there are enough (a white field has none)
-            m = squares * board.square_mm
-            near = (obj[:, 0] >= x0 - m) & (obj[:, 0] <= x1 + m) & (obj[:, 1] >= y0 - m) & (obj[:, 1] <= y1 + m)
+            board_span = squares * board.square_mm
+            near = (
+                (obj[:, 0] >= x0 - board_span)
+                & (obj[:, 0] <= x1 + board_span)
+                & (obj[:, 1] >= y0 - board_span)
+                & (obj[:, 1] <= y1 + board_span)
+            )
             if near.sum() >= 20:
                 break
         if near.sum() >= 12 and near.sum() < len(obj):
@@ -651,9 +666,11 @@ def rectify(
             f"focal length: EXIF {exif_f:.0f} px vs fit {fit_f:.0f} px "
             f"({100 * (fit_f / exif_f - 1):+.1f} %); scale may be off by part of that"
         )
-    cx, cy = (rect.region[0] + rect.region[2]) / 2, (rect.region[1] + rect.region[3]) / 2
-    a, b = rect.project(np.array([[cx, cy, plane_height], [cx + 1, cy, plane_height]]))
-    native = float(np.hypot(*(b - a)))  # the photo's own px per mm at the region's center
+    center_x, center_y = (rect.region[0] + rect.region[2]) / 2, (rect.region[1] + rect.region[3]) / 2
+    pixel_a, pixel_b = rect.project(
+        np.array([[center_x, center_y, plane_height], [center_x + 1, center_y, plane_height]])
+    )
+    native = float(np.hypot(*(pixel_b - pixel_a)))  # the photo's own px per mm at the region's center
     if rms > 1.5:
         rect.notes.append(
             f"reprojection error {rms:.2f} px ({rms / native:.2f} mm) is high: paper not flat? "
@@ -684,7 +701,7 @@ def with_square(board: Board, square_mm: float | None) -> Board:
 
 def summary(rect: Rectification) -> str:
     """A few lines describing a rectification."""
-    c = rect.camera_center
+    eye_x, eye_y, eye_z = rect.camera_center
     f = rect.focal
 
     def px(value: float | str | None) -> str:
@@ -694,7 +711,7 @@ def summary(rect: Rectification) -> str:
         f"photo {rect.source}: {rect.corners} target corners, reprojection {rect.rms_px:.2f} px",
         f"focal {px(f['used'])} px ({f['source']}; exif {px(f['exif'])}, "
         + (f"fit {px(f['fit'])})" if rect.tilt_deg > 10 else "fit: view too square-on to tell)"),
-        f"camera at ({c[0]:.0f}, {c[1]:.0f}, {c[2]:.0f}) mm, tilt {rect.tilt_deg:.1f}°",
+        f"camera at ({eye_x:.0f}, {eye_y:.0f}, {eye_z:.0f}) mm, tilt {rect.tilt_deg:.1f}°",
         f"rectified plane z = {rect.plane_height:g} mm, {rect.px_per_mm:g} px/mm, region "
         + ", ".join(f"{v:g}" for v in rect.region)
         + f" mm → {rect.image}",

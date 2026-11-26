@@ -187,32 +187,34 @@ def _merge_coincident_nodes(
     cell = 2 * MERGE_TOL
     grid: dict[tuple[int, int, int], list[int]] = {}
     remap: dict[int, int] = {}
-    for n, p in nodes.items():
-        key = (int(p[0] // cell), int(p[1] // cell), int(p[2] // cell))
-        target = n
+    for node, position in nodes.items():
+        key = (int(position[0] // cell), int(position[1] // cell), int(position[2] // cell))
+        target = node
         for dx in (-1, 0, 1):
             for dy in (-1, 0, 1):
                 for dz in (-1, 0, 1):
-                    for m in grid.get((key[0] + dx, key[1] + dy, key[2] + dz), ()):
-                        q = nodes[m]
-                        if (p[0] - q[0]) ** 2 + (p[1] - q[1]) ** 2 + (p[2] - q[2]) ** 2 <= MERGE_TOL**2:
-                            target = m
-        remap[n] = target
-        if target == n:
-            grid.setdefault(key, []).append(n)
+                    for other in grid.get((key[0] + dx, key[1] + dy, key[2] + dz), ()):
+                        other_position = nodes[other]
+                        if (position[0] - other_position[0]) ** 2 + (position[1] - other_position[1]) ** 2 + (
+                            position[2] - other_position[2]
+                        ) ** 2 <= MERGE_TOL**2:
+                            target = other
+        remap[node] = target
+        if target == node:
+            grid.setdefault(key, []).append(node)
 
     def fix(elements: list[tuple[int, ...]], corners: int) -> list[tuple[int, ...]]:
         out = []
-        for e in elements:
-            mapped = tuple(remap[n] for n in e)
+        for element in elements:
+            mapped = tuple(remap[node] for node in element)
             if len(set(mapped)) == len(mapped):
                 out.append(mapped)
         return out
 
     merged_tets = fix(tets, 4)
-    used = {n for tet in merged_tets for n in tet}
-    kept = {n: p for n, p in nodes.items() if remap[n] == n and n in used}
-    return kept, merged_tets, [t for t in fix(tris, 3) if all(n in kept for n in t)]
+    used = {node for tet in merged_tets for node in tet}
+    kept = {node: position for node, position in nodes.items() if remap[node] == node and node in used}
+    return kept, merged_tets, [t for t in fix(tris, 3) if all(node in kept for node in t)]
 
 
 def _oriented_faces(nodes: dict[int, Vec3], tets: list[tuple[int, ...]], tris: list[tuple[int, ...]]) -> list[TriFace]:
@@ -272,34 +274,34 @@ class Cover:
     samples: tuple[tuple[Vec3, float], ...]  #: (barycentric coordinates, area) of each point
 
 
-def _sub_triangles(n: int) -> list[Vec3]:
+def _sub_triangles(divisions: int) -> list[Vec3]:
     """Barycentric centroids of the n² sub-triangles of a triangle."""
     points = []
-    for i in range(n):
-        for j in range(n - i):
-            u, v = (i + 1 / 3) / n, (j + 1 / 3) / n
+    for i in range(divisions):
+        for j in range(divisions - i):
+            u, v = (i + 1 / 3) / divisions, (j + 1 / 3) / divisions
             points.append((1 - u - v, u, v))
-            if i + j < n - 1:
-                u, v = (i + 2 / 3) / n, (j + 2 / 3) / n
+            if i + j < divisions - 1:
+                u, v = (i + 2 / 3) / divisions, (j + 2 / 3) / divisions
                 points.append((1 - u - v, u, v))
     return points
 
 
-def cover_region(mesh: Mesh, region: Region, n: int = SAMPLES) -> list[Cover]:
+def cover_region(mesh: Mesh, region: Region, sample_count: int = SAMPLES) -> list[Cover]:
     """The boundary faces a region touches, with the sample points of each face it covers.
 
     Sampling each face (instead of testing its centroid) makes the covered area, and so the
     loads and supports built from it, nearly independent of the element size.
     """
-    lo, hi = region.bounds()
-    bary = _sub_triangles(n)
+    lower, upper = region.bounds()
+    bary = _sub_triangles(sample_count)
     covers = []
     for face in mesh.faces:
         a, b, c = (mesh.nodes[k] for k in face.nodes[:3])
-        if any(max(a[i], b[i], c[i]) < lo[i] - 1e-6 or min(a[i], b[i], c[i]) > hi[i] + 1e-6 for i in range(3)):
+        if any(max(a[i], b[i], c[i]) < lower[i] - 1e-6 or min(a[i], b[i], c[i]) > upper[i] + 1e-6 for i in range(3)):
             continue
         samples = tuple(
-            ((la, lb, lc), face.area / (n * n))
+            ((la, lb, lc), face.area / (sample_count * sample_count))
             for la, lb, lc in bary
             if region.matches(
                 (

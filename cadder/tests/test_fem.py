@@ -207,7 +207,7 @@ def test_covered_area_is_the_region_not_the_triangles():
     region = Box((2, 2, -1), (8, 8, 1), facing=(0, 0, 1))
     whole = Box((-1, -1, -1), (11, 11, 1))
     assert sum(covered_weights(cover_region(_plate_mesh(), whole)).values()) == pytest.approx(100.0)
-    part = sum(covered_weights(cover_region(_plate_mesh(), region, n=24)).values())
+    part = sum(covered_weights(cover_region(_plate_mesh(), region, sample_count=24)).values())
     assert part == pytest.approx(36.0, rel=0.1)
 
 

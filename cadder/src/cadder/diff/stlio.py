@@ -99,11 +99,11 @@ def same_surface(a: Triangles, b: Triangles, tolerance: float) -> bool:
     """
     if len(a) != len(b):
         return False
-    ca = np.round(a.mean(axis=1) / tolerance).astype(np.int64)
-    cb = np.round(b.mean(axis=1) / tolerance).astype(np.int64)
-    ca = ca[np.lexsort(ca.T[::-1])]
-    cb = cb[np.lexsort(cb.T[::-1])]
-    return bool(np.abs(ca - cb).max() <= 1)
+    cells_a = np.round(a.mean(axis=1) / tolerance).astype(np.int64)
+    cells_b = np.round(b.mean(axis=1) / tolerance).astype(np.int64)
+    cells_a = cells_a[np.lexsort(cells_a.T[::-1])]
+    cells_b = cells_b[np.lexsort(cells_b.T[::-1])]
+    return bool(np.abs(cells_a - cells_b).max() <= 1)
 
 
 def surface_area(tris: Triangles) -> float:

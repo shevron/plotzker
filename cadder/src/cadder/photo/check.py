@@ -111,19 +111,21 @@ def check(photos: list[Path], board: Board = DEFAULT_BOARD, camera: Camera | Non
         except ValueError as exc:
             results.append(PhotoCheck(photo.name, "fail", reasons=[str(exc)]))
             continue
-        r = PhotoCheck(photo.name, "ok", rect.corners, _fit_mm(rect), rect.tilt_deg)
-        assert r.fit_mm is not None
-        if r.corners < MIN_CORNERS:
-            r.verdict = "fail"
-            r.reasons.append(f"only {r.corners} target corners: show more of the target")
-        if r.fit_mm > FAIL_MM:
-            r.verdict = "fail"
-            r.reasons.append(f"target fits only to {r.fit_mm:.2f} mm: flatten the paper, hold the phone still")
-        elif r.fit_mm > WARN_MM:
-            r.verdict = "fail" if r.verdict == "fail" else "warn"
-            r.reasons.append(f"target fits to {r.fit_mm:.2f} mm: is the paper flat?")
-        results.append(r)
-        if r.verdict != "fail":
+        result = PhotoCheck(photo.name, "ok", rect.corners, _fit_mm(rect), rect.tilt_deg)
+        assert result.fit_mm is not None
+        if result.corners < MIN_CORNERS:
+            result.verdict = "fail"
+            result.reasons.append(f"only {result.corners} target corners: show more of the target")
+        if result.fit_mm > FAIL_MM:
+            result.verdict = "fail"
+            result.reasons.append(
+                f"target fits only to {result.fit_mm:.2f} mm: flatten the paper, hold the phone still"
+            )
+        elif result.fit_mm > WARN_MM:
+            result.verdict = "fail" if result.verdict == "fail" else "warn"
+            result.reasons.append(f"target fits to {result.fit_mm:.2f} mm: is the paper flat?")
+        results.append(result)
+        if result.verdict != "fail":
             view = rect.camera_center - np.array([board.width / 2, board.height / 2, 0.0])
             directions.append(view / np.linalg.norm(view))
     angle = max(

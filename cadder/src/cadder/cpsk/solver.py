@@ -131,23 +131,23 @@ class _Builder:
 
     # ----- Operands -----
 
-    def pt(self, op: Operand) -> gcs.PointId:
-        return self.entities[op.target].points[op.point]
+    def point_id(self, operand: Operand) -> gcs.PointId:
+        return self.entities[operand.target].points[operand.point]
 
-    def ln(self, op: Operand) -> gcs.LineId:
-        line = self.entities[op.target].line
+    def line_id(self, operand: Operand) -> gcs.LineId:
+        line = self.entities[operand.target].line
         assert line is not None
         return line
 
-    def curve(self, op: Operand) -> gcs.LineId | gcs.CircleId | gcs.ArcId:
-        entity = self.entities[op.target]
+    def curve(self, operand: Operand) -> gcs.LineId | gcs.CircleId | gcs.ArcId:
+        entity = self.entities[operand.target]
         for found in (entity.line, entity.circle, entity.arc):
             if found is not None:
                 return found
-        raise AssertionError(op)
+        raise AssertionError(operand)
 
-    def radius(self, op: Operand) -> gcs.ParamId:
-        radius = self.entities[op.target].radius
+    def radius(self, operand: Operand) -> gcs.ParamId:
+        radius = self.entities[operand.target].radius
         assert radius is not None
         return radius
 
@@ -168,58 +168,58 @@ class _Builder:
             return param
         return self.param(self.units.to_radians(value) if angle else value, True)
 
-    def add(self, c: Constraint) -> list[gcs.ConstraintTag]:
-        s = self.system
-        ops = c.operands
-        driving = c.driving
-        match c.type:
+    def add(self, constraint: Constraint) -> list[gcs.ConstraintTag]:
+        system = self.system
+        ops = constraint.operands
+        driving = constraint.driving
+        match constraint.type:
             case "coincident":
-                return [s.coincident(self.pt(ops["a"]), self.pt(ops["b"]))]
+                return [system.coincident(self.point_id(ops["a"]), self.point_id(ops["b"]))]
             case "point-on":
                 return [self.point_on(ops["point"], ops["object"])]
             case "horizontal" | "vertical":
-                horizontal = c.type == "horizontal"
+                horizontal = constraint.type == "horizontal"
                 if "of" in ops:
-                    line = self.ln(ops["of"])
-                    return [s.horizontal(line) if horizontal else s.vertical(line)]
-                a, b = self.pt(ops["a"]), self.pt(ops["b"])
-                return [s.horizontal_points(a, b) if horizontal else s.vertical_points(a, b)]
+                    line = self.line_id(ops["of"])
+                    return [system.horizontal(line) if horizontal else system.vertical(line)]
+                a, b = self.point_id(ops["a"]), self.point_id(ops["b"])
+                return [system.horizontal_points(a, b) if horizontal else system.vertical_points(a, b)]
             case "parallel":
-                return [s.parallel(self.ln(ops["a"]), self.ln(ops["b"]))]
+                return [system.parallel(self.line_id(ops["a"]), self.line_id(ops["b"]))]
             case "perpendicular":
                 return self.perpendicular(ops["a"], ops["b"])
             case "tangent":
                 return self.tangent(ops["a"], ops["b"])
             case "equal":
                 if ops["a"].kind == "line":
-                    return [s.equal_length(self.ln(ops["a"]), self.ln(ops["b"]))]
-                return [s.equal(self.radius(ops["a"]), self.radius(ops["b"]))]
+                    return [system.equal_length(self.line_id(ops["a"]), self.line_id(ops["b"]))]
+                return [system.equal(self.radius(ops["a"]), self.radius(ops["b"]))]
             case "symmetric":
-                a, b = self.pt(ops["a"]), self.pt(ops["b"])
+                a, b = self.point_id(ops["a"]), self.point_id(ops["b"])
                 if ops["about"].kind == "line":
-                    return [s.symmetric_line(a, b, self.ln(ops["about"]))]
-                return [s.symmetric_point(a, b, self.pt(ops["about"]))]
+                    return [system.symmetric_line(a, b, self.line_id(ops["about"]))]
+                return [system.symmetric_point(a, b, self.point_id(ops["about"]))]
             case "block":
                 return []
             case "distance":
-                return [self.distance(c)]
+                return [self.distance(constraint)]
             case "distance-x" | "distance-y":
-                axis = 0 if c.type == "distance-x" else 1
-                first = s.get_point_param_ids(self.pt(ops["a"]))[axis]
-                second = s.get_point_param_ids(self.pt(ops["b"]))[axis]
-                return [s.difference(first, second, self.value(c), driving=driving)]
+                axis = 0 if constraint.type == "distance-x" else 1
+                first = system.get_point_param_ids(self.point_id(ops["a"]))[axis]
+                second = system.get_point_param_ids(self.point_id(ops["b"]))[axis]
+                return [system.difference(first, second, self.value(constraint), driving=driving)]
             case "radius" | "diameter":
-                return [self.size(c)]
+                return [self.size(constraint)]
             case _:
                 if "of" in ops:
                     arc = self.entities[ops["of"].target].arc
                     assert arc is not None
-                    return [s.arc_angle(arc, self.value(c, angle=True), driving=driving)]
-                line_a, line_b = self.ln(ops["a"]), self.ln(ops["b"])
-                return [s.l2l_angle(line_a, line_b, self.value(c, angle=True), driving=driving)]
+                    return [system.arc_angle(arc, self.value(constraint, angle=True), driving=driving)]
+                line_a, line_b = self.line_id(ops["a"]), self.line_id(ops["b"])
+                return [system.l2l_angle(line_a, line_b, self.value(constraint, angle=True), driving=driving)]
 
     def point_on(self, point: Operand, obj: Operand) -> gcs.ConstraintTag:
-        p = self.pt(point)
+        p = self.point_id(point)
         entity = self.entities[obj.target]
         if entity.line is not None:
             return self.system.point_on_line(p, entity.line)
@@ -229,82 +229,82 @@ class _Builder:
         return self.system.point_on_arc(p, entity.arc)
 
     def perpendicular(self, a: Operand, b: Operand) -> list[gcs.ConstraintTag]:
-        s = self.system
+        system = self.system
         if a.is_point:
             # End points of a line and an arc: coincident, and the curves are perpendicular at
             # the joint. Like FreeCAD, keep the side (+90° or -90°) the stored shape has.
             curve_a = self.curve(replace(a, point=None))
             curve_b = self.curve(replace(b, point=None))
-            joint = self.pt(a)
-            angle = s.calculate_angle_via_point(curve_a, curve_b, joint)
+            joint = self.point_id(a)
+            angle = system.calculate_angle_via_point(curve_a, curve_b, joint)
             locked = math.pi / 2 if math.sin(angle) >= 0 else -math.pi / 2
             return [
-                s.coincident(joint, self.pt(b)),
-                s.set_angle_via_point(curve_a, curve_b, joint, locked),
+                system.coincident(joint, self.point_id(b)),
+                system.set_angle_via_point(curve_a, curve_b, joint, locked),
             ]
         if a.kind == "line" and b.kind == "line":
-            return [s.perpendicular(self.ln(a), self.ln(b))]
+            return [system.perpendicular(self.line_id(a), self.line_id(b))]
         line, curve = (a, b) if a.kind == "line" else (b, a)
-        center = self.pt(replace(curve, point="center", kind="point"))
-        return [s.point_on_line(center, self.ln(line))]  # normal to the curve
+        center = self.point_id(replace(curve, point="center", kind="point"))
+        return [system.point_on_line(center, self.line_id(line))]  # normal to the curve
 
     def tangent(self, a: Operand, b: Operand) -> list[gcs.ConstraintTag]:
-        s = self.system
+        system = self.system
         if a.is_point:
             # End point to end point: coincident, and the curves' tangents are parallel at the
             # joint. Like FreeCAD, keep the relative direction (0 or π) the stored shape has.
             curve_a = self.curve(replace(a, point=None))
             curve_b = self.curve(replace(b, point=None))
-            joint = self.pt(a)
-            angle = s.calculate_angle_via_point(curve_a, curve_b, joint)
+            joint = self.point_id(a)
+            angle = system.calculate_angle_via_point(curve_a, curve_b, joint)
             locked = 0.0 if math.cos(angle) >= 0 else math.pi
             return [
-                s.coincident(joint, self.pt(b)),
-                s.set_angle_via_point(curve_a, curve_b, joint, locked),
+                system.coincident(joint, self.point_id(b)),
+                system.set_angle_via_point(curve_a, curve_b, joint, locked),
             ]
         if b.kind == "line":
             a, b = b, a
-        ea, eb = self.entities[a.target], self.entities[b.target]
-        if ea.line is not None:
-            if eb.circle is not None:
-                return [s.tangent_line_circle(ea.line, eb.circle)]
-            assert eb.arc is not None
-            return [s.tangent_line_arc(ea.line, eb.arc)]
-        if ea.circle is not None and eb.circle is not None:
-            return [s.tangent_circle_circle(ea.circle, eb.circle)]
-        if ea.arc is not None and eb.arc is not None:
-            return [s.tangent_arc_arc(ea.arc, eb.arc)]
-        circle = ea.circle if ea.circle is not None else eb.circle
-        arc = ea.arc if ea.arc is not None else eb.arc
+        entity_a, entity_b = self.entities[a.target], self.entities[b.target]
+        if entity_a.line is not None:
+            if entity_b.circle is not None:
+                return [system.tangent_line_circle(entity_a.line, entity_b.circle)]
+            assert entity_b.arc is not None
+            return [system.tangent_line_arc(entity_a.line, entity_b.arc)]
+        if entity_a.circle is not None and entity_b.circle is not None:
+            return [system.tangent_circle_circle(entity_a.circle, entity_b.circle)]
+        if entity_a.arc is not None and entity_b.arc is not None:
+            return [system.tangent_arc_arc(entity_a.arc, entity_b.arc)]
+        circle = entity_a.circle if entity_a.circle is not None else entity_b.circle
+        arc = entity_a.arc if entity_a.arc is not None else entity_b.arc
         assert circle is not None and arc is not None
-        return [s.tangent_circle_arc(circle, arc)]
+        return [system.tangent_circle_arc(circle, arc)]
 
-    def distance(self, c: Constraint) -> gcs.ConstraintTag:
-        s = self.system
-        ops = c.operands
-        value = self.value(c)
+    def distance(self, constraint: Constraint) -> gcs.ConstraintTag:
+        system = self.system
+        ops = constraint.operands
+        value = self.value(constraint)
         if "of" in ops:
             entity = self.entities[ops["of"].target]
             start, end = entity.points["start"], entity.points["end"]
-            return s.p2p_distance(start, end, value, driving=c.driving)
+            return system.p2p_distance(start, end, value, driving=constraint.driving)
         a, b = ops["a"], ops["b"]
         if a.is_point and b.is_point:
-            return s.p2p_distance(self.pt(a), self.pt(b), value, driving=c.driving)
+            return system.p2p_distance(self.point_id(a), self.point_id(b), value, driving=constraint.driving)
         point, line = (a, b) if a.is_point else (b, a)
-        return s.p2l_distance(self.pt(point), self.ln(line), value, driving=c.driving)
+        return system.p2l_distance(self.point_id(point), self.line_id(line), value, driving=constraint.driving)
 
-    def size(self, c: Constraint) -> gcs.ConstraintTag:
-        s = self.system
-        entity = self.entities[c.operands["of"].target]
-        value = self.value(c)
+    def size(self, constraint: Constraint) -> gcs.ConstraintTag:
+        system = self.system
+        entity = self.entities[constraint.operands["of"].target]
+        value = self.value(constraint)
         if entity.circle is not None:
-            if c.type == "radius":
-                return s.circle_radius(entity.circle, value, driving=c.driving)
-            return s.circle_diameter(entity.circle, value, driving=c.driving)
+            if constraint.type == "radius":
+                return system.circle_radius(entity.circle, value, driving=constraint.driving)
+            return system.circle_diameter(entity.circle, value, driving=constraint.driving)
         assert entity.arc is not None
-        if c.type == "radius":
-            return s.arc_radius(entity.arc, value, driving=c.driving)
-        return s.arc_diameter(entity.arc, value, driving=c.driving)
+        if constraint.type == "radius":
+            return system.arc_radius(entity.arc, value, driving=constraint.driving)
+        return system.arc_diameter(entity.arc, value, driving=constraint.driving)
 
     # ----- Results -----
 
@@ -313,25 +313,25 @@ class _Builder:
         return list(found)
 
     def solved(self, primitive: Primitive) -> Primitive:
-        s = self.system
+        system = self.system
         entity = self.entities[primitive.index]
         geometry: Geometry
         match primitive.geometry:
             case Point():
-                geometry = Point(*s.get_point(entity.points[None]))
+                geometry = Point(*system.get_point(entity.points[None]))
             case Line():
                 (x1, y1), (x2, y2) = (
-                    s.get_point(entity.points["start"]),
-                    s.get_point(entity.points["end"]),
+                    system.get_point(entity.points["start"]),
+                    system.get_point(entity.points["end"]),
                 )
                 geometry = Line(x1, y1, x2, y2)
             case Circle():
                 assert entity.circle is not None
-                info = s.get_circle(entity.circle)
+                info = system.get_circle(entity.circle)
                 geometry = Circle(info.center[0], info.center[1], abs(info.radius))
             case Arc():
                 assert entity.arc is not None
-                arc = s.get_arc(entity.arc)
+                arc = system.get_arc(entity.arc)
                 start, sweep = arc.start_angle, arc.end_angle - arc.start_angle
                 if arc.radius < 0:
                     start += math.pi

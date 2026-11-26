@@ -47,16 +47,16 @@ class PartChange:
     def size_delta(self) -> tuple[float, float, float] | None:
         """Change of the bounding-box extents (x, y, z), mm."""
         if self.before and self.after:
-            b, a = self.before.size, self.after.size
-            return a[0] - b[0], a[1] - b[1], a[2] - b[2]
+            old, new = self.before.size, self.after.size
+            return new[0] - old[0], new[1] - old[1], new[2] - old[2]
         return None
 
     @property
     def shift(self) -> tuple[float, float, float] | None:
         """Movement of the bounding-box minimum corner (x, y, z), mm."""
         if self.before and self.after:
-            b, a = self.before.bbox_min, self.after.bbox_min
-            return a[0] - b[0], a[1] - b[1], a[2] - b[2]
+            old, new = self.before.bbox_min, self.after.bbox_min
+            return new[0] - old[0], new[1] - old[1], new[2] - old[2]
         return None
 
 
@@ -69,54 +69,56 @@ def _stats(path: Path | None) -> tuple[MeshStats | None, str]:
         return None, str(exc)
 
 
-def compare_snapshots(a: Snapshot, b: Snapshot) -> list[PartChange]:
+def compare_snapshots(before: Snapshot, after: Snapshot) -> list[PartChange]:
     """Compare every part name that exists in either snapshot (sorted by name)."""
     changes = []
-    for name in sorted(set(a.parts) | set(b.parts)):
-        pa, pb = a.parts.get(name), b.parts.get(name)
-        if pa is None:
-            sb, err = _stats(pb.path if pb else None)
-            changes.append(PartChange(name, Status.ADDED, after=sb, note=err))
-        elif pb is None:
-            sa, err = _stats(pa.path)
-            changes.append(PartChange(name, Status.REMOVED, before=sa, note=err))
+    for name in sorted(set(before.parts) | set(after.parts)):
+        part_before, part_after = before.parts.get(name), after.parts.get(name)
+        if part_before is None:
+            stats_after, err = _stats(part_after.path if part_after else None)
+            changes.append(PartChange(name, Status.ADDED, after=stats_after, note=err))
+        elif part_after is None:
+            stats_before, err = _stats(part_before.path)
+            changes.append(PartChange(name, Status.REMOVED, before=stats_before, note=err))
         else:
-            changes.append(_compare_part(name, pa.path, pb.path, pa.error or pb.error))
+            changes.append(
+                _compare_part(name, part_before.path, part_after.path, part_before.error or part_after.error)
+            )
     return changes
 
 
 def _compare_part(name: str, path_a: Path | None, path_b: Path | None, error: str | None) -> PartChange:
-    sa, err_a = _stats(path_a)
-    sb, err_b = _stats(path_b)
-    if sa is None or sb is None:
+    stats_a, err_a = _stats(path_a)
+    stats_b, err_b = _stats(path_b)
+    if stats_a is None or stats_b is None:
         first_line = (error or err_a or err_b).strip().splitlines()[-1:] or ["unknown"]
-        return PartChange(name, Status.ERROR, sa, sb, note=first_line[0])
-    if sa.hash == sb.hash:
-        return PartChange(name, Status.UNCHANGED, sa, sb)
+        return PartChange(name, Status.ERROR, stats_a, stats_b, note=first_line[0])
+    if stats_a.hash == stats_b.hash:
+        return PartChange(name, Status.UNCHANGED, stats_a, stats_b)
     assert path_a is not None and path_b is not None
     if same_surface(read_stl(path_a), read_stl(path_b), SAME_TOLERANCE_MM):
-        return PartChange(name, Status.UNCHANGED, sa, sb, note="same shape, different float noise")
-    return PartChange(name, Status.CHANGED, sa, sb)
+        return PartChange(name, Status.UNCHANGED, stats_a, stats_b, note="same shape, different float noise")
+    return PartChange(name, Status.CHANGED, stats_a, stats_b)
 
 
 def to_json(
-    a: Snapshot,
-    b: Snapshot,
+    before: Snapshot,
+    after: Snapshot,
     changes: list[PartChange],
     assemblies: list[AssemblyChange] | None = None,
 ) -> str:
     """The comparison as JSON (for the later HTML viewer and for scripts)."""
 
-    def default(o: object) -> object:
-        if isinstance(o, Status):
-            return o.value
-        raise TypeError(type(o))
+    def default(entry: object) -> object:
+        if isinstance(entry, Status):
+            return entry.value
+        raise TypeError(type(entry))
 
     from cadder.diff.assembly import to_dict
 
     doc = {
-        "a": {"label": a.label, "commit": a.commit, "error": a.error},
-        "b": {"label": b.label, "commit": b.commit, "error": b.error},
+        "a": {"label": before.label, "commit": before.commit, "error": before.error},
+        "b": {"label": after.label, "commit": after.commit, "error": after.error},
         "parts": [
             {
                 **asdict(c),
@@ -135,34 +137,34 @@ def _short(snap: Snapshot) -> str:
     return snap.label if snap.commit == snap.label else f"{snap.label} ({snap.commit[:8]})"
 
 
-def format_report(a: Snapshot, b: Snapshot, changes: list[PartChange], show_all: bool) -> str:
+def format_report(before: Snapshot, after: Snapshot, changes: list[PartChange], show_all: bool) -> str:
     """Human-readable summary: one line per part that differs (or all with ``show_all``)."""
-    lines = [f"Design diff: {_short(a)} → {_short(b)}"]
-    for snap in (a, b):
+    lines = [f"Design diff: {_short(before)} → {_short(after)}"]
+    for snap in (before, after):
         if snap.error:
             lines.append(f"  warning: {snap.label}: {snap.error.strip().splitlines()[-1]}")
-    counts = {s: sum(c.status is s for c in changes) for s in Status}
+    counts = {s: sum(change.status is s for change in changes) for s in Status}
     lines.append("  " + ", ".join(f"{n} {s.value}" for s, n in counts.items() if n))
     lines.append("")
-    for c in changes:
-        if c.status is Status.UNCHANGED and not show_all:
+    for change in changes:
+        if change.status is Status.UNCHANGED and not show_all:
             continue
-        lines.append(f"  {c.status.value:<9} {c.name:<28} {_detail(c)}".rstrip())
+        lines.append(f"  {change.status.value:<9} {change.name:<28} {_detail(change)}".rstrip())
     return "\n".join(lines)
 
 
-def _detail(c: PartChange) -> str:
-    if c.status is Status.CHANGED:
-        dv, ds, sh = c.volume_delta, c.size_delta, c.shift
-        assert dv is not None and ds is not None and sh is not None
-        parts = [f"volume {dv:+.1f} mm³"]
-        if any(abs(x) > 1e-3 for x in ds):
-            parts.append("size " + " ".join(f"{x:+.2f}" for x in ds))
-        if any(abs(x) > 1e-3 for x in sh):
-            parts.append("origin " + " ".join(f"{x:+.2f}" for x in sh))
+def _detail(change: PartChange) -> str:
+    if change.status is Status.CHANGED:
+        volume_delta_value, size_change, shift_vector = change.volume_delta, change.size_delta, change.shift
+        assert volume_delta_value is not None and size_change is not None and shift_vector is not None
+        parts = [f"volume {volume_delta_value:+.1f} mm³"]
+        if any(abs(x) > 1e-3 for x in size_change):
+            parts.append("size " + " ".join(f"{x:+.2f}" for x in size_change))
+        if any(abs(x) > 1e-3 for x in shift_vector):
+            parts.append("origin " + " ".join(f"{x:+.2f}" for x in shift_vector))
         return ", ".join(parts)
-    if c.status is Status.ADDED and c.after:
-        return f"{c.after.volume:.1f} mm³"
-    if c.status is Status.REMOVED and c.before:
-        return f"{c.before.volume:.1f} mm³"
-    return c.note
+    if change.status is Status.ADDED and change.after:
+        return f"{change.after.volume:.1f} mm³"
+    if change.status is Status.REMOVED and change.before:
+        return f"{change.before.volume:.1f} mm³"
+    return change.note

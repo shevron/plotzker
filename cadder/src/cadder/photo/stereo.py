@@ -93,30 +93,30 @@ def height_scan(
     other_gray = [gray(o) for o in others]
     ref_rect = ref[0]
     other_rects = [o[0] for o in others]
-    zs = np.arange(z_range[0], z_range[1] + step / 2, step)
+    z_values = np.arange(z_range[0], z_range[1] + step / 2, step)
     x0, y0, x1, y1 = box
     grown = (x0 - search, y0 - search, x1 + search, y1 + search)
     pad = round(search * px_per_mm)
-    shifts = np.full((len(others), len(zs), 2), np.nan)
-    scores = np.zeros((len(others), len(zs)))
-    for j, z in enumerate(zs):
+    shifts = np.full((len(others), len(z_values), 2), np.nan)
+    scores = np.zeros((len(others), len(z_values)))
+    for j, z in enumerate(z_values):
         template = render_plane(ref_rect, ref_gray, box, float(z), px_per_mm)
         if template.std() < 2:
             raise ValueError("the box has no texture to match: move it onto print or detail")
-        for i, (o, og) in enumerate(zip(other_rects, other_gray, strict=True)):
-            area = render_plane(o, og, grown, float(z), px_per_mm)
+        for i, (o, other_image) in enumerate(zip(other_rects, other_gray, strict=True)):
+            area = render_plane(o, other_image, grown, float(z), px_per_mm)
             res = cv2.matchTemplate(area, template, cv2.TM_CCOEFF_NORMED)
-            _, best, _, (lx, ly) = cv2.minMaxLoc(res)
+            _, best, _, (peak_x, peak_y) = cv2.minMaxLoc(res)
             # sub-pixel peak (parabola in x and y)
             fx = fy = 0.0
-            if 0 < lx < res.shape[1] - 1:
-                a, b, c = res[ly, lx - 1], res[ly, lx], res[ly, lx + 1]
-                fx = 0.5 * (a - c) / (a - 2 * b + c) if (a - 2 * b + c) else 0.0
-            if 0 < ly < res.shape[0] - 1:
-                a, b, c = res[ly - 1, lx], res[ly, lx], res[ly + 1, lx]
-                fy = 0.5 * (a - c) / (a - 2 * b + c) if (a - 2 * b + c) else 0.0
-            dx = (lx + fx - pad) / px_per_mm
-            dy = -(ly + fy - pad) / px_per_mm  # image rows run down, target y up
+            if 0 < peak_x < res.shape[1] - 1:
+                before, peak, after = res[peak_y, peak_x - 1], res[peak_y, peak_x], res[peak_y, peak_x + 1]
+                fx = 0.5 * (before - after) / (before - 2 * peak + after) if (before - 2 * peak + after) else 0.0
+            if 0 < peak_y < res.shape[0] - 1:
+                before, peak, after = res[peak_y - 1, peak_x], res[peak_y, peak_x], res[peak_y + 1, peak_x]
+                fy = 0.5 * (before - after) / (before - 2 * peak + after) if (before - 2 * peak + after) else 0.0
+            dx = (peak_x + fx - pad) / px_per_mm
+            dy = -(peak_y + fy - pad) / px_per_mm  # image rows run down, target y up
             shifts[i, j] = (dx, dy)
             scores[i, j] = best
     views: list[ViewHeight] = []
@@ -126,28 +126,28 @@ def height_scan(
         if good.sum() < 3:
             views.append(ViewHeight(name, None, float(scores[i].max()), 0.0, math.nan))
             continue
-        z_good, s_good = zs[good], shifts[i, good]
-        a = np.column_stack([np.ones(good.sum()), z_good])
-        coef, *_ = np.linalg.lstsq(a, s_good, rcond=None)  # shift = c0 + c1 z, per axis
+        z_good, s_good = z_values[good], shifts[i, good]
+        before = np.column_stack([np.ones(good.sum()), z_good])
+        coef, *_ = np.linalg.lstsq(before, s_good, rcond=None)  # shift = c0 + c1 z, per axis
         c0, c1 = coef[0], coef[1]
         sens = float(np.hypot(*c1))
         if sens < 1e-3:
             views.append(ViewHeight(name, None, float(scores[i].max()), sens, math.nan))
             continue
         z0 = float(-(c0 @ c1) / (c1 @ c1))
-        rms = float(np.sqrt(np.mean(np.sum((s_good - a @ coef) ** 2, axis=1))))
-        k = int(np.argmin(np.abs(zs - z0)))
+        rms = float(np.sqrt(np.mean(np.sum((s_good - before @ coef) ** 2, axis=1))))
+        k = int(np.argmin(np.abs(z_values - z0)))
         views.append(ViewHeight(name, z0, float(scores[i, k]), sens, rms))
     usable = [v for v in views if v.z is not None and v.score >= 0.5]
     if not usable:
         z, spread = None, math.nan
     else:
-        w = np.array([v.sensitivity**2 for v in usable])
-        hs = np.array([v.z for v in usable], dtype=np.float64)
-        z = float(np.sum(w * hs) / w.sum())
-        spread = float(np.sqrt(np.sum(w * (hs - z) ** 2) / w.sum()))
+        weights = np.array([v.sensitivity**2 for v in usable])
+        heights = np.array([v.z for v in usable], dtype=np.float64)
+        z = float(np.sum(weights * heights) / weights.sum())
+        spread = float(np.sqrt(np.sum(weights * (heights - z) ** 2) / weights.sum()))
     curve = [
-        (float(zs[j]), float(scores[:, j].mean()), *map(float, np.nanmean(shifts[:, j], axis=0)))
-        for j in range(len(zs))
+        (float(z_values[j]), float(scores[:, j].mean()), *map(float, np.nanmean(shifts[:, j], axis=0)))
+        for j in range(len(z_values))
     ]
     return HeightResult(z, spread, views, curve)  # type: ignore[arg-type]

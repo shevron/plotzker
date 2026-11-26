@@ -54,7 +54,7 @@ def solid_diff(a: Triangles, b: Triangles) -> SolidDiff:
 
     Raises ``ValueError`` if either mesh is not a closed solid.
     """
-    ma, mb = _manifold(a), _manifold(b)
-    added, added_volume = _pieces(mb - ma)
-    removed, removed_volume = _pieces(ma - mb)
+    manifold_a, manifold_b = _manifold(a), _manifold(b)
+    added, added_volume = _pieces(manifold_b - manifold_a)
+    removed, removed_volume = _pieces(manifold_a - manifold_b)
     return SolidDiff(added, removed, added_volume, removed_volume)

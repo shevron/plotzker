@@ -63,52 +63,52 @@ class FeatureFile:
 
     def to_target(self, points: Points) -> Points:
         """Part-frame points (N × 3) → target frame."""
-        p = np.asarray(points, dtype=np.float64).reshape(-1, 3)
-        a = math.radians(self.angle_deg)
-        c, s = math.cos(a), math.sin(a)
-        x = self.origin[0] + c * p[:, 0] - s * p[:, 1]
-        y = self.origin[1] + s * p[:, 0] + c * p[:, 1]
-        return np.column_stack([x, y, p[:, 2]])
+        data = np.asarray(points, dtype=np.float64).reshape(-1, 3)
+        angle = math.radians(self.angle_deg)
+        cos_angle, sin_angle = math.cos(angle), math.sin(angle)
+        x = self.origin[0] + cos_angle * data[:, 0] - sin_angle * data[:, 1]
+        y = self.origin[1] + sin_angle * data[:, 0] + cos_angle * data[:, 1]
+        return np.column_stack([x, y, data[:, 2]])
 
     def to_photo(self, points: Points) -> Points:
         """Part-frame points → photo pixels (or the points themselves in pixel mode)."""
-        p = np.asarray(points, dtype=np.float64).reshape(-1, 3)
+        data = np.asarray(points, dtype=np.float64).reshape(-1, 3)
         if self.rect is None:
-            return p[:, :2]
-        return self.rect.project(self.to_target(p))
+            return data[:, :2]
+        return self.rect.project(self.to_target(data))
 
 
 def read(path: Path) -> FeatureFile:
     """Load and check a feature file (problems are listed in ``errors``)."""
     data = json.loads(path.read_text())
     base = path.parent
-    ff = FeatureFile(path=path, features=list(data.get("features", [])))
+    feature_file = FeatureFile(path=path, features=list(data.get("features", [])))
     if "rectification" in data:
         sidecar = base / data["rectification"]
-        ff.rect, ff.rect_dir = Rectification.load(sidecar), sidecar.parent
+        feature_file.rect, feature_file.rect_dir = Rectification.load(sidecar), sidecar.parent
     elif "image" in data:
-        ff.image = base / data["image"]
+        feature_file.image = base / data["image"]
     else:
-        ff.errors.append("give either 'rectification' (a .rect.json) or 'image'")
+        feature_file.errors.append("give either 'rectification' (a .rect.json) or 'image'")
     frame = data.get("frame", {})
     origin = frame.get("origin", (0.0, 0.0))
-    ff.origin = (float(origin[0]), float(origin[1]))
-    ff.angle_deg = float(frame.get("angle_deg", 0.0))
-    for i, f in enumerate(ff.features):
+    feature_file.origin = (float(origin[0]), float(origin[1]))
+    feature_file.angle_deg = float(frame.get("angle_deg", 0.0))
+    for i, f in enumerate(feature_file.features):
         name = f.get("name", f"#{i}")
         if f.get("kind") not in KINDS:
-            ff.errors.append(f"{name}: kind must be one of {', '.join(KINDS)}")
+            feature_file.errors.append(f"{name}: kind must be one of {', '.join(KINDS)}")
         if f.get("kind") in ("box", "circle", "point") and "center" not in f:
-            ff.errors.append(f"{name}: needs 'center'")
+            feature_file.errors.append(f"{name}: needs 'center'")
         if f.get("kind") == "box" and "size" not in f:
-            ff.errors.append(f"{name}: needs 'size'")
+            feature_file.errors.append(f"{name}: needs 'size'")
         if f.get("kind") == "circle" and "d" not in f:
-            ff.errors.append(f"{name}: needs 'd'")
+            feature_file.errors.append(f"{name}: needs 'd'")
         if f.get("kind") == "line" and len(f.get("points", [])) < 2:
-            ff.errors.append(f"{name}: needs at least 2 'points'")
+            feature_file.errors.append(f"{name}: needs at least 2 'points'")
         if "source" not in f:
-            ff.errors.append(f"{name}: needs 'source' (measured, datasheet, photo, assumed)")
-    return ff
+            feature_file.errors.append(f"{name}: needs 'source' (measured, datasheet, photo, assumed)")
+    return feature_file
 
 
 def _xyz(v: list[float]) -> list[float]:
@@ -119,27 +119,31 @@ def _outline(f: dict[str, Any]) -> list[Points]:
     """Polylines (part frame, N × 3) that draw a feature."""
     kind = f["kind"]
     if kind == "box":
-        c, s = np.array(_xyz(f["center"])), np.array(_xyz(f["size"]))
-        lo, hi = c - s / 2, c + s / 2
+        center, size = np.array(_xyz(f["center"])), np.array(_xyz(f["size"]))
+        lower, upper = center - size / 2, center + size / 2
         corners = np.array(
-            [[x, y, z] for z in (lo[2], hi[2]) for x, y in
-             ((lo[0], lo[1]), (hi[0], lo[1]), (hi[0], hi[1]), (lo[0], hi[1]))]
+            [[x, y, z] for z in (lower[2], upper[2]) for x, y in
+             ((lower[0], lower[1]), (upper[0], lower[1]), (upper[0], upper[1]), (lower[0], upper[1]))]
         )  # fmt: skip
         lines = [corners[[0, 1, 2, 3, 0]], corners[[4, 5, 6, 7, 4]]]
         lines += [corners[[i, i + 4]] for i in range(4)]
         return lines
     if kind == "circle":
-        c = np.array(_xyz(f["center"]))
-        a = np.linspace(0, 2 * math.pi, 73)
-        r = f["d"] / 2
-        return [np.column_stack([c[0] + r * np.cos(a), c[1] + r * np.sin(a), np.full(73, c[2])])]
+        center = np.array(_xyz(f["center"]))
+        angles = np.linspace(0, 2 * math.pi, 73)
+        radius = f["d"] / 2
+        return [
+            np.column_stack(
+                [center[0] + radius * np.cos(angles), center[1] + radius * np.sin(angles), np.full(73, center[2])]
+            )
+        ]
     if kind == "line":
         return [np.array([_xyz(p) for p in f["points"]], dtype=np.float64)]
     return [np.array([_xyz(f["center"])], dtype=np.float64)]
 
 
 def overlay(
-    ff: FeatureFile,
+    feature_file: FeatureFile,
     on: str = "photo",
     labels: str = "names",
     rect: Path | None = None,
@@ -156,61 +160,64 @@ def overlay(
     import cv2
 
     if rect is not None:
-        ff.rect, ff.rect_dir = Rectification.load(rect), rect.parent
+        feature_file.rect, feature_file.rect_dir = Rectification.load(rect), rect.parent
 
-    def same(p: Points) -> Points:
-        return p
+    def same(line_points: Points) -> Points:
+        return line_points
 
     to_img: Callable[[Points], Points] = same
-    if ff.rect is None:
-        assert ff.image is not None
-        image = load(ff.image)
+    if feature_file.rect is None:
+        assert feature_file.image is not None
+        image = load(feature_file.image)
     elif on == "rectified":
-        assert ff.rect_dir is not None
-        image = load(ff.rect_dir / ff.rect.image)
-        to_img = ff.rect.photo_to_rect
+        assert feature_file.rect_dir is not None
+        image = load(feature_file.rect_dir / feature_file.rect.image)
+        to_img = feature_file.rect.photo_to_rect
     else:
-        assert ff.rect_dir is not None
-        image = load(ff.rect_dir / ff.rect.source)
+        assert feature_file.rect_dir is not None
+        image = load(feature_file.rect_dir / feature_file.rect.source)
     drawn: list[tuple[str, tuple[int, int, int], list[Points]]] = []
-    for f in ff.features:
+    for f in feature_file.features:
         if f.get("kind") not in KINDS:
             continue
         color = COLORS.get(str(f.get("source", "")).split()[0], (255, 255, 255))
-        drawn.append((str(f.get("name", "")), color, [to_img(ff.to_photo(line)) for line in _outline(f)]))
+        drawn.append((str(f.get("name", "")), color, [to_img(feature_file.to_photo(line)) for line in _outline(f)]))
     x0 = y0 = 0
     if crop is not None and drawn:
-        allp = np.vstack([p for _, _, lines in drawn for p in lines])
+        allp = np.vstack([line_points for _, _, lines in drawn for line_points in lines])
         px_per_mm = 1.0
-        if ff.rect is not None:  # the image's scale near the features
-            c = np.mean(ff.to_target(np.array([[0.0, 0, 0], [1, 0, 0]])), axis=0)
-            pair = to_img(ff.rect.project(np.array([c, c + np.array([1.0, 0.0, 0.0])])))
+        if feature_file.rect is not None:  # the image's scale near the features
+            target_x = np.mean(feature_file.to_target(np.array([[0.0, 0, 0], [1, 0, 0]])), axis=0)
+            pair = to_img(feature_file.rect.project(np.array([target_x, target_x + np.array([1.0, 0.0, 0.0])])))
             px_per_mm = float(np.hypot(*(pair[1] - pair[0])))
-        m = crop * px_per_mm
-        h, w = image.shape[:2]
-        x0, y0 = max(0, int(allp[:, 0].min() - m)), max(0, int(allp[:, 1].min() - m))
-        x1, y1 = min(w, int(allp[:, 0].max() + m)), min(h, int(allp[:, 1].max() + m))
+        margin_px = crop * px_per_mm
+        image_height, image_width = image.shape[:2]
+        x0, y0 = max(0, int(allp[:, 0].min() - margin_px)), max(0, int(allp[:, 1].min() - margin_px))
+        x1, y1 = (
+            min(image_width, int(allp[:, 0].max() + margin_px)),
+            min(image_height, int(allp[:, 1].max() + margin_px)),
+        )
         image = np.ascontiguousarray(image[y0:y1, x0:x1])
     scale = max(image.shape[:2]) / 1500
     thick, font_scale = max(1, round(1.5 * scale)), 0.7 * scale
     legend = []
-    for n, (name, color, lines) in enumerate(drawn, 1):
+    for number, (name, color, lines) in enumerate(drawn, 1):
         first = None
         for line in lines:
             pts = np.round(line - [x0, y0]).astype(np.int32).reshape(-1, 2)
             if len(pts) == 1:
-                at = (int(pts[0, 0]), int(pts[0, 1]))
-                cv2.drawMarker(image, at, color, cv2.MARKER_CROSS, round(14 * scale), thick)
+                anchor = (int(pts[0, 0]), int(pts[0, 1]))
+                cv2.drawMarker(image, anchor, color, cv2.MARKER_CROSS, round(14 * scale), thick)
             else:
                 cv2.polylines(image, [pts], False, color, thick, cv2.LINE_AA)
             first = first or (int(pts[0, 0]), int(pts[0, 1]))
-        text = {"names": name, "numbers": str(n)}.get(labels)
+        text = {"names": name, "numbers": str(number)}.get(labels)
         if text and first is not None:
             cv2.putText(
                 image, text, (first[0] + 4, first[1] - 4),
                 cv2.FONT_HERSHEY_SIMPLEX, font_scale, color, thick, cv2.LINE_AA,
             )  # fmt: skip
-        legend.append(f"{n} {name}")
+        legend.append(f"{number} {name}")
     return image, legend
 
 
@@ -222,13 +229,13 @@ def _fmt(v: object) -> str:
     return str(v)
 
 
-def table(ff: FeatureFile) -> str:
+def table(feature_file: FeatureFile) -> str:
     """The features as a Markdown table (the report's "Features" section)."""
     rows = [
         "| Feature | Kind | Position (x, y, z) | Size | Source | ± | Notes |",
         "|---|---|---|---|---|---|---|",
     ]
-    for f in ff.features:
+    for f in feature_file.features:
         kind = f.get("kind", "")
         if kind == "line":
             pos = " → ".join(f"({_fmt(p)})" for p in f.get("points", []))

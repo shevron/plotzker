@@ -56,9 +56,9 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
         if isinstance(geometry, Line):
             return f"L {xy(end)}"
         assert isinstance(geometry, Arc)
-        r = _n(geometry.r * scale)
+        radius = _n(geometry.r * scale)
         large = int(geometry.sweep > math.pi)
-        return f"A {r} {r} 0 {large} {0 if forward else 1} {xy(end)}"
+        return f"A {radius} {radius} 0 {large} {0 if forward else 1} {xy(end)}"
 
     filled: list[str] = []
     for loop in loops:
@@ -69,9 +69,11 @@ def to_svg(solved: SolvedSketch, *, allow_open: bool = False) -> str:
     for primitive in circles:
         circle = primitive.geometry
         assert isinstance(circle, Circle)
-        cx, cy, r = circle.cx * scale, circle.cy * scale, circle.r * scale
-        east, west = Point(cx + r, cy), Point(cx - r, cy)
-        filled.append(f"M {xy(east)} A {_n(r)} {_n(r)} 0 1 0 {xy(west)} A {_n(r)} {_n(r)} 0 1 0 {xy(east)} Z")
+        cx, cy, radius = circle.cx * scale, circle.cy * scale, circle.r * scale
+        east, west = Point(cx + radius, cy), Point(cx - radius, cy)
+        filled.append(
+            f"M {xy(east)} A {_n(radius)} {_n(radius)} 0 1 0 {xy(west)} A {_n(radius)} {_n(radius)} 0 1 0 {xy(east)} Z"
+        )
     stroked = [f"M {xy(e.start)} {segment(e, True)}" for e in open_edges]
 
     title = solved.sketch.metadata.get("title", ("",))[0]

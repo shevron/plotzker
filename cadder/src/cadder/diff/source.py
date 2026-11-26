@@ -54,14 +54,14 @@ def _diff_args(a: str, b: str) -> list[str] | None:
     return [a, b]
 
 
-def commit_log(repo: Path, a: str, b: str) -> list[str]:
+def commit_log(repo: Path, rev_a: str, rev_b: str) -> list[str]:
     """One line per commit going from ``a`` to ``b`` (newest first); empty if not linear."""
-    if WORKTREE in (a, b):
-        a, b = (a if a != WORKTREE else "HEAD"), (b if b != WORKTREE else "HEAD")
-    if a == b:
+    if WORKTREE in (rev_a, rev_b):
+        rev_a, rev_b = (rev_a if rev_a != WORKTREE else "HEAD"), (rev_b if rev_b != WORKTREE else "HEAD")
+    if rev_a == rev_b:
         return []
     try:
-        out = _git(repo, "log", "--format=%h %s", f"{a}..{b}")
+        out = _git(repo, "log", "--format=%h %s", f"{rev_a}..{rev_b}")
     except RuntimeError:
         return []
     return out.splitlines()
@@ -69,13 +69,13 @@ def commit_log(repo: Path, a: str, b: str) -> list[str]:
 
 def changed_files(
     repo: Path,
-    a: str,
-    b: str,
+    rev_a: str,
+    rev_b: str,
     layout: SourceLayout = SourceLayout(),  # noqa: B008
 ) -> list[FileChange]:
     """Source files under the layout's roots that differ, with added/deleted line counts (a
     moved file shows as ``old => new``)."""
-    args = _diff_args(a, b)
+    args = _diff_args(rev_a, rev_b)
     if args is None:
         return []
     out = _git(repo, "diff", "--numstat", "-M", *args, "--", *layout.roots)
@@ -87,9 +87,9 @@ def changed_files(
     return files
 
 
-def file_diff(repo: Path, a: str, b: str, path: str) -> str:
+def file_diff(repo: Path, rev_a: str, rev_b: str, path: str) -> str:
     """The unified diff of one file (cut to :data:`MAX_DIFF_LINES` lines), or ''."""
-    args = _diff_args(a, b)
+    args = _diff_args(rev_a, rev_b)
     if args is None or not path:
         return ""
     lines = _git(repo, "diff", "--no-color", "-U3", *args, "--", path).splitlines()
@@ -110,53 +110,55 @@ def _verdicts(repo: Path, rev: str, path: str) -> dict[str, dict[str, Any]]:
         return {}
 
 
-def fem_hints(repo: Path, a: str, b: str, changed: list[str], verdicts: str = "fem/verdicts.toml") -> dict[str, str]:
+def fem_hints(
+    repo: Path, rev_a: str, rev_b: str, changed: list[str], verdicts: str = "fem/verdicts.toml"
+) -> dict[str, str]:
     """A one-line FEM note for each changed part that has a verdict in either revision.
 
     "re-checked" if the verdict entry differs between the revisions; "not re-run" if the part
     changed but its entry did not (the verdict may be stale: the ``fem-status`` command tells).
     """
-    va, vb = _verdicts(repo, a, verdicts), _verdicts(repo, b, verdicts)
+    verdicts_a, verdicts_b = _verdicts(repo, rev_a, verdicts), _verdicts(repo, rev_b, verdicts)
     hints = {}
     for name in changed:
-        ea, eb = va.get(name), vb.get(name)
-        if ea is None and eb is None:
+        entry_a, entry_b = verdicts_a.get(name), verdicts_b.get(name)
+        if entry_a is None and entry_b is None:
             continue
-        if ea == eb:
-            hints[name] = f"verdict {eb['verdict'] if eb else '?'} not re-run since this change"
-        elif ea is None and eb is not None:
-            hints[name] = f"first verdict {eb['verdict']}"
-        elif eb is None and ea is not None:
-            hints[name] = f"verdict {ea['verdict']} removed"
-        elif ea is not None and eb is not None:
-            hints[name] = f"re-checked {ea['verdict']} → {eb['verdict']}"
+        if entry_a == entry_b:
+            hints[name] = f"verdict {entry_b['verdict'] if entry_b else '?'} not re-run since this change"
+        elif entry_a is None and entry_b is not None:
+            hints[name] = f"first verdict {entry_b['verdict']}"
+        elif entry_b is None and entry_a is not None:
+            hints[name] = f"verdict {entry_a['verdict']} removed"
+        elif entry_a is not None and entry_b is not None:
+            hints[name] = f"re-checked {entry_a['verdict']} → {entry_b['verdict']}"
     return hints
 
 
 def collect(
     repo: Path,
-    a: Snapshot,
-    b: Snapshot,
+    before: Snapshot,
+    after: Snapshot,
     changed_parts: list[str],
     layout: SourceLayout = SourceLayout(),  # noqa: B008
 ) -> dict[str, Any]:
     """Source information for the report: ``{"log", "files", "params", "parts": {name: {...}}}``."""
     parts: dict[str, dict[str, str]] = {}
-    hints = fem_hints(repo, a.commit, b.commit, changed_parts, layout.verdicts_file)
+    hints = fem_hints(repo, before.commit, after.commit, changed_parts, layout.verdicts_file)
     for name in changed_parts:
-        pf = b.parts.get(name) or a.parts.get(name)
-        path = pf.source if pf and pf.source else ""
-        info = {"path": path, "diff": file_diff(repo, a.commit, b.commit, path)}
+        part_file = after.parts.get(name) or before.parts.get(name)
+        path = part_file.source if part_file and part_file.source else ""
+        info = {"path": path, "diff": file_diff(repo, before.commit, after.commit, path)}
         if name in hints:
             info["fem"] = hints[name]
         parts[name] = info
     return {
-        "log": commit_log(repo, a.commit, b.commit),
+        "log": commit_log(repo, before.commit, after.commit),
         "files": [
             {"path": f.path, "added": f.added, "deleted": f.deleted}
-            for f in changed_files(repo, a.commit, b.commit, layout)
+            for f in changed_files(repo, before.commit, after.commit, layout)
         ],
-        "params": file_diff(repo, a.commit, b.commit, layout.params_file or ""),
+        "params": file_diff(repo, before.commit, after.commit, layout.params_file or ""),
         "parts": parts,
     }
 

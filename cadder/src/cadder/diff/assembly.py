@@ -215,46 +215,50 @@ def _label(item: Item, labels: dict[float, str]) -> tuple[str, bool]:
     return f"item {item.index} ({item.volume:.0f} mm³)", False
 
 
-def compare_assembly(name: str, a: Path | None, b: Path | None, labels: dict[float, str]) -> AssemblyChange:
+def compare_assembly(name: str, before: Path | None, after: Path | None, labels: dict[float, str]) -> AssemblyChange:
     """Compare one assembly given the item files of both revisions (None: it does not exist)."""
     change = AssemblyChange(name)
-    a_items = load_items(a) if a else []
-    b_items = load_items(b) if b else []
-    for status, ia, ib in match_items(a_items, b_items):
-        ref = ib or ia
+    a_items = load_items(before) if before else []
+    b_items = load_items(after) if after else []
+    for status, item_before, item_after in match_items(a_items, b_items):
+        ref = item_after or item_before
         assert ref is not None
         label, printed = _label(ref, labels)
         shift = None
         rotated = False
-        if status is not InstanceStatus.UNCHANGED and ia and ib:
-            shift = _shift(ia, ib)
-            rotated = status is InstanceStatus.MOVED and not np.allclose(ia.size, ib.size, atol=1e-2)
-        change.instances.append(InstanceChange(status, label, printed, ia, ib, shift, rotated))
+        if status is not InstanceStatus.UNCHANGED and item_before and item_after:
+            shift = _shift(item_before, item_after)
+            rotated = status is InstanceStatus.MOVED and not np.allclose(item_before.size, item_after.size, atol=1e-2)
+        change.instances.append(InstanceChange(status, label, printed, item_before, item_after, shift, rotated))
     change.instances.sort(key=lambda i: (i.before or i.after).index if (i.before or i.after) else 0)  # type: ignore[union-attr]
-    if a is None:
+    if before is None:
         change.status = "added"
-    elif b is None:
+    elif after is None:
         change.status = "removed"
     elif any(i.status is not InstanceStatus.UNCHANGED for i in change.instances):
         change.status = "changed"
     return change
 
 
-def compare_assemblies(a: Snapshot, b: Snapshot, volumes: Mapping[str, float]) -> list[AssemblyChange]:
+def compare_assemblies(before: Snapshot, after: Snapshot, volumes: Mapping[str, float]) -> list[AssemblyChange]:
     """Compare every assembly that exists in either snapshot (sorted by name).
 
     ``volumes`` are the printable parts' volumes (mm³), used to name instances.
     """
     labels = part_labels(volumes)
     changes = []
-    for name in sorted(set(a.assemblies) | set(b.assemblies)):
-        fa, fb = a.assemblies.get(name), b.assemblies.get(name)
-        errors = [f.error for f in (fa, fb) if f and f.error]
-        if errors or (fa and fa.path is None) or (fb and fb.path is None):
+    for name in sorted(set(before.assemblies) | set(after.assemblies)):
+        file_before, file_after = before.assemblies.get(name), after.assemblies.get(name)
+        errors = [f.error for f in (file_before, file_after) if f and f.error]
+        if errors or (file_before and file_before.path is None) or (file_after and file_after.path is None):
             note = errors[0].strip().splitlines()[-1] if errors else "no data"
             changes.append(AssemblyChange(name, status="error", note=note))
             continue
-        changes.append(compare_assembly(name, fa.path if fa else None, fb.path if fb else None, labels))
+        changes.append(
+            compare_assembly(
+                name, file_before.path if file_before else None, file_after.path if file_after else None, labels
+            )
+        )
     return changes
 
 
@@ -262,22 +266,22 @@ def format_assemblies(changes: list[AssemblyChange], show_all: bool) -> str:
     """Text summary: one line per assembly that differs, then its changed instances."""
     lines = ["Assemblies:"]
     shown = False
-    for c in changes:
-        if c.status == "unchanged" and not show_all:
+    for change in changes:
+        if change.status == "unchanged" and not show_all:
             continue
         shown = True
         counts = ", ".join(
-            f"{c.count(s)} {s.value}"
+            f"{change.count(s)} {s.value}"
             for s in (
                 InstanceStatus.MODIFIED,
                 InstanceStatus.MOVED,
                 InstanceStatus.ADDED,
                 InstanceStatus.REMOVED,
             )
-            if c.count(s)
+            if change.count(s)
         )
-        lines.append(f"  {c.status:<9} {c.name:<22} {counts or c.note}".rstrip())
-        for i in c.instances:
+        lines.append(f"  {change.status:<9} {change.name:<22} {counts or change.note}".rstrip())
+        for i in change.instances:
             if i.status is InstanceStatus.UNCHANGED or (
                 i.status is InstanceStatus.MOVED and not i.printed and not show_all
             ):
@@ -294,12 +298,12 @@ def format_assemblies(changes: list[AssemblyChange], show_all: bool) -> str:
 def to_dict(changes: list[AssemblyChange]) -> list[dict[str, object]]:
     """The comparison as plain data (no meshes), for ``--json``."""
     out: list[dict[str, object]] = []
-    for c in changes:
+    for change in changes:
         out.append(
             {
-                "name": c.name,
-                "status": c.status,
-                "note": c.note,
+                "name": change.name,
+                "status": change.status,
+                "note": change.note,
                 "instances": [
                     {
                         "label": i.label,
@@ -308,7 +312,7 @@ def to_dict(changes: list[AssemblyChange]) -> list[dict[str, object]]:
                         "shift": i.shift,
                         "rotated": i.rotated,
                     }
-                    for i in c.instances
+                    for i in change.instances
                     if i.status is not InstanceStatus.UNCHANGED
                 ],
             }

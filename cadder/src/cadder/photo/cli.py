@@ -64,18 +64,18 @@ def info_command(photos: list[Path], as_json: Json = False) -> None:
     from cadder.photo.image import info
 
     rows = []
-    for p in photos:
-        i = info(p)
-        rows.append({**asdict(i), "path": str(p), "focal_px": i.focal_px})
+    for photo in photos:
+        i = info(photo)
+        rows.append({**asdict(i), "path": str(photo), "focal_px": i.focal_px})
     if as_json:
         _echo_json(rows)
         return
-    for r in rows:
-        f = r["focal_px"]
+    for row in rows:
+        f = row["focal_px"]
         typer.echo(
-            f"{r['path']}: {r['width']}×{r['height']}, {r['make'] or '?'} {r['model'] or ''}, "
-            f"focal {r['focal_mm'] or '?'} mm (35 mm eq. {r['focal_35mm'] or '?'}, "
-            f"zoom {r['digital_zoom'] or 1:g}) → {f'{f:.0f} px' if f else 'unknown'}"
+            f"{row['path']}: {row['width']}×{row['height']}, {row['make'] or '?'} {row['model'] or ''}, "
+            f"focal {row['focal_mm'] or '?'} mm (35 mm eq. {row['focal_35mm'] or '?'}, "
+            f"zoom {row['digital_zoom'] or 1:g}) → {f'{f:.0f} px' if f else 'unknown'}"
         )
 
 
@@ -88,12 +88,12 @@ def convert_command(
     """Convert photos (e.g. HEIC) to upright JPEGs, keeping EXIF."""
     from cadder.photo.image import to_jpeg
 
-    for p in photos:
-        target = (out or p.parent) / (p.stem + ".jpg")
-        if target.resolve() == p.resolve():
-            typer.echo(f"{p}: already a JPEG")
+    for photo in photos:
+        target = (out or photo.parent) / (photo.stem + ".jpg")
+        if target.resolve() == photo.resolve():
+            typer.echo(f"{photo}: already a JPEG")
             continue
-        typer.echo(f"wrote {to_jpeg(p, target)}")
+        typer.echo(f"wrote {to_jpeg(photo, target)}")
 
 
 @app.command("target")
@@ -113,12 +113,12 @@ def target_command(
     """
     from cadder.photo.target import Board, make_target
 
-    sx, sy = (int(v) for v in squares.lower().split("x"))
+    squares_x, squares_y = (int(v) for v in squares.lower().split("x"))
     blank = None
     if field.lower() != "none":
-        a, b, c, d = (int(v) for v in field.split(","))
-        blank = (a, b, c, d)
-    board = Board(sx, sy, square, marker, field=blank)
+        left, top, right, bottom = (int(v) for v in field.split(","))
+        blank = (left, top, right, bottom)
+    board = Board(squares_x, squares_y, square, marker, field=blank)
     typer.echo(f"wrote {make_target(out, board, paper)}: {board.label()}")
 
 
@@ -146,8 +146,8 @@ def rectify_command(
     """
     from cadder.photo.target import Board, rectify, summary, with_square
 
-    sx, sy = (int(v) for v in squares.lower().split("x"))
-    board = with_square(Board(sx, sy, nominal_square, nominal_marker), square)
+    squares_x, squares_y = (int(v) for v in squares.lower().split("x"))
+    board = with_square(Board(squares_x, squares_y, nominal_square, nominal_marker), square)
     box: tuple[float, float, float, float] | None = None
     if region:
         x0, y0, x1, y1 = (float(v) for v in region.split(","))
@@ -183,8 +183,8 @@ def calibrate_command(
         f"wrote {out}: focal {k[0][0]:.0f} px, center ({k[0][2]:.0f}, {k[1][2]:.0f}), "
         f"k1 {cam.dist[0]:.4f}, k2 {cam.dist[1]:.4f}; reprojection {cam.rms_px:.2f} px"
     )
-    for v in cam.views:
-        typer.echo(f"  {v['photo']}: {v['corners']} corners, {v['rms_px']:.2f} px")
+    for view in cam.views:
+        typer.echo(f"  {view['photo']}: {view['corners']} corners, {view['rms_px']:.2f} px")
 
 
 @app.command("crop")
@@ -235,11 +235,13 @@ def edges_command(
     scale = _scale(image)
     found = edges(load(image), scale, (x0, y0), (x1, y1), band, count, min_strength, first, polarity)
     if as_json:
-        _echo_json([asdict(e) for e in found])
+        _echo_json([asdict(edge) for edge in found])
         return
-    for e in found:
-        kind = "dark→light" if e.rising else "light→dark"
-        typer.echo(f"at {e.position:8.3f} {scale.unit}: ({e.x:.3f}, {e.y:.3f}) {kind}, strength {e.strength:.0f}")
+    for edge in found:
+        kind = "dark→light" if edge.rising else "light→dark"
+        typer.echo(
+            f"at {edge.position:8.3f} {scale.unit}: ({edge.x:.3f}, {edge.y:.3f}) {kind}, strength {edge.strength:.0f}"
+        )
 
 
 @app.command("holes")
@@ -265,15 +267,15 @@ def holes_command(
     scale = _scale(image)
     found = holes(load(image), scale, (x0, y0, x1, y1), dia_min, dia_max, count)
     if as_json:
-        _echo_json([asdict(h) for h in found])
+        _echo_json([asdict(hole) for hole in found])
         return
     if not found:
         typer.echo("no circles found")
-    for h in found:
+    for hole in found:
         typer.echo(
-            f"hole {h.hole} ring {h.ring}: center ({h.x:.3f}, {h.y:.3f}) Ø{h.diameter:.3f} "
-            f"{scale.unit} (minor {h.minor:.3f}, axis {h.angle_deg:.0f}°), "
-            f"fit RMS {h.rms:.3f}, {h.points}/120 rays"
+            f"hole {hole.hole} ring {hole.ring}: center ({hole.x:.3f}, {hole.y:.3f}) Ø{hole.diameter:.3f} "
+            f"{scale.unit} (minor {hole.minor:.3f}, axis {hole.angle_deg:.0f}°), "
+            f"fit RMS {hole.rms:.3f}, {hole.points}/120 rays"
         )
 
 
@@ -318,8 +320,8 @@ def triangulate_command(
     from cadder.photo.target import Rectification, triangulate
 
     parsed = []
-    for v in views:
-        path, _, xy = v.rpartition(":")
+    for view in views:
+        path, _, xy = view.rpartition(":")
         x, y = (float(c) for c in xy.split(","))
         parsed.append((Rectification.load(Path(path)), np.array([x, y])))
     if len(parsed) < 2:
@@ -345,10 +347,10 @@ def overlay_command(
     from cadder.photo.features import overlay, read
     from cadder.photo.image import save
 
-    ff = read(features)
-    for e in ff.errors:
-        typer.secho(f"warning: {e}", fg=typer.colors.YELLOW, err=True)
-    image, legend = overlay(ff, on, labels, rect, crop)
+    feature_file = read(features)
+    for error in feature_file.errors:
+        typer.secho(f"warning: {error}", fg=typer.colors.YELLOW, err=True)
+    image, legend = overlay(feature_file, on, labels, rect, crop)
     which = f"_{rect.name.split('.')[0]}" if rect else ""
     target = out or features.parent / "overlays" / f"{features.stem}{which}_{on}.jpg"
     typer.echo(f"wrote {save(image, target)}")
@@ -397,8 +399,8 @@ def height_command(
             + ("" if v.score >= 0.5 else " (weak match: not used)")
         )
     if curve:
-        for zz, sc, dx, dy in result.curve:
-            typer.echo(f"  z {zz:6.2f}: match {sc:.2f}, shift ({dx:+.2f}, {dy:+.2f})")
+        for curve_z, score, dx, dy in result.curve:
+            typer.echo(f"  z {curve_z:6.2f}: match {score:.2f}, shift ({dx:+.2f}, {dy:+.2f})")
 
 
 @app.command("outline")
@@ -431,29 +433,29 @@ def outline_command(
     from cadder.photo.measure import crop, outline
 
     scale = _scale(image)
-    g = tuple(float(v) for v in guess.split(",")) if guess else None
-    av = [tuple(float(v) for v in a.split(",")) for a in avoid or []]
+    guess_values = tuple(float(v) for v in guess.split(",")) if guess else None
+    avoid_boxes = [tuple(float(v) for v in a.split(",")) for a in avoid or []]
     img = load(image)
-    o, used = outline(
-        img, scale, (x0, y0, x1, y1), not light, lines, guess=g, avoid=av, span=span,  # type: ignore[arg-type]
+    found_outline, used = outline(
+        img, scale, (x0, y0, x1, y1), not light, lines, guess=guess_values, avoid=avoid_boxes, span=span,  # type: ignore[arg-type]
     )  # fmt: skip
     if as_json:
-        _echo_json({**asdict(o), "edge_points": used})
+        _echo_json({**asdict(found_outline), "edge_points": used})
     else:
         typer.echo(
-            f"center ({o.x:.3f}, {o.y:.3f}) {scale.unit}, length {o.length:.3f} x width "
-            f"{o.width:.3f}, angle {o.angle_deg:.2f}°, fit RMS {o.rms:.3f}; "
-            f"edge points per side {o.points}"
+            f"center ({found_outline.x:.3f}, {found_outline.y:.3f}) {scale.unit}, "
+            f"length {found_outline.length:.3f} x width {found_outline.width:.3f}, angle {found_outline.angle_deg:.2f}°, fit RMS {found_outline.rms:.3f}; "
+            f"edge points per side {found_outline.points}"
         )
     import cv2
 
     marked = img.copy()
     k = scale.px_per_unit
-    corners = scale.to_px(np.array(o.corners)).round().astype(np.int32)
+    corners = scale.to_px(np.array(found_outline.corners)).round().astype(np.int32)
     cv2.polylines(marked, [corners], True, (0, 0, 255), max(1, round(k / 20)), cv2.LINE_AA)
     for pts in used.values():
-        for q in scale.to_px(np.array(pts)) if pts else []:
-            cv2.circle(marked, (round(q[0]), round(q[1])), max(2, round(k / 10)), (0, 200, 0), -1)
+        for pixel in scale.to_px(np.array(pts)) if pts else []:
+            cv2.circle(marked, (round(pixel[0]), round(pixel[1])), max(2, round(k / 10)), (0, 200, 0), -1)
     view = crop(marked, scale, (x0, y0, x1, y1))
     target = out or image.parent / "crops" / f"{image.stem}_outline.png"
     typer.echo(f"wrote {save(view, target)}")
@@ -474,17 +476,17 @@ def check_command(
 
     cam = Camera.load(camera) if camera else None
     result = check(photos, with_square(DEFAULT_BOARD, square), cam)
-    for p in result.photos:
-        fit = "-" if p.fit_mm is None else f"{p.fit_mm:.2f} mm"
-        tilt = "-" if p.tilt_deg is None else f"{p.tilt_deg:.0f}°"
+    for photo in result.photos:
+        fit = "-" if photo.fit_mm is None else f"{photo.fit_mm:.2f} mm"
+        tilt = "-" if photo.tilt_deg is None else f"{photo.tilt_deg:.0f}°"
         typer.echo(
-            f"{p.verdict.upper():4} {p.photo}: {p.corners} corners, fit {fit}, tilt {tilt}"
-            + "".join(f"; {r}" for r in p.reasons)
+            f"{photo.verdict.upper():4} {photo.photo}: {photo.corners} corners, fit {fit}, tilt {tilt}"
+            + "".join(f"; {r}" for r in photo.reasons)
         )
     if len(photos) > 1:
         typer.echo(f"widest angle between usable views: {result.angle_deg:.0f}°")
-    for n in result.notes:
-        typer.echo(f"note: {n}")
+    for note in result.notes:
+        typer.echo(f"note: {note}")
     if not result.ok:
         raise typer.Exit(1)
 
@@ -495,10 +497,10 @@ def table_command(features: Path) -> None:
     """Print a feature file as a Markdown table (for the report)."""
     from cadder.photo.features import read, table
 
-    ff = read(features)
-    for e in ff.errors:
-        typer.secho(f"warning: {e}", fg=typer.colors.YELLOW, err=True)
-    typer.echo(table(ff))
+    feature_file = read(features)
+    for error in feature_file.errors:
+        typer.secho(f"warning: {error}", fg=typer.colors.YELLOW, err=True)
+    typer.echo(table(feature_file))
 
 
 def main() -> None:

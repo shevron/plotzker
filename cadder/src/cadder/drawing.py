@@ -54,11 +54,11 @@ class SvgDrawing:
         if label:
             self.text((x0 + x1) / 2, (y0 + y1) / 2, label, anchor="middle", size=label_size)
 
-    def text(self, x: float, y: float, s: str, anchor: str = "start", size: float = 6) -> None:
+    def text(self, x: float, y: float, text: str, anchor: str = "start", size: float = 6) -> None:
         """Text with its baseline at ``(x, y)``; ``anchor``: start, middle or end."""
         self.raw(
             f'<text x="{x:g}" y="{self.y(y):g}" font-size="{size:g}" text-anchor="{anchor}" '
-            f'font-family="{FONT}" fill="{INK}">{s}</text>'
+            f'font-family="{FONT}" fill="{INK}">{text}</text>'
         )
 
     def line(self, x1: float, y1: float, x2: float, y2: float, color: str = "#000", width: float = 0.4) -> None:
@@ -68,9 +68,9 @@ class SvgDrawing:
             f'stroke="{color}" stroke-width="{width:g}"/>'
         )
 
-    def circle(self, x: float, y: float, r: float, style: str) -> None:
+    def circle(self, x: float, y: float, radius: float, style: str) -> None:
         """A circle of radius ``r``."""
-        self.raw(f'<circle cx="{x:g}" cy="{self.y(y):g}" r="{r:g}" {style}/>')
+        self.raw(f'<circle cx="{x:g}" cy="{self.y(y):g}" r="{radius:g}" {style}/>')
 
     def crosshair(self, x: float, y: float, half: float = 6, color: str = "#000", width: float = 0.3) -> None:
         """A center mark: a cross of arms ``half`` long."""
@@ -91,10 +91,10 @@ class SvgDrawing:
 
     def to_svg(self) -> str:
         """The whole document."""
-        w, h = self.width, self.height
+        width, height = self.width, self.height
         return (
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:g}mm" height="{h:g}mm" '
-            f'viewBox="0 0 {w:g} {h:g}">\n' + "\n".join(self.elements) + "\n</svg>\n"
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{width:g}mm" height="{height:g}mm" '
+            f'viewBox="0 0 {width:g} {height:g}">\n' + "\n".join(self.elements) + "\n</svg>\n"
         )
 
 
